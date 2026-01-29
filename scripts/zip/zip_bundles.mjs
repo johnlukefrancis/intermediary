@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptRoot = path.dirname(scriptPath);
 const repoRoot = path.resolve(scriptRoot, '..', '..');
-const outputRoot = path.join(scriptRoot, 'Output');
+const outputRoot = path.join(scriptRoot, 'output');
 
 function formatTimestamp(date) {
   const pad = (value) => String(value).padStart(2, '0');
@@ -102,7 +102,7 @@ function shouldSkipPath(relativePath) {
     'node_modules/',
     'dist/',
     '.git/',
-    'scripts/zip/Output/',
+    'scripts/zip/output/',
     'assets/',
     // App icons (binary, not needed for context)
     'src-tauri/icons/',

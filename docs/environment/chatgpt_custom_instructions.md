@@ -4,13 +4,13 @@ Owner: JL · Scope: Intermediary workflow handoff console (Tauri + Rust + TypeSc
 
 ## 0. Bundles (canon)
 This project includes "motherlode" zip bundles for ChatGPT context:
-- `scripts/zip/Output/Intermediary_Bundles_Index.md` — bundle contents + SHA (repo location; in bundles it appears at repo root as `Intermediary_Bundles_Index.md`)
+- `scripts/zip/output/Intermediary_Bundles_Index.md` — bundle contents + SHA (repo location; in bundles it appears at repo root as `Intermediary_Bundles_Index.md`)
 - `Intermediary_Full_latest.zip` — complete codebase (app/, src-tauri/, agent/, docs/, scripts/, root configs)
 - `Intermediary_App_latest.zip` — Frontend + Tauri only (app/, src-tauri/)
 - `Intermediary_Docs_latest.zip` — Documentation only (docs/)
 
 Rules (mandatory when repo-specific):
-- Read the bundle index first (`Intermediary_Bundles_Index.md` or `scripts/zip/Output/Intermediary_Bundles_Index.md`).
+- Read the bundle index first (`Intermediary_Bundles_Index.md` or `scripts/zip/output/Intermediary_Bundles_Index.md`).
 - If a question depends on repo specifics, do not answer from memory: open/search the relevant bundle(s).
 - Bundles are the source of truth; cite concrete paths used (`app/src/...`, `src-tauri/src/...`, `docs/...`).
 - Use `docs/guide.md` to locate docs; use the latest attached bundle if the user says files changed.
