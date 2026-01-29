@@ -48,9 +48,9 @@ Intermediary uses a **two-component architecture**:
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                   Watched Repos                     │    │
-│  │     /home/user/code/repo1                           │    │
-│  │     /home/user/code/repo2                           │    │
-│  │     ...                                             │    │
+│  │     /home/johnf/code/textureportal                  │    │
+│  │     /home/johnf/code/worktrees/tr-engine            │    │
+│  │     /home/johnf/code/intermediary                   │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -65,6 +65,7 @@ Intermediary uses a **two-component architecture**:
   - Three-column layout per repo: Docs, Code, Zip Bundles
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
+  - **Triangle Rain tab:** A repo-group tab with worktree switcher inside (v0 ships with only `tr-engine` configured; schema anticipates multiple worktrees later)
 
 ### WSL Agent
 
@@ -103,6 +104,8 @@ All draggable files originate from a staging directory on Windows:
 ## Why This Architecture?
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
+
+**v0 constraint:** All repos live in WSL Linux FS under `/home/johnf/code`, so the WSL agent is required for v0. Windows-native repo support (where the agent would not be needed) is a later enhancement.
 
 ## Directory Structure (Planned)
 

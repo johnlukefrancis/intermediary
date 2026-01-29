@@ -38,8 +38,8 @@
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* Repos may live in **WSL Linux filesystem** or Windows filesystem.
-* Needs frequent repeated “context snapshots” for LLM collaboration.
+* **v0:** All repos live in **WSL Linux filesystem** under `/home/johnf/code`. Windows-path support is a later enhancement.
+* Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
 
@@ -67,7 +67,7 @@
 
 ### Layout (single window)
 
-* **Top tab bar:** one tab per repo (“triangle rain”, “textureportal”, “blankstop”…).
+* **Top tab bar:** one tab per repo. Triangle Rain is a single tab containing a **worktree switcher** (v0 ships with only `tr-engine` configured; schema anticipates multiple worktrees later).
 * **Three columns per tab:**
 
   1. **Docs** (recently changed doc-like files)
@@ -108,15 +108,17 @@
 Each repo has:
 
 * `repoId`, `label`
-* `location`:
+* `location`: **v0 supports WSL paths only** (distro + Linux path). Windows-native paths are a later enhancement.
 
-  * `windows`: absolute Windows path
-  * `wsl`: distro + Linux path
+  * v0 initial roots:
+    * `/home/johnf/code/textureportal`
+    * `/home/johnf/code/worktrees/tr-engine` (Triangle Rain worktree)
+    * `/home/johnf/code/intermediary`
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
   * `codeGlobs` (e.g. `src/**`, `packages/**`)
-  * `ignoreGlobs` (e.g. `**/node_modules/**`, `**/.git/**`, `**/dist/**`)
+  * `ignoreGlobs` (e.g. `**/node_modules/**`, `**/.git/**`, `**/dist/**`, `**/target/**`)
 
 ### 7.2 File change tracking
 
@@ -133,8 +135,9 @@ Each repo has:
   * Example: `%LOCALAPPDATA%\Intermediary\staging\<repoId>\...`
 * Staging rules:
 
-  * When a file changes, optionally auto-stage (configurable).
-  * On drag start, ensure staged copy exists and is up-to-date.
+  * **Auto-stage on change is the default behavior** (reduces drag latency at cost of disk churn).
+  * `autoStage` is a boolean option (global default + per-repo override) to disable auto-staging.
+  * When `autoStage` is off, **stage-on-drag** is the fallback: on drag start, ensure staged copy exists and is up-to-date.
   * Use atomic write: copy to temp name then rename to final.
 
 ### 7.4 Zip bundle presets
@@ -142,8 +145,10 @@ Each repo has:
 Per repo, user can define multiple presets:
 
 * Preset name, description
-* Include globs
-* Exclude globs
+* **v0 selection UI:** top-level folders only (no nested subfolder selection). User toggles which top-level folders to include.
+* **Include root files toggle:** single boolean, default ON. When ON, includes files at repo root (README, package.json, etc.).
+* Exclude globs (always applied): `**/node_modules/**`, `**/.git/**`, `**/dist/**`, `**/target/**`
+* Advanced include/exclude globs: later enhancement
 * Output naming template
 * Output destination: staging bundles folder
 
@@ -316,11 +321,15 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 
 ---
 
-## 13. Open decisions
+## 13. Decisions (locked)
 
-* Where do your repos actually live today (WSL Linux FS vs `/mnt/c/...`)? This impacts whether the agent is required.
-* Preferred bundle contents defaults per repo (e.g., always include `README`, `package.json`, `src/**`, `docs/**`?).
-* Do you want auto-stage on change (more disk churn, less drag latency) or stage-on-drag (less churn, small latency)?
+The following assumptions are locked for v0:
+
+* **Repo location:** All repos live in WSL Linux FS under `/home/johnf/code`. The WSL agent is required.
+* **Initial repo set:** textureportal, worktrees/tr-engine (Triangle Rain), intermediary.
+* **Triangle Rain tab model:** Single tab with worktree switcher inside; v0 ships with only tr-engine configured.
+* **Bundle selection UI:** Top-level folders only + "include root files" toggle (default ON). No nested subfolder selection in v0.
+* **Staging strategy:** Auto-stage on change is default ON. Boolean toggle (global + per-repo) to disable; stage-on-drag is fallback when off.
 
 ---
 
