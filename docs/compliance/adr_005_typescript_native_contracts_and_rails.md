@@ -8,8 +8,8 @@ Scope: app/src TypeScript + frontend contracts
 ---
 
 ## Context
-Blankstop ships a TypeScript frontend from day one. We want tight, readable types
-and no “make the compiler happy” weakening.
+Intermediary ships a TypeScript frontend from day one. We want tight, readable types
+and no "make the compiler happy" weakening.
 
 ---
 
