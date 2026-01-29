@@ -42,6 +42,15 @@ Workflow and tooling documentation.
 | Document | Purpose |
 |----------|---------|
 | [docs/inventory/skills_inventory.md](inventory/skills_inventory.md) | Available agent skills for this project |
+| [docs/inventory/file_ledger.md](inventory/file_ledger.md) | Auto-generated file inventory |
+
+## Commands
+
+Runnable commands organized by area (ADR-012 compliant).
+
+| Document | Purpose |
+|----------|---------|
+| [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
 
 ## Bundle Naming
 

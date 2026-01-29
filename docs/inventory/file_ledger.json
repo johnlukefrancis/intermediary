@@ -2,6 +2,50 @@
   "scope": "src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
+      "path": "agent/src/main.ts",
+      "summary": "Agent entry point - bootstraps WebSocket server and watchers"
+    },
+    {
+      "path": "agent/src/repos/repo_top_level.ts",
+      "summary": "Scan top-level directories and files in a repo"
+    },
+    {
+      "path": "agent/src/repos/repo_watcher.ts",
+      "summary": "Chokidar file watcher setup with event emission and ignore patterns"
+    },
+    {
+      "path": "agent/src/server/router.ts",
+      "summary": "Request dispatch and response building for WebSocket protocol"
+    },
+    {
+      "path": "agent/src/server/ws_server.ts",
+      "summary": "WebSocket server lifecycle on localhost:3141"
+    },
+    {
+      "path": "agent/src/staging/path_bridge.ts",
+      "summary": "WSL to Windows path conversion for staging files"
+    },
+    {
+      "path": "agent/src/staging/stager.ts",
+      "summary": "Atomic file copy with debounced auto-staging"
+    },
+    {
+      "path": "agent/src/util/categorizer.ts",
+      "summary": "File kind classification (docs/code/other) based on path patterns"
+    },
+    {
+      "path": "agent/src/util/errors.ts",
+      "summary": "Error types and helpers for the agent"
+    },
+    {
+      "path": "agent/src/util/logger.ts",
+      "summary": "Structured logging to console with ISO timestamps"
+    },
+    {
+      "path": "agent/src/util/ring_buffer.ts",
+      "summary": "Generic circular buffer for recent file changes per repo"
+    },
+    {
       "path": "app/index.html",
       "summary": "index module"
     },

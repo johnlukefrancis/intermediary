@@ -3,6 +3,17 @@
 Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
+agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
+agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
+agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
+agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
+agent/src/server/ws_server.ts - WebSocket server lifecycle on localhost:3141
+agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files
+agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
+agent/src/util/categorizer.ts - File kind classification (docs/code/other) based on path patterns
+agent/src/util/errors.ts - Error types and helpers for the agent
+agent/src/util/logger.ts - Structured logging to console with ISO timestamps
+agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
 app/src/app.tsx - Root component with tab state management
 app/src/components/layout/three_column.tsx - Three-column layout component (Docs | Code | Zips)

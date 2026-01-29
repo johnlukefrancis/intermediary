@@ -47,13 +47,25 @@ export const HelloEventSchema = z.object({
   reposDetected: z.array(z.string()).optional(),
 });
 
+/** Staging info attached to file change events when auto-staged */
+export const StagedInfoSchema = z.object({
+  wslPath: z.string(),
+  windowsPath: z.string(),
+  bytesCopied: z.number().int().nonnegative(),
+  mtimeMs: z.number(),
+});
+export type StagedInfo = z.infer<typeof StagedInfoSchema>;
+
 export const FileChangedEventSchema = z.object({
   type: z.literal("fileChanged"),
   repoId: z.string(),
   path: z.string(),
   kind: FileKindSchema,
   mtime: z.string(),
+  /** Present when file was auto-staged */
+  staged: StagedInfoSchema.optional(),
 });
+export type FileChangedEvent = z.infer<typeof FileChangedEventSchema>;
 
 export const SnapshotEventSchema = z.object({
   type: z.literal("snapshot"),
@@ -113,11 +125,39 @@ export const BuildBundleCommandSchema = z.object({
   presetId: z.string(),
 });
 
+/** Handshake from UI with config and staging paths */
+export const ClientHelloCommandSchema = z.object({
+  type: z.literal("clientHello"),
+  /** Repos to watch: repoId -> wslRootPath */
+  repos: z.record(z.string(), z.string()),
+  /** WSL path for staging files, e.g. /mnt/c/Users/.../staging/files */
+  stagingWslRoot: z.string(),
+  /** Windows path for staging files, e.g. C:\Users\...\staging\files */
+  stagingWinRoot: z.string(),
+  /** Whether to auto-stage docs/code files on change */
+  autoStageOnChange: z.boolean().optional(),
+});
+
+/** Toggle agent options at runtime */
+export const SetOptionsCommandSchema = z.object({
+  type: z.literal("setOptions"),
+  autoStageOnChange: z.boolean().optional(),
+});
+
+/** Request top-level directory listing for a repo */
+export const GetRepoTopLevelCommandSchema = z.object({
+  type: z.literal("getRepoTopLevel"),
+  repoId: z.string(),
+});
+
 export const UiCommandSchema = z.discriminatedUnion("type", [
   WatchRepoCommandSchema,
   RefreshCommandSchema,
   StageFileCommandSchema,
   BuildBundleCommandSchema,
+  ClientHelloCommandSchema,
+  SetOptionsCommandSchema,
+  GetRepoTopLevelCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
 
@@ -140,6 +180,9 @@ export const StageFileResultSchema = z.object({
   repoId: z.string(),
   path: z.string(),
   windowsPath: z.string(),
+  wslPath: z.string(),
+  bytesCopied: z.number().int().nonnegative(),
+  mtimeMs: z.number(),
 });
 
 export const BuildBundleResultSchema = z.object({
@@ -149,11 +192,35 @@ export const BuildBundleResultSchema = z.object({
   windowsPath: z.string(),
 });
 
+/** Response to clientHello with agent info */
+export const ClientHelloResultSchema = z.object({
+  type: z.literal("clientHelloResult"),
+  agentVersion: z.string(),
+  watchedRepoIds: z.array(z.string()),
+});
+
+/** Acknowledgment for setOptions */
+export const SetOptionsResultSchema = z.object({
+  type: z.literal("setOptionsResult"),
+  autoStageOnChange: z.boolean(),
+});
+
+/** Top-level directories and files for a repo */
+export const GetRepoTopLevelResultSchema = z.object({
+  type: z.literal("getRepoTopLevelResult"),
+  repoId: z.string(),
+  dirs: z.array(z.string()),
+  files: z.array(z.string()),
+});
+
 export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
   RefreshResultSchema,
   StageFileResultSchema,
   BuildBundleResultSchema,
+  ClientHelloResultSchema,
+  SetOptionsResultSchema,
+  GetRepoTopLevelResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 
