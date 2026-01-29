@@ -2,12 +2,12 @@
 set -euo pipefail
 
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-if [[ -n "${TEXTUREPORTAL_WIN_PATH:-}" ]]; then
-  DEST_DIR="${TEXTUREPORTAL_WIN_PATH}"
+if [[ -n "${INTERMEDIARY_WIN_PATH:-}" ]]; then
+  DEST_DIR="${INTERMEDIARY_WIN_PATH}"
 elif [[ -d "/mnt/d" ]]; then
-  DEST_DIR="/mnt/d/code/textureportal"
+  DEST_DIR="/mnt/d/code/intermediary"
 else
-  DEST_DIR="/mnt/c/code/textureportal"
+  DEST_DIR="/mnt/c/code/intermediary"
 fi
 
 if ! command -v rsync >/dev/null 2>&1; then
@@ -30,13 +30,8 @@ sync_once() {
     --exclude "dist" \
     --exclude "dist-ssr" \
     --exclude "src-tauri/target" \
-    --exclude "tp-ml/.venv" \
-    --exclude "tp-ml/models" \
-    --exclude "tp-ml/**/__pycache__" \
-    --exclude "tp-ml-diffusers/.venv" \
-    --exclude "tp-ml-diffusers/models" \
-    --exclude "tp-ml-diffusers/.cache" \
-    --exclude "tp-ml-diffusers/**/__pycache__" \
+    --exclude "agent/.venv" \
+    --exclude "agent/__pycache__" \
     "$SOURCE_DIR/" "$DEST_DIR/"
 }
 
@@ -44,7 +39,7 @@ sync_once
 
 echo "Watching $SOURCE_DIR -> $DEST_DIR"
 while inotifywait -r -e modify,create,delete,move \
-  --exclude "(\\.git|node_modules|dist|dist-ssr|target|src-tauri/target|tp-ml/\\.venv|tp-ml/models|tp-ml-diffusers/\\.venv|tp-ml-diffusers/models|tp-ml-diffusers/\\.cache|__pycache__)" \
+  --exclude "(\\.git|node_modules|dist|dist-ssr|target|src-tauri/target|agent/\\.venv|__pycache__)" \
   "$SOURCE_DIR" >/dev/null 2>&1; do
   sync_once
   echo "Synced at $(date +%H:%M:%S)"

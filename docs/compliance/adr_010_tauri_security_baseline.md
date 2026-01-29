@@ -8,7 +8,7 @@ Scope: Tauri shell configuration, asset protocol, and webview security
 ---
 
 ## Context
-TexturePortal ships as a local desktop app. The webview must be locked down for production while still allowing dev ergonomics. We also expose local files via an asset protocol and must keep that scoped.
+Intermediary ships as a local desktop app. The webview must be locked down for production while still allowing dev ergonomics. We also expose local files via an asset protocol (for staging directory access) and must keep that scoped.
 
 ---
 

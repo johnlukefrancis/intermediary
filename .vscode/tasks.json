@@ -66,11 +66,7 @@
       "type": "shell",
       "command": "pnpm tauri dev",
       "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "/home/johnf/code/textureportal/assets/output",
-          "TEXTUREFORGE_OUTPUT_DIR": ""
-        }
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -107,52 +103,12 @@
       "label": "Tauri: dev (Windows)",
       "type": "process",
       "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "D:\\textureportal\\assets\\output",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_ML_PACK_REGISTRY": "D:\\runtime_packs\\registry.local.json",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "15000",
-          "TEXTUREPORTAL_ML_RUNTIMES": "[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml'\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers'\",\"mode\":\"wsl\"}]",
-          "TEXTUREPORTAL_LOG_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs"
-        }
-      },
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs'; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='15000'; $env:TEXTUREPORTAL_ML_RUNTIMES='[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml''\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers''\",\"mode\":\"wsl\"}]'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; cd $env:TEXTUREPORTAL_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_LOG_DIR | Out-Null; pnpm tauri dev"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Tauri: dev (Windows, watch + sync + debug)",
-      "type": "process",
-      "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "D:\\code\\textureportal\\assets\\output",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_DEBUG_WINDOW": "1",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "15000",
-          "TEXTUREPORTAL_ML_RUNTIMES": "[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml'\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers'\",\"mode\":\"wsl\"}]",
-          "TEXTUREPORTAL_LOG_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs"
-        }
-      },
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_DEBUG_WINDOW='1'; $env:TEXTUREPORTAL_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs'; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='15000'; $env:TEXTUREPORTAL_ML_RUNTIMES='[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml''\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers''\",\"mode\":\"wsl\"}]'; $winPath = if ($env:TEXTUREPORTAL_WIN_PATH) { $env:TEXTUREPORTAL_WIN_PATH } else { 'D:\\code\\textureportal' }; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/textureportal && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_LOG_DIR | Out-Null; pnpm tauri dev"
+        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; cd $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
       ],
       "presentation": {
         "reveal": "always",
@@ -165,92 +121,15 @@
       }
     },
     {
-      "label": "Tauri: dev (Windows, watch + sync + debug, managed packs)",
+      "label": "Tauri: dev (Windows, watch + sync)",
       "type": "process",
       "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "D:\\TexturePortal\\outputs",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_DEBUG_WINDOW": "1",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "60000",
-          "TEXTUREPORTAL_ML_PACK_REGISTRY": "D:\\runtime_packs\\registry.local.json",
-          "TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT": "D:\\ml_models",
-          "TP_ML_DIFFUSERS_GENERATION_MODEL_ROOT": "D:\\ml_models",
-          "TP_ML_GGUF_MODEL_ROOT": "D:\\ml_models\\gguf",
-          "TP_ML_DIFFUSERS_JOB_LOG_DIR": "D:\\textureportal\\logs",
-          "PYTHONPATH": "D:\\code\\textureportal\\tp-ml-diffusers\\src;D:\\code\\textureportal\\tp-ml-gguf\\src;D:\\code\\textureportal\\tp-ml\\src",
-          "TEXTUREPORTAL_LOG_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs"
-        }
-      },
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='D:\\TexturePortal\\outputs'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_DEBUG_WINDOW='1'; $env:TEXTUREPORTAL_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs'; $env:TEXTUREPORTAL_ML_PACK_REGISTRY='D:\\runtime_packs\\registry.local.json'; $env:TEXTUREPORTAL_ML_MODEL_DIR='D:\\ml_models'; $env:TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT='D:\\ml_models'; $env:TP_ML_DIFFUSERS_GENERATION_MODEL_ROOT='D:\\ml_models'; $env:TP_ML_GGUF_MODEL_ROOT='D:\\ml_models\\gguf'; $env:TP_ML_DIFFUSERS_JOB_LOG_DIR='D:\\textureportal\\logs'; $env:PYTHONPATH='D:\\code\\textureportal\\tp-ml-diffusers\\src;D:\\code\\textureportal\\tp-ml-gguf\\src;D:\\code\\textureportal\\tp-ml\\src'; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='60000'; New-Item -ItemType Directory -Force $env:TP_ML_DIFFUSERS_JOB_LOG_DIR | Out-Null; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_OUTPUT_DIR | Out-Null; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_LOG_DIR | Out-Null; New-Item -ItemType Directory -Force $env:TP_ML_GGUF_MODEL_ROOT | Out-Null; $winPath = if ($env:TEXTUREPORTAL_WIN_PATH) { $env:TEXTUREPORTAL_WIN_PATH } else { 'D:\\code\\textureportal' }; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/textureportal && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; pnpm tauri dev"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Tauri: dev (Windows, watch + sync + debug, SDPA math + slicing)",
-      "type": "process",
-      "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_DEBUG_WINDOW": "1",
-          "TEXTUREPORTAL_ML_PACK_REGISTRY": "D:\\runtime_packs\\registry.local.json",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "15000",
-          "TEXTUREPORTAL_ML_MODEL_DIR": "D:\\ml_models",
-          "TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT": "D:\\ml_models",
-          "TEXTUREPORTAL_LOG_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs"
-        }
-      },
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_DEBUG_WINDOW='1'; $env:TEXTUREPORTAL_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs'; $env:TEXTUREPORTAL_ML_PACK_REGISTRY='D:\\runtime_packs\\registry.local.json'; $env:TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT='D:\\ml_models'; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='15000'; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_LOG_DIR | Out-Null; $winPath = if ($env:TEXTUREPORTAL_WIN_PATH) { $env:TEXTUREPORTAL_WIN_PATH } else { 'D:\\code\\textureportal' }; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/textureportal && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; pnpm tauri dev"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Tauri: dev (Windows, watch + sync + debug, SDPA math + slicing + xformers)",
-      "type": "process",
-      "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_DEBUG_WINDOW": "1",
-          "TEXTUREPORTAL_ML_PACK_REGISTRY": "D:\\runtime_packs\\registry.local.json",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "15000",
-          "TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT": "D:\\ml_models",
-          "TEXTUREPORTAL_LOG_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs"
-        }
-      },
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_DEBUG_WINDOW='1'; $env:TEXTUREPORTAL_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\logs'; $env:TEXTUREPORTAL_ML_PACK_REGISTRY='D:\\runtime_packs\\registry.local.json'; $env:TP_ML_DIFFUSERS_INPAINT_MODEL_ROOT='D:\\ml_models'; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='15000'; New-Item -ItemType Directory -Force $env:TEXTUREPORTAL_LOG_DIR | Out-Null; $winPath = if ($env:TEXTUREPORTAL_WIN_PATH) { $env:TEXTUREPORTAL_WIN_PATH } else { 'D:\\code\\textureportal' }; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/textureportal && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; pnpm tauri dev"
+        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; $winPath = $env:INTERMEDIARY_WIN_PATH; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/intermediary && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
       ],
       "presentation": {
         "reveal": "always",
@@ -263,54 +142,18 @@
       "label": "Tauri: build installer (Windows)",
       "type": "process",
       "command": "powershell.exe",
-      "options": {
-        "env": {
-          "TEXTUREPORTAL_OUTPUT_DIR": "\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output",
-          "TEXTUREFORGE_OUTPUT_DIR": "",
-          "TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS": "300000",
-          "TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS": "15000",
-          "TEXTUREPORTAL_ML_RUNTIMES": "[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml'\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc 'export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers'\",\"mode\":\"wsl\"}]"
-        }
-      },
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:TEXTUREPORTAL_OUTPUT_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\textureportal\\assets\\output'; $env:TEXTUREPORTAL_WIN_PATH='D:\\code\\textureportal'; $env:TEXTUREPORTAL_WSL_PATH='/home/johnf/code/textureportal'; $env:TEXTUREPORTAL_WSL_DISTRO='Ubuntu'; $env:TEXTUREFORGE_OUTPUT_DIR=''; $env:TEXTUREPORTAL_ML_JOB_IDLE_TIMEOUT_MS='300000'; $env:TEXTUREPORTAL_ML_CAPABILITIES_TIMEOUT_MS='15000'; $env:TEXTUREPORTAL_ML_RUNTIMES='[{\"runtime_id\":\"wsl\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''cd /home/johnf/code/textureportal/tp-ml && uv run tp-ml''\",\"mode\":\"wsl\"},{\"runtime_id\":\"diffusers\",\"command_line\":\"wsl.exe -d Ubuntu -- bash -lc ''export TP_ML_DIFFUSERS_INPAINT_MODEL=/home/johnf/code/textureportal/tp-ml-diffusers/models/seam_repair_inpaint__sdxl; cd /home/johnf/code/textureportal/tp-ml-diffusers && uv run tp-ml-diffusers''\",\"mode\":\"wsl\"}]'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/textureportal && ./scripts/windows/sync_to_windows.sh'; cd $env:TEXTUREPORTAL_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; pnpm tauri build"
+        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; cd $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; pnpm tauri build"
       ],
       "presentation": {
         "reveal": "always",
         "panel": "shared",
         "showReuseMessage": false
       },
-      "group": "build"
-    },
-    {
-      "label": "Installer: run latest (Windows)",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$winPath = if ($env:TEXTUREPORTAL_WIN_PATH) { $env:TEXTUREPORTAL_WIN_PATH } else { 'D:\\code\\textureportal' }; $installer = Get-ChildItem -Path \"$winPath\\\\target\\\\release\\\\bundle\\\\nsis\\\\*-setup.exe\" | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if (-not $installer) { Write-Error \"No NSIS installer found. Run 'Tauri: build installer (Windows)' first.\"; exit 1 } ; Start-Process $installer.FullName"
-      ],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Installer: build + run (Windows)",
-      "dependsOn": [
-        "Tauri: build installer (Windows)",
-        "Installer: run latest (Windows)"
-      ],
-      "dependsOrder": "sequence",
       "group": "build"
     },
     {
@@ -329,78 +172,12 @@
       "group": "build"
     },
     {
-      "label": "Watch: dry-run (preview)",
+      "label": "Zip: docs only",
       "type": "shell",
-      "command": "cargo run -p textureportal_watch -- --once --dry-run",
+      "command": "node scripts/zip/zip_bundles.mjs --docs",
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Watch: organize once",
-      "type": "shell",
-      "command": "cargo run -p textureportal_watch -- --once",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Watch: run (continuous)",
-      "type": "shell",
-      "command": "cargo run -p textureportal_watch",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "ML: seam repair (diffusers CLI)",
-      "type": "shell",
-      "command": "python scripts/ml/run_seam_repair_job.py ${input:seamRepairInput} --model-id ${input:seamRepairModel} --band-px ${input:seamRepairBand} --seed ${input:seamRepairSeed}",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "GPU: watch nvidia-smi (1s)",
-      "type": "shell",
-      "command": "nvidia-smi --query-gpu=timestamp,driver_version,name,pstate,clocks.sm,clocks.mem,power.draw,utilization.gpu,utilization.memory,memory.used,memory.total --format=csv -l 1",
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "showReuseMessage": false
-      },
-      "group": "build"
-    },
-    {
-      "label": "Env: clean caches (WSL)",
-      "type": "shell",
-      "command": "${workspaceFolder}/scripts/maintenance/clean_caches.sh",
       "presentation": {
         "reveal": "always",
         "panel": "shared",
@@ -408,32 +185,6 @@
         "close": true
       },
       "group": "build"
-    }
-  ],
-  "inputs": [
-    {
-      "id": "seamRepairInput",
-      "type": "promptString",
-      "description": "BaseColor input path (IO path)",
-      "default": "${workspaceFolder}/assets/organized/"
-    },
-    {
-      "id": "seamRepairModel",
-      "type": "promptString",
-      "description": "Model id (sdxl | sd2 | sd15)",
-      "default": "sdxl"
-    },
-    {
-      "id": "seamRepairBand",
-      "type": "promptString",
-      "description": "Seam band width (px)",
-      "default": "32"
-    },
-    {
-      "id": "seamRepairSeed",
-      "type": "promptString",
-      "description": "Seed",
-      "default": "0"
     }
   ]
 }

@@ -71,18 +71,18 @@ Constraints: <atomic, project-level rails only>
 
 ### Feature Implementation
 ```text
-Task: Add batch processing mode to the texture pipeline.
-Context: TexturePortal texture tool. Core processing in src/core/.
+Task: Add multi-repo tab support to the handoff console.
+Context: Intermediary workflow tool. UI in app/src/, Tauri backend in src-tauri/.
 Refs: { docs/compliance/adr_000_modular_file_discipline.md }
-Deliver: Implement batch mode and summarize edits.
+Deliver: Implement tab switching and summarize edits.
 Constraints: Respect ADR-000 modularity; keep new modules within ADR-000 targets/caps.
 ```
 
 ### Bug Investigation
 ```text
-Task: Investigate why normal maps look flat on dark albedos.
-Context: Texture-derived generation in src/core/.
-Refs: { src/core/texture_analyzer }
+Task: Investigate why file changes from WSL agent are not appearing in UI.
+Context: Intermediary handoff console. IPC between WSL agent and Tauri UI.
+Refs: { docs/system_overview.md }
 Deliver: Root cause analysis and proposed fix.
 Constraints: No band-aids per ADR-007.
 ```

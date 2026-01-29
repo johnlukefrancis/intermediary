@@ -7,7 +7,7 @@ Stage: Environment and process guardrails
 
 Applies to:
 
-- Agent prompts and workflow for textureportal
+- Agent prompts and workflow for intermediary
 - New documentation (Design, Implementation, Architecture, Reports)
 - Any work that introduces new runtime surfaces or long-lived processes
 
@@ -27,7 +27,7 @@ When:
 Then:
 - Start from the relevant docs index in `docs/` and place docs in the correct subtree.
 - Follow `docs/environment/docs_workflow.md` for naming, headers, and required sections.
-- Agent prompts must include `tp-docs-discipline` in Constraints (most work requires doc updates).
+- Agent prompts must include `im-docs-discipline` in Constraints (most work requires doc updates).
 
 When:
 - A change affects long-running runtime behavior (ML sidecars, queues, IO, streaming)
@@ -76,7 +76,7 @@ Prompts authored by ChatGPT must:
 
 - Edit in WSL, run the app in Windows when required by the repo workflow.
 - Use repo scripts for sync and run steps (e.g. `scripts/windows/sync_to_windows.sh`, `scripts/ml/*`).
-- Windows dev runs MUST set `TEXTUREPORTAL_LOG_DIR` to the WSL UNC path (`\\wsl$\<distro>\<wsl_path>\logs`). Do not symlink `logs/` or rely on `/mnt/` visibility.
+- Windows dev runs MUST set `INTERMEDIARY_LOG_DIR` to the WSL UNC path (`\\wsl$\<distro>\<wsl_path>\logs`). Do not symlink `logs/` or rely on `/mnt/` visibility.
 - Required checks must be run when specified in AGENTS or ADRs.
 
 ### 3.4 Types are contracts (ADR-005)
@@ -93,7 +93,7 @@ Skills encode architectural and compliance rails and must be invoked proactively
 - Every agent reply that touches code must start with `Skills: …` listing skills used.
 - See AGENTS.md / CLAUDE.md for the canonical skill table.
 
-**tp-docs-discipline is near-universal**: most work changes behavior or touches docs, so include it by default. It enforces guide index updates, roadmap/known_issues upkeep, required doc headers, and prevents pasted chat logs as repo docs.
+**im-docs-discipline is near-universal**: most work changes behavior or touches docs, so include it by default. It enforces guide index updates, roadmap/known_issues upkeep, required doc headers, and prevents pasted chat logs as repo docs.
 
 ## 4. Invariants
 

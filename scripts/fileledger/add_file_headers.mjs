@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 // Path: scripts/fileledger/add_file_headers.mjs
-// Description: add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
-
-// add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
+// Description: Adds missing header comments (path + description) to source files using the ledger output.
 
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';

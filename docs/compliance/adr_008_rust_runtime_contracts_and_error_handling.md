@@ -8,7 +8,7 @@ Scope: Rust runtime (src-tauri/**, crates/**)
 ---
 
 ## Context
-TexturePortal relies on Rust for runtime orchestration (Tauri commands, ML sidecars, IO, and core pipeline). Failures must be surfaced as typed errors, not panics, and invariants must be enforced consistently across release builds.
+Intermediary relies on Rust for runtime orchestration (Tauri commands, WSL agent IPC, and staging operations). Failures must be surfaced as typed errors, not panics, and invariants must be enforced consistently across release builds.
 
 ---
 

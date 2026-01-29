@@ -1,19 +1,20 @@
-# Docs Workflow Canon — TexturePortal
+# Docs Workflow Canon — Intermediary
 
-Updated on: 2026-01-16
+Updated on: 2026-01-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006, ADR-007
 
 ## 1. Purpose & scope
 
-- Canon for how documentation is written and organized in TexturePortal.
-- Applies to all documentation in `docs/` (Design, Implementation, Architecture, Reports, Inventory, Environment, Usage, ADRs).
+- Canon for how documentation is written and organized in Intermediary.
+- Applies to all documentation in `docs/` (Scouting, Design, Implementation, Architecture, Reports, Inventory, Environment, Usage, ADRs).
 - Use `docs/guide.md` as the index, and follow the naming + content rules below.
 
 ## 2. Naming + placement rules
 
 All docs live under `docs/` and use a type suffix at the end of the filename.
 
+- Scouting → `docs/scouting/<thing>_scouting.md`
 - Design → `docs/design/<thing>_design.md`
 - Implementation → `docs/implementation/<thing>_implementation.md`
 - Architecture → `docs/architecture/<thing>_architecture.md`
@@ -41,6 +42,7 @@ Depends on: ADR-000, ADR-006 (and any other relevant ADRs)
 
 | Type | When | Purpose | Minimum content |
 | --- | --- | --- | --- |
+| Scouting | Before design | Exploration: touchpoints, file locations, patterns, risks | Touchpoints, Patterns found, Open questions, Risks |
 | Design | Before implementation | Behavior, goals, non-goals, user-visible outcomes | Problem, Goals, Non-goals, MVP, Behavior table, Acceptance |
 | Implementation | Before coding | PR ladder + verification plan | PR ladder + verification checklist |
 | Architecture | After ship | Shipped system as it works today | Ownership, lifecycle, invariants, failure modes |

@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 // Path: scripts/fileledger/gen_file_ledger.mjs
-// Description: gen_file_ledger.mjs - Generates human+machine file ledgers for TexturePortal code sources.
-
-// gen_file_ledger.mjs - Generates human+machine file ledgers for TexturePortal code sources.
+// Description: Generates human+machine file ledgers for Intermediary code sources.
 
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -14,11 +12,8 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultRootNames = [
     'src-tauri',
-    'tp-ml',
-    'tp-ml-diffusers',
-    'tp-ml-gguf',
-    'crates',
     'app',
+    'agent',
     'scripts'
 ];
 const args = process.argv.slice(2);
@@ -104,25 +99,18 @@ const suffixRoleMap = new Map([
 
 const segmentRoleMap = new Map([
     ['src-tauri', 'tauri backend'],
-    ['crates', 'rust crates'],
     ['app', 'frontend'],
-    ['tp-ml', 'ml runtime'],
-    ['tp-ml-diffusers', 'diffusers integration'],
+    ['agent', 'wsl agent'],
     ['scripts', 'scripts'],
-    ['ml', 'ml pipeline'],
-    ['job_runner', 'job runner'],
-    ['pipeline', 'pipeline'],
-    ['sidecar', 'sidecar'],
-    ['trace', 'trace'],
+    ['staging', 'staging system'],
+    ['ipc', 'ipc protocol'],
+    ['watcher', 'file watcher'],
+    ['bundle', 'bundle builder'],
+    ['config', 'configuration'],
     ['paths', 'path helpers'],
-    ['queue', 'queue'],
-    ['seam_repair', 'seam repair'],
-    ['tile_checker', 'tile checker'],
-    ['drop', 'drop ui'],
     ['debug', 'debug'],
     ['settings', 'settings'],
     ['core', 'core'],
-    ['runtime', 'runtime'],
     ['io', 'io']
 ]);
 

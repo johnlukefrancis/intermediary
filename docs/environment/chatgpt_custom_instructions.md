@@ -1,19 +1,18 @@
-# TexturePortal – GPT Collaboration Rails (v2, bundle-first)
+# Intermediary – GPT Collaboration Rails (bundle-first)
 
-Owner: JL · Scope: TexturePortal PBR texture generation tool (Tauri + Rust + TypeScript)
+Owner: JL · Scope: Intermediary workflow handoff console (Tauri + Rust + TypeScript + WSL agent)
 
 ## 0. Bundles (canon)
 This project includes "motherlode" zip bundles for ChatGPT context:
-- `scripts/zip/Output/TexturePortal_Bundles_Index.md` — bundle contents + SHA (repo location; in bundles it appears at repo root as `TexturePortal_Bundles_Index.md`)
-- `TexturePortal_Full_latest.zip` — complete codebase (crates/, app/, src-tauri/, docs/, root configs)
-- `TexturePortal_Crates_latest.zip` — Rust code only (crates/)
-- `TexturePortal_App_latest.zip` — Frontend only (app/, src-tauri/)
-- `TexturePortal_Docs_latest.zip` — Documentation only (docs/)
+- `scripts/zip/Output/Intermediary_Bundles_Index.md` — bundle contents + SHA (repo location; in bundles it appears at repo root as `Intermediary_Bundles_Index.md`)
+- `Intermediary_Full_latest.zip` — complete codebase (app/, src-tauri/, agent/, docs/, scripts/, root configs)
+- `Intermediary_App_latest.zip` — Frontend + Tauri only (app/, src-tauri/)
+- `Intermediary_Docs_latest.zip` — Documentation only (docs/)
 
 Rules (mandatory when repo-specific):
-- Read the bundle index first (`TexturePortal_Bundles_Index.md` or `scripts/zip/Output/TexturePortal_Bundles_Index.md`).
+- Read the bundle index first (`Intermediary_Bundles_Index.md` or `scripts/zip/Output/Intermediary_Bundles_Index.md`).
 - If a question depends on repo specifics, do not answer from memory: open/search the relevant bundle(s).
-- Bundles are the source of truth; cite concrete paths used (`crates/...`, `app/src/...`, `docs/...`).
+- Bundles are the source of truth; cite concrete paths used (`app/src/...`, `src-tauri/src/...`, `docs/...`).
 - Use `docs/guide.md` to locate docs; use the latest attached bundle if the user says files changed.
 
 ## 0b. Docs guide + file ledger
@@ -35,14 +34,13 @@ Rules (mandatory when repo-specific):
    - ADR-006 (workflow discipline: correct paths, prompt shape, observability)
    - ADR-005 (TypeScript contracts: no type weakening)
    - ADR-007 (architecture-first: no band-aids, no stopgaps)
-- ADR-008 (Rust runtime contracts + error handling)
-- ADR-009 (Rust concurrency + IO boundaries)
-- ADR-010 (Tauri security baseline: CSP + asset scope)
-- ADR-011 (Managed ML runtime packs + binary-only deps)
+   - ADR-008 (Rust runtime contracts + error handling)
+   - ADR-009 (Rust concurrency + IO boundaries)
+   - ADR-010 (Tauri security baseline: CSP + asset scope)
 
 4) Path discipline is non-negotiable:
    - Never invent paths. Every path must exist in the repo/bundle.
-   - When listing refs/paths in prompts, prefix with `@` (e.g., `@docs/design/ml_sidecar_protocol_design.md`).
+   - When listing refs/paths in prompts, prefix with `@` (e.g., `@docs/system_overview.md`).
    - If unsure, explicitly say you need the file and ask for it rather than guessing.
 
 ## 2. System design rules
@@ -53,7 +51,7 @@ When JL asks for design/architecture/new subsystems:
 4) For non-trivial work, offer exactly 1 design: the end state that satisfies the behavior table + invariants and ADR-007.
    - Do not offer a "close to current architecture" alternative.
    - If contrast helps, include a short "Rejected (noncompliant)" subsection listing 1–2 approaches and why they fail the behaviors/invariants or violate rails. Do not write agent prompts for rejected items.
-5) State explicit tradeoffs (3–5 bullets). Avoid “effort/diff size/more parts” as deciding axes.
+5) State explicit tradeoffs (3–5 bullets). Avoid "effort/diff size/more parts" as deciding axes.
 6) Refuse designs that can't hit behaviors/invariants; recommend changing the assumption instead of tweak-chains.
 7) Bake in rails:
    - ADR-000: propose a module/file layout; prefer new small modules over growing monoliths (~200 LOC typical).
@@ -61,7 +59,7 @@ When JL asks for design/architecture/new subsystems:
 ## 3. Debugging rules
 1) Start from observed behavior (when/where/how often).
 1b) Request the run log first: ask for `logs/run_latest.txt` path and relevant log excerpts before hypothesizing.
-2) Include at least one cross-layer hypothesis (Rust/backend + TS/frontend).
+2) Include at least one cross-layer hypothesis (Rust/backend + TS/frontend, or UI + WSL agent).
 3) Do simple probes first (logs, minimal state inspection).
 4) Turn findings into defenses (tests, assertions, invariant checks).
 5) Capture the invariant in docs (plain language rule).
@@ -99,12 +97,14 @@ Avoid:
 
 Skills are global-only (`~/.codex/skills` for Codex, `~/.claude/skills` for Claude). Include relevant skill tags in Constraints when authoring agent prompts.
 
+This repo uses **generic skills** (no prefix). Other repos use prefixed skills (`tp-*`, `tr-*`) — ignore those for Intermediary.
+
 Read @docs/inventory/skills_inventory.md before writing prompts to see a list of available skills.
 
 Rules:
-- Agent prompts must include relevant skill names in Constraints (e.g., `Skills: tp-typescript-native-rails, tp-workflow-closeout`).
+- Agent prompts must include relevant skill names in Constraints (e.g., `Skills: typescript-native-rails, workflow-closeout`).
 - Agents must start every code-touching reply with `Skills: …` listing skills used.
-- Use tp-docs-discipline when doc updates are required (reports, architecture, roadmap, known_issues, inventories).
+- Use docs-discipline when doc updates are required (reports, architecture, roadmap, known_issues, inventories).
 
 ## 8. Architecture-first (ADR-007)
 When proposing fixes/refactors or writing agent prompts:

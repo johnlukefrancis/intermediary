@@ -1,5 +1,5 @@
 // Path: scripts/zip/zip_bundles.mjs
-// Description: Builds timestamped TexturePortal zip bundles for ChatGPT context.
+// Description: Builds timestamped Intermediary zip bundles for ChatGPT context.
 
 import { execSync, spawnSync } from 'node:child_process';
 import { promises as fs } from 'node:fs';
@@ -108,23 +108,9 @@ function shouldSkipPath(relativePath) {
     'src-tauri/icons/',
     // Test report images (binary outputs)
     'docs/reports/bundles/',
-    // Python virtual environments
-    'tp-ml/.venv/',
-    'tp-ml-diffusers/.venv/',
-    'tp-ml-gguf/.venv/',
-    // ML model files
-    'tp-ml/models/',
-    'tp-ml-diffusers/models/',
-    'tp-ml-gguf/models/',
-    // Python cache
-    'tp-ml/__pycache__/',
-    'tp-ml-diffusers/__pycache__/',
-    'tp-ml-gguf/__pycache__/',
-    'tp-ml/.pytest_cache/',
-    'tp-ml-diffusers/.pytest_cache/',
-    'tp-ml-gguf/.pytest_cache/',
-    // GGUF engine binaries
-    'tp-ml-gguf/src/tp_ml_gguf/bin/',
+    // WSL agent virtual environment (future)
+    'agent/.venv/',
+    'agent/__pycache__/',
     // File extensions
     '*.log',
     '*.pyc',
@@ -194,12 +180,12 @@ async function getTotalSize(files) {
   return statResults.reduce((sum, size) => sum + size, 0);
 }
 
-async function writeManifest(stagingRoot, bundleName, sha, contentsRootLabel = 'TexturePortal/') {
+async function writeManifest(stagingRoot, bundleName, sha, contentsRootLabel = 'Intermediary/') {
   const generatedAt = new Date().toISOString();
   const shaLabel = sha || 'unavailable';
   const manifestPath = path.join(stagingRoot, '_MANIFEST.md');
   const header = [
-    '# TexturePortal Bundle Manifest',
+    '# Intermediary Bundle Manifest',
     '',
     `Bundle: ${bundleName}`,
     `Generated: ${generatedAt}`,
@@ -307,7 +293,7 @@ async function copyFile(source, stagingRoot) {
 
 async function buildBundle({ bundleName, entries, rootFiles, timestamp, sha, contentsRootLabel }) {
   const shaSuffix = sha ? `_${sha}` : '';
-  const zipName = `TexturePortal_${bundleName}_${timestamp}${shaSuffix}.zip`;
+  const zipName = `Intermediary_${bundleName}_${timestamp}${shaSuffix}.zip`;
   const zipPath = path.join(outputRoot, zipName);
   let stagedFiles = [];
   let stagedBytes = 0;
@@ -391,16 +377,16 @@ async function removeOldZips(prefixes) {
 }
 
 async function writeLatestCopy(bundleResult) {
-  const latestName = `TexturePortal_${bundleResult.bundleName}_latest.zip`;
+  const latestName = `Intermediary_${bundleResult.bundleName}_latest.zip`;
   const latestPath = path.join(outputRoot, latestName);
   await fs.copyFile(bundleResult.zipPath, latestPath);
   return { latestName, latestPath };
 }
 
 async function writeIndex(results, meta = {}) {
-  const indexPath = path.join(outputRoot, 'TexturePortal_Bundles_Index.md');
+  const indexPath = path.join(outputRoot, 'Intermediary_Bundles_Index.md');
   const lines = [
-    '# TexturePortal Bundle Index',
+    '# Intermediary Bundle Index',
     '',
     `Generated: ${new Date().toISOString()}`,
     `Git SHA: ${meta.sha || results[0]?.sha || 'unavailable'}`,
@@ -422,13 +408,12 @@ async function writeIndex(results, meta = {}) {
   lines.push('');
   lines.push('Latest:');
   for (const result of results) {
-    lines.push(`- TexturePortal_${result.bundleName}_latest.zip`);
+    lines.push(`- Intermediary_${result.bundleName}_latest.zip`);
   }
   lines.push('');
   lines.push('Notes:');
-  lines.push('- Full bundle: complete codebase (crates/, app/, src-tauri/, docs/, root configs)');
-  lines.push('- Crates bundle: Rust code only (crates/)');
-  lines.push('- App bundle: Frontend only (app/)');
+  lines.push('- Full bundle: complete codebase (app/, src-tauri/, docs/, scripts/, root configs)');
+  lines.push('- App bundle: Frontend + Tauri only (app/, src-tauri/)');
   lines.push('- Docs bundle: Documentation only (docs/)');
   await fs.writeFile(indexPath, `${lines.join('\n')}\n`, 'utf8');
 }
@@ -451,21 +436,18 @@ const sha = getGitShortSha();
 
 const args = process.argv.slice(2);
 const wantsFull = args.includes('--full');
-const wantsCrates = args.includes('--crates');
 const wantsApp = args.includes('--app');
 const wantsDocs = args.includes('--docs');
-const wantsAll = !wantsFull && !wantsCrates && !wantsApp && !wantsDocs;
+const wantsAll = !wantsFull && !wantsApp && !wantsDocs;
 const includeFull = wantsFull || wantsAll;
-const includeCrates = wantsCrates || wantsAll;
 const includeApp = wantsApp || wantsAll;
 const includeDocs = wantsDocs || wantsAll;
 const latestOnly = args.includes('--latest-only');
 
 const prefixes = [];
-if (includeFull) prefixes.push('TexturePortal_Full_');
-if (includeCrates) prefixes.push('TexturePortal_Crates_');
-if (includeApp) prefixes.push('TexturePortal_App_');
-if (includeDocs) prefixes.push('TexturePortal_Docs_');
+if (includeFull) prefixes.push('Intermediary_Full_');
+if (includeApp) prefixes.push('Intermediary_App_');
+if (includeDocs) prefixes.push('Intermediary_Docs_');
 
 await removeOldZips(prefixes);
 
@@ -476,13 +458,11 @@ if (includeFull) {
   const result = await buildBundle({
     bundleName: 'Full',
     entries: [
-      { source: 'crates', filter: true },
       { source: 'app', filter: true },
       { source: 'src-tauri', filter: true },
+      { source: 'crates', filter: true },
+      { source: 'agent', filter: true },
       { source: 'docs', filter: true },
-      { source: 'tp-ml', filter: true },
-      { source: 'tp-ml-diffusers', filter: true },
-      { source: 'tp-ml-gguf', filter: true },
       { source: '.vscode', filter: true },
       { source: 'scripts', filter: true },
       { source: 'logs', filter: true },
@@ -490,31 +470,7 @@ if (includeFull) {
     rootFiles,
     timestamp,
     sha,
-    contentsRootLabel: 'TexturePortal/',
-  });
-  const latest = await writeLatestCopy(result);
-  if (latestOnly) {
-    const latestStats = await fs.stat(latest.latestPath);
-    results.push({
-      ...result,
-      zipPath: latest.latestPath,
-      zipName: latest.latestName,
-      zipBytes: latestStats.size,
-    });
-    await removePath(result.zipPath);
-  } else {
-    results.push(result);
-  }
-}
-
-if (includeCrates) {
-  const result = await buildBundle({
-    bundleName: 'Crates',
-    entries: [{ source: 'crates', filter: true }],
-    rootFiles: ['Cargo.toml'],
-    timestamp,
-    sha,
-    contentsRootLabel: 'crates/',
+    contentsRootLabel: 'Intermediary/',
   });
   const latest = await writeLatestCopy(result);
   if (latestOnly) {
@@ -537,12 +493,11 @@ if (includeApp) {
     entries: [
       { source: 'app', filter: true },
       { source: 'src-tauri', filter: true },
-      { source: 'scripts', filter: true },
     ],
-    rootFiles: ['package.json', 'tsconfig.json', 'vite.config.ts'],
+    rootFiles: ['package.json', 'tsconfig.json', 'vite.config.ts', 'Cargo.toml'],
     timestamp,
     sha,
-    contentsRootLabel: 'app/',
+    contentsRootLabel: 'Intermediary/',
   });
   const latest = await writeLatestCopy(result);
   if (latestOnly) {
