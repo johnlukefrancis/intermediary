@@ -22,5 +22,5 @@
     "types": ["node", "react", "react-dom"],
     "typeRoots": ["./node_modules/@types"]
   },
-  "include": ["app/src/**/*"]
+  "include": ["app/src/**/*", "agent/src/**/*"]
 }

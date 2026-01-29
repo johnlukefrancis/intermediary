@@ -3,6 +3,8 @@
 
 use crate::paths::wsl_convert::windows_to_wsl_path;
 use serde::Serialize;
+use std::fs;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 /// Resolved application paths
@@ -17,8 +19,8 @@ pub struct AppPaths {
     pub staging_wsl_root: String,
     /// Log directory path
     pub log_dir: String,
-    /// Path to drag icon PNG (None until we embed one)
-    pub drag_icon_windows_path: Option<String>,
+    /// Path to drag icon PNG
+    pub drag_icon_windows_path: String,
 }
 
 impl AppPaths {
@@ -29,32 +31,29 @@ impl AppPaths {
             .app_local_data_dir()
             .map_err(|_| AppPathsError::NoAppLocalData)?;
 
-        let app_local_data_str = app_local_data
-            .to_str()
-            .ok_or(AppPathsError::InvalidPath)?
-            .to_string();
+        ensure_dir(&app_local_data, "app local data directory")?;
+        let app_local_data_str = path_to_string(&app_local_data)?;
 
         let staging_windows = app_local_data.join("staging");
-        let staging_windows_str = staging_windows
-            .to_str()
-            .ok_or(AppPathsError::InvalidPath)?
-            .to_string();
+        ensure_dir(&staging_windows, "staging directory")?;
+        let staging_windows_str = path_to_string(&staging_windows)?;
 
         let staging_wsl_root = windows_to_wsl_path(&staging_windows_str)
             .ok_or(AppPathsError::WslConversionFailed)?;
 
-        let log_dir = app_local_data.join("logs");
-        let log_dir_str = log_dir
-            .to_str()
-            .ok_or(AppPathsError::InvalidPath)?
-            .to_string();
+        let log_dir = resolve_log_dir(&app_local_data)?;
+        let log_dir_str = path_to_string(&log_dir)?;
+
+        let drag_icon_path = app_local_data.join("drag_icon.png");
+        write_drag_icon_if_missing(&drag_icon_path)?;
+        let drag_icon_windows_path = path_to_string(&drag_icon_path)?;
 
         Ok(Self {
             app_local_data_dir: app_local_data_str,
             staging_windows_root: staging_windows_str,
             staging_wsl_root,
             log_dir: log_dir_str,
-            drag_icon_windows_path: None,
+            drag_icon_windows_path,
         })
     }
 }
@@ -65,6 +64,10 @@ pub enum AppPathsError {
     NoAppLocalData,
     InvalidPath,
     WslConversionFailed,
+    Io {
+        context: &'static str,
+        source: std::io::Error,
+    },
 }
 
 impl std::fmt::Display for AppPathsError {
@@ -73,8 +76,41 @@ impl std::fmt::Display for AppPathsError {
             Self::NoAppLocalData => write!(f, "Could not resolve app local data directory"),
             Self::InvalidPath => write!(f, "Path contains invalid UTF-8"),
             Self::WslConversionFailed => write!(f, "Failed to convert Windows path to WSL path"),
+            Self::Io { context, source } => write!(f, "{context}: {source}"),
         }
     }
 }
 
 impl std::error::Error for AppPathsError {}
+
+fn ensure_dir(path: &Path, context: &'static str) -> Result<(), AppPathsError> {
+    fs::create_dir_all(path).map_err(|source| AppPathsError::Io { context, source })
+}
+
+fn path_to_string(path: &Path) -> Result<String, AppPathsError> {
+    path.to_str()
+        .ok_or(AppPathsError::InvalidPath)
+        .map(|value| value.to_string())
+}
+
+fn resolve_log_dir(app_local_data: &PathBuf) -> Result<PathBuf, AppPathsError> {
+    if let Ok(env_dir) = std::env::var("INTERMEDIARY_LOG_DIR") {
+        let path = PathBuf::from(env_dir);
+        ensure_dir(&path, "log directory")?;
+        return Ok(path);
+    }
+
+    let log_dir = app_local_data.join("logs");
+    ensure_dir(&log_dir, "log directory")?;
+    Ok(log_dir)
+}
+
+fn write_drag_icon_if_missing(path: &Path) -> Result<(), AppPathsError> {
+    if path.exists() {
+        return Ok(());
+    }
+
+    const DRAG_ICON_BYTES: &[u8] = include_bytes!("../../../icons/32x32.png");
+    fs::write(path, DRAG_ICON_BYTES)
+        .map_err(|source| AppPathsError::Io { context: "drag icon", source })
+}

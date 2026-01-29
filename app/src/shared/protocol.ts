@@ -21,73 +21,79 @@ export type WorktreeId = z.infer<typeof WorktreeIdSchema>;
 // File metadata
 // -----------------------------------------------------------------------------
 
-export const FileMetaSchema = z.object({
+export const FileKindSchema = z.enum(["docs", "code", "other"]);
+export type FileKind = z.infer<typeof FileKindSchema>;
+
+export const FileEntrySchema = z.object({
   /** Relative path from repo root */
   path: z.string(),
-  /** File size in bytes */
-  size: z.number().int().nonnegative(),
+  /** Classification for column routing */
+  kind: FileKindSchema,
   /** Last modified timestamp (ISO 8601) */
   mtime: z.string(),
-  /** Whether the file is staged for bundling */
-  staged: z.boolean(),
+  /** Optional file size in bytes */
+  sizeBytes: z.number().int().nonnegative().optional(),
 });
-export type FileMeta = z.infer<typeof FileMetaSchema>;
+export type FileEntry = z.infer<typeof FileEntrySchema>;
 
 // -----------------------------------------------------------------------------
-// Agent -> UI messages
+// Agent -> UI events (payloads)
 // -----------------------------------------------------------------------------
 
-export const HelloMessageSchema = z.object({
+export const HelloEventSchema = z.object({
   type: z.literal("hello"),
   agentVersion: z.string(),
-  timestamp: z.string(),
+  distro: z.string(),
+  reposDetected: z.array(z.string()).optional(),
 });
 
-export const FileChangedMessageSchema = z.object({
+export const FileChangedEventSchema = z.object({
   type: z.literal("fileChanged"),
   repoId: z.string(),
-  file: FileMetaSchema,
-  changeType: z.enum(["created", "modified", "deleted"]),
+  path: z.string(),
+  kind: FileKindSchema,
+  mtime: z.string(),
 });
 
-export const SnapshotMessageSchema = z.object({
+export const SnapshotEventSchema = z.object({
   type: z.literal("snapshot"),
   repoId: z.string(),
-  files: z.array(FileMetaSchema),
+  recent: z.array(FileEntrySchema),
 });
 
-export const BundleBuiltMessageSchema = z.object({
+export const BundleBuiltEventSchema = z.object({
   type: z.literal("bundleBuilt"),
   repoId: z.string(),
-  bundlePath: z.string(),
-  fileCount: z.number().int().nonnegative(),
+  presetId: z.string(),
+  windowsPath: z.string(),
   sizeBytes: z.number().int().nonnegative(),
+  mtime: z.string(),
+  gitShort: z.string(),
 });
 
-export const ErrorMessageSchema = z.object({
+export const ErrorEventSchema = z.object({
   type: z.literal("error"),
-  code: z.string(),
+  scope: z.string(),
   message: z.string(),
   details: z.unknown().optional(),
 });
 
-export const AgentMessageSchema = z.discriminatedUnion("type", [
-  HelloMessageSchema,
-  FileChangedMessageSchema,
-  SnapshotMessageSchema,
-  BundleBuiltMessageSchema,
-  ErrorMessageSchema,
+export const AgentEventSchema = z.discriminatedUnion("type", [
+  HelloEventSchema,
+  FileChangedEventSchema,
+  SnapshotEventSchema,
+  BundleBuiltEventSchema,
+  ErrorEventSchema,
 ]);
-export type AgentMessage = z.infer<typeof AgentMessageSchema>;
+export type AgentEvent = z.infer<typeof AgentEventSchema>;
 
 // -----------------------------------------------------------------------------
-// UI -> Agent messages
+// UI -> Agent commands (payloads)
 // -----------------------------------------------------------------------------
 
 export const WatchRepoCommandSchema = z.object({
   type: z.literal("watchRepo"),
   repoId: z.string(),
-  wslPath: z.string(),
 });
 
 export const RefreshCommandSchema = z.object({
@@ -99,13 +105,12 @@ export const StageFileCommandSchema = z.object({
   type: z.literal("stageFile"),
   repoId: z.string(),
   path: z.string(),
-  staged: z.boolean(),
 });
 
 export const BuildBundleCommandSchema = z.object({
   type: z.literal("buildBundle"),
   repoId: z.string(),
-  outputName: z.string(),
+  presetId: z.string(),
 });
 
 export const UiCommandSchema = z.discriminatedUnion("type", [
@@ -117,11 +122,106 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
 export type UiCommand = z.infer<typeof UiCommandSchema>;
 
 // -----------------------------------------------------------------------------
+// UI -> Agent responses (payloads)
+// -----------------------------------------------------------------------------
+
+export const WatchRepoResultSchema = z.object({
+  type: z.literal("watchRepoResult"),
+  repoId: z.string(),
+});
+
+export const RefreshResultSchema = z.object({
+  type: z.literal("refreshResult"),
+  repoId: z.string(),
+});
+
+export const StageFileResultSchema = z.object({
+  type: z.literal("stageFileResult"),
+  repoId: z.string(),
+  path: z.string(),
+  windowsPath: z.string(),
+});
+
+export const BuildBundleResultSchema = z.object({
+  type: z.literal("buildBundleResult"),
+  repoId: z.string(),
+  presetId: z.string(),
+  windowsPath: z.string(),
+});
+
+export const UiResponseSchema = z.discriminatedUnion("type", [
+  WatchRepoResultSchema,
+  RefreshResultSchema,
+  StageFileResultSchema,
+  BuildBundleResultSchema,
+]);
+export type UiResponse = z.infer<typeof UiResponseSchema>;
+
+// -----------------------------------------------------------------------------
+// Protocol envelopes
+// -----------------------------------------------------------------------------
+
+export const RequestEnvelopeSchema = z.object({
+  kind: z.literal("request"),
+  requestId: z.string(),
+  payload: UiCommandSchema,
+});
+export type RequestEnvelope = z.infer<typeof RequestEnvelopeSchema>;
+
+export const ResponseErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
+});
+export type ResponseError = z.infer<typeof ResponseErrorSchema>;
+
+export const ResponseOkEnvelopeSchema = z.object({
+  kind: z.literal("response"),
+  requestId: z.string(),
+  status: z.literal("ok"),
+  payload: UiResponseSchema,
+});
+export type ResponseOkEnvelope = z.infer<typeof ResponseOkEnvelopeSchema>;
+
+export const ResponseErrorEnvelopeSchema = z.object({
+  kind: z.literal("response"),
+  requestId: z.string(),
+  status: z.literal("error"),
+  error: ResponseErrorSchema,
+});
+export type ResponseErrorEnvelope = z.infer<typeof ResponseErrorEnvelopeSchema>;
+
+export const ResponseEnvelopeSchema = z.discriminatedUnion("status", [
+  ResponseOkEnvelopeSchema,
+  ResponseErrorEnvelopeSchema,
+]);
+export type ResponseEnvelope = z.infer<typeof ResponseEnvelopeSchema>;
+
+export const EventEnvelopeSchema = z.object({
+  kind: z.literal("event"),
+  eventId: z.string().optional(),
+  payload: AgentEventSchema,
+});
+export type EventEnvelope = z.infer<typeof EventEnvelopeSchema>;
+
+export const ProtocolEnvelopeSchema = z.discriminatedUnion("kind", [
+  RequestEnvelopeSchema,
+  ResponseOkEnvelopeSchema,
+  ResponseErrorEnvelopeSchema,
+  EventEnvelopeSchema,
+]);
+export type ProtocolEnvelope = z.infer<typeof ProtocolEnvelopeSchema>;
+
+// -----------------------------------------------------------------------------
 // Parsing utilities
 // -----------------------------------------------------------------------------
 
-export function parseAgentMessage(data: unknown): AgentMessage {
-  return AgentMessageSchema.parse(data);
+export function parseEnvelope(data: unknown): ProtocolEnvelope {
+  return ProtocolEnvelopeSchema.parse(data);
+}
+
+export function parseAgentEvent(data: unknown): AgentEvent {
+  return AgentEventSchema.parse(data);
 }
 
 export function parseUiCommand(data: unknown): UiCommand {

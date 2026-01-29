@@ -26,6 +26,12 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", "src-tauri/**", "*.config.*"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "scripts/**",
+      "src-tauri/**",
+      "*.config.*",
+    ],
   }
 );
