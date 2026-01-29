@@ -1,0 +1,39 @@
+{
+  "name": "intermediary",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "sharp"]
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "lint": "eslint \"app/src/**/*.{ts,tsx}\"",
+    "typecheck": "tsc --noEmit",
+    "headers:list": "node scripts/fileledger/add_file_headers.mjs --list",
+    "headers:write": "node scripts/fileledger/add_file_headers.mjs --write",
+    "gen:ledger": "node scripts/fileledger/gen_file_ledger.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "sharp": "^0.33.5",
+    "@tauri-apps/cli": "^2.2.4",
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.18.0",
+    "typescript": "~5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vite": "^6.1.0"
+  }
+}

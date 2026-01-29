@@ -1,0 +1,26 @@
+[package]
+name = "intermediary"
+version = "0.1.0"
+description = "Intermediary - Context bundling app for AI agents"
+authors = ["JL"]
+edition = "2021"
+
+[lib]
+name = "intermediary_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/lib/mod.rs"
+
+[[bin]]
+name = "intermediary"
+path = "src/bin/intermediary.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.2", features = [] }
+tauri-plugin-drag = "2.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+dirs = "5.0"
+chrono = "0.4"

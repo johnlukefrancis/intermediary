@@ -2,6 +2,62 @@
   "scope": "src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
+      "path": "app/index.html",
+      "summary": "index module"
+    },
+    {
+      "path": "app/src/app.tsx",
+      "summary": "Root component with tab state management"
+    },
+    {
+      "path": "app/src/components/layout/three_column.tsx",
+      "summary": "Three-column layout component (Docs | Code | Zips)"
+    },
+    {
+      "path": "app/src/components/tab_bar.tsx",
+      "summary": "Tab navigation component"
+    },
+    {
+      "path": "app/src/main.tsx",
+      "summary": "React entry point - mounts App to DOM"
+    },
+    {
+      "path": "app/src/shared/config.ts",
+      "summary": "AppConfig Zod schema and types"
+    },
+    {
+      "path": "app/src/shared/protocol.ts",
+      "summary": "Agent<->UI WebSocket protocol types with Zod validation"
+    },
+    {
+      "path": "app/src/styles/columns.css",
+      "summary": "columns module"
+    },
+    {
+      "path": "app/src/styles/main.css",
+      "summary": "main module"
+    },
+    {
+      "path": "app/src/styles/tab_bar.css",
+      "summary": "tab bar module"
+    },
+    {
+      "path": "app/src/tabs/intermediary_tab.tsx",
+      "summary": "Intermediary project tab"
+    },
+    {
+      "path": "app/src/tabs/texture_portal_tab.tsx",
+      "summary": "TexturePortal project tab"
+    },
+    {
+      "path": "app/src/tabs/triangle_rain_tab.tsx",
+      "summary": "Triangle Rain project tab with worktree selector"
+    },
+    {
+      "path": "app/src/vite_env.d.ts",
+      "summary": "Vite client type declarations"
+    },
+    {
       "path": "scripts/fileledger/add_file_headers.mjs",
       "summary": "Adds missing header comments (path + description) to source files using the ledger output."
     },
@@ -10,8 +66,56 @@
       "summary": "Generates human+machine file ledgers for Intermediary code sources."
     },
     {
+      "path": "scripts/icons/generate_icons.mjs",
+      "summary": "Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as..."
+    },
+    {
+      "path": "scripts/icons/resize_preview_icons.mjs",
+      "summary": "Resize preview geometry icons from raw assets to display sizes. Outputs 40px (1x) and 80px (2x retina) versions."
+    },
+    {
       "path": "scripts/zip/zip_bundles.mjs",
       "summary": "Builds timestamped Intermediary zip bundles for ChatGPT context."
+    },
+    {
+      "path": "src-tauri/build.rs",
+      "summary": "Tauri build script"
+    },
+    {
+      "path": "src-tauri/src/bin/intermediary.rs",
+      "summary": "Binary entry point for Tauri app"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/mod.rs",
+      "summary": "Tauri command exports"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/paths.rs",
+      "summary": "get_app_paths command implementation"
+    },
+    {
+      "path": "src-tauri/src/lib/mod.rs",
+      "summary": "Library root - Tauri setup and plugin registration"
+    },
+    {
+      "path": "src-tauri/src/lib/obs/logging.rs",
+      "summary": "File-based logger writing to run_latest.txt"
+    },
+    {
+      "path": "src-tauri/src/lib/obs/mod.rs",
+      "summary": "Observability module exports"
+    },
+    {
+      "path": "src-tauri/src/lib/paths/app_paths.rs",
+      "summary": "Application path resolution logic"
+    },
+    {
+      "path": "src-tauri/src/lib/paths/mod.rs",
+      "summary": "Path resolution module exports"
+    },
+    {
+      "path": "src-tauri/src/lib/paths/wsl_convert.rs",
+      "summary": "Windows <-> WSL path conversion utilities"
     }
   ]
 }
