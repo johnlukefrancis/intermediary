@@ -23,7 +23,8 @@ export interface Stager {
     repoId: string,
     repoRoot: string,
     relativePath: string,
-    callback: (result: StageResult) => void
+    onSuccess: (result: StageResult) => void,
+    onError?: (err: unknown) => void
   ): void;
   cancelPendingStage(repoId: string, relativePath: string): void;
 }
@@ -32,10 +33,13 @@ export interface Stager {
  * Validate that a relative path is safe (no traversal, no absolute).
  */
 function validateRelativePath(relativePath: string): void {
-  if (path.isAbsolute(relativePath)) {
+  if (path.posix.isAbsolute(relativePath) || path.win32.isAbsolute(relativePath)) {
     throw new AgentError("INVALID_PATH", "Absolute paths not allowed");
   }
-  const normalized = path.normalize(relativePath);
+  if (relativePath.includes("\\")) {
+    throw new AgentError("INVALID_PATH", "Backslashes not allowed in relative paths");
+  }
+  const normalized = path.posix.normalize(relativePath);
   if (normalized.startsWith("..")) {
     throw new AgentError("INVALID_PATH", "Path traversal not allowed");
   }
@@ -99,7 +103,8 @@ export function createStager(config: PathBridgeConfig): Stager {
     repoId: string,
     repoRoot: string,
     relativePath: string,
-    callback: (result: StageResult) => void
+    onSuccess: (result: StageResult) => void,
+    onError?: (err: unknown) => void
   ): void {
     const key = getPendingKey(repoId, relativePath);
 
@@ -113,13 +118,14 @@ export function createStager(config: PathBridgeConfig): Stager {
     const timeout = setTimeout(() => {
       pendingStages.delete(key);
       stageFile(repoId, repoRoot, relativePath)
-        .then(callback)
+        .then(onSuccess)
         .catch((err: unknown) => {
           logger.error("Auto-stage failed", {
             repoId,
             relativePath,
             error: err instanceof Error ? err.message : String(err),
           });
+          onError?.(err);
         });
     }, AUTO_STAGE_DEBOUNCE_MS);
 

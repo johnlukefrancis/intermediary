@@ -2,20 +2,10 @@
 // Description: Agent<->UI WebSocket protocol types with Zod validation
 
 import { z } from "zod";
+import { AppConfigSchema } from "./config.js";
 
-// -----------------------------------------------------------------------------
-// Tab and Worktree identifiers
-// -----------------------------------------------------------------------------
-
-export const TabIdSchema = z.enum([
-  "texture-portal",
-  "triangle-rain",
-  "intermediary",
-]);
-export type TabId = z.infer<typeof TabIdSchema>;
-
-export const WorktreeIdSchema = z.enum(["tr-engine"]);
-export type WorktreeId = z.infer<typeof WorktreeIdSchema>;
+export { TabIdSchema, WorktreeIdSchema } from "./ids.js";
+export type { TabId, WorktreeId } from "./ids.js";
 
 // -----------------------------------------------------------------------------
 // File metadata
@@ -128,8 +118,8 @@ export const BuildBundleCommandSchema = z.object({
 /** Handshake from UI with config and staging paths */
 export const ClientHelloCommandSchema = z.object({
   type: z.literal("clientHello"),
-  /** Repos to watch: repoId -> wslRootPath */
-  repos: z.record(z.string(), z.string()),
+  /** Full app configuration */
+  config: AppConfigSchema,
   /** WSL path for staging files, e.g. /mnt/c/Users/.../staging/files */
   stagingWslRoot: z.string(),
   /** Windows path for staging files, e.g. C:\Users\...\staging\files */

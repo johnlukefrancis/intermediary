@@ -1,6 +1,9 @@
 // Path: agent/src/util/logger.ts
 // Description: Structured logging to console with ISO timestamps
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogEntry {
@@ -18,6 +21,27 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 let minLevel: LogLevel = "info";
+const logDir = path.join(process.cwd(), "logs");
+const logFile = path.join(logDir, "agent_latest.log");
+let logInitPromise: Promise<void> | null = null;
+
+function ensureLogFile(): Promise<void> {
+  if (!logInitPromise) {
+    logInitPromise = fs
+      .mkdir(logDir, { recursive: true })
+      .then(() => fs.appendFile(logFile, ""))
+      .catch((err: unknown) => {
+        console.error(
+          `{"level":"error","msg":"Failed to init log file","error":"${String(err)}"}`
+        );
+      });
+  }
+  return logInitPromise;
+}
+
+function writeLogFile(line: string): void {
+  void ensureLogFile().then(() => fs.appendFile(logFile, `${line}\n`));
+}
 
 export function setLogLevel(level: LogLevel): void {
   minLevel = level;
@@ -36,6 +60,7 @@ function log(level: LogLevel, msg: string, data?: Record<string, unknown>): void
   };
 
   const output = JSON.stringify(entry);
+  writeLogFile(output);
   if (level === "error") {
     console.error(output);
   } else {

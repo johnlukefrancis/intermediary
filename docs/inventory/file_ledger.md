@@ -20,6 +20,7 @@ app/src/components/layout/three_column.tsx - Three-column layout component (Docs
 app/src/components/tab_bar.tsx - Tab navigation component
 app/src/main.tsx - React entry point - mounts App to DOM
 app/src/shared/config.ts - AppConfig Zod schema and types
+app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/columns.css - columns module
 app/src/styles/main.css - main module

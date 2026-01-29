@@ -2,7 +2,50 @@
 // Description: AppConfig Zod schema and types
 
 import { z } from "zod";
-import { TabIdSchema, WorktreeIdSchema } from "./protocol";
+import { TabIdSchema, WorktreeIdSchema } from "./ids.js";
+
+export const DEFAULT_DOCS_GLOBS = [
+  "docs/**",
+  "**/*.md",
+  "**/*.mdx",
+  "**/*.txt",
+  "**/*.rst",
+  "**/*.adoc",
+  "**/*.asciidoc",
+  "**/*.wiki",
+  "**/README*",
+];
+
+export const DEFAULT_CODE_GLOBS = [
+  "src/**",
+  "app/**",
+  "agent/**",
+  "crates/**",
+  "src-tauri/**",
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.js",
+  "**/*.jsx",
+  "**/*.mjs",
+  "**/*.cjs",
+  "**/*.rs",
+  "**/*.toml",
+  "**/*.json",
+  "**/*.yaml",
+  "**/*.yml",
+  "**/*.py",
+  "**/*.go",
+];
+
+export const DEFAULT_IGNORE_GLOBS = [
+  "**/node_modules/**",
+  "**/.git/**",
+  "**/dist/**",
+  "**/build/**",
+  "**/target/**",
+  "**/.cache/**",
+  "**/logs/**",
+];
 
 /**
  * Configuration for a single repository/worktree
@@ -20,6 +63,12 @@ export const RepoConfigSchema = z.object({
   worktreeId: WorktreeIdSchema.optional(),
   /** Whether to auto-stage file changes */
   autoStage: z.boolean().default(true),
+  /** Globs that classify docs */
+  docsGlobs: z.array(z.string()).default(DEFAULT_DOCS_GLOBS),
+  /** Globs that classify code */
+  codeGlobs: z.array(z.string()).default(DEFAULT_CODE_GLOBS),
+  /** Globs that should be ignored by watchers */
+  ignoreGlobs: z.array(z.string()).default(DEFAULT_IGNORE_GLOBS),
 });
 
 export type RepoConfig = z.infer<typeof RepoConfigSchema>;
@@ -65,6 +114,9 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       wslPath: "/home/johnf/code/textureportal",
       tabId: "texture-portal",
       autoStage: true,
+      docsGlobs: DEFAULT_DOCS_GLOBS,
+      codeGlobs: DEFAULT_CODE_GLOBS,
+      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
     },
     {
       repoId: "triangle-rain-tr-engine",
@@ -73,6 +125,9 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       tabId: "triangle-rain",
       worktreeId: "tr-engine",
       autoStage: true,
+      docsGlobs: DEFAULT_DOCS_GLOBS,
+      codeGlobs: DEFAULT_CODE_GLOBS,
+      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
     },
     {
       repoId: "intermediary",
@@ -80,6 +135,9 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       wslPath: "/home/johnf/code/intermediary",
       tabId: "intermediary",
       autoStage: true,
+      docsGlobs: DEFAULT_DOCS_GLOBS,
+      codeGlobs: DEFAULT_CODE_GLOBS,
+      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
     },
   ],
 });

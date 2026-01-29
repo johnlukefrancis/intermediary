@@ -5,11 +5,11 @@ import chokidar, { type FSWatcher } from "chokidar";
 import * as path from "node:path";
 import type { FileEntry, FileKind } from "../../../app/src/shared/protocol.js";
 import { RingBuffer } from "../util/ring_buffer.js";
-import { categorizeFile } from "../util/categorizer.js";
+import { type CategorizerConfig, categorizeFile } from "../util/categorizer.js";
 import { logger } from "../util/logger.js";
 
 /** Patterns to ignore when watching */
-const IGNORE_PATTERNS = [
+const DEFAULT_IGNORE_PATTERNS = [
   "**/node_modules/**",
   "**/.git/**",
   "**/dist/**",
@@ -22,6 +22,12 @@ const IGNORE_PATTERNS = [
 ];
 
 const RING_BUFFER_CAPACITY = 200;
+
+export interface RepoWatcherConfig {
+  docsGlobs: string[];
+  codeGlobs: string[];
+  ignoreGlobs: string[];
+}
 
 export interface FileChangeEvent {
   repoId: string;
@@ -38,14 +44,24 @@ export interface RepoWatcher {
   stop(): Promise<void>;
   onFileChange(handler: FileChangeHandler): void;
   getRecentChanges(): FileEntry[];
+  getOtherChanges(): FileEntry[];
   readonly repoId: string;
   readonly rootPath: string;
 }
 
-export function createRepoWatcher(repoId: string, rootPath: string): RepoWatcher {
+export function createRepoWatcher(
+  repoId: string,
+  rootPath: string,
+  config: RepoWatcherConfig
+): RepoWatcher {
   let watcher: FSWatcher | null = null;
   const handlers: FileChangeHandler[] = [];
   const recentChanges = new RingBuffer<FileEntry>(RING_BUFFER_CAPACITY);
+  const otherChanges = new RingBuffer<FileEntry>(RING_BUFFER_CAPACITY);
+  const categorizerConfig: CategorizerConfig = {
+    docsGlobs: config.docsGlobs,
+    codeGlobs: config.codeGlobs,
+  };
 
   function emitChange(event: FileChangeEvent): void {
     for (const handler of handlers) {
@@ -65,8 +81,13 @@ export function createRepoWatcher(repoId: string, rootPath: string): RepoWatcher
     filePath: string,
     stats?: { mtime?: Date }
   ): void {
-    const relativePath = path.relative(rootPath, filePath);
-    const kind = categorizeFile(relativePath);
+    const relativePath = path.relative(rootPath, filePath).split(path.sep).join("/");
+    if (relativePath.startsWith("..")) {
+      logger.warn("Skipping path outside repo root", { repoId, filePath });
+      return;
+    }
+
+    const kind = categorizeFile(relativePath, categorizerConfig);
     const mtime = stats?.mtime ?? new Date();
 
     const entry: FileEntry = {
@@ -75,26 +96,35 @@ export function createRepoWatcher(repoId: string, rootPath: string): RepoWatcher
       mtime: mtime.toISOString(),
     };
 
-    // Don't track deletions in recent changes buffer
     if (eventType !== "unlink") {
+      if (kind === "other") {
+        otherChanges.push(entry);
+        return;
+      }
       recentChanges.push(entry);
     }
 
-    emitChange({
-      repoId,
-      relativePath,
-      kind,
-      mtime,
-      eventType,
-    });
+    if (kind !== "other") {
+      emitChange({
+        repoId,
+        relativePath,
+        kind,
+        mtime,
+        eventType,
+      });
+    }
   }
 
   async function start(): Promise<void> {
     return new Promise((resolve, reject) => {
       logger.info("Starting repo watcher", { repoId, rootPath });
 
+      const ignorePatterns = Array.from(
+        new Set([...DEFAULT_IGNORE_PATTERNS, ...config.ignoreGlobs])
+      );
+
       watcher = chokidar.watch(rootPath, {
-        ignored: IGNORE_PATTERNS,
+        ignored: ignorePatterns,
         persistent: true,
         ignoreInitial: true,
         awaitWriteFinish: {
@@ -143,6 +173,9 @@ export function createRepoWatcher(repoId: string, rootPath: string): RepoWatcher
     },
     getRecentChanges() {
       return recentChanges.toArray();
+    },
+    getOtherChanges() {
+      return otherChanges.toArray();
     },
     get repoId() {
       return repoId;

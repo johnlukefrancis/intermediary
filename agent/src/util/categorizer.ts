@@ -1,6 +1,7 @@
 // Path: agent/src/util/categorizer.ts
 // Description: File kind classification (docs/code/other) based on path patterns
 
+import { minimatch } from "minimatch";
 import type { FileKind } from "../../../app/src/shared/protocol.js";
 
 /** Extensions considered documentation */
@@ -43,22 +44,31 @@ const CODE_EXTENSIONS = new Set([
   ".yml",
 ]);
 
-/**
- * Classify a file path into docs, code, or other.
- */
-export function categorizeFile(relativePath: string): FileKind {
+export interface CategorizerConfig {
+  docsGlobs: string[];
+  codeGlobs: string[];
+}
+
+function matchesAnyGlobs(pathName: string, globs: string[]): boolean {
+  for (const glob of globs) {
+    if (minimatch(pathName, glob, { dot: true, nocase: true })) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function fallbackCategorize(relativePath: string): FileKind {
   const lower = relativePath.toLowerCase();
   const parts = lower.split("/");
   const fileName = parts[parts.length - 1] ?? "";
 
-  // Check if in a docs directory
   for (const part of parts.slice(0, -1)) {
     if (DOC_DIRS.has(part)) {
       return "docs";
     }
   }
 
-  // Check file extension
   const extMatch = /\.[^./]+$/.exec(fileName);
   const ext = extMatch?.[0] ?? "";
 
@@ -70,12 +80,31 @@ export function categorizeFile(relativePath: string): FileKind {
     return "code";
   }
 
-  // Special files
   if (fileName === "readme" || fileName.startsWith("readme.")) {
     return "docs";
   }
 
   return "other";
+}
+
+/**
+ * Classify a file path into docs, code, or other.
+ */
+export function categorizeFile(
+  relativePath: string,
+  config: CategorizerConfig
+): FileKind {
+  const normalized = relativePath.replace(/\\/g, "/");
+
+  if (config.docsGlobs.length > 0 && matchesAnyGlobs(normalized, config.docsGlobs)) {
+    return "docs";
+  }
+
+  if (config.codeGlobs.length > 0 && matchesAnyGlobs(normalized, config.codeGlobs)) {
+    return "code";
+  }
+
+  return fallbackCategorize(normalized);
 }
 
 /**

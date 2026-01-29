@@ -52,7 +52,15 @@ export function buildStagedPaths(
   relativePath: string
 ): { wslPath: string; windowsPath: string } {
   const normalizedRelative = relativePath.replace(/\\/g, "/");
-  const wslPath = path.posix.join(config.stagingWslRoot, repoId, normalizedRelative);
-  const windowsPath = `${config.stagingWinRoot}\\${repoId}\\${normalizedRelative.replace(/\//g, "\\")}`;
+  const normalizedWslRoot = config.stagingWslRoot.replace(/\/+$/, "");
+  const normalizedWinRoot = config.stagingWinRoot.replace(/\\+$/, "");
+  const wslRoot = normalizedWslRoot.endsWith("/files")
+    ? normalizedWslRoot
+    : path.posix.join(normalizedWslRoot, "files");
+  const winRoot = normalizedWinRoot.endsWith("\\files")
+    ? normalizedWinRoot
+    : `${normalizedWinRoot}\\files`;
+  const wslPath = path.posix.join(wslRoot, repoId, normalizedRelative);
+  const windowsPath = `${winRoot}\\${repoId}\\${normalizedRelative.replace(/\//g, "\\")}`;
   return { wslPath, windowsPath };
 }

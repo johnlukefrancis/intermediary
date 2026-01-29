@@ -8,6 +8,7 @@ import type {
   FileChangedEvent,
   StagedInfo,
 } from "../../app/src/shared/protocol.js";
+import type { RepoConfig } from "../../app/src/shared/config.js";
 import { createWsServer, type WsServer } from "./server/ws_server.js";
 import { createRouter, type Router } from "./server/router.js";
 import { createRepoWatcher, type RepoWatcher } from "./repos/repo_watcher.js";
@@ -23,6 +24,7 @@ const AGENT_VERSION = "0.1.0";
 interface AgentState {
   watchers: Map<string, RepoWatcher>;
   repoRoots: Map<string, string>;
+  repoConfigs: Map<string, RepoConfig>;
   stager: Stager | null;
   autoStageOnChange: boolean;
 }
@@ -30,6 +32,7 @@ interface AgentState {
 const state: AgentState = {
   watchers: new Map(),
   repoRoots: new Map(),
+  repoConfigs: new Map(),
   stager: null,
   autoStageOnChange: true,
 };
@@ -40,24 +43,46 @@ let server: WsServer;
 async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResponse> {
   switch (command.type) {
     case "clientHello": {
+      await resetWatchers();
+
       // Configure staging
       const config: PathBridgeConfig = {
         stagingWslRoot: command.stagingWslRoot,
         stagingWinRoot: command.stagingWinRoot,
       };
       state.stager = createStager(config);
-      state.autoStageOnChange = command.autoStageOnChange ?? true;
+      state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
 
       // Start watchers for configured repos
       const watchedRepoIds: string[] = [];
-      for (const [repoId, rootPath] of Object.entries(command.repos)) {
-        if (await isValidRepoRoot(rootPath)) {
-          await startWatcher(repoId, rootPath);
-          watchedRepoIds.push(repoId);
+      for (const repo of command.config.repos) {
+        state.repoRoots.set(repo.repoId, repo.wslPath);
+        state.repoConfigs.set(repo.repoId, repo);
+
+        if (await isValidRepoRoot(repo.wslPath)) {
+          await startWatcher(repo);
+          watchedRepoIds.push(repo.repoId);
         } else {
-          logger.warn("Invalid repo root, skipping", { repoId, rootPath });
+          logger.warn("Invalid repo root, skipping", {
+            repoId: repo.repoId,
+            rootPath: repo.wslPath,
+          });
         }
       }
+
+      queueMicrotask(() => {
+        for (const repoId of watchedRepoIds) {
+          const watcher = state.watchers.get(repoId);
+          if (!watcher) {
+            continue;
+          }
+          router.broadcastEvent({
+            type: "snapshot",
+            repoId,
+            recent: watcher.getRecentChanges(),
+          });
+        }
+      });
 
       return {
         type: "clientHelloResult",
@@ -82,10 +107,17 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         return { type: "watchRepoResult", repoId: command.repoId };
       }
       const rootPath = state.repoRoots.get(command.repoId);
+      const repoConfig = state.repoConfigs.get(command.repoId);
       if (!rootPath) {
         throw new AgentError("UNKNOWN_REPO", `Unknown repo: ${command.repoId}`);
       }
-      await startWatcher(command.repoId, rootPath);
+      if (!repoConfig) {
+        throw new AgentError("UNKNOWN_REPO", `Unknown repo config: ${command.repoId}`);
+      }
+      if (!(await isValidRepoRoot(rootPath))) {
+        throw new AgentError("INVALID_REPO", `Invalid repo root: ${rootPath}`);
+      }
+      await startWatcher(repoConfig);
       return { type: "watchRepoResult", repoId: command.repoId };
     }
 
@@ -141,15 +173,24 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
       throw new AgentError("NOT_IMPLEMENTED", "Bundle building not yet implemented");
     }
   }
+
+  const exhaustiveCheck: never = command;
+  throw new AgentError("UNKNOWN_COMMAND", `Unsupported command: ${String(exhaustiveCheck)}`);
 }
 
-async function startWatcher(repoId: string, rootPath: string): Promise<void> {
-  const watcher = createRepoWatcher(repoId, rootPath);
+async function startWatcher(repoConfig: RepoConfig): Promise<void> {
+  const watcher = createRepoWatcher(repoConfig.repoId, repoConfig.wslPath, {
+    docsGlobs: repoConfig.docsGlobs,
+    codeGlobs: repoConfig.codeGlobs,
+    ignoreGlobs: repoConfig.ignoreGlobs,
+  });
 
   watcher.onFileChange((event) => {
+    const repoId = event.repoId;
+    const rootPath = repoConfig.wslPath;
     const baseEvent: FileChangedEvent = {
       type: "fileChanged",
-      repoId: event.repoId,
+      repoId,
       path: event.relativePath,
       kind: event.kind,
       mtime: event.mtime.toISOString(),
@@ -160,7 +201,8 @@ async function startWatcher(repoId: string, rootPath: string): Promise<void> {
       state.autoStageOnChange &&
       state.stager &&
       event.eventType !== "unlink" &&
-      shouldAutoStage(event.kind)
+      shouldAutoStage(event.kind) &&
+      repoConfig.autoStage
     ) {
       state.stager.scheduleAutoStage(
         repoId,
@@ -174,6 +216,9 @@ async function startWatcher(repoId: string, rootPath: string): Promise<void> {
             mtimeMs: result.mtimeMs,
           };
           router.broadcastEvent({ ...baseEvent, staged });
+        },
+        () => {
+          router.broadcastEvent(baseEvent);
         }
       );
     } else {
@@ -182,8 +227,8 @@ async function startWatcher(repoId: string, rootPath: string): Promise<void> {
   });
 
   await watcher.start();
-  state.watchers.set(repoId, watcher);
-  state.repoRoots.set(repoId, rootPath);
+  state.watchers.set(repoConfig.repoId, watcher);
+  state.repoRoots.set(repoConfig.repoId, repoConfig.wslPath);
 }
 
 async function shutdown(): Promise<void> {
@@ -193,6 +238,15 @@ async function shutdown(): Promise<void> {
   }
   await server.stop();
   process.exit(0);
+}
+
+async function resetWatchers(): Promise<void> {
+  for (const watcher of state.watchers.values()) {
+    await watcher.stop();
+  }
+  state.watchers.clear();
+  state.repoRoots.clear();
+  state.repoConfigs.clear();
 }
 
 async function main(): Promise<void> {

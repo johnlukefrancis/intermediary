@@ -51,6 +51,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | Document | Purpose |
 |----------|---------|
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
+| [docs/commands/workflow/closeout_checks.md](commands/workflow/closeout_checks.md) | Required dependency sync, ledger updates, and closeout checks |
 
 ## Bundle Naming
 

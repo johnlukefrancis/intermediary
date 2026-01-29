@@ -7,6 +7,11 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src/**/*", "../app/src/shared/protocol.ts"],
+  "include": [
+    "src/**/*",
+    "../app/src/shared/ids.ts",
+    "../app/src/shared/config.ts",
+    "../app/src/shared/protocol.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

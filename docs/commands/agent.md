@@ -1,4 +1,7 @@
 # Agent Commands
+Updated on: 2026-01-29
+Owners: JL · Agents
+Depends on: ADR-000, ADR-012
 
 Commands for running and developing the WSL agent.
 
@@ -42,11 +45,25 @@ Send a clientHello to configure the agent:
   "requestId": "test-1",
   "payload": {
     "type": "clientHello",
-    "repos": {
-      "texture-portal": "/home/johnf/code/textureportal"
+    "config": {
+      "agentHost": "localhost",
+      "agentPort": 3141,
+      "autoStageGlobal": true,
+      "repos": [
+        {
+          "repoId": "textureportal",
+          "label": "TexturePortal",
+          "wslPath": "/home/johnf/code/textureportal",
+          "tabId": "texture-portal",
+          "autoStage": true,
+          "docsGlobs": ["docs/**", "**/*.md", "**/*.mdx"],
+          "codeGlobs": ["src/**", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+          "ignoreGlobs": ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/target/**"]
+        }
+      ]
     },
-    "stagingWslRoot": "/mnt/c/Users/johnf/AppData/Local/Intermediary/staging/files",
-    "stagingWinRoot": "C:\\Users\\johnf\\AppData\\Local\\Intermediary\\staging\\files",
+    "stagingWslRoot": "/mnt/c/Users/johnf/AppData/Local/Intermediary/staging",
+    "stagingWinRoot": "C:\\Users\\johnf\\AppData\\Local\\Intermediary\\staging",
     "autoStageOnChange": true
   }
 }
