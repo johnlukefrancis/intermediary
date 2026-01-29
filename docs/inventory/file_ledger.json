@@ -1,0 +1,17 @@
+{
+  "scope": "src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
+  "entries": [
+    {
+      "path": "scripts/fileledger/add_file_headers.mjs",
+      "summary": "Adds missing header comments (path + description) to source files using the ledger output."
+    },
+    {
+      "path": "scripts/fileledger/gen_file_ledger.mjs",
+      "summary": "Generates human+machine file ledgers for Intermediary code sources."
+    },
+    {
+      "path": "scripts/zip/zip_bundles.mjs",
+      "summary": "Builds timestamped Intermediary zip bundles for ChatGPT context."
+    }
+  ]
+}
