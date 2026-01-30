@@ -100,15 +100,50 @@
       "group": "build"
     },
     {
+      "label": "WSL Agent: dev",
+      "type": "process",
+      "command": "wsl.exe",
+      "args": [
+        "-d",
+        "Ubuntu",
+        "--",
+        "bash",
+        "-lc",
+        "cd /home/johnf/code/intermediary && pnpm run agent:dev"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [
+          {
+            "regexp": ".*"
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "WebSocket server started",
+          "endsPattern": "Agent ready"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "group": "build"
+    },
+    {
       "label": "Tauri: dev (Windows)",
       "type": "process",
+      "dependsOn": [
+        "WSL Agent: dev"
+      ],
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/intermediary && pnpm run agent:dev\"'; cd $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
+        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; cd $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
       ],
       "presentation": {
         "reveal": "always",
@@ -123,13 +158,16 @@
     {
       "label": "Tauri: dev (Windows, watch + sync)",
       "type": "process",
+      "dependsOn": [
+        "WSL Agent: dev"
+      ],
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; $winPath = $env:INTERMEDIARY_WIN_PATH; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/intermediary && ./scripts/windows/watch_sync_to_windows.sh\"'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/intermediary && pnpm run agent:dev\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
+        "$env:INTERMEDIARY_WIN_PATH='D:\\code\\intermediary'; $env:INTERMEDIARY_WSL_PATH='/home/johnf/code/intermediary'; $env:INTERMEDIARY_WSL_DISTRO='Ubuntu'; $env:INTERMEDIARY_LOG_DIR='\\\\wsl$\\Ubuntu\\home\\johnf\\code\\intermediary\\logs'; $winPath = $env:INTERMEDIARY_WIN_PATH; wsl.exe -d Ubuntu -- bash -lc 'cd /home/johnf/code/intermediary && ./scripts/windows/sync_to_windows.sh'; Start-Process wsl.exe -ArgumentList '-d Ubuntu -- bash -lc \"cd /home/johnf/code/intermediary && ./scripts/windows/watch_sync_to_windows.sh\"'; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; pnpm tauri dev"
       ],
       "presentation": {
         "reveal": "always",
