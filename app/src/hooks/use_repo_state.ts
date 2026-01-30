@@ -89,13 +89,19 @@ export function useRepoState(repoId: string): RepoState {
           setRecentCode((prev) => upsertFile(prev, entry));
         }
 
-        const stagedInfo = event.staged;
-        if (stagedInfo) {
-          registerStaged(event.path, stagedInfo);
-        }
+        // Cached staged entries are only valid for the latest known file version.
+        setStagedByPath((prev) => {
+          const next = new Map(prev);
+          if (event.changeType === "unlink" || !event.staged) {
+            next.delete(event.path);
+          } else {
+            next.set(event.path, event.staged);
+          }
+          return next;
+        });
       }
     },
-    [repoId, registerStaged]
+    [repoId]
   );
 
   useEffect(() => {
