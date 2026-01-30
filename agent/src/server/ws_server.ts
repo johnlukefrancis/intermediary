@@ -1,5 +1,5 @@
 // Path: agent/src/server/ws_server.ts
-// Description: WebSocket server lifecycle on localhost:3141
+// Description: WebSocket server lifecycle on 0.0.0.0:3141
 
 import { WebSocketServer, type WebSocket } from "ws";
 import { logger } from "../util/logger.js";
@@ -27,7 +27,7 @@ export function createWsServer(config: WsServerConfig): WsServer {
 
   async function start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      wss = new WebSocketServer({ host: "127.0.0.1", port });
+      wss = new WebSocketServer({ host: "0.0.0.0", port });
 
       wss.on("listening", () => {
         logger.info("WebSocket server started", { port });
