@@ -126,7 +126,7 @@
       },
       "presentation": {
         "reveal": "always",
-        "panel": "shared",
+        "panel": "dedicated",
         "showReuseMessage": false
       },
       "group": "build"
@@ -137,6 +137,7 @@
       "dependsOn": [
         "WSL Agent: dev"
       ],
+      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
@@ -161,6 +162,7 @@
       "dependsOn": [
         "WSL Agent: dev"
       ],
+      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
