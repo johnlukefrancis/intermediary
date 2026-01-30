@@ -79,6 +79,11 @@
 
 .worktree-selector select:focus {
   outline: none;
+}
+
+.worktree-selector select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
   border-color: var(--color-accent);
 }
 
@@ -132,6 +137,15 @@
 .path-chip:hover {
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
+}
+
+.path-chip:focus {
+  outline: none;
+}
+
+.path-chip:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .path-chip.copied {
@@ -224,7 +238,7 @@
 }
 
 .system-banner.reconnecting .system-banner-icon {
-  animation: gentle-pulse 2s ease-in-out infinite;
+  animation: gentle-pulse 2s var(--ease-in-out) infinite;
 }
 
 .system-banner-message {

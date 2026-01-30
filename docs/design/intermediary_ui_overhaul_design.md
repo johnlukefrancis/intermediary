@@ -23,12 +23,15 @@ Depends on: ADR-000, ADR-005, ADR-006
 CSS imports must follow this order in `app/src/main.tsx`:
 
 ```
-tokens.css      → Abstract primitives (spacing, radii, blur, shadows, typography, motion)
-theme_dark.css  → Fills semantic slots with dark theme values
+tokens.css        → Abstract primitives (spacing, radii, blur, shadows, typography, motion)
+theme_dark.css    → Fills semantic slots with dark theme values
 theme_accents.css → Per-tab accent overrides via data-active-tab
-effects.css     → Background gradient, grain, glass utilities
-main.css        → Layout reset and base structure
-[components]    → Component-specific styles
+effects.css       → Background gradient, grain, glass utilities
+motion.css        → Transition presets, reduced-motion support
+a11y.css          → Focus rings, disabled states, screen reader utilities
+badges.css        → Unified badge primitives
+main.css          → Layout reset and base structure
+[components]      → Component-specific styles
 ```
 
 ### File Responsibilities
@@ -75,9 +78,11 @@ main.css        → Layout reset and base structure
 
 | Tab | Primary | Soft | Glow |
 |-----|---------|------|------|
-| Intermediary | `#f9a8d4` (light pink) | `rgba(249,168,212,0.15)` | `rgba(249,168,212,0.4)` |
+| Intermediary | `#c4688a` (dusty rose) | `rgba(196,104,138,0.15)` | `rgba(196,104,138,0.4)` |
 | TexturePortal | `#7c3aed` (deep purple) | `rgba(124,58,237,0.15)` | `rgba(124,58,237,0.4)` |
-| Triangle Rain | `#39ff14` (toxic green) | `rgba(57,255,20,0.12)` | `rgba(57,255,20,0.35)` |
+| Triangle Rain | `#16a34a` (muted emerald) | `rgba(22,163,74,0.12)` | `rgba(22,163,74,0.35)` |
+
+**Note**: Each `[data-active-tab]` selector must define both `--accent-*` and `--color-accent-*` variables. This is not duplication — CSS custom properties resolve at definition time, so `--color-accent: var(--accent-primary)` in `:root` captures the root value and won't update when `--accent-primary` changes lower in the tree.
 
 ### Semantic States
 
@@ -86,7 +91,7 @@ main.css        → Layout reset and base structure
 | Success | `#4ade80` | `#1a3d2a` | `#2f7a4b` |
 | Error | `#f87171` | `#2a1414` | `#6b1d1d` |
 | Info | `#93c5fd` | `#1a2a3d` | `#23324d` |
-| Warning | `#fbbf24` | `#2a2414` | — |
+| Warning | `#fbbf24` | `#2a2414` | `#7a5c1d` |
 
 ---
 
@@ -162,6 +167,83 @@ For frosted glass panels, use the utility class or manual application:
 
 ---
 
+## Motion
+
+### Duration Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--duration-instant` | 0ms | Immediate state changes |
+| `--duration-fast` | 100ms | Micro-interactions, quick feedback |
+| `--duration-normal` | 150ms | Standard transitions (default) |
+| `--duration-slow` | 250ms | Deliberate animations |
+| `--duration-slower` | 400ms | Page transitions, complex animations |
+
+### Easing Tokens
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--ease-out` | `cubic-bezier(0.33, 1, 0.68, 1)` | Enter animations, appearing elements |
+| `--ease-in-out` | `cubic-bezier(0.65, 0, 0.35, 1)` | Symmetric animations, pulsing |
+| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Bouncy effects (use sparingly) |
+
+### Reduced Motion
+
+All animations and transitions respect `prefers-reduced-motion: reduce`. When enabled:
+- Animation duration collapses to near-instant (0.01ms)
+- Animation iteration count becomes 1
+- Transition duration collapses to near-instant
+- Scroll behavior becomes `auto`
+
+This is handled globally in `motion.css` — no per-component opt-out needed.
+
+---
+
+## Accessibility
+
+### Focus Ring Convention
+
+All interactive elements use a consistent `:focus-visible` outline:
+
+```css
+.element:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+```
+
+The base focus state (`:focus`) removes the default outline, and `:focus-visible` adds the styled ring only when keyboard navigation is detected.
+
+### Disabled State Convention
+
+Disabled elements use consistent styling:
+
+```css
+.element:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+```
+
+Some components may also add `filter: saturate(0.5)` for accent-colored buttons.
+
+---
+
+## ASCII Cue Pattern
+
+Panel headers use a monospace `:: ` prefix as a subtle terminal-style decoration:
+
+```css
+.panel-header::before {
+  content: ':: ';
+  color: var(--color-text-muted);
+}
+```
+
+This is the only ASCII decoration currently in use. Keep ASCII cues minimal and consistent.
+
+---
+
 ## Implementation Checklist
 
 Phase 1: Foundation (complete)
@@ -188,11 +270,19 @@ Phase 4: Documentation (complete)
 - [x] Create this design doc
 - [x] Update `docs/guide.md`
 
+Phase 5: Polish (complete)
+- [x] Create `motion.css` with reduced-motion support
+- [x] Create `a11y.css` with focus ring utilities
+- [x] Add `--color-warning-muted` token
+- [x] Replace hardcoded colors with tokens
+- [x] Add `:focus-visible` to all interactive elements
+- [x] Delete deprecated `offline_banner.css`
+- [x] Document accent variable inheritance behavior
+
 ---
 
 ## Future Enhancements
 
 - Light theme variant (`theme_light.css`)
 - Additional accent color presets
-- Animation tokens for micro-interactions
 - Component-specific glass variants (lighter/heavier blur)

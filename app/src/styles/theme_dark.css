@@ -38,6 +38,7 @@
   /* Warning (amber) */
   --theme-warning: #fbbf24;
   --theme-warning-soft: #2a2414;
+  --theme-warning-muted: #7a5c1d;
 
   /* Info (blue) */
   --theme-info: #93c5fd;
@@ -47,6 +48,12 @@
   /* ===== GLASS SURFACE ===== */
   --theme-glass-bg: rgba(20, 20, 31, 0.75);
   --theme-glass-border: rgba(255, 255, 255, 0.06);
+
+  /* ===== EFFECT COLORS ===== */
+  --theme-gradient-top: rgba(30, 30, 50, 0.4);
+  --theme-gradient-bottom: #0a0a10;
+  --theme-bg-hover-subtle: rgba(255, 255, 255, 0.03);
+  --theme-scanline: rgba(0, 0, 0, 0.02);
 
   /* ===== LEGACY BRIDGE ===== */
   /* Maps old variable names to new tokens for gradual migration */

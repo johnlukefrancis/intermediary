@@ -17,7 +17,7 @@
 .panel-content::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: var(--radius-sm);
-  transition: background 0.15s ease;
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 .panel-content::-webkit-scrollbar-thumb:hover {

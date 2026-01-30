@@ -100,6 +100,7 @@
 
   --color-warning: var(--theme-warning);
   --color-warning-soft: var(--theme-warning-soft);
+  --color-warning-muted: var(--theme-warning-muted);
 
   --color-info: var(--theme-info);
   --color-info-soft: var(--theme-info-soft);
@@ -109,4 +110,10 @@
   --glass-bg: var(--theme-glass-bg);
   --glass-border: var(--theme-glass-border);
   --glass-blur: var(--blur-lg);
+
+  /* Effect colors */
+  --color-gradient-top: var(--theme-gradient-top);
+  --color-gradient-bottom: var(--theme-gradient-bottom);
+  --color-bg-hover-subtle: var(--theme-bg-hover-subtle);
+  --color-scanline: var(--theme-scanline);
 }

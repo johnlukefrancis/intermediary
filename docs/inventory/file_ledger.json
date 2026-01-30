@@ -206,6 +206,10 @@
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
     },
     {
+      "path": "app/src/styles/a11y.css",
+      "summary": "Accessibility utilities - focus rings, disabled states, screen reader helpers"
+    },
+    {
       "path": "app/src/styles/badges.css",
       "summary": "Unified badge primitive for status indicators and labels"
     },
@@ -238,8 +242,8 @@
       "summary": "Global layout reset and base structure"
     },
     {
-      "path": "app/src/styles/offline_banner.css",
-      "summary": "Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner..."
+      "path": "app/src/styles/motion.css",
+      "summary": "Motion utilities, transition presets, and reduced-motion support"
     },
     {
       "path": "app/src/styles/panels.css",

@@ -28,8 +28,8 @@
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.02) 2px,
-    rgba(0, 0, 0, 0.02) 4px
+    var(--color-scanline) 2px,
+    var(--color-scanline) 4px
   );
   pointer-events: none;
   border-radius: inherit;
@@ -89,7 +89,7 @@
 
 /* Subtle pulsing animation for "waiting" states */
 .empty-state--waiting {
-  animation: pulse-muted 2s ease-in-out infinite;
+  animation: pulse-muted 2s var(--ease-in-out) infinite;
 }
 
 @keyframes pulse-muted {

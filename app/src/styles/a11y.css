@@ -1,0 +1,53 @@
+/*
+ * Path: app/src/styles/a11y.css
+ * Description: Accessibility utilities - focus rings, disabled states, screen reader helpers
+ */
+
+/* ===== FOCUS RING PATTERN ===== */
+/* Standard focus-visible outline for interactive elements */
+/* Individual components may need to add :focus-visible rules for custom elements */
+
+button:focus,
+[role="button"]:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Explicit focus-ring class for custom interactive elements */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ===== DISABLED STATE PATTERN ===== */
+.disabled,
+:disabled,
+[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== SCREEN READER ONLY ===== */
+/* Visually hide content while keeping it accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
