@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
   useRef,
   type ReactNode,
 } from "react";
@@ -55,7 +56,15 @@ interface AgentProviderProps {
 
 export function AgentProvider({ children }: AgentProviderProps): React.JSX.Element {
   const { config: persistedConfig, setAutoStageGlobal } = useConfig();
-  const config = extractAppConfig(persistedConfig);
+  const config = useMemo(
+    () => extractAppConfig(persistedConfig),
+    [
+      persistedConfig.agentHost,
+      persistedConfig.agentPort,
+      persistedConfig.autoStageGlobal,
+      persistedConfig.repos,
+    ]
+  );
 
   const [connectionState, setConnectionState] = useState<ConnectionState>(
     INITIAL_CONNECTION_STATE
