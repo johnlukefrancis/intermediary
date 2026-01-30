@@ -321,10 +321,9 @@ export const EventEnvelopeSchema = z.object({
 });
 export type EventEnvelope = z.infer<typeof EventEnvelopeSchema>;
 
-export const ProtocolEnvelopeSchema = z.discriminatedUnion("kind", [
+export const ProtocolEnvelopeSchema = z.union([
   RequestEnvelopeSchema,
-  ResponseOkEnvelopeSchema,
-  ResponseErrorEnvelopeSchema,
+  ResponseEnvelopeSchema,
   EventEnvelopeSchema,
 ]);
 export type ProtocolEnvelope = z.infer<typeof ProtocolEnvelopeSchema>;
