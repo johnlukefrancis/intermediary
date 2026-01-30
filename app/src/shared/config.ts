@@ -76,6 +76,9 @@ export const DEFAULT_IGNORE_GLOBS = [
   "**/target/**",
   "**/.cache/**",
   "**/logs/**",
+  "**/scripts/zip/output/**",
+  "**/scripts/zip/Output/**",
+  "**/Scripts/Zip/Output/**",
 ];
 
 /**
