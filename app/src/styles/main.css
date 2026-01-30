@@ -1,11 +1,9 @@
 /*
  * Path: app/src/styles/main.css
- * Description: main module
+ * Description: Global layout reset and base structure
  */
 
-/* Path: app/src/styles/main.css */
-/* Description: Global styles and CSS reset */
-
+/* ===== RESET ===== */
 *,
 *::before,
 *::after {
@@ -14,17 +12,7 @@
   padding: 0;
 }
 
-:root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f3460;
-  --text-primary: #e8e8e8;
-  --text-secondary: #a0a0a0;
-  --accent: #e94560;
-  --border: #2a2a4a;
-  --font-mono: "SF Mono", "Fira Code", Consolas, monospace;
-}
-
+/* ===== DOCUMENT ===== */
 html,
 body,
 #root {
@@ -33,24 +21,21 @@ body,
 }
 
 body {
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
+/* ===== APP SHELL ===== */
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .tab-content {
@@ -62,41 +47,42 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  gap: 12px;
+  padding: var(--space-3);
+  gap: var(--space-3);
 }
 
+/* ===== UTILITIES ===== */
 .placeholder {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
-/* Worktree selector for Triangle Rain tab */
+/* ===== WORKTREE SELECTOR ===== */
 .worktree-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--bg-secondary);
-  border-radius: 4px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-sm);
 }
 
 .worktree-selector label {
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
 }
 
 .worktree-selector select {
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .worktree-selector select:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--color-accent);
 }

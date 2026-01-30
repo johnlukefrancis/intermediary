@@ -1,0 +1,61 @@
+/*
+ * Path: app/src/styles/theme_dark.css
+ * Description: Dark glass vintage theme - fills semantic token slots
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ===== BACKGROUND PALETTE ===== */
+  /* Deep "ink" base with blue undertones */
+  --theme-bg-base: #0d0d14;
+  --theme-bg-surface: #14141f;
+  --theme-bg-elevated: #1a1a28;
+  --theme-bg-hover: #222233;
+  --theme-bg-active: #2a2a3d;
+
+  /* ===== TEXT PALETTE ===== */
+  --theme-text-primary: #e8e8ec;
+  --theme-text-secondary: #9898a8;
+  --theme-text-muted: #606070;
+
+  /* ===== BORDER PALETTE ===== */
+  --theme-border: #2a2a3d;
+  --theme-border-subtle: #1f1f2d;
+  --theme-border-highlight: rgba(255, 255, 255, 0.08);
+
+  /* ===== SEMANTIC STATES ===== */
+  /* Success (green) */
+  --theme-success: #4ade80;
+  --theme-success-soft: #1a3d2a;
+  --theme-success-muted: #2f7a4b;
+
+  /* Error (red) */
+  --theme-error: #f87171;
+  --theme-error-soft: #2a1414;
+  --theme-error-muted: #6b1d1d;
+
+  /* Warning (amber) */
+  --theme-warning: #fbbf24;
+  --theme-warning-soft: #2a2414;
+
+  /* Info (blue) */
+  --theme-info: #93c5fd;
+  --theme-info-soft: #1a2a3d;
+  --theme-info-muted: #23324d;
+
+  /* ===== GLASS SURFACE ===== */
+  --theme-glass-bg: rgba(20, 20, 31, 0.75);
+  --theme-glass-border: rgba(255, 255, 255, 0.06);
+
+  /* ===== LEGACY BRIDGE ===== */
+  /* Maps old variable names to new tokens for gradual migration */
+  --bg-primary: var(--theme-bg-base);
+  --bg-secondary: var(--theme-bg-surface);
+  --bg-tertiary: var(--theme-bg-elevated);
+  --bg-hover: var(--theme-bg-hover);
+  --text-primary: var(--theme-text-primary);
+  --text-secondary: var(--theme-text-secondary);
+  --accent: var(--color-accent);
+  --border: var(--theme-border);
+}

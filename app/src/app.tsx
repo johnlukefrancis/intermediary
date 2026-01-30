@@ -36,7 +36,7 @@ export function App(): React.JSX.Element {
   );
 
   return (
-    <div className="app">
+    <div className="app" data-active-tab={activeTab}>
       <OfflineBanner />
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
       <StatusBar />

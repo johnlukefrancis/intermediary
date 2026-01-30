@@ -1,22 +1,19 @@
 /*
  * Path: app/src/styles/file_row.css
- * Description: file row module
+ * Description: Styles for file row component with drag handle
  */
-
-/* Path: app/src/styles/file_row.css */
-/* Description: Styles for file row component with drag handle */
 
 .file-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
-  transition: background 0.15s ease;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 .file-row:hover {
-  background: var(--bg-tertiary);
+  background: var(--color-bg-elevated);
 }
 
 .file-drag-handle {
@@ -26,15 +23,16 @@
   width: 24px;
   height: 24px;
   cursor: grab;
-  color: var(--text-secondary);
-  border-radius: 4px;
-  transition: background 0.15s ease, color 0.15s ease;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  transition: background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
   user-select: none;
 }
 
 .file-drag-handle:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
 }
 
 .file-drag-handle:active {
@@ -43,8 +41,8 @@
 
 .drag-icon {
   font-family: var(--font-mono);
-  font-size: 14px;
-  font-weight: bold;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
   letter-spacing: -2px;
 }
 
@@ -57,16 +55,16 @@
 }
 
 .file-name {
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .file-dir {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -83,38 +81,38 @@
 .file-badge {
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .file-badge.change {
-  background: #2a2f45;
-  color: #cbd5f5;
+  background: var(--color-info-muted);
+  color: var(--color-info);
 }
 
 .file-badge.change.change-add {
-  background: #123d2a;
-  color: #4ade80;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 
 .file-badge.change.change-modify {
-  background: #23324d;
-  color: #93c5fd;
+  background: var(--color-info-soft);
+  color: var(--color-info);
 }
 
 .file-badge.change.change-delete {
-  background: #3a1b1b;
-  color: #f87171;
+  background: var(--color-error-soft);
+  color: var(--color-error);
 }
 
 .file-badge.staged {
-  background: #1a472a;
-  color: #4ade80;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 
 .file-time {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   font-family: var(--font-mono);
 }

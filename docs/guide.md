@@ -26,6 +26,12 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [ADR-010](compliance/adr_010_tauri_security_baseline.md) | Tauri Security Baseline |
 | [ADR-012](compliance/adr_012_copy_safe_command_delivery.md) | Copy-safe Command Delivery |
 
+## Design
+
+| Document | Purpose |
+|----------|---------|
+| [docs/design/intermediary_ui_overhaul_design.md](design/intermediary_ui_overhaul_design.md) | UI design system, tokens, and visual guidelines |
+
 ## Environment
 
 Workflow and tooling documentation.

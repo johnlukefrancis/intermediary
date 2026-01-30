@@ -1,24 +1,21 @@
 /*
  * Path: app/src/styles/offline_banner.css
- * Description: offline banner module
+ * Description: Styles for offline/reconnecting status banner
  */
-
-/* Path: app/src/styles/offline_banner.css */
-/* Description: Styles for offline/reconnecting status banner */
 
 .offline-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border);
-  color: var(--text-secondary);
-  font-size: 13px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-base);
 }
 
 .offline-banner.reconnecting {
-  background: #2a2a3e;
+  background: var(--color-bg-active);
 }
 
 .offline-icon {
@@ -28,14 +25,14 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--color-accent);
   color: white;
-  font-size: 12px;
-  font-weight: bold;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .offline-banner.reconnecting .offline-icon {
-  background: #6c7a89;
+  background: var(--color-text-muted);
   animation: pulse 1.5s ease-in-out infinite;
 }
 
@@ -44,13 +41,14 @@
 }
 
 .offline-error {
-  color: var(--accent);
-  font-size: 12px;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
   opacity: 0.8;
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

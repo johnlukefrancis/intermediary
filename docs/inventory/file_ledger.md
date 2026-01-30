@@ -54,14 +54,18 @@ app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentP
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
-app/src/styles/bundle_column.css - bundle column module
-app/src/styles/columns.css - columns module
-app/src/styles/drag_error_notice.css - drag error notice module
-app/src/styles/file_row.css - file row module
-app/src/styles/main.css - main module
-app/src/styles/offline_banner.css - offline banner module
-app/src/styles/status_bar.css - status bar module
-app/src/styles/tab_bar.css - tab bar module
+app/src/styles/bundle_column.css - Styles for bundle column components
+app/src/styles/columns.css - Three-column layout styles
+app/src/styles/drag_error_notice.css - Inline notice for drag errors
+app/src/styles/effects.css - Background gradient, grain noise, and glass surface utilities
+app/src/styles/file_row.css - Styles for file row component with drag handle
+app/src/styles/main.css - Global layout reset and base structure
+app/src/styles/offline_banner.css - Styles for offline/reconnecting status banner
+app/src/styles/status_bar.css - Status bar styles for auto-stage toggle and connection status
+app/src/styles/tab_bar.css - Tab bar navigation styles
+app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
+app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
+app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/intermediary_tab.tsx - Intermediary project tab with file lists
 app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
 app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with worktree selector and file lists

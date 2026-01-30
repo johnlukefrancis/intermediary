@@ -1,0 +1,32 @@
+/*
+ * Path: app/src/styles/theme_accents.css
+ * Description: Per-tab accent colors via data-active-tab attribute
+ */
+
+/* ===== DEFAULT ACCENT (fallback) ===== */
+:root {
+  --accent-primary: #f9a8d4;
+  --accent-soft: rgba(249, 168, 212, 0.15);
+  --accent-glow: rgba(249, 168, 212, 0.4);
+}
+
+/* ===== INTERMEDIARY - Light pink ===== */
+[data-active-tab="intermediary"] {
+  --accent-primary: #f9a8d4;
+  --accent-soft: rgba(249, 168, 212, 0.15);
+  --accent-glow: rgba(249, 168, 212, 0.4);
+}
+
+/* ===== TEXTURE PORTAL - Deep purple ===== */
+[data-active-tab="texture-portal"] {
+  --accent-primary: #7c3aed;
+  --accent-soft: rgba(124, 58, 237, 0.15);
+  --accent-glow: rgba(124, 58, 237, 0.4);
+}
+
+/* ===== TRIANGLE RAIN - Toxic green ===== */
+[data-active-tab="triangle-rain"] {
+  --accent-primary: #39ff14;
+  --accent-soft: rgba(57, 255, 20, 0.12);
+  --accent-glow: rgba(57, 255, 20, 0.35);
+}

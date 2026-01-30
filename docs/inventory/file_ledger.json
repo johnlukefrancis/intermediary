@@ -207,35 +207,51 @@
     },
     {
       "path": "app/src/styles/bundle_column.css",
-      "summary": "bundle column module"
+      "summary": "Styles for bundle column components"
     },
     {
       "path": "app/src/styles/columns.css",
-      "summary": "columns module"
+      "summary": "Three-column layout styles"
     },
     {
       "path": "app/src/styles/drag_error_notice.css",
-      "summary": "drag error notice module"
+      "summary": "Inline notice for drag errors"
+    },
+    {
+      "path": "app/src/styles/effects.css",
+      "summary": "Background gradient, grain noise, and glass surface utilities"
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "file row module"
+      "summary": "Styles for file row component with drag handle"
     },
     {
       "path": "app/src/styles/main.css",
-      "summary": "main module"
+      "summary": "Global layout reset and base structure"
     },
     {
       "path": "app/src/styles/offline_banner.css",
-      "summary": "offline banner module"
+      "summary": "Styles for offline/reconnecting status banner"
     },
     {
       "path": "app/src/styles/status_bar.css",
-      "summary": "status bar module"
+      "summary": "Status bar styles for auto-stage toggle and connection status"
     },
     {
       "path": "app/src/styles/tab_bar.css",
-      "summary": "tab bar module"
+      "summary": "Tab bar navigation styles"
+    },
+    {
+      "path": "app/src/styles/theme_accents.css",
+      "summary": "Per-tab accent colors via data-active-tab attribute"
+    },
+    {
+      "path": "app/src/styles/theme_dark.css",
+      "summary": "Dark glass vintage theme - fills semantic token slots"
+    },
+    {
+      "path": "app/src/styles/tokens.css",
+      "summary": "Design system tokens - spacing, radii, blur, shadows, typography, motion"
     },
     {
       "path": "app/src/tabs/intermediary_tab.tsx",

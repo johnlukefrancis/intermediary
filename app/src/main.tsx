@@ -6,6 +6,11 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
 import { ConfigProvider } from "./hooks/use_config.js";
 import { AgentProvider } from "./hooks/use_agent.js";
+// CSS imports - ORDER MATTERS (tokens -> theme -> accents -> effects -> layout -> components)
+import "./styles/tokens.css";
+import "./styles/theme_dark.css";
+import "./styles/theme_accents.css";
+import "./styles/effects.css";
 import "./styles/main.css";
 import "./styles/bundle_column.css";
 

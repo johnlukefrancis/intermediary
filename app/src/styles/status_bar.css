@@ -1,32 +1,29 @@
 /*
  * Path: app/src/styles/status_bar.css
- * Description: status bar module
+ * Description: Status bar styles for auto-stage toggle and connection status
  */
-
-/* Path: app/src/styles/status_bar.css */
-/* Description: Status bar styles for auto-stage toggle */
 
 .status-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text-secondary);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
 .status-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .status-label {
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-size: 11px;
+  font-size: var(--text-sm);
 }
 
 .status-toggle {
@@ -46,10 +43,11 @@
 .status-toggle-track {
   position: absolute;
   inset: 0;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-slow) var(--ease-out),
+    border-color var(--duration-slow) var(--ease-out);
 }
 
 .status-toggle-track::after {
@@ -60,46 +58,47 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--text-secondary);
-  transition: transform 0.2s ease, background 0.2s ease;
+  background: var(--color-text-secondary);
+  transition: transform var(--duration-slow) var(--ease-out),
+    background var(--duration-slow) var(--ease-out);
 }
 
 .status-toggle input:checked + .status-toggle-track {
-  background: #203b2f;
-  border-color: #2f7a4b;
+  background: var(--color-success-soft);
+  border-color: var(--color-success-muted);
 }
 
 .status-toggle input:checked + .status-toggle-track::after {
   transform: translateX(18px);
-  background: #4ade80;
+  background: var(--color-success);
 }
 
 .status-toggle input:focus-visible + .status-toggle-track {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
 .status-hint {
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   opacity: 0.7;
 }
 
 .status-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .status-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .status-error {
-  font-size: 11px;
-  color: #f87171;
+  font-size: var(--text-sm);
+  color: var(--color-error);
   max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -107,36 +106,37 @@
 }
 
 .status-connection {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
+  font-size: var(--text-sm);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
 }
 
 .status-connection.connected {
-  color: #4ade80;
-  border-color: #2f7a4b;
-  background: #203b2f;
+  color: var(--color-success);
+  border-color: var(--color-success-muted);
+  background: var(--color-success-soft);
 }
 
 .status-connection.disconnected {
-  color: #fca5a5;
-  border-color: #7f1d1d;
-  background: #2a1414;
+  color: var(--color-error);
+  border-color: var(--color-error-muted);
+  background: var(--color-error-soft);
 }
 
 .status-path {
-  font-size: 11px;
-  font-family: var(--font-mono, monospace);
-  color: var(--text-secondary);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 8px;
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
   max-width: 400px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -144,12 +144,12 @@
 }
 
 .status-path:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 .status-path.copied {
-  background: #203b2f;
-  border-color: #2f7a4b;
-  color: #4ade80;
+  background: var(--color-success-soft);
+  border-color: var(--color-success-muted);
+  color: var(--color-success);
 }
