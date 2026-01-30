@@ -109,7 +109,7 @@
         "--",
         "bash",
         "-lc",
-        "cd /home/johnf/code/intermediary && pnpm run agent:dev"
+        "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use 20 >/dev/null; corepack enable; cd /home/johnf/code/intermediary && pnpm run agent:dev"
       ],
       "isBackground": true,
       "problemMatcher": {
