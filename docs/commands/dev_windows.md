@@ -12,6 +12,7 @@ The project includes VS Code tasks that handle sync and build automatically.
 ### Tauri: dev (Windows)
 
 Syncs from WSL, installs dependencies if needed, then starts Tauri dev server.
+Also launches the WSL agent in a separate WSL process.
 
 Task name: `Tauri: dev (Windows)`
 
@@ -20,6 +21,7 @@ This is the **default build task** (Ctrl+Shift+B).
 ### Tauri: dev (Windows, watch + sync)
 
 Same as above, plus starts a background watcher that continuously syncs changes from WSL.
+Also launches the WSL agent in a separate WSL process.
 
 Task name: `Tauri: dev (Windows, watch + sync)`
 
