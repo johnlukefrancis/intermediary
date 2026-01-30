@@ -15,7 +15,7 @@ import {
   createAgentClient,
   type AgentClient,
 } from "../lib/agent/agent_client.js";
-import { sendClientHello } from "../lib/agent/messages.js";
+import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
 import { getDefaultConfig, type AppConfig } from "../shared/config.js";
 import {
   type ConnectionState,
@@ -26,9 +26,19 @@ import type { AppPaths } from "../types/app_paths.js";
 
 type EventHandler = (event: AgentEvent) => void;
 
+type HelloStatus = "idle" | "pending" | "ok" | "error";
+
+interface HelloState {
+  status: HelloStatus;
+  watchedRepoIds: string[];
+  lastHelloAt: number | null;
+  lastError: string | null;
+}
+
 interface AgentContextValue {
   client: AgentClient | null;
   connectionState: ConnectionState;
+  helloState: HelloState;
   config: AppConfig;
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
@@ -48,10 +58,17 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   );
   const [appPaths, setAppPaths] = useState<AppPaths | null>(null);
   const [config] = useState<AppConfig>(() => getDefaultConfig());
-  const [autoStageOnChange, setAutoStageOnChange] = useState(config.autoStageGlobal);
+  const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
+  const [helloState, setHelloState] = useState<HelloState>({
+    status: "idle",
+    watchedRepoIds: [],
+    lastHelloAt: null,
+    lastError: null,
+  });
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
+  const autoStageRef = useRef(autoStageOnChange);
 
   const subscribe = useCallback((handler: EventHandler) => {
     handlersRef.current.add(handler);
@@ -65,6 +82,10 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       handler(event);
     }
   }, []);
+
+  useEffect(() => {
+    autoStageRef.current = autoStageOnChange;
+  }, [autoStageOnChange]);
 
   // Initialize on mount
   useEffect(() => {
@@ -105,28 +126,86 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
 
   // Send clientHello when connected
   useEffect(() => {
-    if (
-      connectionState.status !== "connected" ||
-      !client ||
-      !appPaths
-    ) {
+    if (connectionState.status !== "connected") {
+      setHelloState((prev) =>
+        prev.status === "idle"
+          ? prev
+          : {
+              status: "idle",
+              watchedRepoIds: [],
+              lastHelloAt: null,
+              lastError: null,
+            }
+      );
       return;
     }
+
+    if (!client || !appPaths) {
+      return;
+    }
+
+    let cancelled = false;
+    setHelloState({
+      status: "pending",
+      watchedRepoIds: [],
+      lastHelloAt: null,
+      lastError: null,
+    });
 
     void sendClientHello(
       client,
       config,
       appPaths.stagingWslRoot,
       appPaths.stagingWindowsRoot,
-      autoStageOnChange
-    ).catch((err: unknown) => {
-      console.error("[AgentProvider] clientHello failed:", err);
-    });
-  }, [connectionState.status, client, appPaths, config, autoStageOnChange]);
+      autoStageRef.current
+    )
+      .then((result) => {
+        if (cancelled) return;
+        setHelloState({
+          status: "ok",
+          watchedRepoIds: result.watchedRepoIds,
+          lastHelloAt: Date.now(),
+          lastError: null,
+        });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "clientHello failed";
+        console.error("[AgentProvider] clientHello failed:", err);
+        setHelloState({
+          status: "error",
+          watchedRepoIds: [],
+          lastHelloAt: null,
+          lastError: message,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionState.status, client, appPaths, config]);
+
+  const setAutoStageOnChange = useCallback(
+    (value: boolean) => {
+      setAutoStageOnChangeState(value);
+      if (!client || connectionState.status !== "connected") {
+        return;
+      }
+      void sendSetOptions(client, value)
+        .then((result) => {
+          setAutoStageOnChangeState(result.autoStageOnChange);
+        })
+        .catch((err: unknown) => {
+          console.error("[AgentProvider] setOptions failed:", err);
+        });
+    },
+    [client, connectionState.status]
+  );
 
   const value: AgentContextValue = {
     client,
     connectionState,
+    helloState,
     config,
     appPaths,
     autoStageOnChange,

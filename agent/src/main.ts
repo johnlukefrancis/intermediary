@@ -193,6 +193,7 @@ async function startWatcher(repoConfig: RepoConfig): Promise<void> {
       repoId,
       path: event.relativePath,
       kind: event.kind,
+      changeType: event.eventType,
       mtime: event.mtime.toISOString(),
     };
 

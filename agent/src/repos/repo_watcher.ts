@@ -93,6 +93,7 @@ export function createRepoWatcher(
     const entry: FileEntry = {
       path: relativePath,
       kind,
+      changeType: eventType,
       mtime: mtime.toISOString(),
     };
 

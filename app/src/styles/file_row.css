@@ -1,3 +1,8 @@
+/*
+ * Path: app/src/styles/file_row.css
+ * Description: file row module
+ */
+
 /* Path: app/src/styles/file_row.css */
 /* Description: Styles for file row component with drag handle */
 
@@ -81,6 +86,26 @@
   font-size: 10px;
   text-transform: uppercase;
   font-weight: 500;
+}
+
+.file-badge.change {
+  background: #2a2f45;
+  color: #cbd5f5;
+}
+
+.file-badge.change.change-add {
+  background: #123d2a;
+  color: #4ade80;
+}
+
+.file-badge.change.change-modify {
+  background: #23324d;
+  color: #93c5fd;
+}
+
+.file-badge.change.change-delete {
+  background: #3a1b1b;
+  color: #f87171;
 }
 
 .file-badge.staged {

@@ -54,6 +54,10 @@
       "summary": "Root component with tab state management and offline banner"
     },
     {
+      "path": "app/src/components/drag_error_notice.tsx",
+      "summary": "Small inline error notice for drag failures"
+    },
+    {
       "path": "app/src/components/file_list_column.tsx",
       "summary": "Column wrapper that renders a list of FileRow components"
     },
@@ -70,8 +74,16 @@
       "summary": "Connection status banner shown when agent is offline"
     },
     {
+      "path": "app/src/components/status_bar.tsx",
+      "summary": "Status bar with auto-stage toggle"
+    },
+    {
       "path": "app/src/components/tab_bar.tsx",
       "summary": "Tab navigation component"
+    },
+    {
+      "path": "app/src/components/worktree_selector.tsx",
+      "summary": "Worktree selector dropdown for Triangle Rain"
     },
     {
       "path": "app/src/components/zip_column_placeholder.tsx",
@@ -122,6 +134,10 @@
       "summary": "columns module"
     },
     {
+      "path": "app/src/styles/drag_error_notice.css",
+      "summary": "drag error notice module"
+    },
+    {
       "path": "app/src/styles/file_row.css",
       "summary": "file row module"
     },
@@ -132,6 +148,10 @@
     {
       "path": "app/src/styles/offline_banner.css",
       "summary": "offline banner module"
+    },
+    {
+      "path": "app/src/styles/status_bar.css",
+      "summary": "status bar module"
     },
     {
       "path": "app/src/styles/tab_bar.css",

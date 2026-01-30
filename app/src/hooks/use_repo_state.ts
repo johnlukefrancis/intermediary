@@ -1,13 +1,14 @@
 // Path: app/src/hooks/use_repo_state.ts
 // Description: Per-repo file state management with event subscription
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAgent } from "./use_agent.js";
 import type {
   FileEntry,
   StagedInfo,
   AgentEvent,
 } from "../shared/protocol.js";
+import { sendGetRepoTopLevel, sendRefresh } from "../lib/agent/messages.js";
 
 const MAX_RECENT_FILES = 200;
 
@@ -16,6 +17,9 @@ export interface RepoState {
   recentCode: FileEntry[];
   stagedByPath: Map<string, StagedInfo>;
   isLoading: boolean;
+  topLevelDirs: string[];
+  topLevelFiles: string[];
+  registerStaged: (relativePath: string, stagedInfo: StagedInfo) => void;
 }
 
 function sortByMtimeDesc(a: FileEntry, b: FileEntry): number {
@@ -35,7 +39,7 @@ function upsertFile(files: FileEntry[], entry: FileEntry): FileEntry[] {
 }
 
 export function useRepoState(repoId: string): RepoState {
-  const { subscribe } = useAgent();
+  const { subscribe, client, connectionState, helloState } = useAgent();
 
   const [recentDocs, setRecentDocs] = useState<FileEntry[]>([]);
   const [recentCode, setRecentCode] = useState<FileEntry[]>([]);
@@ -43,6 +47,17 @@ export function useRepoState(repoId: string): RepoState {
     () => new Map()
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [topLevelDirs, setTopLevelDirs] = useState<string[]>([]);
+  const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
+  const lastHelloRefreshKeyRef = useRef<string | null>(null);
+
+  const registerStaged = useCallback((relativePath: string, stagedInfo: StagedInfo) => {
+    setStagedByPath((prev) => {
+      const next = new Map(prev);
+      next.set(relativePath, stagedInfo);
+      return next;
+    });
+  }, []);
 
   const handleEvent = useCallback(
     (event: AgentEvent) => {
@@ -64,6 +79,7 @@ export function useRepoState(repoId: string): RepoState {
         const entry: FileEntry = {
           path: event.path,
           kind: event.kind,
+          changeType: event.changeType,
           mtime: event.mtime,
         };
 
@@ -75,15 +91,11 @@ export function useRepoState(repoId: string): RepoState {
 
         const stagedInfo = event.staged;
         if (stagedInfo) {
-          setStagedByPath((prev) => {
-            const next = new Map(prev);
-            next.set(event.path, stagedInfo);
-            return next;
-          });
+          registerStaged(event.path, stagedInfo);
         }
       }
     },
-    [repoId]
+    [repoId, registerStaged]
   );
 
   useEffect(() => {
@@ -92,15 +104,62 @@ export function useRepoState(repoId: string): RepoState {
     setRecentCode([]);
     setStagedByPath(new Map());
     setIsLoading(true);
+    setTopLevelDirs([]);
+    setTopLevelFiles([]);
 
     const unsubscribe = subscribe(handleEvent);
     return unsubscribe;
   }, [subscribe, handleEvent, repoId]);
+
+  useEffect(() => {
+    if (
+      connectionState.status !== "connected" ||
+      !client ||
+      helloState.status !== "ok" ||
+      helloState.lastHelloAt === null
+    ) {
+      return;
+    }
+    if (!helloState.watchedRepoIds.includes(repoId)) {
+      return;
+    }
+
+    const refreshKey = `${repoId}:${helloState.lastHelloAt}`;
+    if (lastHelloRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+    lastHelloRefreshKeyRef.current = refreshKey;
+
+    setIsLoading(true);
+    void sendRefresh(client, repoId).catch((err: unknown) => {
+      console.error("[useRepoState] refresh failed:", err);
+      setIsLoading(false);
+    });
+
+    void sendGetRepoTopLevel(client, repoId)
+      .then((result) => {
+        setTopLevelDirs(result.dirs);
+        setTopLevelFiles(result.files);
+      })
+      .catch((err: unknown) => {
+        console.error("[useRepoState] getRepoTopLevel failed:", err);
+      });
+  }, [
+    repoId,
+    client,
+    connectionState.status,
+    helloState.status,
+    helloState.lastHelloAt,
+    helloState.watchedRepoIds,
+  ]);
 
   return {
     recentDocs,
     recentCode,
     stagedByPath,
     isLoading,
+    topLevelDirs,
+    topLevelFiles,
+    registerStaged,
   };
 }

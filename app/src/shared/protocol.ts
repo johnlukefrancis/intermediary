@@ -14,11 +14,16 @@ export type { TabId, WorktreeId } from "./ids.js";
 export const FileKindSchema = z.enum(["docs", "code", "other"]);
 export type FileKind = z.infer<typeof FileKindSchema>;
 
+export const FileChangeTypeSchema = z.enum(["add", "change", "unlink"]);
+export type FileChangeType = z.infer<typeof FileChangeTypeSchema>;
+
 export const FileEntrySchema = z.object({
   /** Relative path from repo root */
   path: z.string(),
   /** Classification for column routing */
   kind: FileKindSchema,
+  /** Last observed change type for this file */
+  changeType: FileChangeTypeSchema,
   /** Last modified timestamp (ISO 8601) */
   mtime: z.string(),
   /** Optional file size in bytes */
@@ -51,6 +56,7 @@ export const FileChangedEventSchema = z.object({
   repoId: z.string(),
   path: z.string(),
   kind: FileKindSchema,
+  changeType: FileChangeTypeSchema,
   mtime: z.string(),
   /** Present when file was auto-staged */
   staged: StagedInfoSchema.optional(),

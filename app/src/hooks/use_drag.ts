@@ -19,6 +19,10 @@ const INITIAL_DRAG_STATE: DragState = {
   error: null,
 };
 
+export interface UseDragOptions {
+  onStaged?: (relativePath: string, stagedInfo: StagedInfo) => void;
+}
+
 export interface UseDragResult {
   dragState: DragState;
   handleDragStart: (
@@ -29,9 +33,10 @@ export interface UseDragResult {
   clearError: () => void;
 }
 
-export function useDrag(): UseDragResult {
+export function useDrag(options?: UseDragOptions): UseDragResult {
   const { client, appPaths } = useAgent();
   const [dragState, setDragState] = useState<DragState>(INITIAL_DRAG_STATE);
+  const onStaged = options?.onStaged;
 
   const clearError = useCallback(() => {
     setDragState((prev) => ({ ...prev, error: null }));
@@ -59,7 +64,14 @@ export function useDrag(): UseDragResult {
           // Need to stage the file first
           setDragState({ isDragging: true, isStaging: true, error: null });
           const result = await sendStageFile(client, repoId, relativePath);
-          windowsPath = result.windowsPath;
+          const stagedResult: StagedInfo = {
+            wslPath: result.wslPath,
+            windowsPath: result.windowsPath,
+            bytesCopied: result.bytesCopied,
+            mtimeMs: result.mtimeMs,
+          };
+          onStaged?.(relativePath, stagedResult);
+          windowsPath = stagedResult.windowsPath;
         }
 
         await startDrag({
@@ -73,7 +85,7 @@ export function useDrag(): UseDragResult {
         setDragState({ isDragging: false, isStaging: false, error: message });
       }
     },
-    [client, appPaths]
+    [client, appPaths, onStaged]
   );
 
   return {

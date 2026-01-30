@@ -4,6 +4,7 @@
 import React, { useState } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { OfflineBanner } from "./components/offline_banner.js";
+import { StatusBar } from "./components/status_bar.js";
 import { TexturePortalTab } from "./tabs/texture_portal_tab.js";
 import { TriangleRainTab } from "./tabs/triangle_rain_tab.js";
 import { IntermediaryTab } from "./tabs/intermediary_tab.js";
@@ -16,6 +17,7 @@ export function App(): React.JSX.Element {
     <div className="app">
       <OfflineBanner />
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <StatusBar />
       <main className="tab-content">
         {activeTab === "texture-portal" && <TexturePortalTab />}
         {activeTab === "triangle-rain" && <TriangleRainTab />}

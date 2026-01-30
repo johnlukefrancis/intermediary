@@ -3,7 +3,7 @@
 
 import type React from "react";
 import { useCallback } from "react";
-import type { FileEntry, StagedInfo } from "../shared/protocol.js";
+import type { FileEntry, FileChangeType, StagedInfo } from "../shared/protocol.js";
 import "../styles/file_row.css";
 
 interface FileRowProps {
@@ -43,6 +43,18 @@ function getDirectory(path: string): string {
   return parts.slice(0, -1).join("/");
 }
 
+function getChangeBadge(changeType: FileChangeType): { label: string; className: string } {
+  switch (changeType) {
+    case "add":
+      return { label: "A", className: "change-add" };
+    case "unlink":
+      return { label: "D", className: "change-delete" };
+    case "change":
+    default:
+      return { label: "M", className: "change-modify" };
+  }
+}
+
 export function FileRow({
   file,
   repoId,
@@ -60,6 +72,7 @@ export function FileRow({
 
   const fileName = getFileName(file.path);
   const directory = getDirectory(file.path);
+  const changeBadge = getChangeBadge(file.changeType);
 
   return (
     <div className="file-row">
@@ -75,6 +88,12 @@ export function FileRow({
         {directory && <span className="file-dir">{directory}</span>}
       </div>
       <div className="file-meta">
+        <span
+          className={`file-badge change ${changeBadge.className}`}
+          title={`Change: ${file.changeType}`}
+        >
+          {changeBadge.label}
+        </span>
         {stagedInfo && <span className="file-badge staged">staged</span>}
         <span className="file-time">{formatRelativeTime(file.mtime)}</span>
       </div>
