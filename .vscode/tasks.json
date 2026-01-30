@@ -112,18 +112,23 @@
         "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; if [ -s \"/home/johnf/.nvm/nvm.sh\" ]; then . \"/home/johnf/.nvm/nvm.sh\"; else echo \"nvm.sh not found at /home/johnf/.nvm\" >&2; exit 1; fi; nvm use 20 >/dev/null; corepack enable; cd /home/johnf/code/intermediary && pnpm run agent:dev"
       ],
       "isBackground": true,
-      "problemMatcher": {
-        "pattern": [
-          {
-            "regexp": ".*"
+      "problemMatcher": [
+        {
+          "owner": "wsl-agent",
+          "pattern": [
+            {
+              "regexp": "^(.*)$",
+              "file": 1,
+              "message": 1
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "WebSocket server started",
+            "endsPattern": "Agent ready"
           }
-        ],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "WebSocket server started",
-          "endsPattern": "Agent ready"
         }
-      },
+      ],
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
