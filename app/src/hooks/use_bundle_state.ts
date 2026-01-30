@@ -34,6 +34,29 @@ export interface BundleState {
 
 const EMPTY_SAVED_SELECTIONS: Record<string, BundleSelection> = {};
 
+function buildPresetKey(presets: BundlePreset[]): string {
+  return presets
+    .map((preset) => {
+      const dirs = preset.topLevelDirs.join(",");
+      return `${preset.presetId}:${preset.presetName}:${preset.includeRoot}:${dirs}`;
+    })
+    .join("|");
+}
+
+function buildSelectionKey(selections: Record<string, BundleSelection>): string {
+  const entries = Object.keys(selections)
+    .sort()
+    .map((presetId) => {
+      const selection = selections[presetId];
+      if (!selection) {
+        return `${presetId}:missing`;
+      }
+      const dirs = selection.topLevelDirs.join(",");
+      return `${presetId}:${selection.includeRoot}:${dirs}`;
+    });
+  return entries.join("|");
+}
+
 function normalizeTopLevelDirs(dirs: string[], available: string[] = []): string[] {
   const unique = Array.from(new Set(dirs.filter((dir) => dir.length > 0)));
   if (available.length === 0) {
@@ -136,6 +159,7 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
     repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId
   );
   const lastRefreshKeyRef = useRef<string | null>(null);
+  const resetKeyRef = useRef<string | null>(null);
 
   // Update selection for a preset
   const setSelection = useCallback((presetId: string, selection: BundleSelection) => {
@@ -233,6 +257,14 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
 
   // Reset state when repoId changes
   useEffect(() => {
+    const resetKey = `${repoId}|${buildPresetKey(repoPresets)}|${buildSelectionKey(
+      savedSelections
+    )}`;
+    if (resetKeyRef.current === resetKey) {
+      return;
+    }
+    resetKeyRef.current = resetKey;
+
     const next = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
       const saved = savedSelections[preset.presetId];
