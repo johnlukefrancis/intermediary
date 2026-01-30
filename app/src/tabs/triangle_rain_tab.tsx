@@ -1,13 +1,15 @@
 // Path: app/src/tabs/triangle_rain_tab.tsx
 // Description: Triangle Rain project tab with worktree selector and file lists
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
+import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { FileListColumn } from "../components/file_list_column.js";
-import { ZipColumnPlaceholder } from "../components/zip_column_placeholder.js";
+import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { WorktreeSelector } from "../components/worktree_selector.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
+import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import type { WorktreeId } from "../shared/protocol.js";
@@ -25,11 +27,24 @@ export function TriangleRainTab(): React.JSX.Element {
   const [selectedWorktree, setSelectedWorktree] = useState<WorktreeId>("tr-engine");
   const repoId = useMemo(() => getRepoId(selectedWorktree), [selectedWorktree]);
 
-  const { connectionState } = useAgent();
-  const { recentDocs, recentCode, stagedByPath, isLoading, registerStaged } = useRepoState(repoId);
+  const { connectionState, appPaths } = useAgent();
+  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, registerStaged } =
+    useRepoState(repoId);
+  const bundleState = useBundleState(repoId, topLevelDirs);
   const { dragState, handleDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
+
+  const handleBundleDragStart = useCallback(
+    async (windowsPath: string) => {
+      if (!appPaths) return;
+      await startDrag({
+        item: [windowsPath],
+        icon: appPaths.dragIconWindowsPath,
+      });
+    },
+    [appPaths]
+  );
 
   const isConnected = connectionState.status === "connected";
   const emptyMessage = !isConnected
@@ -67,7 +82,14 @@ export function TriangleRainTab(): React.JSX.Element {
             onDragStart={handleDragStart}
           />
         }
-        zipsContent={<ZipColumnPlaceholder />}
+        zipsContent={
+          <BundleColumn
+            repoId={repoId}
+            bundleState={bundleState}
+            onDragStart={handleBundleDragStart}
+            emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
+          />
+        }
       />
     </div>
   );

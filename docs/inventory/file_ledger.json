@@ -2,6 +2,38 @@
   "scope": "src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
+      "path": "agent/src/bundles/bundle_builder.ts",
+      "summary": "Orchestrates bundle building process"
+    },
+    {
+      "path": "agent/src/bundles/bundle_lister.ts",
+      "summary": "List existing bundles for a preset"
+    },
+    {
+      "path": "agent/src/bundles/bundle_types.ts",
+      "summary": "Type definitions for bundle building"
+    },
+    {
+      "path": "agent/src/bundles/git_info.ts",
+      "summary": "Best-effort git info extraction for bundle manifests"
+    },
+    {
+      "path": "agent/src/bundles/ignore_rules.ts",
+      "summary": "Centralized ignore patterns for bundle building"
+    },
+    {
+      "path": "agent/src/bundles/manifest.ts",
+      "summary": "Manifest generation for bundle zips"
+    },
+    {
+      "path": "agent/src/bundles/retention.ts",
+      "summary": "Bundle cleanup logic (keep last N)"
+    },
+    {
+      "path": "agent/src/bundles/zip_writer.ts",
+      "summary": "Archiver wrapper for creating bundle zip files"
+    },
+    {
       "path": "agent/src/main.ts",
       "summary": "Agent entry point - bootstraps WebSocket server and watchers"
     },
@@ -54,6 +86,26 @@
       "summary": "Root component with tab state management and offline banner"
     },
     {
+      "path": "app/src/components/bundles/bundle_column.tsx",
+      "summary": "Main bundles column component"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_list.tsx",
+      "summary": "List of built bundles with drag handles"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_row.tsx",
+      "summary": "Individual bundle row with drag support"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_selection_panel.tsx",
+      "summary": "Selection UI for bundle building (root toggle, dir checkboxes)"
+    },
+    {
+      "path": "app/src/components/bundles/preset_selector.tsx",
+      "summary": "Preset tabs/buttons for bundle building"
+    },
+    {
       "path": "app/src/components/drag_error_notice.tsx",
       "summary": "Small inline error notice for drag failures"
     },
@@ -86,12 +138,12 @@
       "summary": "Worktree selector dropdown for Triangle Rain"
     },
     {
-      "path": "app/src/components/zip_column_placeholder.tsx",
-      "summary": "Placeholder for zip bundles column (real implementation in prompt 4)"
-    },
-    {
       "path": "app/src/hooks/use_agent.tsx",
       "summary": "Agent context provider and connection management hook"
+    },
+    {
+      "path": "app/src/hooks/use_bundle_state.ts",
+      "summary": "Per-repo bundle state management with event subscription"
     },
     {
       "path": "app/src/hooks/use_drag.ts",
@@ -128,6 +180,10 @@
     {
       "path": "app/src/shared/protocol.ts",
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
+    },
+    {
+      "path": "app/src/styles/bundle_column.css",
+      "summary": "bundle column module"
     },
     {
       "path": "app/src/styles/columns.css",

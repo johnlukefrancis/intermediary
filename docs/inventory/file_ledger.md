@@ -3,6 +3,14 @@
 Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
+agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process
+agent/src/bundles/bundle_lister.ts - List existing bundles for a preset
+agent/src/bundles/bundle_types.ts - Type definitions for bundle building
+agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manifests
+agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
+agent/src/bundles/manifest.ts - Manifest generation for bundle zips
+agent/src/bundles/retention.ts - Bundle cleanup logic (keep last N)
+agent/src/bundles/zip_writer.ts - Archiver wrapper for creating bundle zip files
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
@@ -16,6 +24,11 @@ agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
 app/src/app.tsx - Root component with tab state management and offline banner
+app/src/components/bundles/bundle_column.tsx - Main bundles column component
+app/src/components/bundles/bundle_list.tsx - List of built bundles with drag handles
+app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
+app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes)
+app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
 app/src/components/file_row.tsx - Draggable file item with drag handle and metadata display
@@ -24,8 +37,8 @@ app/src/components/offline_banner.tsx - Connection status banner shown when agen
 app/src/components/status_bar.tsx - Status bar with auto-stage toggle
 app/src/components/tab_bar.tsx - Tab navigation component
 app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
-app/src/components/zip_column_placeholder.tsx - Placeholder for zip bundles column (real implementation in prompt 4)
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
+app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
@@ -35,6 +48,7 @@ app/src/main.tsx - React entry point - mounts App with AgentProvider to DOM
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
+app/src/styles/bundle_column.css - bundle column module
 app/src/styles/columns.css - columns module
 app/src/styles/drag_error_notice.css - drag error notice module
 app/src/styles/file_row.css - file row module

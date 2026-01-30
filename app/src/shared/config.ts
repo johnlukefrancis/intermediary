@@ -4,6 +4,37 @@
 import { z } from "zod";
 import { TabIdSchema, WorktreeIdSchema } from "./ids.js";
 
+// -----------------------------------------------------------------------------
+// Bundle preset configuration
+// -----------------------------------------------------------------------------
+
+/**
+ * Configuration for a bundle preset
+ */
+export const BundlePresetSchema = z.object({
+  /** Unique identifier for this preset */
+  presetId: z.string().min(1),
+  /** Display name in the UI */
+  presetName: z.string().min(1),
+  /** Whether to include root-level files */
+  includeRoot: z.boolean().default(true),
+  /** Top-level directories to include (empty = ALL) */
+  topLevelDirs: z.array(z.string()).default([]),
+});
+
+export type BundlePreset = z.infer<typeof BundlePresetSchema>;
+
+export const DEFAULT_BUNDLE_PRESET: BundlePreset = {
+  presetId: "context",
+  presetName: "Context",
+  includeRoot: true,
+  topLevelDirs: [],
+};
+
+// -----------------------------------------------------------------------------
+// Glob defaults
+// -----------------------------------------------------------------------------
+
 export const DEFAULT_DOCS_GLOBS = [
   "docs/**",
   "**/*.md",
@@ -69,6 +100,8 @@ export const RepoConfigSchema = z.object({
   codeGlobs: z.array(z.string()).default(DEFAULT_CODE_GLOBS),
   /** Globs that should be ignored by watchers */
   ignoreGlobs: z.array(z.string()).default(DEFAULT_IGNORE_GLOBS),
+  /** Bundle presets for this repo */
+  bundlePresets: z.array(BundlePresetSchema).default([DEFAULT_BUNDLE_PRESET]),
 });
 
 export type RepoConfig = z.infer<typeof RepoConfigSchema>;
@@ -117,6 +150,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
       ignoreGlobs: DEFAULT_IGNORE_GLOBS,
+      bundlePresets: [DEFAULT_BUNDLE_PRESET],
     },
     {
       repoId: "triangle-rain-tr-engine",
@@ -128,6 +162,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
       ignoreGlobs: DEFAULT_IGNORE_GLOBS,
+      bundlePresets: [DEFAULT_BUNDLE_PRESET],
     },
     {
       repoId: "intermediary",
@@ -138,6 +173,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
       ignoreGlobs: DEFAULT_IGNORE_GLOBS,
+      bundlePresets: [DEFAULT_BUNDLE_PRESET],
     },
   ],
 });

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
 import { AgentProvider } from "./hooks/use_agent.js";
 import "./styles/main.css";
+import "./styles/bundle_column.css";
 
 const container = document.getElementById("root");
 if (!container) {

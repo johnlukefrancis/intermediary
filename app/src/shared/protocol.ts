@@ -74,10 +74,12 @@ export const BundleBuiltEventSchema = z.object({
   repoId: z.string(),
   presetId: z.string(),
   windowsPath: z.string(),
-  sizeBytes: z.number().int().nonnegative(),
-  mtime: z.string(),
-  gitShort: z.string(),
+  aliasWindowsPath: z.string(),
+  bytes: z.number().int().nonnegative(),
+  fileCount: z.number().int().nonnegative(),
+  builtAtIso: z.string(),
 });
+export type BundleBuiltEvent = z.infer<typeof BundleBuiltEventSchema>;
 
 export const ErrorEventSchema = z.object({
   type: z.literal("error"),
@@ -115,10 +117,20 @@ export const StageFileCommandSchema = z.object({
   path: z.string(),
 });
 
+/** Selection payload for bundle building */
+export const BundleSelectionSchema = z.object({
+  /** Whether to include root-level files */
+  includeRoot: z.boolean(),
+  /** Top-level directories to include (empty = ALL) */
+  topLevelDirs: z.array(z.string()),
+});
+export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
+
 export const BuildBundleCommandSchema = z.object({
   type: z.literal("buildBundle"),
   repoId: z.string(),
   presetId: z.string(),
+  selection: BundleSelectionSchema,
 });
 
 /** Handshake from UI with config and staging paths */
@@ -146,6 +158,13 @@ export const GetRepoTopLevelCommandSchema = z.object({
   repoId: z.string(),
 });
 
+/** Request list of existing bundles for a preset */
+export const ListBundlesCommandSchema = z.object({
+  type: z.literal("listBundles"),
+  repoId: z.string(),
+  presetId: z.string(),
+});
+
 export const UiCommandSchema = z.discriminatedUnion("type", [
   WatchRepoCommandSchema,
   RefreshCommandSchema,
@@ -154,6 +173,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   ClientHelloCommandSchema,
   SetOptionsCommandSchema,
   GetRepoTopLevelCommandSchema,
+  ListBundlesCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
 
@@ -186,6 +206,11 @@ export const BuildBundleResultSchema = z.object({
   repoId: z.string(),
   presetId: z.string(),
   windowsPath: z.string(),
+  wslPath: z.string(),
+  aliasWindowsPath: z.string(),
+  bytes: z.number().int().nonnegative(),
+  fileCount: z.number().int().nonnegative(),
+  builtAtIso: z.string(),
 });
 
 /** Response to clientHello with agent info */
@@ -209,6 +234,24 @@ export const GetRepoTopLevelResultSchema = z.object({
   files: z.array(z.string()),
 });
 
+/** Info about a single bundle file */
+export const BundleInfoSchema = z.object({
+  windowsPath: z.string(),
+  fileName: z.string(),
+  bytes: z.number().int().nonnegative(),
+  mtimeMs: z.number(),
+  isLatestAlias: z.boolean(),
+});
+export type BundleInfo = z.infer<typeof BundleInfoSchema>;
+
+/** Response with list of existing bundles */
+export const ListBundlesResultSchema = z.object({
+  type: z.literal("listBundlesResult"),
+  repoId: z.string(),
+  presetId: z.string(),
+  bundles: z.array(BundleInfoSchema),
+});
+
 export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
   RefreshResultSchema,
@@ -217,6 +260,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   ClientHelloResultSchema,
   SetOptionsResultSchema,
   GetRepoTopLevelResultSchema,
+  ListBundlesResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 
@@ -228,6 +272,7 @@ export type BuildBundleResult = z.infer<typeof BuildBundleResultSchema>;
 export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
 export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
 export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;
+export type ListBundlesResult = z.infer<typeof ListBundlesResultSchema>;
 
 // -----------------------------------------------------------------------------
 // Protocol envelopes

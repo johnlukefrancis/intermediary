@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
   },
   "scripts": {
     "dev": "vite",
@@ -22,6 +25,7 @@
   "dependencies": {
     "@crabnebula/tauri-plugin-drag": "^2.1.0",
     "@tauri-apps/api": "^2.2.0",
+    "archiver": "^7.0.1",
     "chokidar": "^3.6.0",
     "minimatch": "^9.0.3",
     "react": "^18.3.1",
@@ -32,6 +36,7 @@
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@tauri-apps/cli": "^2.2.4",
+    "@types/archiver": "^7.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

@@ -9,6 +9,9 @@ import type {
   SetOptionsResult,
   GetRepoTopLevelResult,
   RefreshResult,
+  BuildBundleResult,
+  ListBundlesResult,
+  BundleSelection,
 } from "../../shared/protocol.js";
 
 export async function sendClientHello(
@@ -66,5 +69,31 @@ export async function sendRefresh(
   return client.send<RefreshResult>({
     type: "refresh",
     repoId,
+  });
+}
+
+export async function sendBuildBundle(
+  client: AgentClient,
+  repoId: string,
+  presetId: string,
+  selection: BundleSelection
+): Promise<BuildBundleResult> {
+  return client.send<BuildBundleResult>({
+    type: "buildBundle",
+    repoId,
+    presetId,
+    selection,
+  });
+}
+
+export async function sendListBundles(
+  client: AgentClient,
+  repoId: string,
+  presetId: string
+): Promise<ListBundlesResult> {
+  return client.send<ListBundlesResult>({
+    type: "listBundles",
+    repoId,
+    presetId,
   });
 }

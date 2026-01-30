@@ -15,6 +15,8 @@ import { createRepoWatcher, type RepoWatcher } from "./repos/repo_watcher.js";
 import { getRepoTopLevel, isValidRepoRoot } from "./repos/repo_top_level.js";
 import { createStager, type Stager, type StageResult } from "./staging/stager.js";
 import { type PathBridgeConfig } from "./staging/path_bridge.js";
+import { createBundleBuilder, type BundleBuilder } from "./bundles/bundle_builder.js";
+import { listBundles } from "./bundles/bundle_lister.js";
 import { shouldAutoStage } from "./util/categorizer.js";
 import { logger, setLogLevel } from "./util/logger.js";
 import { AgentError } from "./util/errors.js";
@@ -26,6 +28,8 @@ interface AgentState {
   repoRoots: Map<string, string>;
   repoConfigs: Map<string, RepoConfig>;
   stager: Stager | null;
+  bundleBuilder: BundleBuilder | null;
+  stagingWslRoot: string | null;
   autoStageOnChange: boolean;
 }
 
@@ -34,6 +38,8 @@ const state: AgentState = {
   repoRoots: new Map(),
   repoConfigs: new Map(),
   stager: null,
+  bundleBuilder: null,
+  stagingWslRoot: null,
   autoStageOnChange: true,
 };
 
@@ -51,6 +57,8 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         stagingWinRoot: command.stagingWinRoot,
       };
       state.stager = createStager(config);
+      state.bundleBuilder = createBundleBuilder(config);
+      state.stagingWslRoot = command.stagingWslRoot;
       state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
 
       // Start watchers for configured repos
@@ -169,8 +177,68 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
     }
 
     case "buildBundle": {
-      // TODO: Implement bundle building
-      throw new AgentError("NOT_IMPLEMENTED", "Bundle building not yet implemented");
+      if (!state.bundleBuilder || !state.stagingWslRoot) {
+        throw new AgentError("NOT_CONFIGURED", "Bundle builder not configured");
+      }
+      const rootPath = state.repoRoots.get(command.repoId);
+      if (!rootPath) {
+        throw new AgentError("UNKNOWN_REPO", `Unknown repo: ${command.repoId}`);
+      }
+
+      const result = await state.bundleBuilder.buildBundle({
+        repoId: command.repoId,
+        repoRoot: rootPath,
+        presetId: command.presetId,
+        presetName: command.presetId,
+        selection: command.selection,
+        outputDir: state.stagingWslRoot,
+      });
+
+      router.broadcastEvent({
+        type: "bundleBuilt",
+        repoId: command.repoId,
+        presetId: command.presetId,
+        windowsPath: result.windowsPath,
+        aliasWindowsPath: result.aliasWindowsPath,
+        bytes: result.bytes,
+        fileCount: result.fileCount,
+        builtAtIso: result.builtAtIso,
+      });
+
+      return {
+        type: "buildBundleResult",
+        repoId: command.repoId,
+        presetId: command.presetId,
+        windowsPath: result.windowsPath,
+        wslPath: result.wslPath,
+        aliasWindowsPath: result.aliasWindowsPath,
+        bytes: result.bytes,
+        fileCount: result.fileCount,
+        builtAtIso: result.builtAtIso,
+      };
+    }
+
+    case "listBundles": {
+      if (!state.stagingWslRoot) {
+        throw new AgentError("NOT_CONFIGURED", "Staging not configured");
+      }
+      const bundles = await listBundles({
+        bundleDir: state.stagingWslRoot,
+        repoId: command.repoId,
+        presetId: command.presetId,
+      });
+      return {
+        type: "listBundlesResult",
+        repoId: command.repoId,
+        presetId: command.presetId,
+        bundles: bundles.map((b) => ({
+          windowsPath: b.windowsPath,
+          fileName: b.fileName,
+          bytes: b.bytes,
+          mtimeMs: b.mtimeMs,
+          isLatestAlias: b.isLatestAlias,
+        })),
+      };
     }
   }
 
