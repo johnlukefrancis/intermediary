@@ -59,7 +59,8 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
       lastError: null,
     });
 
-    const url = `ws://${config.host}:${config.port}`;
+    const resolvedHost = config.host === "localhost" ? "127.0.0.1" : config.host;
+    const url = `ws://${resolvedHost}:${config.port}`;
     ws = new WebSocket(url);
 
     ws.onopen = handleOpen;
@@ -104,6 +105,11 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
 
   function handleError(event: Event): void {
     const message = event instanceof ErrorEvent ? event.message : "Connection error";
+    console.error("[AgentClient] WebSocket error", {
+      host: config.host,
+      port: config.port,
+      message,
+    });
     setConnectionState({
       ...connectionState,
       lastError: message,
