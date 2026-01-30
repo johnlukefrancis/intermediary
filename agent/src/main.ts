@@ -61,15 +61,26 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
       state.stagingWslRoot = command.stagingWslRoot;
       state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
 
-      // Start watchers for configured repos
+      // Start watchers for configured repos (async)
       const watchedRepoIds: string[] = [];
       for (const repo of command.config.repos) {
         state.repoRoots.set(repo.repoId, repo.wslPath);
         state.repoConfigs.set(repo.repoId, repo);
 
         if (await isValidRepoRoot(repo.wslPath)) {
-          await startWatcher(repo);
           watchedRepoIds.push(repo.repoId);
+          void startWatcher(repo).catch((err: unknown) => {
+            logger.error("Failed to start repo watcher", {
+              repoId: repo.repoId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            router.broadcastEvent({
+              type: "error",
+              scope: "watcher",
+              message: `Watcher failed for ${repo.repoId}`,
+              details: err instanceof Error ? err.message : String(err),
+            });
+          });
         } else {
           logger.warn("Invalid repo root, skipping", {
             repoId: repo.repoId,
@@ -77,20 +88,6 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
           });
         }
       }
-
-      queueMicrotask(() => {
-        for (const repoId of watchedRepoIds) {
-          const watcher = state.watchers.get(repoId);
-          if (!watcher) {
-            continue;
-          }
-          router.broadcastEvent({
-            type: "snapshot",
-            repoId,
-            recent: watcher.getRecentChanges(),
-          });
-        }
-      });
 
       return {
         type: "clientHelloResult",
@@ -309,9 +306,20 @@ async function startWatcher(repoConfig: RepoConfig): Promise<void> {
     }
   });
 
-  await watcher.start();
   state.watchers.set(repoConfig.repoId, watcher);
   state.repoRoots.set(repoConfig.repoId, repoConfig.wslPath);
+
+  try {
+    await watcher.start();
+    router.broadcastEvent({
+      type: "snapshot",
+      repoId: repoConfig.repoId,
+      recent: watcher.getRecentChanges(),
+    });
+  } catch (err) {
+    state.watchers.delete(repoConfig.repoId);
+    throw err;
+  }
 }
 
 async function shutdown(): Promise<void> {
