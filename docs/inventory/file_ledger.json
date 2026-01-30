@@ -210,6 +210,10 @@
       "summary": "Styles for bundle column components"
     },
     {
+      "path": "app/src/styles/chrome.css",
+      "summary": "Unified header chrome styles for tab bar, status bar, and banners"
+    },
+    {
       "path": "app/src/styles/columns.css",
       "summary": "Three-column layout styles"
     },
@@ -231,15 +235,15 @@
     },
     {
       "path": "app/src/styles/offline_banner.css",
-      "summary": "Styles for offline/reconnecting status banner"
+      "summary": "Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner..."
     },
     {
       "path": "app/src/styles/status_bar.css",
-      "summary": "Status bar styles for auto-stage toggle and connection status"
+      "summary": "Status bar command strip styles"
     },
     {
       "path": "app/src/styles/tab_bar.css",
-      "summary": "Tab bar navigation styles"
+      "summary": "Tab bar navigation styles with glass pill aesthetic"
     },
     {
       "path": "app/src/styles/theme_accents.css",

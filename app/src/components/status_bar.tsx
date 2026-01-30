@@ -31,7 +31,7 @@ export function StatusBar(): React.JSX.Element {
       <div className="status-left">
         <div className="status-group">
           <span className="status-label">Auto-stage</span>
-          <label className="status-toggle">
+          <label className="vintage-toggle">
             <input
               type="checkbox"
               checked={autoStageOnChange}
@@ -39,25 +39,34 @@ export function StatusBar(): React.JSX.Element {
                 setAutoStageOnChange(event.target.checked);
               }}
             />
-            <span className="status-toggle-track" aria-hidden="true" />
+            <span className="vintage-toggle-track" aria-hidden="true" />
           </label>
         </div>
+        <span className="chrome-sep" aria-hidden="true">·</span>
         <span className={`status-connection ${isConnected ? "connected" : "disconnected"}`}>
           Agent: {connectionLabel}
         </span>
-        {!isConnected && <span className="status-hint">Applies on reconnect</span>}
+        {!isConnected && (
+          <>
+            <span className="chrome-sep" aria-hidden="true">·</span>
+            <span className="status-hint">Applies on reconnect</span>
+          </>
+        )}
       </div>
 
       <div className="status-right">
         {lastError && (
-          <span className="status-error" title={lastError}>
-            Error: {lastError.length > 40 ? `${lastError.slice(0, 40)}...` : lastError}
-          </span>
+          <>
+            <span className="status-error" title={lastError}>
+              Error: {lastError.length > 40 ? `${lastError.slice(0, 40)}...` : lastError}
+            </span>
+            <span className="chrome-sep" aria-hidden="true">·</span>
+          </>
         )}
         {stagingPath && (
           <button
             type="button"
-            className={`status-path ${copyFeedback ? "copied" : ""}`}
+            className={`path-chip ${copyFeedback ? "copied" : ""}`}
             onClick={handleCopyPath}
             title="Click to copy staging path"
           >

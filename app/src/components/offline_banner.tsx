@@ -3,7 +3,6 @@
 
 import type React from "react";
 import { useAgent } from "../hooks/use_agent.js";
-import "../styles/offline_banner.css";
 
 export function OfflineBanner(): React.JSX.Element | null {
   const { connectionState } = useAgent();
@@ -20,11 +19,11 @@ export function OfflineBanner(): React.JSX.Element | null {
       : "Agent offline";
 
   return (
-    <div className={`offline-banner ${isReconnecting ? "reconnecting" : ""}`}>
-      <span className="offline-icon">{isReconnecting ? "..." : "!"}</span>
-      <span className="offline-message">{message}</span>
+    <div className={`system-banner ${isReconnecting ? "reconnecting" : ""}`}>
+      <span className="system-banner-icon">{isReconnecting ? "~" : "!"}</span>
+      <span className="system-banner-message">{message}</span>
       {connectionState.lastError && (
-        <span className="offline-error">{connectionState.lastError}</span>
+        <span className="system-banner-error">{connectionState.lastError}</span>
       )}
     </div>
   );

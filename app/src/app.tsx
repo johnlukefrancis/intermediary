@@ -37,9 +37,11 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="app" data-active-tab={activeTab}>
+      <header className="header-stack glass-surface">
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+        <StatusBar />
+      </header>
       <OfflineBanner />
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-      <StatusBar />
       <main className="tab-content">
         {activeTab === "texture-portal" && <TexturePortalTab />}
         {activeTab === "triangle-rain" && <TriangleRainTab />}

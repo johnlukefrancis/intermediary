@@ -55,14 +55,15 @@ app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/bundle_column.css - Styles for bundle column components
+app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column layout styles
 app/src/styles/drag_error_notice.css - Inline notice for drag errors
 app/src/styles/effects.css - Background gradient, grain noise, and glass surface utilities
 app/src/styles/file_row.css - Styles for file row component with drag handle
 app/src/styles/main.css - Global layout reset and base structure
-app/src/styles/offline_banner.css - Styles for offline/reconnecting status banner
-app/src/styles/status_bar.css - Status bar styles for auto-stage toggle and connection status
-app/src/styles/tab_bar.css - Tab bar navigation styles
+app/src/styles/offline_banner.css - Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner...
+app/src/styles/status_bar.css - Status bar command strip styles
+app/src/styles/tab_bar.css - Tab bar navigation styles with glass pill aesthetic
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion

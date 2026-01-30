@@ -27,6 +27,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps): React.JSX.Eleme
             onTabChange(tab.id);
           }}
           type="button"
+          aria-current={activeTab === tab.id ? "page" : undefined}
         >
           {tab.label}
         </button>

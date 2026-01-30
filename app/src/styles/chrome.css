@@ -1,0 +1,248 @@
+/*
+ * Path: app/src/styles/chrome.css
+ * Description: Unified header chrome styles for tab bar, status bar, and banners
+ */
+
+/* ===== HEADER STACK ===== */
+.header-stack {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ===== CHROME SEPARATOR ===== */
+.chrome-sep {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  user-select: none;
+  padding: 0 var(--space-1);
+}
+
+/* ===== CHROME CHIP (shared styling for grouped elements) ===== */
+.chrome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  transition: background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+.chrome-chip:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* ===== WORKTREE SELECTOR (glass chip variant) ===== */
+.worktree-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-inset-subtle);
+}
+
+.worktree-selector label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.worktree-selector select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out);
+}
+
+.worktree-selector select:hover {
+  background: var(--color-bg-hover);
+}
+
+.worktree-selector select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+/* ===== STATE PILLS ===== */
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.state-pill.success {
+  color: var(--color-success);
+  border-color: var(--color-success-muted);
+}
+
+.state-pill.error {
+  color: var(--color-error);
+  border-color: var(--color-error-muted);
+}
+
+.state-pill.warning {
+  color: var(--color-warning);
+  border-color: var(--color-warning-muted);
+}
+
+/* ===== MONO PATH CHIP ===== */
+.path-chip {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+.path-chip:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.path-chip.copied {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-muted);
+  color: var(--color-success);
+}
+
+/* ===== VINTAGE TOGGLE ===== */
+.vintage-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 32px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.vintage-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.vintage-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  transition: background var(--duration-slow) var(--ease-out),
+    border-color var(--duration-slow) var(--ease-out);
+}
+
+.vintage-toggle-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  transition: transform var(--duration-slow) var(--ease-out),
+    background var(--duration-slow) var(--ease-out);
+}
+
+.vintage-toggle input:checked + .vintage-toggle-track {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-muted);
+}
+
+.vintage-toggle input:checked + .vintage-toggle-track::after {
+  transform: translateX(16px);
+  background: var(--color-success);
+}
+
+.vintage-toggle input:focus-visible + .vintage-toggle-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ===== SYSTEM BANNER (offline/reconnecting) ===== */
+.system-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  border: 1px solid var(--glass-border);
+  border-top: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.system-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  color: var(--color-bg-base);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+}
+
+.system-banner.reconnecting .system-banner-icon {
+  animation: gentle-pulse 2s ease-in-out infinite;
+}
+
+.system-banner-message {
+  flex: 1;
+}
+
+.system-banner-error {
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  opacity: 0.9;
+}
+
+@keyframes gentle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

@@ -1,57 +1,6 @@
 /*
  * Path: app/src/styles/offline_banner.css
- * Description: Styles for offline/reconnecting status banner
+ * Description: Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner
+ *
+ * This file is kept for reference. All banner styles are now in chrome.css.
  */
-
-.offline-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--text-base);
-}
-
-.offline-banner.reconnecting {
-  background: var(--color-bg-active);
-}
-
-.offline-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-accent);
-  color: white;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-}
-
-.offline-banner.reconnecting .offline-icon {
-  background: var(--color-text-muted);
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.offline-message {
-  flex: 1;
-}
-
-.offline-error {
-  color: var(--color-accent);
-  font-size: var(--text-sm);
-  opacity: 0.8;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
