@@ -10,6 +10,10 @@
       "summary": "List existing bundles for a preset"
     },
     {
+      "path": "agent/src/bundles/bundle_scan.test.ts",
+      "summary": "Unit tests for bundle selection validation"
+    },
+    {
       "path": "agent/src/bundles/bundle_scan.ts",
       "summary": "Resolve bundle entries and validate selection"
     },
@@ -64,6 +68,10 @@
     {
       "path": "agent/src/staging/path_bridge.ts",
       "summary": "WSL to Windows path conversion for staging files"
+    },
+    {
+      "path": "agent/src/staging/stager.test.ts",
+      "summary": "Unit tests for staging path validation"
     },
     {
       "path": "agent/src/staging/stager.ts",

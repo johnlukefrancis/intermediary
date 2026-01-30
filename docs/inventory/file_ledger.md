@@ -5,6 +5,7 @@ Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .
 ```text
 agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process
 agent/src/bundles/bundle_lister.ts - List existing bundles for a preset
+agent/src/bundles/bundle_scan.test.ts - Unit tests for bundle selection validation
 agent/src/bundles/bundle_scan.ts - Resolve bundle entries and validate selection
 agent/src/bundles/bundle_types.ts - Type definitions for bundle building
 agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manifests
@@ -19,6 +20,7 @@ agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emissio
 agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
 agent/src/server/ws_server.ts - WebSocket server lifecycle on localhost:3141
 agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files
+agent/src/staging/stager.test.ts - Unit tests for staging path validation
 agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
 agent/src/util/categorizer.ts - File kind classification (docs/code/other) based on path patterns
 agent/src/util/errors.ts - Error types and helpers for the agent

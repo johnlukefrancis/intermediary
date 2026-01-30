@@ -33,6 +33,9 @@ export interface Stager {
  * Validate that a relative path is safe (no traversal, no absolute).
  */
 function validateRelativePath(relativePath: string): void {
+  if (!relativePath) {
+    throw new AgentError("INVALID_PATH", "Empty relative paths not allowed");
+  }
   if (path.posix.isAbsolute(relativePath) || path.win32.isAbsolute(relativePath)) {
     throw new AgentError("INVALID_PATH", "Absolute paths not allowed");
   }
@@ -40,7 +43,7 @@ function validateRelativePath(relativePath: string): void {
     throw new AgentError("INVALID_PATH", "Backslashes not allowed in relative paths");
   }
   const normalized = path.posix.normalize(relativePath);
-  if (normalized.startsWith("..")) {
+  if (normalized === "." || normalized.startsWith("..")) {
     throw new AgentError("INVALID_PATH", "Path traversal not allowed");
   }
 }

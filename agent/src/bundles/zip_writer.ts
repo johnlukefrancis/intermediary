@@ -24,18 +24,46 @@ export interface ZipWriteResult {
 export async function writeZip(options: ZipWriterOptions): Promise<ZipWriteResult> {
   const { outputPath, entries, manifestJson } = options;
 
-  const output = fs.createWriteStream(outputPath);
+  const fileHandle = await fs.promises.open(outputPath, "w");
+  const output = fs.createWriteStream(outputPath, {
+    fd: fileHandle.fd,
+    autoClose: false,
+  });
   const archive = archiver("zip", { zlib: { level: 6 } });
 
   const fileCount = entries.length + (manifestJson ? 1 : 0);
 
   return new Promise((resolve, reject) => {
-    output.on("close", () => {
-      resolve({ bytes: archive.pointer(), fileCount });
-    });
-    output.on("error", (err) => { reject(err); });
+    let settled = false;
 
-    archive.on("error", (err) => { reject(err); });
+    const fail = async (err: unknown): Promise<void> => {
+      if (settled) return;
+      settled = true;
+      try {
+        await fileHandle.close();
+      } catch {
+        // Ignore close failures.
+      }
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+
+    output.on("finish", () => {
+      void (async () => {
+        if (settled) return;
+        try {
+          await fileHandle.sync();
+          await fileHandle.close();
+          settled = true;
+          resolve({ bytes: archive.pointer(), fileCount });
+        } catch (err) {
+          await fail(err);
+        }
+      })();
+    });
+
+    output.on("error", (err) => { void fail(err); });
+
+    archive.on("error", (err) => { void fail(err); });
     archive.on("warning", (err) => {
       logger.warn("Archiver warning", { error: err.message });
     });
@@ -54,7 +82,7 @@ export async function writeZip(options: ZipWriterOptions): Promise<ZipWriteResul
 
         await archive.finalize();
       } catch (err) {
-        reject(err instanceof Error ? err : new Error(String(err)));
+        void fail(err);
       }
     })();
   });

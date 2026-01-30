@@ -38,7 +38,7 @@ function validateTopLevelDirs(
   const normalized: string[] = [];
 
   for (const dir of topLevelDirs) {
-    if (!dir || dir.includes("/") || dir.includes("\\")) {
+    if (!dir || dir === "." || dir === ".." || dir.includes("/") || dir.includes("\\")) {
       invalid.push(dir);
       continue;
     }
