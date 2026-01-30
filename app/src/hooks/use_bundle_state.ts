@@ -32,6 +32,8 @@ export interface BundleState {
   refreshBundles: (presetId: string) => Promise<void>;
 }
 
+const EMPTY_SAVED_SELECTIONS: Record<string, BundleSelection> = {};
+
 function normalizeTopLevelDirs(dirs: string[], available: string[] = []): string[] {
   const unique = Array.from(new Set(dirs.filter((dir) => dir.length > 0)));
   if (available.length === 0) {
@@ -112,7 +114,10 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
   const { config: persistedConfig, setBundleSelection: persistSelection } = useConfig();
 
   // Get saved selections for this repo
-  const savedSelections = persistedConfig.bundleSelections[repoId] ?? {};
+  const savedSelections = useMemo(
+    () => persistedConfig.bundleSelections[repoId] ?? EMPTY_SAVED_SELECTIONS,
+    [persistedConfig.bundleSelections, repoId]
+  );
 
   const repoPresets = useMemo(() => {
     const repoConfig = config.repos.find((repo) => repo.repoId === repoId);
