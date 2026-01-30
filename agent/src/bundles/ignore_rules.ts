@@ -35,12 +35,6 @@ export const ALWAYS_IGNORE_FILES = new Set([
  * Check if an entry should be ignored during bundle building
  */
 export function shouldIgnoreEntry(name: string, isDirectory: boolean): boolean {
-  // Skip hidden files/dirs (starting with .)
-  if (name.startsWith(".") && name !== ".") {
-    // Allow certain dotfiles if needed in future
-    return true;
-  }
-
   if (isDirectory) {
     return ALWAYS_IGNORE_DIRS.has(name);
   }

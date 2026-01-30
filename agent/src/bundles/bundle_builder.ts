@@ -11,6 +11,7 @@ import { writeZip } from "./zip_writer.js";
 import { cleanupOldBundles } from "./retention.js";
 import type { BuildBundleOptions, BuildBundleResult } from "./bundle_types.js";
 import { logger } from "../util/logger.js";
+import { scanBundleContents } from "./bundle_scan.js";
 
 export interface BundleBuilder {
   buildBundle(options: BuildBundleOptions): Promise<BuildBundleResult>;
@@ -44,40 +45,49 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
 
     // 3. Generate filename
     const timestamp = formatTimestamp(builtAt);
-    const shortSha = gitInfo.shortSha ?? "nosha";
-    const fileName = `${repoId}_${presetId}_${timestamp}_${shortSha}.zip`;
+    const shortSha = gitInfo.shortSha;
+    const baseName = `${repoId}_${presetId}_${timestamp}`;
+    const fileName = shortSha ? `${baseName}_${shortSha}.zip` : `${baseName}.zip`;
     const wslPath = path.posix.join(bundleDir, fileName);
 
     // 4. Create temp file for atomic write
     const tempPath = wslPath + `.${crypto.randomUUID()}.tmp`;
 
-    // 5. Determine which dirs to include
-    const topLevelDirsIncluded =
-      selection.topLevelDirs.length > 0
-        ? selection.topLevelDirs
-        : await getTopLevelDirs(repoRoot);
-
-    // 6. Create manifest
-    // We'll update fileCount after zip is written
-    const manifest = createManifest(
-      repoId,
+    // 5. Resolve entries and validate selection
+    const scanResult = await scanBundleContents({
       repoRoot,
-      presetId,
-      presetName,
-      { includeRoot: selection.includeRoot, topLevelDirsIncluded },
-      gitInfo,
-      0, // Will be updated
-      0  // Will be updated
-    );
+      includeRoot: selection.includeRoot,
+      topLevelDirs: selection.topLevelDirs,
+    });
+
+    // 6. Create manifest (best-effort totals)
+    const manifestFileCount = scanResult.fileCount + 1;
+    let totalBytesBestEffort = scanResult.totalBytes;
+    let manifestJson = "";
+    for (let i = 0; i < 2; i += 1) {
+      const manifest = createManifest(
+        repoId,
+        repoRoot,
+        presetId,
+        presetName,
+        {
+          includeRoot: selection.includeRoot,
+          topLevelDirsIncluded: scanResult.topLevelDirsIncluded,
+        },
+        gitInfo,
+        manifestFileCount,
+        totalBytesBestEffort
+      );
+      manifestJson = serializeManifest(manifest);
+      const manifestBytes = Buffer.byteLength(manifestJson, "utf8");
+      totalBytesBestEffort = scanResult.totalBytes + manifestBytes;
+    }
 
     try {
       // 7. Write zip with manifest
-      const manifestJson = serializeManifest(manifest);
       const zipResult = await writeZip({
         outputPath: tempPath,
-        repoRoot,
-        includeRoot: selection.includeRoot,
-        topLevelDirs: selection.topLevelDirs,
+        entries: scanResult.entries,
         manifestJson,
       });
 
@@ -124,16 +134,4 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
   }
 
   return { buildBundle };
-}
-
-/**
- * Get all non-ignored top-level directories
- */
-async function getTopLevelDirs(repoRoot: string): Promise<string[]> {
-  const { shouldIgnoreEntry } = await import("./ignore_rules.js");
-  const entries = await fs.readdir(repoRoot, { withFileTypes: true });
-  return entries
-    .filter((e) => e.isDirectory() && !shouldIgnoreEntry(e.name, true))
-    .map((e) => e.name)
-    .sort();
 }

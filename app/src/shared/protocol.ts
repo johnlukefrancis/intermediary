@@ -121,8 +121,8 @@ export const StageFileCommandSchema = z.object({
 export const BundleSelectionSchema = z.object({
   /** Whether to include root-level files */
   includeRoot: z.boolean(),
-  /** Top-level directories to include (empty = ALL) */
-  topLevelDirs: z.array(z.string()),
+  /** Top-level directories to include */
+  topLevelDirs: z.array(z.string().min(1)),
 });
 export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
 

@@ -20,7 +20,7 @@ export interface BundleManifest {
     branch?: string;
   };
   fileCount: number;
-  totalBytes: number;
+  totalBytesBestEffort: number;
 }
 
 /**

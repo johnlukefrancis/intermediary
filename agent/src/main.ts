@@ -181,15 +181,29 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         throw new AgentError("NOT_CONFIGURED", "Bundle builder not configured");
       }
       const rootPath = state.repoRoots.get(command.repoId);
+      const repoConfig = state.repoConfigs.get(command.repoId);
       if (!rootPath) {
         throw new AgentError("UNKNOWN_REPO", `Unknown repo: ${command.repoId}`);
+      }
+      if (!repoConfig) {
+        throw new AgentError("UNKNOWN_REPO", `Unknown repo config: ${command.repoId}`);
+      }
+
+      const preset = repoConfig.bundlePresets.find(
+        (entry) => entry.presetId === command.presetId
+      );
+      if (!preset) {
+        throw new AgentError(
+          "UNKNOWN_PRESET",
+          `Unknown preset: ${command.presetId}`
+        );
       }
 
       const result = await state.bundleBuilder.buildBundle({
         repoId: command.repoId,
         repoRoot: rootPath,
         presetId: command.presetId,
-        presetName: command.presetId,
+        presetName: preset.presetName,
         selection: command.selection,
         outputDir: state.stagingWslRoot,
       });

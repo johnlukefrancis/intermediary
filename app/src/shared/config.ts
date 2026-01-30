@@ -18,8 +18,8 @@ export const BundlePresetSchema = z.object({
   presetName: z.string().min(1),
   /** Whether to include root-level files */
   includeRoot: z.boolean().default(true),
-  /** Top-level directories to include (empty = ALL) */
-  topLevelDirs: z.array(z.string()).default([]),
+  /** Top-level directories to include (empty = default to all at runtime) */
+  topLevelDirs: z.array(z.string().min(1)).default([]),
 });
 
 export type BundlePreset = z.infer<typeof BundlePresetSchema>;

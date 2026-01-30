@@ -1,7 +1,7 @@
 // Path: app/src/hooks/use_bundle_state.ts
 // Description: Per-repo bundle state management with event subscription
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAgent } from "./use_agent.js";
 import { sendBuildBundle, sendListBundles } from "../lib/agent/messages.js";
 import type {
@@ -9,12 +9,13 @@ import type {
   BundleSelection,
   AgentEvent,
 } from "../shared/protocol.js";
-import { DEFAULT_BUNDLE_PRESET } from "../shared/config.js";
+import { DEFAULT_BUNDLE_PRESET, type BundlePreset } from "../shared/config.js";
 
 export interface BundlePresetState {
   presetId: string;
   presetName: string;
   selection: BundleSelection;
+  isSelectionInitialized: boolean;
   isBuilding: boolean;
   bundles: BundleInfo[];
   lastBuildError: string | null;
@@ -30,28 +31,80 @@ export interface BundleState {
   refreshBundles: (presetId: string) => Promise<void>;
 }
 
-function createDefaultPresetState(): BundlePresetState {
+function normalizeTopLevelDirs(dirs: string[], available: string[] = []): string[] {
+  const unique = Array.from(new Set(dirs.filter((dir) => dir.length > 0)));
+  if (available.length === 0) {
+    return unique.sort();
+  }
+  const allowed = new Set(available);
+  return unique.filter((dir) => allowed.has(dir)).sort();
+}
+
+function createPresetState(
+  preset: BundlePreset,
+  topLevelDirs: string[] = []
+): BundlePresetState {
+  if (preset.topLevelDirs.length > 0) {
+    return {
+      presetId: preset.presetId,
+      presetName: preset.presetName,
+      selection: {
+        includeRoot: preset.includeRoot,
+        topLevelDirs: normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs),
+      },
+      isSelectionInitialized: true,
+      isBuilding: false,
+      bundles: [],
+      lastBuildError: null,
+    };
+  }
+
   return {
-    presetId: DEFAULT_BUNDLE_PRESET.presetId,
-    presetName: DEFAULT_BUNDLE_PRESET.presetName,
+    presetId: preset.presetId,
+    presetName: preset.presetName,
     selection: {
-      includeRoot: DEFAULT_BUNDLE_PRESET.includeRoot,
-      // Empty means ALL - but we track actual dirs for UI display
-      topLevelDirs: [],
+      includeRoot: preset.includeRoot,
+      topLevelDirs: topLevelDirs.length > 0 ? [...topLevelDirs].sort() : [],
     },
+    isSelectionInitialized: topLevelDirs.length > 0,
     isBuilding: false,
     bundles: [],
     lastBuildError: null,
   };
 }
 
-export function useBundleState(repoId: string, topLevelDirs: string[]): BundleState {
-  const { subscribe, client, connectionState, helloState } = useAgent();
+function getRepoPresets(presets: BundlePreset[]): BundlePreset[] {
+  if (presets.length > 0) {
+    return presets;
+  }
+  return [
+    {
+      presetId: DEFAULT_BUNDLE_PRESET.presetId,
+      presetName: DEFAULT_BUNDLE_PRESET.presetName,
+      includeRoot: DEFAULT_BUNDLE_PRESET.includeRoot,
+      topLevelDirs: DEFAULT_BUNDLE_PRESET.topLevelDirs,
+    },
+  ];
+}
 
-  const [presets, setPresets] = useState<Map<string, BundlePresetState>>(
-    () => new Map([[DEFAULT_BUNDLE_PRESET.presetId, createDefaultPresetState()]])
+export function useBundleState(repoId: string, topLevelDirs: string[]): BundleState {
+  const { subscribe, client, connectionState, helloState, config } = useAgent();
+
+  const repoPresets = useMemo(() => {
+    const repoConfig = config.repos.find((repo) => repo.repoId === repoId);
+    return getRepoPresets(repoConfig?.bundlePresets ?? []);
+  }, [config.repos, repoId]);
+
+  const [presets, setPresets] = useState<Map<string, BundlePresetState>>(() => {
+    const initial = new Map<string, BundlePresetState>();
+    for (const preset of repoPresets) {
+      initial.set(preset.presetId, createPresetState(preset, topLevelDirs));
+    }
+    return initial;
+  });
+  const [activePresetId, setActivePresetId] = useState(
+    repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId
   );
-  const [activePresetId, setActivePresetId] = useState(DEFAULT_BUNDLE_PRESET.presetId);
   const lastRefreshKeyRef = useRef<string | null>(null);
 
   // Update selection for a preset
@@ -60,7 +113,12 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
       const next = new Map(prev);
       const preset = next.get(presetId);
       if (preset) {
-        next.set(presetId, { ...preset, selection, lastBuildError: null });
+        next.set(presetId, {
+          ...preset,
+          selection,
+          isSelectionInitialized: true,
+          lastBuildError: null,
+        });
       }
       return next;
     });
@@ -143,10 +201,38 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
 
   // Reset state when repoId changes
   useEffect(() => {
-    setPresets(new Map([[DEFAULT_BUNDLE_PRESET.presetId, createDefaultPresetState()]]));
-    setActivePresetId(DEFAULT_BUNDLE_PRESET.presetId);
+    const next = new Map<string, BundlePresetState>();
+    for (const preset of repoPresets) {
+      next.set(preset.presetId, createPresetState(preset));
+    }
+    setPresets(next);
+    setActivePresetId(repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId);
     lastRefreshKeyRef.current = null;
-  }, [repoId]);
+  }, [repoId, repoPresets]);
+
+  useEffect(() => {
+    if (topLevelDirs.length === 0) {
+      return;
+    }
+    setPresets((prev) => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const preset of next.values()) {
+        if (!preset.isSelectionInitialized) {
+          next.set(preset.presetId, {
+            ...preset,
+            selection: {
+              includeRoot: preset.selection.includeRoot,
+              topLevelDirs: [...topLevelDirs].sort(),
+            },
+            isSelectionInitialized: true,
+          });
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [topLevelDirs]);
 
   // Refresh bundles on connect
   useEffect(() => {

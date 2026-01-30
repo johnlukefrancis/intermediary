@@ -5,8 +5,10 @@ Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .
 ```text
 agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process
 agent/src/bundles/bundle_lister.ts - List existing bundles for a preset
+agent/src/bundles/bundle_scan.ts - Resolve bundle entries and validate selection
 agent/src/bundles/bundle_types.ts - Type definitions for bundle building
 agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manifests
+agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
 agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
 agent/src/bundles/manifest.ts - Manifest generation for bundle zips
 agent/src/bundles/retention.ts - Bundle cleanup logic (keep last N)

@@ -10,12 +10,20 @@
       "summary": "List existing bundles for a preset"
     },
     {
+      "path": "agent/src/bundles/bundle_scan.ts",
+      "summary": "Resolve bundle entries and validate selection"
+    },
+    {
       "path": "agent/src/bundles/bundle_types.ts",
       "summary": "Type definitions for bundle building"
     },
     {
       "path": "agent/src/bundles/git_info.ts",
       "summary": "Best-effort git info extraction for bundle manifests"
+    },
+    {
+      "path": "agent/src/bundles/ignore_rules.test.ts",
+      "summary": "Unit tests for bundle ignore rules"
     },
     {
       "path": "agent/src/bundles/ignore_rules.ts",

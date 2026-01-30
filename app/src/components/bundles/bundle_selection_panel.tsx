@@ -22,13 +22,10 @@ export function BundleSelectionPanel({
   onSelectionChange,
   onBuild,
 }: BundleSelectionPanelProps): React.JSX.Element {
-  // Empty topLevelDirs in selection means ALL
-  const selectedDirs = selection.topLevelDirs.length > 0
-    ? new Set(selection.topLevelDirs)
-    : new Set(topLevelDirs);
-
-  const allSelected = topLevelDirs.every((d) => selectedDirs.has(d));
-  const noneSelected = topLevelDirs.every((d) => !selectedDirs.has(d));
+  const selectedDirs = new Set(selection.topLevelDirs);
+  const allSelected =
+    topLevelDirs.length > 0 && selection.topLevelDirs.length === topLevelDirs.length;
+  const noneSelected = selection.topLevelDirs.length === 0;
 
   const handleIncludeRootChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,9 +36,7 @@ export function BundleSelectionPanel({
 
   const handleDirToggle = useCallback(
     (dir: string) => {
-      const currentSet = new Set(selection.topLevelDirs.length > 0
-        ? selection.topLevelDirs
-        : topLevelDirs);
+      const currentSet = new Set(selection.topLevelDirs);
 
       if (currentSet.has(dir)) {
         currentSet.delete(dir);
@@ -49,22 +44,20 @@ export function BundleSelectionPanel({
         currentSet.add(dir);
       }
 
-      // If all selected, use empty array (means ALL)
-      const newDirs = currentSet.size === topLevelDirs.length
-        ? []
-        : Array.from(currentSet).sort();
-
-      onSelectionChange({ ...selection, topLevelDirs: newDirs });
+      onSelectionChange({
+        ...selection,
+        topLevelDirs: Array.from(currentSet).sort(),
+      });
     },
-    [selection, topLevelDirs, onSelectionChange]
+    [selection, onSelectionChange]
   );
 
   const handleSelectAll = useCallback(() => {
-    onSelectionChange({ ...selection, topLevelDirs: [] });
-  }, [selection, onSelectionChange]);
+    onSelectionChange({ ...selection, topLevelDirs: [...topLevelDirs].sort() });
+  }, [selection, topLevelDirs, onSelectionChange]);
 
   const handleSelectNone = useCallback(() => {
-    onSelectionChange({ ...selection, topLevelDirs: ["__none__"] });
+    onSelectionChange({ ...selection, topLevelDirs: [] });
   }, [selection, onSelectionChange]);
 
   return (
@@ -87,14 +80,14 @@ export function BundleSelectionPanel({
             <button
               className="dir-action-btn"
               onClick={handleSelectAll}
-              disabled={allSelected}
+              disabled={topLevelDirs.length === 0 || allSelected}
             >
               All
             </button>
             <button
               className="dir-action-btn"
               onClick={handleSelectNone}
-              disabled={noneSelected}
+              disabled={topLevelDirs.length === 0 || noneSelected}
             >
               None
             </button>
@@ -124,7 +117,7 @@ export function BundleSelectionPanel({
       <button
         className="build-button"
         onClick={onBuild}
-        disabled={isBuilding || (noneSelected && !selection.includeRoot)}
+        disabled={isBuilding || (!selection.includeRoot && selection.topLevelDirs.length === 0)}
       >
         {isBuilding ? "Building..." : "Build Bundle"}
       </button>

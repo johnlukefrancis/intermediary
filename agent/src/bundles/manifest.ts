@@ -15,7 +15,7 @@ export function createManifest(
   selection: { includeRoot: boolean; topLevelDirsIncluded: string[] },
   git: GitInfo,
   fileCount: number,
-  totalBytes: number
+  totalBytesBestEffort: number
 ): BundleManifest {
   return {
     generatedAt: new Date().toISOString(),
@@ -26,7 +26,7 @@ export function createManifest(
     selection,
     git,
     fileCount,
-    totalBytes,
+    totalBytesBestEffort,
   };
 }
 
