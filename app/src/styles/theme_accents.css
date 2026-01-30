@@ -5,19 +5,19 @@
 
 /* ===== DEFAULT ACCENT (fallback) ===== */
 :root {
-  --accent-primary: #f9a8d4;
-  --accent-soft: rgba(249, 168, 212, 0.15);
-  --accent-glow: rgba(249, 168, 212, 0.4);
+  --accent-primary: #c4688a;
+  --accent-soft: rgba(196, 104, 138, 0.15);
+  --accent-glow: rgba(196, 104, 138, 0.4);
 }
 
-/* ===== INTERMEDIARY - Light pink ===== */
+/* ===== INTERMEDIARY - Dusty rose ===== */
 [data-active-tab="intermediary"] {
-  --accent-primary: #f9a8d4;
-  --accent-soft: rgba(249, 168, 212, 0.15);
-  --accent-glow: rgba(249, 168, 212, 0.4);
-  --color-accent: #f9a8d4;
-  --color-accent-soft: rgba(249, 168, 212, 0.15);
-  --color-accent-glow: rgba(249, 168, 212, 0.4);
+  --accent-primary: #c4688a;
+  --accent-soft: rgba(196, 104, 138, 0.15);
+  --accent-glow: rgba(196, 104, 138, 0.4);
+  --color-accent: #c4688a;
+  --color-accent-soft: rgba(196, 104, 138, 0.15);
+  --color-accent-glow: rgba(196, 104, 138, 0.4);
 }
 
 /* ===== TEXTURE PORTAL - Deep purple ===== */
@@ -30,12 +30,12 @@
   --color-accent-glow: rgba(124, 58, 237, 0.4);
 }
 
-/* ===== TRIANGLE RAIN - Toxic green ===== */
+/* ===== TRIANGLE RAIN - Muted emerald ===== */
 [data-active-tab="triangle-rain"] {
-  --accent-primary: #39ff14;
-  --accent-soft: rgba(57, 255, 20, 0.12);
-  --accent-glow: rgba(57, 255, 20, 0.35);
-  --color-accent: #39ff14;
-  --color-accent-soft: rgba(57, 255, 20, 0.12);
-  --color-accent-glow: rgba(57, 255, 20, 0.35);
+  --accent-primary: #16a34a;
+  --accent-soft: rgba(22, 163, 74, 0.12);
+  --accent-glow: rgba(22, 163, 74, 0.35);
+  --color-accent: #16a34a;
+  --color-accent-soft: rgba(22, 163, 74, 0.12);
+  --color-accent-glow: rgba(22, 163, 74, 0.35);
 }
