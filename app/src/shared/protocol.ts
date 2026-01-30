@@ -214,6 +214,15 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 
+// Individual result types for typed command helpers
+export type WatchRepoResult = z.infer<typeof WatchRepoResultSchema>;
+export type RefreshResult = z.infer<typeof RefreshResultSchema>;
+export type StageFileResult = z.infer<typeof StageFileResultSchema>;
+export type BuildBundleResult = z.infer<typeof BuildBundleResultSchema>;
+export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
+export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
+export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;
+
 // -----------------------------------------------------------------------------
 // Protocol envelopes
 // -----------------------------------------------------------------------------

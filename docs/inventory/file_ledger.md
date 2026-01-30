@@ -15,19 +15,32 @@ agent/src/util/errors.ts - Error types and helpers for the agent
 agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
-app/src/app.tsx - Root component with tab state management
+app/src/app.tsx - Root component with tab state management and offline banner
+app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
+app/src/components/file_row.tsx - Draggable file item with drag handle and metadata display
 app/src/components/layout/three_column.tsx - Three-column layout component (Docs | Code | Zips)
+app/src/components/offline_banner.tsx - Connection status banner shown when agent is offline
 app/src/components/tab_bar.tsx - Tab navigation component
-app/src/main.tsx - React entry point - mounts App to DOM
+app/src/components/zip_column_placeholder.tsx - Placeholder for zip bundles column (real implementation in prompt 4)
+app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
+app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
+app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
+app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
+app/src/lib/agent/connection_state.ts - Agent connection status types
+app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
+app/src/main.tsx - React entry point - mounts App with AgentProvider to DOM
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/columns.css - columns module
+app/src/styles/file_row.css - file row module
 app/src/styles/main.css - main module
+app/src/styles/offline_banner.css - offline banner module
 app/src/styles/tab_bar.css - tab bar module
-app/src/tabs/intermediary_tab.tsx - Intermediary project tab
-app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab
-app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with worktree selector
+app/src/tabs/intermediary_tab.tsx - Intermediary project tab with file lists
+app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
+app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with worktree selector and file lists
+app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.

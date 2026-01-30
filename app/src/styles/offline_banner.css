@@ -1,0 +1,54 @@
+/* Path: app/src/styles/offline_banner.css */
+/* Description: Styles for offline/reconnecting status banner */
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.offline-banner.reconnecting {
+  background: #2a2a3e;
+}
+
+.offline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.offline-banner.reconnecting .offline-icon {
+  background: #6c7a89;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.offline-message {
+  flex: 1;
+}
+
+.offline-error {
+  color: var(--accent);
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

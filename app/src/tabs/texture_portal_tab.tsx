@@ -1,13 +1,51 @@
 // Path: app/src/tabs/texture_portal_tab.tsx
-// Description: TexturePortal project tab
+// Description: TexturePortal project tab with file lists
 
 import type React from "react";
-import { ThreeColumn } from "../components/layout/three_column";
+import { ThreeColumn } from "../components/layout/three_column.js";
+import { FileListColumn } from "../components/file_list_column.js";
+import { ZipColumnPlaceholder } from "../components/zip_column_placeholder.js";
+import { useRepoState } from "../hooks/use_repo_state.js";
+import { useDrag } from "../hooks/use_drag.js";
+import { useAgent } from "../hooks/use_agent.js";
+
+const REPO_ID = "textureportal";
 
 export function TexturePortalTab(): React.JSX.Element {
+  const { connectionState } = useAgent();
+  const { recentDocs, recentCode, stagedByPath, isLoading } = useRepoState(REPO_ID);
+  const { handleDragStart } = useDrag();
+
+  const isConnected = connectionState.status === "connected";
+  const emptyMessage = !isConnected
+    ? "Waiting for agent..."
+    : isLoading
+      ? "Loading..."
+      : "No recent files";
+
   return (
     <div className="tab texture-portal-tab">
-      <ThreeColumn />
+      <ThreeColumn
+        docsContent={
+          <FileListColumn
+            files={recentDocs}
+            stagedByPath={stagedByPath}
+            repoId={REPO_ID}
+            emptyMessage={emptyMessage}
+            onDragStart={handleDragStart}
+          />
+        }
+        codeContent={
+          <FileListColumn
+            files={recentCode}
+            stagedByPath={stagedByPath}
+            repoId={REPO_ID}
+            emptyMessage={emptyMessage}
+            onDragStart={handleDragStart}
+          />
+        }
+        zipsContent={<ZipColumnPlaceholder />}
+      />
     </div>
   );
 }

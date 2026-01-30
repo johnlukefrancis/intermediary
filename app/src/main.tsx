@@ -1,9 +1,10 @@
 // Path: app/src/main.tsx
-// Description: React entry point - mounts App to DOM
+// Description: React entry point - mounts App with AgentProvider to DOM
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./app";
+import { App } from "./app.js";
+import { AgentProvider } from "./hooks/use_agent.js";
 import "./styles/main.css";
 
 const container = document.getElementById("root");
@@ -13,6 +14,8 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <AgentProvider>
+      <App />
+    </AgentProvider>
   </StrictMode>
 );

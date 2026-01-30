@@ -51,19 +51,59 @@
     },
     {
       "path": "app/src/app.tsx",
-      "summary": "Root component with tab state management"
+      "summary": "Root component with tab state management and offline banner"
+    },
+    {
+      "path": "app/src/components/file_list_column.tsx",
+      "summary": "Column wrapper that renders a list of FileRow components"
+    },
+    {
+      "path": "app/src/components/file_row.tsx",
+      "summary": "Draggable file item with drag handle and metadata display"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
       "summary": "Three-column layout component (Docs | Code | Zips)"
     },
     {
+      "path": "app/src/components/offline_banner.tsx",
+      "summary": "Connection status banner shown when agent is offline"
+    },
+    {
       "path": "app/src/components/tab_bar.tsx",
       "summary": "Tab navigation component"
     },
     {
+      "path": "app/src/components/zip_column_placeholder.tsx",
+      "summary": "Placeholder for zip bundles column (real implementation in prompt 4)"
+    },
+    {
+      "path": "app/src/hooks/use_agent.tsx",
+      "summary": "Agent context provider and connection management hook"
+    },
+    {
+      "path": "app/src/hooks/use_drag.ts",
+      "summary": "Drag-out logic with on-demand staging"
+    },
+    {
+      "path": "app/src/hooks/use_repo_state.ts",
+      "summary": "Per-repo file state management with event subscription"
+    },
+    {
+      "path": "app/src/lib/agent/agent_client.ts",
+      "summary": "WebSocket client with reconnection and message correlation"
+    },
+    {
+      "path": "app/src/lib/agent/connection_state.ts",
+      "summary": "Agent connection status types"
+    },
+    {
+      "path": "app/src/lib/agent/messages.ts",
+      "summary": "Typed helper functions for sending agent commands"
+    },
+    {
       "path": "app/src/main.tsx",
-      "summary": "React entry point - mounts App to DOM"
+      "summary": "React entry point - mounts App with AgentProvider to DOM"
     },
     {
       "path": "app/src/shared/config.ts",
@@ -82,8 +122,16 @@
       "summary": "columns module"
     },
     {
+      "path": "app/src/styles/file_row.css",
+      "summary": "file row module"
+    },
+    {
       "path": "app/src/styles/main.css",
       "summary": "main module"
+    },
+    {
+      "path": "app/src/styles/offline_banner.css",
+      "summary": "offline banner module"
     },
     {
       "path": "app/src/styles/tab_bar.css",
@@ -91,15 +139,19 @@
     },
     {
       "path": "app/src/tabs/intermediary_tab.tsx",
-      "summary": "Intermediary project tab"
+      "summary": "Intermediary project tab with file lists"
     },
     {
       "path": "app/src/tabs/texture_portal_tab.tsx",
-      "summary": "TexturePortal project tab"
+      "summary": "TexturePortal project tab with file lists"
     },
     {
       "path": "app/src/tabs/triangle_rain_tab.tsx",
-      "summary": "Triangle Rain project tab with worktree selector"
+      "summary": "Triangle Rain project tab with worktree selector and file lists"
+    },
+    {
+      "path": "app/src/types/app_paths.ts",
+      "summary": "TypeScript interface matching Rust AppPaths struct"
     },
     {
       "path": "app/src/vite_env.d.ts",
