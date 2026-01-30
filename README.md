@@ -39,15 +39,10 @@ A single-window "handoff console" that:
 ┌─────────────────────────────────────────────────────────────┐
 │                       WSL (Agent)                           │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  File Watcher (inotify)                               │  │
-│  │  - Watches configured repo paths                      │  │
-│  │  - Emits fileChanged events                           │  │
-│  │  - Debounces rapid writes                             │  │
-│  └───────────────────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Staging Service                                      │  │
-│  │  - Copies files to Windows staging dir (/mnt/c/...)   │  │
-│  │  - Builds zip bundles with manifests                  │  │
+│  │  Node/TS Agent                                        │  │
+│  │  - chokidar file watchers (inotify on Linux)          │  │
+│  │  - Emits fileChanged/snapshot events                  │  │
+│  │  - Stages files + builds bundles                      │  │
 │  │  - Atomic writes (temp + rename)                      │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -60,9 +55,10 @@ A single-window "handoff console" that:
 | Windows UI | Tauri v2 |
 | Frontend | React + TypeScript |
 | Backend | Rust |
-| WSL Agent | Rust (or Node.js for fast iteration) |
-| File Watching | inotify (Linux) via `notify` crate |
-| IPC | WebSocket (JSON messages) |
+| WSL Agent | Node.js + TypeScript |
+| File Watching | chokidar (inotify on Linux) |
+| Bundling | archiver |
+| IPC | WebSocket (JSON request/response + events) |
 | Drag-out | `tauri-plugin-drag` |
 
 ## Project Structure
@@ -73,29 +69,33 @@ intermediary/
 │   ├── src/
 │   │   ├── components/     # UI components
 │   │   ├── hooks/          # React hooks
-│   │   ├── stores/         # State management
-│   │   └── types/          # TypeScript types
+│   │   ├── lib/            # Agent client + helpers
+│   │   ├── shared/         # Protocol + config types
+│   │   ├── styles/         # CSS
+│   │   ├── tabs/           # Repo tab UI
+│   │   └── types/          # App-facing types
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── src-tauri/              # Tauri Rust backend
 │   ├── src/
-│   │   ├── commands/       # Tauri command handlers
-│   │   ├── config/         # Configuration management
-│   │   ├── ipc/            # WebSocket client to agent
-│   │   └── staging/        # File staging operations
+│   │   └── lib/
+│   │       ├── commands/   # Tauri command handlers
+│   │       ├── config/     # Configuration management
+│   │       ├── obs/        # Observability/logging
+│   │       └── paths/      # Path resolution + WSL conversion
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 │
-├── crates/                 # Shared Rust crates
-│   └── intermediary-protocol/  # Shared IPC message types
+├── crates/                 # Rust crates (if present)
 │
 ├── agent/                  # WSL agent daemon
 │   ├── src/
-│   │   ├── watcher/        # inotify file watcher
-│   │   ├── bundler/        # Zip bundle builder
-│   │   └── server/         # WebSocket server
-│   └── Cargo.toml
+│   │   ├── bundles/        # Bundle building + manifest
+│   │   ├── repos/          # File watching
+│   │   ├── server/         # WebSocket server + router
+│   │   ├── staging/        # Path bridge + file staging
+│   │   └── util/           # Logger + helpers
 │
 ├── docs/                   # Documentation
 │   ├── compliance/         # ADRs (architectural decisions)
@@ -123,7 +123,9 @@ intermediary/
 
 All draggable files originate from a staging directory on the Windows filesystem:
 ```
-%LOCALAPPDATA%\Intermediary\staging\<repoId>\...
+%LOCALAPPDATA%\Intermediary\staging\
+  files\<repoId>\...
+  bundles\<repoId>\<presetId>\...
 ```
 
 The WSL agent writes to this path via `/mnt/c/...`, and the Tauri app reads the same files via their Windows paths.
@@ -133,31 +135,42 @@ The WSL agent writes to this path via `/mnt/c/...`, and the Tauri app reads the 
 Every generated zip includes `INTERMEDIARY_MANIFEST.json`:
 ```json
 {
-  "repoId": "my-project",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "gitShort": "abc1234",
-  "dirty": true,
-  "changedFiles": ["src/main.ts", "docs/readme.md"],
-  "patterns": {
-    "include": ["src/**", "docs/**"],
-    "exclude": ["**/node_modules/**"]
+  "generatedAt": "2026-01-30T10:30:00Z",
+  "repoId": "textureportal",
+  "repoRoot": "/home/johnf/code/textureportal",
+  "presetId": "full",
+  "presetName": "Full",
+  "selection": {
+    "includeRoot": true,
+    "topLevelDirsIncluded": ["app", "src-tauri", "docs"]
   },
-  "appVersion": "0.1.0"
+  "git": {
+    "headSha": "abc1234",
+    "shortSha": "abc1234",
+    "branch": "main"
+  },
+  "fileCount": 312,
+  "totalBytesBestEffort": 4820194
 }
 ```
 
 ### IPC Protocol
 
 Agent → UI:
-- `hello` - Agent startup with version info
-- `fileChanged` - Single file change event
+- `fileChanged` - Single file change event (includes changeType + optional staged info)
 - `snapshot` - Batch of recent changes
-- `bundleBuilt` - Bundle ready for drag-out
+- `bundleBuilt` - Bundle ready for drag-out (includes alias path + size metadata)
+- `error` - Structured error event
 
 UI → Agent:
+- `clientHello` - Configure agent with config + staging roots
+- `setOptions` - Toggle auto-stage at runtime
 - `watchRepo` - Start watching a repo
+- `refresh` - Request a fresh snapshot
 - `stageFile` - Stage a single file for drag-out
-- `buildBundle` - Build a zip bundle
+- `buildBundle` - Build a zip bundle (with selection payload)
+- `getRepoTopLevel` - Fetch top-level dirs/files
+- `listBundles` - List existing bundles for a preset
 
 ## Development
 
@@ -168,36 +181,16 @@ UI → Agent:
 - Node.js 20+ with pnpm
 - VS Code (recommended)
 
-### Setup
+### Setup & Running
 
-```bash
-# Clone the repo (in WSL)
-git clone <repo-url> ~/code/intermediary
-cd ~/code/intermediary
-
-# Install frontend dependencies
-cd app && pnpm install
-
-# Build the agent
-cd ../agent && cargo build
-
-# Build the Tauri app
-cd ../src-tauri && cargo build
-```
-
-### Running
-
-```bash
-# Start the WSL agent
-cd agent && cargo run
-
-# In another terminal, start the Tauri dev server
-cd src-tauri && cargo tauri dev
-```
+Use the command docs for current, copy-safe steps:
+- `docs/commands/dev_wsl_agent.md` — start the WSL agent
+- `docs/commands/dev_windows.md` — run the Windows UI (Tauri)
+- `docs/commands/zip_bundles.md` — build repo context bundles
 
 ## Status
 
-**Current phase:** Foundation setup (no code yet)
+**Current phase:** Core app + WSL agent implemented; documentation alignment in progress.
 
 See [docs/roadmap.md](docs/roadmap.md) for development phases.
 

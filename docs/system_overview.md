@@ -80,27 +80,37 @@ Intermediary uses a **two-component architecture**:
 
 ### IPC Protocol
 
-Communication via WebSocket on `127.0.0.1:<port>`:
+Communication via WebSocket on `127.0.0.1:<port>`, with request/response envelopes and event envelopes:
+- Request: `{ kind: "request", requestId, payload }`
+- Response: `{ kind: "response", requestId, status, payload|error }`
+- Event: `{ kind: "event", eventId, payload }`
 
-**Agent → UI:**
-- `hello { agentVersion, distro, reposDetected }`
-- `fileChanged { repoId, path, kind, mtime }`
+**Agent → UI events:**
+- `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 - `snapshot { repoId, recent: FileEntry[] }`
-- `bundleBuilt { repoId, presetId, windowsPath, size, mtime, gitShort }`
-- `error { scope, message, details }`
+- `bundleBuilt { repoId, presetId, windowsPath, aliasWindowsPath, bytes, fileCount, builtAtIso }`
+- `error { scope, message, details? }`
+- `hello` is defined in protocol types but not emitted in the current agent; handshake uses `clientHello` → `clientHelloResult`.
 
-**UI → Agent:**
-- `watchRepo { repoId }`
-- `refresh { repoId }`
-- `stageFile { repoId, path } → { windowsPath }`
-- `buildBundle { repoId, presetId } → { windowsPath }`
+**UI → Agent commands (request/response):**
+- `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } → clientHelloResult`
+- `setOptions { autoStageOnChange? } → setOptionsResult`
+- `watchRepo { repoId } → watchRepoResult`
+- `refresh { repoId } → refreshResult`
+- `stageFile { repoId, path } → stageFileResult`
+- `buildBundle { repoId, presetId, selection } → buildBundleResult`
+- `getRepoTopLevel { repoId } → getRepoTopLevelResult`
+- `listBundles { repoId, presetId } → listBundlesResult`
 
 ### Staging System
 
-All draggable files originate from a staging directory on Windows:
-- Location: `%LOCALAPPDATA%\Intermediary\staging\<repoId>\...`
-- WSL agent writes to `/mnt/c/Users/<user>/AppData/Local/Intermediary/staging/...`
-- UI references via Windows path `C:\Users\<user>\AppData\Local\Intermediary\staging\...`
+Staging roots are resolved by the Tauri backend (`get_app_paths`) from the app local data directory:
+- Windows root: `%LOCALAPPDATA%\Intermediary\staging`
+- WSL root: `/mnt/<drive>/Users/<user>/AppData/Local/Intermediary/staging`
+
+Layout under the staging root:
+- Files: `staging/files/<repoId>/...`
+- Bundles: `staging/bundles/<repoId>/<presetId>/...`
 
 ### Config Persistence
 

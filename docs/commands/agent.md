@@ -1,5 +1,5 @@
 # Agent Commands
-Updated on: 2026-01-29
+Updated on: 2026-01-30
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -69,6 +69,8 @@ Send a clientHello to configure the agent:
 }
 ```
 
+Staging roots point at the staging root. The agent stages files under `staging/files/<repoId>/...` and bundles under `staging/bundles/<repoId>/<presetId>/...`.
+
 Request staging of a file:
 
 ```json
@@ -77,7 +79,7 @@ Request staging of a file:
   "requestId": "test-2",
   "payload": {
     "type": "stageFile",
-    "repoId": "texture-portal",
+    "repoId": "textureportal",
     "path": "docs/readme.md"
   }
 }

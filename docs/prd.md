@@ -1,4 +1,7 @@
 # PRD + Implementation Spec: **Intermediary**
+Updated on: 2026-01-30
+Owners: JL · Agents
+Depends on: ADR-000, ADR-006, ADR-007
 
 ## 1. Product overview
 
@@ -132,7 +135,9 @@ Each repo has:
 
 * All draggables originate from a **staging directory** on the Windows filesystem:
 
-  * Example: `%LOCALAPPDATA%\Intermediary\staging\<repoId>\...`
+  * Root: `%LOCALAPPDATA%\Intermediary\staging`
+  * Files: `staging\files\<repoId>\...`
+  * Bundles: `staging\bundles\<repoId>\<presetId>\...`
 * Staging rules:
 
   * **Auto-stage on change is the default behavior** (reduces drag latency at cost of disk churn).
@@ -147,7 +152,8 @@ Per repo, user can define multiple presets:
 * Preset name, description
 * **v0 selection UI:** top-level folders only (no nested subfolder selection). User toggles which top-level folders to include.
 * **Include root files toggle:** single boolean, default ON. When ON, includes files at repo root (README, package.json, etc.).
-* Exclude globs (always applied): `**/node_modules/**`, `**/.git/**`, `**/dist/**`, `**/target/**`
+* Always-ignored directories: `node_modules`, `.git`, `dist`, `build`, `target`, `.next`, `.cache`, `logs`, `.turbo`, `.vercel`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `coverage`
+* Always-ignored files: `.DS_Store`, `Thumbs.db`, `.env`, `.env.local`
 * Advanced include/exclude globs: later enhancement
 * Output naming template
 * Output destination: staging bundles folder
@@ -158,18 +164,18 @@ Every generated zip includes:
 
 * `INTERMEDIARY_MANIFEST.json` containing:
 
-  * repoId / repo path
-  * timestamp
-  * git short SHA (if repo is git)
-  * dirty status + list of changed files (optional)
-  * include/exclude patterns used
-  * app version
+  * `generatedAt` (ISO timestamp)
+  * `repoId`, `repoRoot`
+  * `presetId`, `presetName`
+  * `selection` (includeRoot + topLevelDirsIncluded)
+  * `git` info (headSha/shortSha/branch, best-effort)
+  * `fileCount`, `totalBytesBestEffort`
 
 ### 7.6 Naming scheme
 
 Bundles should be self-identifying:
 
-* `{repoId}_{presetId}_{gitShort}_{YYYY-MM-DD_HH-mm-ss}.zip`
+* `{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{gitShort?}.zip`
 * Additionally maintain a stable alias:
 
   * `{repoId}_{presetId}_LATEST.zip` (overwritten)
@@ -218,41 +224,43 @@ So:
 
 Responsibilities:
 
-* Watch repos (inotify)
+* Watch repos (chokidar/inotify)
 * Provide “recent changes” feed
 * Build zip bundles to staging (via `/mnt/c/...`)
 * Stage individual files on request
 
-Implementation options:
-
-* Rust binary using `notify` (Linux backend) + zip crate
-* Node script using chokidar + archiver (if you want fastest iteration)
+Implementation: Node.js + TypeScript using chokidar for watch and archiver for zip creation.
 
 #### C) IPC between UI and agent
 
 * Local WebSocket (`127.0.0.1:<port>`) or named pipe.
 * JSON messages.
 
-### 9.3 Message protocol (suggested)
+### 9.3 Message protocol (current)
 
-Agent → UI:
+Requests use `{ kind: "request", requestId, payload }` and responses use `{ kind: "response", requestId, status, payload|error }`.
 
-* `hello { agentVersion, distro, reposDetected? }`
-* `fileChanged { repoId, path, kind, mtime }`
+Agent → UI events:
+
+* `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 * `snapshot { repoId, recent: FileEntry[] }`
-* `bundleBuilt { repoId, presetId, windowsPath, size, mtime, gitShort }`
+* `bundleBuilt { repoId, presetId, windowsPath, aliasWindowsPath, bytes, fileCount, builtAtIso }`
 * `error { scope, message, details? }`
 
-UI → Agent:
+UI → Agent commands:
 
-* `watchRepo { repoId }`
-* `refresh { repoId }`
-* `stageFile { repoId, path } -> { windowsPath }`
-* `buildBundle { repoId, presetId } -> { windowsPath }`
+* `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } -> clientHelloResult`
+* `setOptions { autoStageOnChange? } -> setOptionsResult`
+* `watchRepo { repoId } -> watchRepoResult`
+* `refresh { repoId } -> refreshResult`
+* `stageFile { repoId, path } -> stageFileResult`
+* `buildBundle { repoId, presetId, selection } -> buildBundleResult`
+* `getRepoTopLevel { repoId } -> getRepoTopLevelResult`
+* `listBundles { repoId, presetId } -> listBundlesResult`
 
 ### 9.4 Staging path translation
 
-* Agent writes staged outputs to `/mnt/c/Users/<you>/AppData/Local/Intermediary/staging/...`
+* Agent writes staged outputs to `/mnt/<drive>/Users/<you>/AppData/Local/Intermediary/staging/...`
 * UI references the same file via Windows path:
 
   * `C:\Users\<you>\AppData\Local\Intermediary\staging\...`

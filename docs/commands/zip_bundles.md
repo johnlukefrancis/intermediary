@@ -72,6 +72,7 @@ Each bundle includes:
 - `docs/` - Documentation
 - `scripts/` - Build scripts
 - `.vscode/` - VS Code config
+- `logs/` - Runtime logs (if present)
 - Root configs (package.json, Cargo.toml, etc.)
 
 ### App Bundle
@@ -92,9 +93,12 @@ Each bundle includes:
 - `target/`
 - `dist/`
 - `.git/`
-- `logs/`
 - `scripts/zip/output/`
+- `assets/`
 - `src-tauri/icons/`
+- `docs/reports/bundles/`
+- `agent/.venv/`
+- `agent/__pycache__/`
 - `*.log`, `*.pyc`
 
 ## Typical Usage
