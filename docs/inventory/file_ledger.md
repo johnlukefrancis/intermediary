@@ -19,7 +19,7 @@ agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
 agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
-agent/src/server/ws_server.ts - WebSocket server lifecycle on localhost:3141
+agent/src/server/ws_server.ts - WebSocket server lifecycle on 0.0.0.0:3141
 agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files
 agent/src/staging/stager.test.ts - Unit tests for staging path validation
 agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
@@ -77,6 +77,7 @@ src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation
+src-tauri/src/lib/commands/wsl.rs - WSL host resolution for Windows->WSL agent connections
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary

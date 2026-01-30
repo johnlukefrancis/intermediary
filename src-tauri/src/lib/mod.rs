@@ -8,6 +8,7 @@ pub mod paths;
 
 use commands::config::{load_config, save_config};
 use commands::paths::get_app_paths;
+use commands::wsl::resolve_wsl_host;
 use obs::logging;
 
 /// Run the Tauri application
@@ -22,7 +23,12 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_paths, load_config, save_config])
+        .invoke_handler(tauri::generate_handler![
+            get_app_paths,
+            load_config,
+            save_config,
+            resolve_wsl_host
+        ])
         .run(tauri::generate_context!())
         .expect("error running tauri application");
 }

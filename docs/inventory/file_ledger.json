@@ -67,7 +67,7 @@
     },
     {
       "path": "agent/src/server/ws_server.ts",
-      "summary": "WebSocket server lifecycle on localhost:3141"
+      "summary": "WebSocket server lifecycle on 0.0.0.0:3141"
     },
     {
       "path": "agent/src/staging/path_bridge.ts",
@@ -296,6 +296,10 @@
     {
       "path": "src-tauri/src/lib/commands/paths.rs",
       "summary": "get_app_paths command implementation"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/wsl.rs",
+      "summary": "WSL host resolution for Windows->WSL agent connections"
     },
     {
       "path": "src-tauri/src/lib/config/io.rs",
