@@ -1,7 +1,7 @@
 // Path: app/src/tabs/triangle_rain_tab.tsx
 // Description: Triangle Rain project tab with worktree selector and file lists
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { FileListColumn } from "../components/file_list_column.js";
@@ -12,7 +12,8 @@ import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
-import type { WorktreeId } from "../shared/protocol.js";
+import { useConfig } from "../hooks/use_config.js";
+import type { WorktreeId } from "../shared/ids.js";
 
 const WORKTREES: { id: WorktreeId; label: string }[] = [
   { id: "tr-engine", label: "tr-engine" },
@@ -24,7 +25,29 @@ function getRepoId(worktreeId: WorktreeId): string {
 }
 
 export function TriangleRainTab(): React.JSX.Element {
-  const [selectedWorktree, setSelectedWorktree] = useState<WorktreeId>("tr-engine");
+  const { config, isLoaded, setLastTriangleRainWorktreeId } = useConfig();
+
+  // Initialize from persisted config or default to "tr-engine"
+  const [selectedWorktree, setSelectedWorktreeState] = useState<WorktreeId>(() => {
+    return config.uiState.lastTriangleRainWorktreeId ?? "tr-engine";
+  });
+
+  // Update local state when config loads
+  useEffect(() => {
+    if (isLoaded && config.uiState.lastTriangleRainWorktreeId) {
+      setSelectedWorktreeState(config.uiState.lastTriangleRainWorktreeId);
+    }
+  }, [isLoaded, config.uiState.lastTriangleRainWorktreeId]);
+
+  // Wrap setter to also persist
+  const setSelectedWorktree = useCallback(
+    (worktreeId: WorktreeId) => {
+      setSelectedWorktreeState(worktreeId);
+      setLastTriangleRainWorktreeId(worktreeId);
+    },
+    [setLastTriangleRainWorktreeId]
+  );
+
   const repoId = useMemo(() => getRepoId(selectedWorktree), [selectedWorktree]);
 
   const { connectionState, appPaths } = useAgent();

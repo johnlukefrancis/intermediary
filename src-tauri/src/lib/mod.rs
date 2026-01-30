@@ -2,9 +2,11 @@
 // Description: Library root - Tauri setup and plugin registration
 
 mod commands;
+pub mod config;
 pub mod obs;
 pub mod paths;
 
+use commands::config::{load_config, save_config};
 use commands::paths::get_app_paths;
 use obs::logging;
 
@@ -20,7 +22,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_paths])
+        .invoke_handler(tauri::generate_handler![get_app_paths, load_config, save_config])
         .run(tauri::generate_context!())
         .expect("error running tauri application");
 }

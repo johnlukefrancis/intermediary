@@ -84,3 +84,72 @@
   color: var(--text-secondary);
   opacity: 0.7;
 }
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-error {
+  font-size: 11px;
+  color: #f87171;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-connection {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.status-connection.connected {
+  color: #4ade80;
+  border-color: #2f7a4b;
+  background: #203b2f;
+}
+
+.status-connection.disconnected {
+  color: #fca5a5;
+  border-color: #7f1d1d;
+  background: #2a1414;
+}
+
+.status-path {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-path:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.status-path.copied {
+  background: #203b2f;
+  border-color: #2f7a4b;
+  color: #4ade80;
+}

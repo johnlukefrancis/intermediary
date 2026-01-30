@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-01-29
+Updated on: 2026-01-30
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -10,29 +10,51 @@ Depends on: ADR-000, ADR-007
 
 | Metric | Value |
 |--------|-------|
-| Lines of code | 0 (new project) |
-| Latest milestone | Foundation setup complete |
-| Status | Assumptions locked, ready for spikes |
+| Lines of code | ~4000 |
+| Latest milestone | Daily-driver MVP complete |
+| Status | Ready for production use |
 
 ---
 
 ## Active Initiatives
 
-**Next:** Technical spikes to de-risk the hard parts before MVP implementation.
+**Status:** Core functionality complete. Ready for daily use.
 
-1. **Drag-out spike** — Validate Tauri drag-out works reliably into ChatGPT browser upload zones. Pass/fail decides Tauri vs Electron.
-2. **WSL watcher spike** — WSL agent emits file events via inotify for the initial repo set; UI renders "recent changes" reliably.
-
-Initial repo targets (WSL Linux FS):
+Configured repos (WSL Linux FS):
 - `/home/johnf/code/textureportal`
 - `/home/johnf/code/worktrees/tr-engine`
 - `/home/johnf/code/intermediary`
+
+**Next:** Maintenance and enhancements based on real-world usage.
 
 ---
 
 ## Priority Order
 
 1. ~~Foundation setup (docs, scripts, config)~~ ✓
-2. **Technical spikes** (drag-out, WSL watcher) ← current
-3. MVP implementation
-4. Polish and multi-repo/worktree support
+2. ~~Technical spikes (drag-out, WSL watcher)~~ ✓
+3. ~~MVP implementation~~ ✓
+4. ~~Daily-driver polish (persistence, observability, docs)~~ ✓
+5. **Maintenance / enhancements** ← current
+
+---
+
+## Completed Features
+
+- Three-column UI (Docs, Code, Bundles) per repo
+- WSL agent with file watching and auto-staging
+- Native drag-out via tauri-plugin-drag
+- Bundle building with manifest and retention
+- Config persistence (tab, worktree, bundle selections)
+- Status bar with staging path and error display
+- VS Code tasks for Windows development workflow
+
+---
+
+## Future Enhancements (Backlog)
+
+- System tray mode
+- Global hotkey for "Build + focus app"
+- Windows-native repo support (no agent needed)
+- Custom bundle presets via UI
+- "Save clipboard as report.md" feature

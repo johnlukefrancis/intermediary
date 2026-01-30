@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-01-29
+Updated on: 2026-01-30
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -69,13 +69,14 @@ Intermediary uses a **two-component architecture**:
 
 ### WSL Agent
 
-- **Stack:** Rust or Node.js (TBD based on spike results)
+- **Stack:** Node.js/TypeScript with chokidar for file watching
 - **Purpose:** File watching and bundle generation inside WSL
 - **Key features:**
-  - inotify-based file watching (reliable for Linux FS)
-  - Recent changes feed with debouncing
-  - Bundle building with manifest injection
-  - File staging to Windows-accessible paths
+  - inotify-based file watching via chokidar (reliable for Linux FS)
+  - Recent changes feed with 250ms debouncing
+  - Bundle building with manifest injection and retention (keep last N)
+  - Atomic file staging to Windows-accessible paths
+  - Auto-stage on change (configurable)
 
 ### IPC Protocol
 
@@ -101,26 +102,52 @@ All draggable files originate from a staging directory on Windows:
 - WSL agent writes to `/mnt/c/Users/<user>/AppData/Local/Intermediary/staging/...`
 - UI references via Windows path `C:\Users\<user>\AppData\Local\Intermediary\staging\...`
 
+### Config Persistence
+
+User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
+- **App config:** Agent host/port, auto-stage global setting, repo definitions
+- **UI state:** Last active tab, last Triangle Rain worktree selection
+- **Bundle selections:** Per-repo, per-preset directory selections
+
+Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
+
 ## Why This Architecture?
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
 
 **v0 constraint:** All repos live in WSL Linux FS under `/home/johnf/code`, so the WSL agent is required for v0. Windows-native repo support (where the agent would not be needed) is a later enhancement.
 
-## Directory Structure (Planned)
+## Directory Structure
 
 ```
 intermediary/
 ├── app/                    # Frontend (React/TS)
 │   └── src/
+│       ├── components/     # UI components
+│       ├── hooks/          # React hooks (useAgent, useConfig, etc.)
+│       ├── lib/            # Agent client, messages
+│       ├── shared/         # Protocol types, config schema
+│       ├── styles/         # CSS modules
+│       └── tabs/           # Per-repo tab components
 ├── src-tauri/              # Tauri backend (Rust)
+│   └── src/lib/
+│       ├── commands/       # Tauri commands (paths, config)
+│       ├── config/         # Config persistence (types, io)
+│       ├── obs/            # Observability (logging)
+│       └── paths/          # Path resolution, WSL conversion
+├── agent/                  # WSL agent (Node.js/TS)
 │   └── src/
-├── agent/                  # WSL agent (Rust or Node)
-│   └── src/
-├── crates/                 # Rust Crates
+│       ├── bundles/        # Bundle building, retention
+│       ├── repos/          # File watching
+│       ├── server/         # WebSocket server, router
+│       ├── staging/        # File staging, path bridge
+│       └── util/           # Logger, errors, categorizer
 ├── docs/                   # Documentation
+│   ├── commands/           # ADR-012 compliant command docs
+│   ├── compliance/         # ADRs
+│   └── inventory/          # File ledger
 ├── scripts/                # Build and utility scripts
-└── logs/                   # Runtime logs
+└── logs/                   # Runtime logs (run_latest.txt, agent_latest.log)
 ```
 
 ## Key Workflows

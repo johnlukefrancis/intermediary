@@ -135,7 +135,7 @@
     },
     {
       "path": "app/src/components/status_bar.tsx",
-      "summary": "Status bar with auto-stage toggle"
+      "summary": "Status bar with auto-stage toggle, staging path, and error display"
     },
     {
       "path": "app/src/components/tab_bar.tsx",
@@ -152,6 +152,10 @@
     {
       "path": "app/src/hooks/use_bundle_state.ts",
       "summary": "Per-repo bundle state management with event subscription"
+    },
+    {
+      "path": "app/src/hooks/use_config.tsx",
+      "summary": "Config persistence context provider and hook"
     },
     {
       "path": "app/src/hooks/use_drag.ts",
@@ -175,7 +179,7 @@
     },
     {
       "path": "app/src/main.tsx",
-      "summary": "React entry point - mounts App with AgentProvider to DOM"
+      "summary": "React entry point - mounts App with ConfigProvider and AgentProvider"
     },
     {
       "path": "app/src/shared/config.ts",
@@ -270,12 +274,28 @@
       "summary": "Binary entry point for Tauri app"
     },
     {
+      "path": "src-tauri/src/lib/commands/config.rs",
+      "summary": "Tauri commands for config persistence"
+    },
+    {
       "path": "src-tauri/src/lib/commands/mod.rs",
       "summary": "Tauri command exports"
     },
     {
       "path": "src-tauri/src/lib/commands/paths.rs",
       "summary": "get_app_paths command implementation"
+    },
+    {
+      "path": "src-tauri/src/lib/config/io.rs",
+      "summary": "Config file I/O with atomic writes and error handling"
+    },
+    {
+      "path": "src-tauri/src/lib/config/mod.rs",
+      "summary": "Configuration persistence module"
+    },
+    {
+      "path": "src-tauri/src/lib/config/types.rs",
+      "summary": "Persisted configuration types for Intermediary"
     },
     {
       "path": "src-tauri/src/lib/mod.rs",

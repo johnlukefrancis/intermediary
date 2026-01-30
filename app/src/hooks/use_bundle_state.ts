@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAgent } from "./use_agent.js";
+import { useConfig } from "./use_config.js";
 import { sendBuildBundle, sendListBundles } from "../lib/agent/messages.js";
 import type {
   BundleInfo,
@@ -42,8 +43,26 @@ function normalizeTopLevelDirs(dirs: string[], available: string[] = []): string
 
 function createPresetState(
   preset: BundlePreset,
-  topLevelDirs: string[] = []
+  topLevelDirs: string[] = [],
+  savedSelection?: BundleSelection
 ): BundlePresetState {
+  // If we have a saved selection, use it
+  if (savedSelection) {
+    return {
+      presetId: preset.presetId,
+      presetName: preset.presetName,
+      selection: {
+        includeRoot: savedSelection.includeRoot,
+        topLevelDirs: normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs),
+      },
+      isSelectionInitialized: true,
+      isBuilding: false,
+      bundles: [],
+      lastBuildError: null,
+    };
+  }
+
+  // If preset has explicit dirs, use those
   if (preset.topLevelDirs.length > 0) {
     return {
       presetId: preset.presetId,
@@ -59,6 +78,7 @@ function createPresetState(
     };
   }
 
+  // Default to all available dirs
   return {
     presetId: preset.presetId,
     presetName: preset.presetName,
@@ -89,6 +109,10 @@ function getRepoPresets(presets: BundlePreset[]): BundlePreset[] {
 
 export function useBundleState(repoId: string, topLevelDirs: string[]): BundleState {
   const { subscribe, client, connectionState, helloState, config } = useAgent();
+  const { config: persistedConfig, setBundleSelection: persistSelection } = useConfig();
+
+  // Get saved selections for this repo
+  const savedSelections = persistedConfig.bundleSelections[repoId] ?? {};
 
   const repoPresets = useMemo(() => {
     const repoConfig = config.repos.find((repo) => repo.repoId === repoId);
@@ -98,7 +122,8 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
   const [presets, setPresets] = useState<Map<string, BundlePresetState>>(() => {
     const initial = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
-      initial.set(preset.presetId, createPresetState(preset, topLevelDirs));
+      const saved = savedSelections[preset.presetId];
+      initial.set(preset.presetId, createPresetState(preset, topLevelDirs, saved));
     }
     return initial;
   });
@@ -122,7 +147,9 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
       }
       return next;
     });
-  }, []);
+    // Persist to config
+    persistSelection(repoId, presetId, selection);
+  }, [repoId, persistSelection]);
 
   // Build bundle for a preset
   const buildBundle = useCallback(
@@ -203,12 +230,13 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
   useEffect(() => {
     const next = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
-      next.set(preset.presetId, createPresetState(preset));
+      const saved = savedSelections[preset.presetId];
+      next.set(preset.presetId, createPresetState(preset, [], saved));
     }
     setPresets(next);
     setActivePresetId(repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId);
     lastRefreshKeyRef.current = null;
-  }, [repoId, repoPresets]);
+  }, [repoId, repoPresets, savedSelections]);
 
   useEffect(() => {
     if (topLevelDirs.length === 0) {

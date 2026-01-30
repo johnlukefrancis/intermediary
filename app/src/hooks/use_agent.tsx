@@ -16,13 +16,14 @@ import {
   type AgentClient,
 } from "../lib/agent/agent_client.js";
 import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
-import { getDefaultConfig, type AppConfig } from "../shared/config.js";
+import { extractAppConfig, type AppConfig } from "../shared/config.js";
 import {
   type ConnectionState,
   INITIAL_CONNECTION_STATE,
 } from "../lib/agent/connection_state.js";
 import type { AgentEvent } from "../shared/protocol.js";
 import type { AppPaths } from "../types/app_paths.js";
+import { useConfig } from "./use_config.js";
 
 type EventHandler = (event: AgentEvent) => void;
 
@@ -53,11 +54,13 @@ interface AgentProviderProps {
 }
 
 export function AgentProvider({ children }: AgentProviderProps): React.JSX.Element {
+  const { config: persistedConfig, setAutoStageGlobal } = useConfig();
+  const config = extractAppConfig(persistedConfig);
+
   const [connectionState, setConnectionState] = useState<ConnectionState>(
     INITIAL_CONNECTION_STATE
   );
   const [appPaths, setAppPaths] = useState<AppPaths | null>(null);
-  const [config] = useState<AppConfig>(() => getDefaultConfig());
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
   const [helloState, setHelloState] = useState<HelloState>({
@@ -86,6 +89,21 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   useEffect(() => {
     autoStageRef.current = autoStageOnChange;
   }, [autoStageOnChange]);
+
+  useEffect(() => {
+    if (autoStageOnChange === config.autoStageGlobal) {
+      return;
+    }
+
+    setAutoStageOnChangeState(config.autoStageGlobal);
+    autoStageRef.current = config.autoStageGlobal;
+
+    if (client && connectionState.status === "connected") {
+      void sendSetOptions(client, config.autoStageGlobal).catch((err: unknown) => {
+        console.error("[AgentProvider] setOptions failed:", err);
+      });
+    }
+  }, [autoStageOnChange, client, config.autoStageGlobal, connectionState.status]);
 
   // Initialize on mount
   useEffect(() => {
@@ -188,6 +206,9 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const setAutoStageOnChange = useCallback(
     (value: boolean) => {
       setAutoStageOnChangeState(value);
+      // Persist to config
+      setAutoStageGlobal(value);
+
       if (!client || connectionState.status !== "connected") {
         return;
       }
@@ -199,7 +220,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
           console.error("[AgentProvider] setOptions failed:", err);
         });
     },
-    [client, connectionState.status]
+    [client, connectionState.status, setAutoStageGlobal]
   );
 
   const value: AgentContextValue = {

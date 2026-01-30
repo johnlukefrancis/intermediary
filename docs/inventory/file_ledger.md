@@ -36,17 +36,18 @@ app/src/components/file_list_column.tsx - Column wrapper that renders a list of 
 app/src/components/file_row.tsx - Draggable file item with drag handle and metadata display
 app/src/components/layout/three_column.tsx - Three-column layout component (Docs | Code | Zips)
 app/src/components/offline_banner.tsx - Connection status banner shown when agent is offline
-app/src/components/status_bar.tsx - Status bar with auto-stage toggle
+app/src/components/status_bar.tsx - Status bar with auto-stage toggle, staging path, and error display
 app/src/components/tab_bar.tsx - Tab navigation component
 app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
+app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
-app/src/main.tsx - React entry point - mounts App with AgentProvider to DOM
+app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
@@ -70,8 +71,12 @@ scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw 
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
+src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation
+src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
+src-tauri/src/lib/config/mod.rs - Configuration persistence module
+src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt
 src-tauri/src/lib/obs/mod.rs - Observability module exports

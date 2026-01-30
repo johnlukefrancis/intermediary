@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-01-29
+Updated on: 2026-01-30
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 

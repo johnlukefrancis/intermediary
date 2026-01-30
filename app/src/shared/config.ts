@@ -177,3 +177,109 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
     },
   ],
 });
+
+// -----------------------------------------------------------------------------
+// Persisted config (includes UI state and bundle selections)
+// -----------------------------------------------------------------------------
+
+/** Current config schema version */
+export const CONFIG_VERSION = 1;
+
+/** Remembered UI state */
+export const UiStateSchema = z.object({
+  /** Last active tab */
+  lastActiveTabId: TabIdSchema.nullable().default(null),
+  /** Last Triangle Rain worktree */
+  lastTriangleRainWorktreeId: WorktreeIdSchema.nullable().default(null),
+});
+
+export type UiState = z.infer<typeof UiStateSchema>;
+
+/** Bundle selection state for a preset */
+export const BundleSelectionSchema = z.object({
+  includeRoot: z.boolean(),
+  topLevelDirs: z.array(z.string()),
+});
+
+export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
+
+/** Bundle selections map: repoId -> presetId -> selection */
+export const BundleSelectionsSchema = z.record(
+  z.string(),
+  z.record(z.string(), BundleSelectionSchema)
+);
+
+export type BundleSelections = z.infer<typeof BundleSelectionsSchema>;
+
+/**
+ * Full persisted configuration (saved to disk)
+ */
+export const PersistedConfigSchema = z.object({
+  /** Schema version for migrations */
+  configVersion: z.number().int().min(1).default(CONFIG_VERSION),
+  /** Agent host */
+  agentHost: z.string().min(1).default("localhost"),
+  /** Agent port */
+  agentPort: z.number().int().min(1024).max(65535).default(3141),
+  /** Global auto-stage setting */
+  autoStageGlobal: z.boolean().default(true),
+  /** Configured repositories */
+  repos: z.array(RepoConfigSchema).default([]),
+  /** Remembered UI state */
+  uiState: UiStateSchema.default({}),
+  /** Bundle selections per repo/preset */
+  bundleSelections: BundleSelectionsSchema.default({}),
+});
+
+export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
+
+/** Result from load_config command */
+export interface LoadConfigResult {
+  config: PersistedConfig;
+  wasCreated: boolean;
+  migrationApplied: boolean;
+}
+
+/**
+ * Parse persisted config, applying migrations if needed
+ */
+export function parsePersistedConfig(input: unknown): PersistedConfig {
+  const parsed = PersistedConfigSchema.parse(input);
+  return migrateConfig(parsed);
+}
+
+/**
+ * Get default persisted config
+ */
+export function getDefaultPersistedConfig(): PersistedConfig {
+  return {
+    configVersion: CONFIG_VERSION,
+    ...DEFAULT_APP_CONFIG,
+    uiState: {
+      lastActiveTabId: null,
+      lastTriangleRainWorktreeId: null,
+    },
+    bundleSelections: {},
+  };
+}
+
+/**
+ * Apply migrations to bring config to current version
+ */
+function migrateConfig(config: PersistedConfig): PersistedConfig {
+  // Version 1 is current - no migrations needed yet
+  // Future migrations would go here as version checks
+  return { ...config, configVersion: CONFIG_VERSION };
+}
+
+/**
+ * Extract AppConfig from PersistedConfig
+ */
+export function extractAppConfig(persisted: PersistedConfig): AppConfig {
+  return {
+    agentHost: persisted.agentHost,
+    agentPort: persisted.agentPort,
+    autoStageGlobal: persisted.autoStageGlobal,
+    repos: persisted.repos,
+  };
+}

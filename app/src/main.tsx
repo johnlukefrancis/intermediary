@@ -1,9 +1,10 @@
 // Path: app/src/main.tsx
-// Description: React entry point - mounts App with AgentProvider to DOM
+// Description: React entry point - mounts App with ConfigProvider and AgentProvider
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
+import { ConfigProvider } from "./hooks/use_config.js";
 import { AgentProvider } from "./hooks/use_agent.js";
 import "./styles/main.css";
 import "./styles/bundle_column.css";
@@ -15,8 +16,10 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <AgentProvider>
-      <App />
-    </AgentProvider>
+    <ConfigProvider>
+      <AgentProvider>
+        <App />
+      </AgentProvider>
+    </ConfigProvider>
   </StrictMode>
 );
