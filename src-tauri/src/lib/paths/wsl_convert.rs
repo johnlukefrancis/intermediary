@@ -18,25 +18,29 @@ pub fn windows_to_wsl_path(windows_path: &str) -> Option<String> {
         return Some(unix_path.replace('\\', "/"));
     }
 
-    // Handle standard Windows paths like C:\...
+    // Handle standard Windows paths like C:\... or C:/...
     let mut chars = windows_path.chars();
     let drive_letter = chars.next()?.to_ascii_lowercase();
 
-    // Verify it's a drive letter followed by :\
+    // Verify it's a drive letter followed by :
     if !drive_letter.is_ascii_alphabetic() {
         return None;
     }
     if chars.next() != Some(':') {
         return None;
     }
-    if chars.next() != Some('\\') && !windows_path.ends_with(':') {
-        return None;
+    match chars.next() {
+        Some('\\') | Some('/') => {
+            let rest: String = chars.collect();
+            if rest.is_empty() {
+                return Some(format!("/mnt/{drive_letter}"));
+            }
+            let unix_rest = rest.replace('\\', "/");
+            Some(format!("/mnt/{drive_letter}/{unix_rest}"))
+        }
+        None => Some(format!("/mnt/{drive_letter}")),
+        Some(_) => None,
     }
-
-    let rest: String = chars.collect();
-    let unix_rest = rest.replace('\\', "/");
-
-    Some(format!("/mnt/{drive_letter}{unix_rest}"))
 }
 
 /// Convert a WSL path to its Windows equivalent
@@ -79,6 +83,22 @@ mod tests {
             windows_to_wsl_path(r"D:\code\project"),
             Some("/mnt/d/code/project".to_string())
         );
+        assert_eq!(
+            windows_to_wsl_path("C:/Users/john/AppData"),
+            Some("/mnt/c/Users/john/AppData".to_string())
+        );
+        assert_eq!(
+            windows_to_wsl_path("C:"),
+            Some("/mnt/c".to_string())
+        );
+        assert_eq!(
+            windows_to_wsl_path(r"C:\"),
+            Some("/mnt/c".to_string())
+        );
+        assert_eq!(
+            windows_to_wsl_path("C:/"),
+            Some("/mnt/c".to_string())
+        );
     }
 
     #[test]
@@ -97,6 +117,10 @@ mod tests {
     fn test_unc_path() {
         assert_eq!(
             windows_to_wsl_path(r"\\wsl$\Ubuntu\home\john"),
+            Some("/home/john".to_string())
+        );
+        assert_eq!(
+            windows_to_wsl_path(r"\\wsl.localhost\Ubuntu\home\john"),
             Some("/home/john".to_string())
         );
     }
