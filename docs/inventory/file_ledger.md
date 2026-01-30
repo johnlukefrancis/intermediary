@@ -14,6 +14,7 @@ agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle build
 agent/src/bundles/manifest.ts - Manifest generation for bundle zips
 agent/src/bundles/retention.ts - Bundle cleanup logic (keep last N)
 agent/src/bundles/zip_writer.ts - Archiver wrapper for creating bundle zip files
+agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns

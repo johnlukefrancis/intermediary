@@ -46,6 +46,10 @@
       "summary": "Archiver wrapper for creating bundle zip files"
     },
     {
+      "path": "agent/src/dev/staging_probe.ts",
+      "summary": "Minimal code file for staging detection tests"
+    },
+    {
       "path": "agent/src/main.ts",
       "summary": "Agent entry point - bootstraps WebSocket server and watchers"
     },

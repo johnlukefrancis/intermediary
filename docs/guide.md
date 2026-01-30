@@ -37,6 +37,12 @@ Workflow and tooling documentation.
 | [docs/environment/codex_operational_guide.md](environment/codex_operational_guide.md) | Operational guide for Codex |
 | [docs/environment/chatgpt_custom_instructions.md](environment/chatgpt_custom_instructions.md) | ChatGPT collaboration instructions |
 
+## Usage
+
+| Document | Purpose |
+|----------|---------|
+| [docs/usage/staging_probe_usage.md](usage/staging_probe_usage.md) | Test doc for staging detection |
+
 ## Inventory
 
 | Document | Purpose |
