@@ -54,12 +54,13 @@ app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentP
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
+app/src/styles/badges.css - Unified badge primitive for status indicators and labels
 app/src/styles/bundle_column.css - Styles for bundle column components
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column grid layout (Docs | Code | Zips)
-app/src/styles/drag_error_notice.css - Inline notice for drag errors
+app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Background gradient, grain noise, and glass surface utilities
-app/src/styles/file_row.css - Styles for file row component with drag handle
+app/src/styles/file_row.css - Styles for file row component with glass grab chip
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/offline_banner.css - Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner...
 app/src/styles/panels.css - Glass panel surfaces, headers, and empty states for deck columns

@@ -1,61 +1,73 @@
 /*
  * Path: app/src/styles/file_row.css
- * Description: Styles for file row component with drag handle
+ * Description: Styles for file row component with glass grab chip
  */
 
+/* ===== ROW LAYOUT ===== */
 .file-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: var(--space-2);
-  padding: 6px var(--space-2);
-  border-radius: var(--radius-sm);
-  transition: background var(--duration-normal) var(--ease-out);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .file-row:hover {
   background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-drop-sm);
 }
 
+/* ===== DRAG HANDLE (GRAB CHIP) ===== */
 .file-drag-handle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   cursor: grab;
-  color: var(--color-text-secondary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  transition: background var(--duration-normal) var(--ease-out),
-    color var(--duration-normal) var(--ease-out);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  letter-spacing: 1px;
   user-select: none;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .file-drag-handle:hover {
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  border-color: var(--color-accent);
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-inset-subtle);
 }
 
 .file-drag-handle:active {
   cursor: grabbing;
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
 }
 
-.drag-icon {
-  font-family: var(--font-mono);
-  font-size: var(--text-md);
-  font-weight: var(--weight-bold);
-  letter-spacing: -2px;
-}
-
+/* ===== FILE INFO ===== */
 .file-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .file-name {
   font-size: var(--text-base);
+  font-weight: var(--weight-medium);
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -63,56 +75,25 @@
 }
 
 .file-dir {
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  opacity: 0.7;
 }
 
+/* ===== FILE META ===== */
 .file-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
-.file-badge {
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  font-weight: var(--weight-medium);
-}
-
-.file-badge.change {
-  background: var(--color-info-muted);
-  color: var(--color-info);
-}
-
-.file-badge.change.change-add {
-  background: var(--color-success-soft);
-  color: var(--color-success);
-}
-
-.file-badge.change.change-modify {
-  background: var(--color-info-soft);
-  color: var(--color-info);
-}
-
-.file-badge.change.change-delete {
-  background: var(--color-error-soft);
-  color: var(--color-error);
-}
-
-.file-badge.staged {
-  background: var(--color-success-soft);
-  color: var(--color-success);
-}
-
 .file-time {
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
   font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
 }

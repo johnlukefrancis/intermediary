@@ -53,13 +53,13 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
         onMouseDown={(e) => void handleMouseDown(e)}
         title="Drag to share"
       >
-        ::
+        ⋮⋮
       </div>
       <div className="bundle-info">
         <span className="bundle-filename">
           {bundle.fileName}
           {bundle.isLatestAlias && (
-            <span className="bundle-badge latest">LATEST</span>
+            <span className="badge badge--latest">latest</span>
           )}
         </span>
         <span className="bundle-meta">

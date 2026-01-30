@@ -46,12 +46,12 @@ function getDirectory(path: string): string {
 function getChangeBadge(changeType: FileChangeType): { label: string; className: string } {
   switch (changeType) {
     case "add":
-      return { label: "A", className: "change-add" };
+      return { label: "A", className: "badge--add" };
     case "unlink":
-      return { label: "D", className: "change-delete" };
+      return { label: "D", className: "badge--delete" };
     case "change":
     default:
-      return { label: "M", className: "change-modify" };
+      return { label: "M", className: "badge--modify" };
   }
 }
 
@@ -81,7 +81,7 @@ export function FileRow({
         onMouseDown={handleMouseDown}
         title="Drag to share"
       >
-        <span className="drag-icon">::</span>
+        ⋮⋮
       </div>
       <div className="file-info">
         <span className="file-name">{fileName}</span>
@@ -89,12 +89,12 @@ export function FileRow({
       </div>
       <div className="file-meta">
         <span
-          className={`file-badge change ${changeBadge.className}`}
+          className={`badge ${changeBadge.className}`}
           title={`Change: ${file.changeType}`}
         >
           {changeBadge.label}
         </span>
-        {stagedInfo && <span className="file-badge staged">staged</span>}
+        {stagedInfo && <span className="badge badge--staged">staged</span>}
         <span className="file-time">{formatRelativeTime(file.mtime)}</span>
       </div>
     </div>

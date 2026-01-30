@@ -11,6 +11,7 @@ import "./styles/tokens.css";
 import "./styles/theme_dark.css";
 import "./styles/theme_accents.css";
 import "./styles/effects.css";
+import "./styles/badges.css";
 import "./styles/main.css";
 import "./styles/panels.css";
 import "./styles/scrollbars.css";

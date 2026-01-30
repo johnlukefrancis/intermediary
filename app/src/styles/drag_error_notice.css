@@ -1,37 +1,56 @@
 /*
  * Path: app/src/styles/drag_error_notice.css
- * Description: Inline notice for drag errors
+ * Description: Inline glass toast for drag errors
  */
 
 .drag-error-notice {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: 6px 10px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-2);
-  background: var(--color-error-soft);
+  background: rgba(248, 113, 113, 0.08);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
   border: 1px solid var(--color-error-muted);
   border-radius: var(--radius-md);
-  color: var(--color-error);
-  font-size: var(--text-sm);
+  box-shadow: var(--shadow-inset-subtle);
 }
 
 .drag-error-text {
   flex: 1;
   min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-error);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .drag-error-dismiss {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   border: none;
   background: transparent;
-  color: inherit;
+  color: var(--color-error);
   font-size: var(--text-lg);
+  line-height: 1;
   cursor: pointer;
-  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  opacity: 0.7;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out);
+}
+
+.drag-error-dismiss:hover {
+  opacity: 1;
+  background: rgba(248, 113, 113, 0.1);
 }
 
 .drag-error-dismiss:focus-visible {

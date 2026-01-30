@@ -206,6 +206,10 @@
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
     },
     {
+      "path": "app/src/styles/badges.css",
+      "summary": "Unified badge primitive for status indicators and labels"
+    },
+    {
       "path": "app/src/styles/bundle_column.css",
       "summary": "Styles for bundle column components"
     },
@@ -219,7 +223,7 @@
     },
     {
       "path": "app/src/styles/drag_error_notice.css",
-      "summary": "Inline notice for drag errors"
+      "summary": "Inline glass toast for drag errors"
     },
     {
       "path": "app/src/styles/effects.css",
@@ -227,7 +231,7 @@
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "Styles for file row component with drag handle"
+      "summary": "Styles for file row component with glass grab chip"
     },
     {
       "path": "app/src/styles/main.css",

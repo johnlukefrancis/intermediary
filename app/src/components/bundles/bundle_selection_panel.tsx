@@ -63,14 +63,20 @@ export function BundleSelectionPanel({
   return (
     <div className="bundle-selection-panel">
       <div className="selection-header">
-        <label className="include-root-toggle">
-          <input
-            type="checkbox"
-            checked={selection.includeRoot}
-            onChange={handleIncludeRootChange}
-          />
-          Include root files
-        </label>
+        <div className="include-root-toggle">
+          <label className="vintage-toggle">
+            <input
+              id="include-root-checkbox"
+              type="checkbox"
+              checked={selection.includeRoot}
+              onChange={handleIncludeRootChange}
+            />
+            <span className="vintage-toggle-track" />
+          </label>
+          <label className="toggle-label" htmlFor="include-root-checkbox">
+            Include root files
+          </label>
+        </div>
       </div>
 
       <div className="dir-selection">
@@ -94,16 +100,23 @@ export function BundleSelectionPanel({
           </div>
         </div>
         <div className="dir-checkbox-list">
-          {topLevelDirs.map((dir) => (
-            <label key={dir} className="dir-checkbox">
-              <input
-                type="checkbox"
-                checked={selectedDirs.has(dir)}
-                onChange={() => { handleDirToggle(dir); }}
-              />
-              {dir}
-            </label>
-          ))}
+          {topLevelDirs.map((dir) => {
+            const checkboxId = `dir-checkbox-${dir.replace(/[^a-zA-Z0-9]/g, "-")}`;
+            return (
+              <div key={dir} className="dir-checkbox">
+                <label className="vintage-toggle">
+                  <input
+                    id={checkboxId}
+                    type="checkbox"
+                    checked={selectedDirs.has(dir)}
+                    onChange={() => { handleDirToggle(dir); }}
+                  />
+                  <span className="vintage-toggle-track" />
+                </label>
+                <label className="dir-label" htmlFor={checkboxId}>{dir}</label>
+              </div>
+            );
+          })}
           {topLevelDirs.length === 0 && (
             <span className="no-dirs">No directories found</span>
           )}
