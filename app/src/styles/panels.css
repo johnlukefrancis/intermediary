@@ -1,0 +1,102 @@
+/*
+ * Path: app/src/styles/panels.css
+ * Description: Glass panel surfaces, headers, and empty states for deck columns
+ */
+
+/* ===== PANEL SURFACE ===== */
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--shadow-inset-subtle),
+    var(--shadow-drop-sm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Scanline texture overlay */
+.panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.02) 2px,
+    rgba(0, 0, 0, 0.02) 4px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* ===== PANEL HEADER ===== */
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* ASCII prefix decoration */
+.panel-header::before {
+  content: ':: ';
+  color: var(--color-text-muted);
+  font-weight: var(--weight-normal);
+}
+
+/* ===== PANEL CONTENT ===== */
+.panel-content {
+  position: relative;
+  z-index: 0;
+  flex: 1;
+  padding: var(--space-3);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* When panel content only contains an empty state, center it */
+.panel-content:has(> .empty-state:only-child) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* Subtle pulsing animation for "waiting" states */
+.empty-state--waiting {
+  animation: pulse-muted 2s ease-in-out infinite;
+}
+
+@keyframes pulse-muted {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}

@@ -51,10 +51,5 @@ body {
   gap: var(--space-3);
 }
 
-/* ===== UTILITIES ===== */
-.placeholder {
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
 /* Note: .worktree-selector styles moved to chrome.css */
+/* Note: .placeholder replaced by .empty-state in panels.css */

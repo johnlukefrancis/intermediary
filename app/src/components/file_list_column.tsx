@@ -25,7 +25,9 @@ export function FileListColumn({
   onDragStart,
 }: FileListColumnProps): React.JSX.Element {
   if (files.length === 0) {
-    return <p className="placeholder">{emptyMessage}</p>;
+    const isWaiting = emptyMessage.toLowerCase().includes("waiting");
+    const className = isWaiting ? "empty-state empty-state--waiting" : "empty-state";
+    return <p className={className}>{emptyMessage}</p>;
   }
 
   return (

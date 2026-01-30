@@ -215,7 +215,7 @@
     },
     {
       "path": "app/src/styles/columns.css",
-      "summary": "Three-column layout styles"
+      "summary": "Three-column grid layout (Docs | Code | Zips)"
     },
     {
       "path": "app/src/styles/drag_error_notice.css",
@@ -236,6 +236,14 @@
     {
       "path": "app/src/styles/offline_banner.css",
       "summary": "Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner..."
+    },
+    {
+      "path": "app/src/styles/panels.css",
+      "summary": "Glass panel surfaces, headers, and empty states for deck columns"
+    },
+    {
+      "path": "app/src/styles/scrollbars.css",
+      "summary": "Thin dark scrollbar styling with accent hints"
     },
     {
       "path": "app/src/styles/status_bar.css",

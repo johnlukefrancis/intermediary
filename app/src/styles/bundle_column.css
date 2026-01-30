@@ -192,10 +192,7 @@
   align-items: center;
 }
 
-.bundle-list-empty {
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
+/* Note: .bundle-list-empty replaced by .empty-state in panels.css */
 
 .bundle-list-header {
   padding: var(--space-2) var(--space-3);

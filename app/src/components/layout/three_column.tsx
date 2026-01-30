@@ -17,22 +17,22 @@ export function ThreeColumn({
 }: ThreeColumnProps): React.JSX.Element {
   return (
     <div className="three-column">
-      <section className="column">
-        <h2 className="column-header">Docs</h2>
-        <div className="column-content">
-          {docsContent ?? <p className="placeholder">Waiting for agent...</p>}
+      <section className="panel">
+        <h2 className="panel-header">Docs</h2>
+        <div className="panel-content">
+          {docsContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
         </div>
       </section>
-      <section className="column">
-        <h2 className="column-header">Code</h2>
-        <div className="column-content">
-          {codeContent ?? <p className="placeholder">Waiting for agent...</p>}
+      <section className="panel">
+        <h2 className="panel-header">Code</h2>
+        <div className="panel-content">
+          {codeContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
         </div>
       </section>
-      <section className="column">
-        <h2 className="column-header">Zips</h2>
-        <div className="column-content">
-          {zipsContent ?? <p className="placeholder">Waiting for agent...</p>}
+      <section className="panel">
+        <h2 className="panel-header">Zips</h2>
+        <div className="panel-content">
+          {zipsContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
         </div>
       </section>
     </div>

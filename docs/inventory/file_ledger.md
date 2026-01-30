@@ -56,12 +56,14 @@ app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/bundle_column.css - Styles for bundle column components
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
-app/src/styles/columns.css - Three-column layout styles
+app/src/styles/columns.css - Three-column grid layout (Docs | Code | Zips)
 app/src/styles/drag_error_notice.css - Inline notice for drag errors
 app/src/styles/effects.css - Background gradient, grain noise, and glass surface utilities
 app/src/styles/file_row.css - Styles for file row component with drag handle
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/offline_banner.css - Offline banner styles - DEPRECATED, moved to chrome.css as .system-banner This file is kept for reference. All banner...
+app/src/styles/panels.css - Glass panel surfaces, headers, and empty states for deck columns
+app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar command strip styles
 app/src/styles/tab_bar.css - Tab bar navigation styles with glass pill aesthetic
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute

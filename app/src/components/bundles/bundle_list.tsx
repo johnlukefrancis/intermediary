@@ -17,9 +17,11 @@ export function BundleList({
   emptyMessage = "No bundles yet",
 }: BundleListProps): React.JSX.Element {
   if (bundles.length === 0) {
+    const isWaiting = emptyMessage.toLowerCase().includes("waiting");
+    const className = isWaiting ? "empty-state empty-state--waiting" : "empty-state";
     return (
       <div className="bundle-list empty">
-        <p className="bundle-list-empty">{emptyMessage}</p>
+        <p className={className}>{emptyMessage}</p>
       </div>
     );
   }
