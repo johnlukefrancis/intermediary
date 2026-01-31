@@ -184,6 +184,12 @@ export function useBundleState(
   );
   const lastRefreshKeyRef = useRef<string | null>(null);
   const resetKeyRef = useRef<string | null>(null);
+  const lastProgressUpdateRef = useRef<
+    Map<string, { ts: number; phase: BundleBuildPhase; filesDone: number; filesTotal: number; currentFile?: string }>
+  >(
+    new Map()
+  );
+  const PROGRESS_THROTTLE_MS = 500;
 
   // Update selection for a preset
   const setSelection = useCallback((presetId: string, selection: BundleSelection) => {
@@ -301,6 +307,34 @@ export function useBundleState(
         void refreshBundles(event.presetId);
       }
       if (event.type === "bundleBuildProgress" && event.repoId === repoId) {
+        const now = Date.now();
+        const lastEntry = lastProgressUpdateRef.current.get(event.presetId);
+        const shouldUpdate =
+          !lastEntry ||
+          event.phase !== lastEntry.phase ||
+          event.currentFile !== lastEntry.currentFile ||
+          event.filesDone !== lastEntry.filesDone ||
+          event.filesTotal !== lastEntry.filesTotal ||
+          now - lastEntry.ts >= PROGRESS_THROTTLE_MS;
+        if (!shouldUpdate) {
+          return;
+        }
+        const snapshot: {
+          ts: number;
+          phase: BundleBuildPhase;
+          filesDone: number;
+          filesTotal: number;
+          currentFile?: string;
+        } = {
+          ts: now,
+          phase: event.phase,
+          filesDone: event.filesDone,
+          filesTotal: event.filesTotal,
+        };
+        if (event.currentFile !== undefined) {
+          snapshot.currentFile = event.currentFile;
+        }
+        lastProgressUpdateRef.current.set(event.presetId, snapshot);
         setPresets((prev) => {
           const next = new Map(prev);
           const preset = next.get(event.presetId);

@@ -406,6 +406,9 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+  min-height: 18px;
+  line-height: 1.2;
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .build-progress-file {
@@ -416,9 +419,10 @@
   white-space: nowrap;
 }
 
-.build-progress-bytes {
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+
+.build-progress-details.hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 
 /* ===== BUNDLE LIST ===== */

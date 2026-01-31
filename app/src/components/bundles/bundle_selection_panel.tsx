@@ -58,12 +58,6 @@ interface BundleSelectionPanelProps {
   onBuild: () => void;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 export function BundleSelectionPanel({
   selection,
   topLevelDirs,
@@ -81,17 +75,7 @@ export function BundleSelectionPanel({
     topLevelDirs.length > 0 && selection.topLevelDirs.length === topLevelDirs.length;
   const noneSelected = selection.topLevelDirs.length === 0;
   const currentFile = buildProgress?.currentFile;
-  const currentBytesDone = buildProgress?.currentBytesDone;
-  const currentBytesTotal = buildProgress?.currentBytesTotal;
   const showProgressDetails = Boolean(isBuilding && currentFile);
-  const bytesLabel = (() => {
-    if (currentBytesDone === undefined) return null;
-    const doneLabel = formatBytes(currentBytesDone);
-    if (currentBytesTotal === undefined || currentBytesTotal === 0) {
-      return doneLabel;
-    }
-    return `${doneLabel} / ${formatBytes(currentBytesTotal)}`;
-  })();
 
   const handleIncludeRootChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,16 +190,14 @@ export function BundleSelectionPanel({
         )}
       </button>
 
-      {showProgressDetails && (
-        <div className="build-progress-details" aria-live="polite">
-          <span className="build-progress-file" title={currentFile}>
-            Writing {currentFile}
-          </span>
-          {bytesLabel && (
-            <span className="build-progress-bytes">{bytesLabel}</span>
-          )}
-        </div>
-      )}
+      <div
+        className={`build-progress-details${showProgressDetails ? "" : " hidden"}`}
+        aria-live={showProgressDetails ? "polite" : "off"}
+      >
+        <span className="build-progress-file" title={currentFile}>
+          {showProgressDetails ? `Writing ${currentFile}` : " "}
+        </span>
+      </div>
 
       <div className="selection-header">
         <div className="include-root-toggle">
