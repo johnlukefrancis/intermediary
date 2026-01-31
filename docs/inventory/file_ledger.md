@@ -76,7 +76,12 @@ app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
 app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (worktree selector in tab bar)
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_zip/src/bin/im_zip_cli.rs - CLI entry point for im_zip - accepts plan file, outputs progress JSON
+crates/im_zip/src/error.rs - Error types for zip operations with actionable messages
 crates/im_zip/src/lib.rs - Library root - zip archive creation API
+crates/im_zip/src/plan.rs - ZipPlan schema and validation for plan file parsing
+crates/im_zip/src/progress.rs - Throttled JSON progress reporter for stdout
+crates/im_zip/src/writer.rs - Core zip writing logic with streaming and progress
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.
 scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as...
