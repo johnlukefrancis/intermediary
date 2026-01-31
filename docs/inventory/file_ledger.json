@@ -115,7 +115,7 @@
     },
     {
       "path": "app/src/components/bundles/bundle_selection_panel.tsx",
-      "summary": "Selection UI for bundle building (root toggle, dir checkboxes)"
+      "summary": "Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)"
     },
     {
       "path": "app/src/components/bundles/preset_selector.tsx",

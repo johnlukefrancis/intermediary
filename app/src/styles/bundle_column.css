@@ -96,6 +96,10 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-deck-sm);
   box-shadow: var(--shadow-inset-subtle);
+  /* Grow to fill available space, shrink if needed, scroll internally */
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .selection-header {
@@ -120,6 +124,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  /* Grow to fill panel, allow internal scrolling */
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dir-selection-header {
@@ -181,6 +189,9 @@
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-deck-xs);
+  /* Grow to fill available space, scroll when content overflows */
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .dir-checkbox {
@@ -189,11 +200,89 @@
   gap: var(--space-3);
 }
 
+.dir-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.dir-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dir-expand-btn {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.dir-expand-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.dir-expand-btn:focus {
+  outline: none;
+}
+
+.dir-expand-btn:focus-visible {
+  outline: 1px solid var(--color-accent);
+  border-radius: 2px;
+}
+
+.dir-expand-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
 .dir-label {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
+}
+
+/* ===== SUBDIR LIST ===== */
+.subdir-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-left: calc(16px + var(--space-2));
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border-subtle);
+  margin-top: var(--space-1);
+}
+
+.subdir-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.subdir-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.subdir-label.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== INDETERMINATE TOGGLE STATE ===== */
+.vintage-toggle-track.indeterminate {
+  background: var(--color-warning-muted, #8b7355);
 }
 
 .no-dirs {
@@ -276,7 +365,10 @@
 
 /* ===== BUNDLE LIST ===== */
 .bundle-list {
-  flex: 1;
+  /* Don't grow - let selection panel take available space */
+  /* But ensure we're always visible with min-height */
+  flex: 0 0 auto;
+  min-height: 80px;
   display: flex;
   flex-direction: column;
   overflow: hidden;

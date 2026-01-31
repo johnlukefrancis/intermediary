@@ -19,6 +19,8 @@ export interface RepoState {
   isLoading: boolean;
   topLevelDirs: string[];
   topLevelFiles: string[];
+  /** Subdirectories within each top-level dir (depth-2) */
+  topLevelSubdirs: Record<string, string[]>;
   registerStaged: (relativePath: string, stagedInfo: StagedInfo) => void;
 }
 
@@ -49,6 +51,7 @@ export function useRepoState(repoId: string): RepoState {
   const [isLoading, setIsLoading] = useState(true);
   const [topLevelDirs, setTopLevelDirs] = useState<string[]>([]);
   const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
+  const [topLevelSubdirs, setTopLevelSubdirs] = useState<Record<string, string[]>>({});
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
 
   const registerStaged = useCallback((relativePath: string, stagedInfo: StagedInfo) => {
@@ -112,6 +115,7 @@ export function useRepoState(repoId: string): RepoState {
     setIsLoading(true);
     setTopLevelDirs([]);
     setTopLevelFiles([]);
+    setTopLevelSubdirs({});
 
     const unsubscribe = subscribe(handleEvent);
     return unsubscribe;
@@ -146,6 +150,7 @@ export function useRepoState(repoId: string): RepoState {
       .then((result) => {
         setTopLevelDirs(result.dirs);
         setTopLevelFiles(result.files);
+        setTopLevelSubdirs(result.subdirs ?? {});
       })
       .catch((err: unknown) => {
         console.error("[useRepoState] getRepoTopLevel failed:", err);
@@ -166,6 +171,7 @@ export function useRepoState(repoId: string): RepoState {
     isLoading,
     topLevelDirs,
     topLevelFiles,
+    topLevelSubdirs,
     registerStaged,
   };
 }

@@ -170,6 +170,7 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         repoId: command.repoId,
         dirs: result.dirs,
         files: result.files,
+        subdirs: result.subdirs,
       };
     }
 

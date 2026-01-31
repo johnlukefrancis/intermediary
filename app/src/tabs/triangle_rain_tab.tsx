@@ -27,9 +27,9 @@ export function TriangleRainTab(): React.JSX.Element {
   const repoId = useMemo(() => getRepoId(selectedWorktree), [selectedWorktree]);
 
   const { connectionState, appPaths } = useAgent();
-  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, registerStaged } =
+  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, topLevelSubdirs, registerStaged } =
     useRepoState(repoId);
-  const bundleState = useBundleState(repoId, topLevelDirs);
+  const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs);
   const { dragState, handleDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });

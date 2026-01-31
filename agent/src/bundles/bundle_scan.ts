@@ -24,6 +24,8 @@ export interface BundleScanOptions {
   repoRoot: string;
   includeRoot: boolean;
   topLevelDirs: string[];
+  /** Subdirectories to exclude (e.g. "TriangleRain/Assets") */
+  excludedSubdirs?: string[];
 }
 
 /**
@@ -65,8 +67,13 @@ function validateTopLevelDirs(
 export async function scanBundleContents(
   options: BundleScanOptions
 ): Promise<BundleScanResult> {
-  const { repoRoot, includeRoot } = options;
+  const { repoRoot, includeRoot, excludedSubdirs = [] } = options;
   const entries: BundleEntry[] = [];
+
+  // Build a set of excluded paths for fast lookup (normalized with forward slashes)
+  const excludedSet = new Set(
+    excludedSubdirs.map((p) => p.replace(/\\/g, "/"))
+  );
 
   const rootEntries = await fs.readdir(repoRoot, { withFileTypes: true });
   const topLevelDirsAvailable = rootEntries
@@ -95,7 +102,7 @@ export async function scanBundleContents(
 
   for (const dir of topLevelDirsIncluded) {
     const dirPath = path.join(repoRoot, dir);
-    await collectDirectoryEntries(entries, dirPath, dir);
+    await collectDirectoryEntries(entries, dirPath, dir, excludedSet);
   }
 
   const totalBytes = entries.reduce((sum, entry) => sum + entry.size, 0);
@@ -112,8 +119,14 @@ export async function scanBundleContents(
 async function collectDirectoryEntries(
   entries: BundleEntry[],
   dirPath: string,
-  archiveRoot: string
+  archiveRoot: string,
+  excludedSet: Set<string>
 ): Promise<void> {
+  // Check if this path is excluded
+  if (excludedSet.has(archiveRoot)) {
+    return;
+  }
+
   const dirEntries = await fs.readdir(dirPath, { withFileTypes: true });
 
   for (const entry of dirEntries) {
@@ -124,7 +137,7 @@ async function collectDirectoryEntries(
     const archivePath = path.posix.join(archiveRoot, entry.name);
 
     if (entry.isDirectory()) {
-      await collectDirectoryEntries(entries, sourcePath, archivePath);
+      await collectDirectoryEntries(entries, sourcePath, archivePath, excludedSet);
       continue;
     }
 

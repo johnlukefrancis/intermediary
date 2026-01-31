@@ -17,9 +17,9 @@ const REPO_ID = "intermediary";
 
 export function IntermediaryTab(): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
-  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, registerStaged } =
+  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, topLevelSubdirs, registerStaged } =
     useRepoState(REPO_ID);
-  const bundleState = useBundleState(REPO_ID, topLevelDirs);
+  const bundleState = useBundleState(REPO_ID, topLevelDirs, topLevelSubdirs);
   const { dragState, handleDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });

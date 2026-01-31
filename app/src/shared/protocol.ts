@@ -123,6 +123,8 @@ export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   /** Top-level directories to include */
   topLevelDirs: z.array(z.string().min(1)),
+  /** Subdirectories to exclude (e.g. "TriangleRain/Assets") */
+  excludedSubdirs: z.array(z.string().min(1)).default([]),
 });
 export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
 
@@ -232,6 +234,8 @@ export const GetRepoTopLevelResultSchema = z.object({
   repoId: z.string(),
   dirs: z.array(z.string()),
   files: z.array(z.string()),
+  /** Subdirectories within each top-level dir (depth-2) */
+  subdirs: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 /** Info about a single bundle file */

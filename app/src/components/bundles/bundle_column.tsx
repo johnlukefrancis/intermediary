@@ -41,6 +41,7 @@ export function BundleColumn({
       <BundleSelectionPanel
         selection={activePreset.selection}
         topLevelDirs={bundleState.topLevelDirs}
+        topLevelSubdirs={bundleState.topLevelSubdirs}
         isBuilding={activePreset.isBuilding}
         lastBuildError={activePreset.lastBuildError}
         onSelectionChange={(sel) => { bundleState.setSelection(activePreset.presetId, sel); }}

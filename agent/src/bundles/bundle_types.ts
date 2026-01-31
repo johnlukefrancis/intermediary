@@ -34,6 +34,7 @@ export interface BuildBundleOptions {
   selection: {
     includeRoot: boolean;
     topLevelDirs: string[];
+    excludedSubdirs?: string[];
   };
   outputDir: string;
 }

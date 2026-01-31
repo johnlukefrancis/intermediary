@@ -81,6 +81,7 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
       repoRoot,
       includeRoot: selection.includeRoot,
       topLevelDirs: selection.topLevelDirs,
+      excludedSubdirs: selection.excludedSubdirs ?? [],
     });
 
     // 7. Create manifest (best-effort totals)

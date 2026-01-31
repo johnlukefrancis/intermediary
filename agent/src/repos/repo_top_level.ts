@@ -2,21 +2,25 @@
 // Description: Scan top-level directories and files in a repo
 
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { logger } from "../util/logger.js";
 import { shouldIgnoreEntry } from "../bundles/ignore_rules.js";
 
 export interface TopLevelResult {
   dirs: string[];
   files: string[];
+  /** Subdirectories within each top-level dir (depth-2) */
+  subdirs: Record<string, string[]>;
 }
 
 /**
  * Scan top-level entries in a repository root.
- * Returns sorted arrays of directory and file names.
+ * Returns sorted arrays of directory and file names, plus depth-2 subdirs.
  */
 export async function getRepoTopLevel(rootPath: string): Promise<TopLevelResult> {
   const dirs: string[] = [];
   const files: string[] = [];
+  const subdirs: Record<string, string[]> = {};
 
   try {
     const entries = await fs.readdir(rootPath, { withFileTypes: true });
@@ -35,6 +39,21 @@ export async function getRepoTopLevel(rootPath: string): Promise<TopLevelResult>
 
     dirs.sort();
     files.sort();
+
+    // Scan depth-2 subdirectories for each top-level dir
+    for (const dir of dirs) {
+      try {
+        const dirPath = path.join(rootPath, dir);
+        const subEntries = await fs.readdir(dirPath, { withFileTypes: true });
+        subdirs[dir] = subEntries
+          .filter((e) => e.isDirectory() && !shouldIgnoreEntry(e.name, true))
+          .map((e) => e.name)
+          .sort();
+      } catch {
+        // Skip directories we can't read
+        subdirs[dir] = [];
+      }
+    }
   } catch (err) {
     logger.error("Failed to scan repo top level", {
       rootPath,
@@ -43,7 +62,7 @@ export async function getRepoTopLevel(rootPath: string): Promise<TopLevelResult>
     throw err;
   }
 
-  return { dirs, files };
+  return { dirs, files, subdirs };
 }
 
 /**

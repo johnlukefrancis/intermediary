@@ -186,7 +186,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
 // -----------------------------------------------------------------------------
 
 /** Current config schema version */
-export const CONFIG_VERSION = 1;
+export const CONFIG_VERSION = 2;
 
 /** Remembered UI state */
 export const UiStateSchema = z.object({
@@ -202,6 +202,7 @@ export type UiState = z.infer<typeof UiStateSchema>;
 export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   topLevelDirs: z.array(z.string()),
+  excludedSubdirs: z.array(z.string()).default([]),
 });
 
 export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
@@ -270,8 +271,10 @@ export function getDefaultPersistedConfig(): PersistedConfig {
  * Apply migrations to bring config to current version
  */
 function migrateConfig(config: PersistedConfig): PersistedConfig {
-  // Version 1 is current - no migrations needed yet
-  // Future migrations would go here as version checks
+  // Migration: v1 -> v2: Add excludedSubdirs to bundle selections
+  // Zod schema's .default([]) already ensures excludedSubdirs exists after parsing,
+  // so no data transformation is needed - just update the version number.
+
   return { ...config, configVersion: CONFIG_VERSION };
 }
 

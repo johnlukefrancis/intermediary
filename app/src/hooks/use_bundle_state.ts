@@ -26,6 +26,7 @@ export interface BundleState {
   presets: Map<string, BundlePresetState>;
   activePresetId: string;
   topLevelDirs: string[];
+  topLevelSubdirs: Record<string, string[]>;
   setSelection: (presetId: string, selection: BundleSelection) => void;
   buildBundle: (presetId: string) => Promise<void>;
   setActivePreset: (presetId: string) => void;
@@ -52,7 +53,8 @@ function buildSelectionKey(selections: Record<string, BundleSelection>): string 
         return `${presetId}:missing`;
       }
       const dirs = selection.topLevelDirs.join(",");
-      return `${presetId}:${selection.includeRoot}:${dirs}`;
+      const excluded = selection.excludedSubdirs.join(",");
+      return `${presetId}:${selection.includeRoot}:${dirs}:${excluded}`;
     });
   return entries.join("|");
 }
@@ -79,6 +81,7 @@ function createPresetState(
       selection: {
         includeRoot: savedSelection.includeRoot,
         topLevelDirs: normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs),
+        excludedSubdirs: savedSelection.excludedSubdirs,
       },
       isSelectionInitialized: true,
       isBuilding: false,
@@ -95,6 +98,7 @@ function createPresetState(
       selection: {
         includeRoot: preset.includeRoot,
         topLevelDirs: normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs),
+        excludedSubdirs: [],
       },
       isSelectionInitialized: true,
       isBuilding: false,
@@ -110,6 +114,7 @@ function createPresetState(
     selection: {
       includeRoot: preset.includeRoot,
       topLevelDirs: topLevelDirs.length > 0 ? [...topLevelDirs].sort() : [],
+      excludedSubdirs: [],
     },
     isSelectionInitialized: topLevelDirs.length > 0,
     isBuilding: false,
@@ -132,7 +137,11 @@ function getRepoPresets(presets: BundlePreset[]): BundlePreset[] {
   ];
 }
 
-export function useBundleState(repoId: string, topLevelDirs: string[]): BundleState {
+export function useBundleState(
+  repoId: string,
+  topLevelDirs: string[],
+  topLevelSubdirs: Record<string, string[]>
+): BundleState {
   const { subscribe, client, connectionState, helloState, config } = useAgent();
   const { config: persistedConfig, setBundleSelection: persistSelection } = useConfig();
 
@@ -289,6 +298,7 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
             selection: {
               includeRoot: preset.selection.includeRoot,
               topLevelDirs: [...topLevelDirs].sort(),
+              excludedSubdirs: preset.selection.excludedSubdirs,
             },
             isSelectionInitialized: true,
           });
@@ -335,6 +345,7 @@ export function useBundleState(repoId: string, topLevelDirs: string[]): BundleSt
     presets,
     activePresetId,
     topLevelDirs,
+    topLevelSubdirs,
     setSelection,
     buildBundle,
     setActivePreset: setActivePresetId,
