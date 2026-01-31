@@ -55,15 +55,13 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
         title="Drag to share"
       />
       <div className="bundle-info">
-        <span className="bundle-filename">
-          {bundle.fileName}
-          {bundle.isLatestAlias && (
-            <span className="badge badge--latest">latest</span>
-          )}
-        </span>
+        <span className="bundle-filename">{bundle.fileName}</span>
         <span className="bundle-meta">
           <span className="bundle-size">{formatBytes(bundle.bytes)}</span>
           <span className="bundle-time">{formatRelativeTime(bundle.mtimeMs)}</span>
+          {bundle.isLatestAlias && (
+            <span className="badge badge--latest">latest</span>
+          )}
         </span>
       </div>
     </div>
