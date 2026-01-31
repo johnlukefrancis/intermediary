@@ -29,7 +29,7 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps): React.JSX.Eleme
           type="button"
           aria-current={activeTab === tab.id ? "page" : undefined}
         >
-          {tab.label}
+          <span className="tab-label">{tab.label}</span>
         </button>
       ))}
     </nav>

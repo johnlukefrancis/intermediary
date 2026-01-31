@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/status_bar.css
- * Description: Status bar command strip styles
+ * Description: Status bar command strip with LED indicators and instrument typography
  */
 
 .status-bar {
@@ -9,6 +9,7 @@
   justify-content: space-between;
   padding: var(--space-2) var(--space-3);
   border-top: 1px solid var(--color-border-subtle);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
 }
@@ -33,7 +34,7 @@
 
 .status-label {
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
@@ -53,24 +54,47 @@
   white-space: nowrap;
 }
 
+/* LED connection indicator */
 .status-connection {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-xs);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--color-text-secondary);
-  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.led-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+.led-label {
+  line-height: 1;
+}
+
+/* Connected state: filled green with glow */
+.status-connection.connected .led-dot {
+  background: var(--color-success);
+  box-shadow: 0 0 4px var(--color-success);
 }
 
 .status-connection.connected {
   color: var(--color-success);
-  border-color: var(--color-success-muted);
+}
+
+/* Disconnected state: hollow dim ring */
+.status-connection.disconnected .led-dot {
+  background: transparent;
+  border: 1px solid var(--color-text-muted);
 }
 
 .status-connection.disconnected {
   color: var(--color-error);
-  border-color: var(--color-error-muted);
 }

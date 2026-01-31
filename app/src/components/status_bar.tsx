@@ -44,7 +44,8 @@ export function StatusBar(): React.JSX.Element {
         </div>
         <span className="chrome-sep" aria-hidden="true">·</span>
         <span className={`status-connection ${isConnected ? "connected" : "disconnected"}`}>
-          Agent: {connectionLabel}
+          <span className="led-dot" aria-hidden="true" />
+          <span className="led-label">Agent: {connectionLabel}</span>
         </span>
         {!isConnected && (
           <>
