@@ -1,16 +1,19 @@
 // Path: agent/src/bundles/zip_writer.ts
-// Description: Archiver wrapper for creating bundle zip files
+// Description: Zip writer wrapper with Rust CLI primary path and archiver fallback
 
 import archiver from "archiver";
 import * as fs from "node:fs";
 import { logger } from "../util/logger.js";
 import type { BundleEntry } from "./bundle_scan.js";
+import { AgentError } from "../util/errors.js";
+import { writeZipWithRustCli, type RustZipProgress } from "./rust_zip_cli.js";
 
 export interface ZipWriterOptions {
   outputPath: string;
   entries: BundleEntry[];
   /** Manifest JSON to include at zip root */
   manifestJson?: string;
+  onProgress?: (progress: RustZipProgress) => void;
 }
 
 export interface ZipWriteResult {
@@ -22,6 +25,21 @@ export interface ZipWriteResult {
  * Create a zip file from repository content
  */
 export async function writeZip(options: ZipWriterOptions): Promise<ZipWriteResult> {
+  try {
+    return await writeZipWithRustCli(options);
+  } catch (err) {
+    if (err instanceof AgentError && err.code === "ZIP_CLI_NOT_FOUND") {
+      logger.warn("im_zip_cli unavailable, falling back to archiver", {
+        error: err.message,
+        details: err.details,
+      });
+      return writeZipWithArchiver(options);
+    }
+    throw err;
+  }
+}
+
+async function writeZipWithArchiver(options: ZipWriterOptions): Promise<ZipWriteResult> {
   const { outputPath, entries, manifestJson } = options;
 
   const fileHandle = await fs.promises.open(outputPath, "w");

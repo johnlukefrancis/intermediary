@@ -81,6 +81,19 @@ export const BundleBuiltEventSchema = z.object({
 });
 export type BundleBuiltEvent = z.infer<typeof BundleBuiltEventSchema>;
 
+export const BundleBuildPhaseSchema = z.enum(["scanning", "zipping", "finalizing"]);
+export type BundleBuildPhase = z.infer<typeof BundleBuildPhaseSchema>;
+
+export const BundleBuildProgressEventSchema = z.object({
+  type: z.literal("bundleBuildProgress"),
+  repoId: z.string(),
+  presetId: z.string(),
+  phase: BundleBuildPhaseSchema,
+  filesDone: z.number().int().nonnegative(),
+  filesTotal: z.number().int().nonnegative(),
+});
+export type BundleBuildProgressEvent = z.infer<typeof BundleBuildProgressEventSchema>;
+
 export const ErrorEventSchema = z.object({
   type: z.literal("error"),
   scope: z.string(),
@@ -93,6 +106,7 @@ export const AgentEventSchema = z.discriminatedUnion("type", [
   FileChangedEventSchema,
   SnapshotEventSchema,
   BundleBuiltEventSchema,
+  BundleBuildProgressEventSchema,
   ErrorEventSchema,
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

@@ -12,7 +12,8 @@ agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manif
 agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
 agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
 agent/src/bundles/manifest.ts - Manifest generation for bundle zips
-agent/src/bundles/zip_writer.ts - Archiver wrapper for creating bundle zip files
+agent/src/bundles/rust_zip_cli.ts - Run the Rust im_zip_cli to build zip bundles with progress parsing
+agent/src/bundles/zip_writer.ts - Zip writer wrapper with Rust CLI primary path and archiver fallback
 agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo

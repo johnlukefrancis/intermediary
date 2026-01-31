@@ -3,7 +3,7 @@
 
 import type React from "react";
 import { useCallback, useState, useRef, useEffect } from "react";
-import type { BundleSelection } from "../../shared/protocol.js";
+import type { BundleBuildPhase, BundleSelection } from "../../shared/protocol.js";
 
 /** Checkbox that supports indeterminate state */
 function IndeterminateCheckbox({
@@ -44,6 +44,11 @@ interface BundleSelectionPanelProps {
   topLevelDirs: string[];
   topLevelSubdirs: Record<string, string[]>;
   isBuilding: boolean;
+  buildProgress: {
+    phase: BundleBuildPhase;
+    filesDone: number;
+    filesTotal: number;
+  } | null;
   lastBuildError: string | null;
   onSelectionChange: (selection: BundleSelection) => void;
   onBuild: () => void;
@@ -54,6 +59,7 @@ export function BundleSelectionPanel({
   topLevelDirs,
   topLevelSubdirs,
   isBuilding,
+  buildProgress,
   lastBuildError,
   onSelectionChange,
   onBuild,
@@ -162,6 +168,44 @@ export function BundleSelectionPanel({
       >
         {isBuilding ? "Building..." : "Build Bundle"}
       </button>
+
+      {isBuilding && buildProgress && (
+        <div className="build-progress">
+          <div className="build-progress-header">
+            <span className="build-progress-phase">
+              {buildProgress.phase === "scanning" && "Scanning..."}
+              {buildProgress.phase === "zipping" && "Zipping..."}
+              {buildProgress.phase === "finalizing" && "Finalizing..."}
+            </span>
+            {buildProgress.filesTotal > 0 && (
+              <span className="build-progress-count">
+                {buildProgress.filesDone}/{buildProgress.filesTotal}
+              </span>
+            )}
+          </div>
+          <div
+            className={`build-progress-bar${
+              buildProgress.filesTotal === 0 ? " indeterminate" : ""
+            }`}
+          >
+            <span
+              className="build-progress-fill"
+              style={
+                buildProgress.filesTotal > 0
+                  ? {
+                      width: `${Math.min(
+                        100,
+                        Math.round(
+                          (buildProgress.filesDone / buildProgress.filesTotal) * 100
+                        )
+                      )}%`,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        </div>
+      )}
 
       <div className="selection-header">
         <div className="include-root-toggle">

@@ -9,8 +9,15 @@ import type {
   BundleInfo,
   BundleSelection,
   AgentEvent,
+  BundleBuildPhase,
 } from "../shared/protocol.js";
 import { DEFAULT_BUNDLE_PRESET, type BundlePreset } from "../shared/config.js";
+
+interface BundleBuildProgress {
+  phase: BundleBuildPhase;
+  filesDone: number;
+  filesTotal: number;
+}
 
 export interface BundlePresetState {
   presetId: string;
@@ -18,6 +25,7 @@ export interface BundlePresetState {
   selection: BundleSelection;
   isSelectionInitialized: boolean;
   isBuilding: boolean;
+  buildProgress: BundleBuildProgress | null;
   bundles: BundleInfo[];
   lastBuildError: string | null;
 }
@@ -85,6 +93,7 @@ function createPresetState(
       },
       isSelectionInitialized: true,
       isBuilding: false,
+      buildProgress: null,
       bundles: [],
       lastBuildError: null,
     };
@@ -102,6 +111,7 @@ function createPresetState(
       },
       isSelectionInitialized: true,
       isBuilding: false,
+      buildProgress: null,
       bundles: [],
       lastBuildError: null,
     };
@@ -118,6 +128,7 @@ function createPresetState(
     },
     isSelectionInitialized: topLevelDirs.length > 0,
     isBuilding: false,
+    buildProgress: null,
     bundles: [],
     lastBuildError: null,
   };
@@ -202,7 +213,16 @@ export function useBundleState(
         const next = new Map(prev);
         const p = next.get(presetId);
         if (p) {
-          next.set(presetId, { ...p, isBuilding: true, lastBuildError: null });
+          next.set(presetId, {
+            ...p,
+            isBuilding: true,
+            buildProgress: {
+              phase: "scanning",
+              filesDone: 0,
+              filesTotal: 0,
+            },
+            lastBuildError: null,
+          });
         }
         return next;
       });
@@ -216,7 +236,12 @@ export function useBundleState(
           const next = new Map(prev);
           const p = next.get(presetId);
           if (p) {
-            next.set(presetId, { ...p, isBuilding: false, lastBuildError: message });
+            next.set(presetId, {
+              ...p,
+              isBuilding: false,
+              buildProgress: null,
+              lastBuildError: message,
+            });
           }
           return next;
         });
@@ -236,7 +261,12 @@ export function useBundleState(
           const next = new Map(prev);
           const preset = next.get(presetId);
           if (preset) {
-            next.set(presetId, { ...preset, bundles: result.bundles, isBuilding: false });
+            next.set(presetId, {
+              ...preset,
+              bundles: result.bundles,
+              isBuilding: false,
+              buildProgress: null,
+            });
           }
           return next;
         });
@@ -251,8 +281,39 @@ export function useBundleState(
   const handleEvent = useCallback(
     (event: AgentEvent) => {
       if (event.type === "bundleBuilt" && event.repoId === repoId) {
+        setPresets((prev) => {
+          const next = new Map(prev);
+          const preset = next.get(event.presetId);
+          if (preset) {
+            next.set(event.presetId, {
+              ...preset,
+              isBuilding: false,
+              buildProgress: null,
+            });
+          }
+          return next;
+        });
         // Refresh bundle list after build
         void refreshBundles(event.presetId);
+      }
+      if (event.type === "bundleBuildProgress" && event.repoId === repoId) {
+        setPresets((prev) => {
+          const next = new Map(prev);
+          const preset = next.get(event.presetId);
+          if (preset) {
+            next.set(event.presetId, {
+              ...preset,
+              isBuilding: true,
+              buildProgress: {
+                phase: event.phase,
+                filesDone: event.filesDone,
+                filesTotal: event.filesTotal,
+              },
+              lastBuildError: null,
+            });
+          }
+          return next;
+        });
       }
     },
     [repoId, refreshBundles]

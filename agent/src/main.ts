@@ -57,7 +57,9 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         stagingWinRoot: command.stagingWinRoot,
       };
       state.stager = createStager(config);
-      state.bundleBuilder = createBundleBuilder(config);
+      state.bundleBuilder = createBundleBuilder(config, (event) => {
+        router.broadcastEvent(event);
+      });
       state.stagingWslRoot = command.stagingWslRoot;
       state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
 

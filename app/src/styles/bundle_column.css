@@ -293,6 +293,61 @@
   letter-spacing: 0.03em;
 }
 
+/* ===== BUILD PROGRESS ===== */
+.build-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.build-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.build-progress-bar {
+  position: relative;
+  height: 8px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.build-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-soft));
+  transition: width 160ms var(--ease-out);
+}
+
+.build-progress-bar.indeterminate .build-progress-fill {
+  position: absolute;
+  width: 35%;
+  animation: build-progress-sweep 1.2s infinite var(--ease-out);
+}
+
+@keyframes build-progress-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
 /* ===== BUILD ERROR ===== */
 .build-error {
   padding: var(--space-2) var(--space-3);

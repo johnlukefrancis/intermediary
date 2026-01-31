@@ -43,6 +43,7 @@ export function BundleColumn({
         topLevelDirs={bundleState.topLevelDirs}
         topLevelSubdirs={bundleState.topLevelSubdirs}
         isBuilding={activePreset.isBuilding}
+        buildProgress={activePreset.buildProgress}
         lastBuildError={activePreset.lastBuildError}
         onSelectionChange={(sel) => { bundleState.setSelection(activePreset.presetId, sel); }}
         onBuild={() => { void bundleState.buildBundle(activePreset.presetId); }}

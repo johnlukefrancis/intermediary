@@ -38,8 +38,12 @@
       "summary": "Manifest generation for bundle zips"
     },
     {
+      "path": "agent/src/bundles/rust_zip_cli.ts",
+      "summary": "Run the Rust im_zip_cli to build zip bundles with progress parsing"
+    },
+    {
       "path": "agent/src/bundles/zip_writer.ts",
-      "summary": "Archiver wrapper for creating bundle zip files"
+      "summary": "Zip writer wrapper with Rust CLI primary path and archiver fallback"
     },
     {
       "path": "agent/src/dev/staging_probe.ts",

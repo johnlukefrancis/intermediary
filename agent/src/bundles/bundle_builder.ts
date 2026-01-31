@@ -11,10 +11,13 @@ import { writeZip } from "./zip_writer.js";
 import type { BuildBundleOptions, BuildBundleResult } from "./bundle_types.js";
 import { logger } from "../util/logger.js";
 import { scanBundleContents } from "./bundle_scan.js";
+import type { AgentEvent } from "../../../app/src/shared/protocol.js";
 
 export interface BundleBuilder {
   buildBundle(options: BuildBundleOptions): Promise<BuildBundleResult>;
 }
+
+type ProgressEmitter = (event: AgentEvent) => void;
 
 /**
  * Format timestamp for bundle filename
@@ -50,11 +53,31 @@ async function cleanupExistingBundles(bundleDir: string, repoId: string, presetI
   }
 }
 
-export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilder {
+export function createBundleBuilder(
+  _pathConfig: PathBridgeConfig,
+  emitProgress?: ProgressEmitter
+): BundleBuilder {
   async function buildBundle(options: BuildBundleOptions): Promise<BuildBundleResult> {
     const { repoId, repoRoot, presetId, presetName, selection, outputDir } = options;
     const builtAt = new Date();
     const builtAtIso = builtAt.toISOString();
+
+    const emitBundleProgress = (
+      phase: "scanning" | "zipping" | "finalizing",
+      filesDone: number,
+      filesTotal: number
+    ): void => {
+      emitProgress?.({
+        type: "bundleBuildProgress",
+        repoId,
+        presetId,
+        phase,
+        filesDone,
+        filesTotal,
+      });
+    };
+
+    emitBundleProgress("scanning", 0, 0);
 
     // 1. Ensure output directory exists
     const bundleDir = path.posix.join(outputDir, "bundles", repoId, presetId);
@@ -111,11 +134,18 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
 
     try {
       // 8. Write zip with manifest
+      const totalFiles = scanResult.fileCount + 1;
+      emitBundleProgress("zipping", 0, totalFiles);
       const zipResult = await writeZip({
         outputPath: tempPath,
         entries: scanResult.entries,
         manifestJson,
+        onProgress: (progress) => {
+          emitBundleProgress("zipping", progress.filesDone, progress.filesTotal);
+        },
       });
+
+      emitBundleProgress("finalizing", zipResult.fileCount, zipResult.fileCount);
 
       // 9. Atomic rename
       await fs.rename(tempPath, wslPath);
