@@ -3,8 +3,8 @@
 Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
-agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process
-agent/src/bundles/bundle_lister.ts - List existing bundles for a preset
+agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process (single timestamped file, no accumulation)
+agent/src/bundles/bundle_lister.ts - Find the single bundle file for a preset
 agent/src/bundles/bundle_scan.test.ts - Unit tests for bundle selection validation
 agent/src/bundles/bundle_scan.ts - Resolve bundle entries and validate selection
 agent/src/bundles/bundle_types.ts - Type definitions for bundle building
@@ -12,7 +12,6 @@ agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manif
 agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
 agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
 agent/src/bundles/manifest.ts - Manifest generation for bundle zips
-agent/src/bundles/retention.ts - Bundle cleanup logic (keep last N)
 agent/src/bundles/zip_writer.ts - Archiver wrapper for creating bundle zip files
 agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
@@ -30,17 +29,17 @@ agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes 
 app/index.html - index module
 app/src/app.tsx - Root component with tab state management and offline banner
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
-app/src/components/bundles/bundle_list.tsx - List of built bundles with drag handles
+app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes)
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
-app/src/components/file_row.tsx - Draggable file item with drag handle and metadata display
+app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/offline_banner.tsx - Connection status banner shown when agent is offline
 app/src/components/status_bar.tsx - Status bar with auto-stage toggle, staging path, and error display
-app/src/components/tab_bar.tsx - Tab navigation component
+app/src/components/tab_bar.tsx - Tab navigation component with Triangle Rain worktree dropdown
 app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
@@ -61,7 +60,7 @@ app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
-app/src/styles/file_row.css - Hardware-style file row with left rail, state marker, and etched grip handle
+app/src/styles/file_row.css - Hardware-style file row with left rail and state marker
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
@@ -73,7 +72,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/intermediary_tab.tsx - Intermediary project tab with file lists
 app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
-app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with worktree selector and file lists
+app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (worktree selector in tab bar)
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.

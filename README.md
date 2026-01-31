@@ -154,6 +154,10 @@ Every generated zip includes `INTERMEDIARY_MANIFEST.json`:
 }
 ```
 
+### Bundle Naming + Retention
+
+Bundles are timestamped to make the "latest" obvious, and only the most recent bundle per preset is kept. Older bundles for the same repo + preset are deleted before a new one is written.
+
 ### IPC Protocol
 
 Agent → UI:

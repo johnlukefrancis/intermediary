@@ -1,5 +1,5 @@
 // Path: agent/src/bundles/bundle_lister.ts
-// Description: List existing bundles for a preset
+// Description: Find the single bundle file for a preset
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -22,64 +22,48 @@ export interface ListBundlesOptions {
 }
 
 /**
- * List all bundles for a given repo+preset
- * Returns LATEST alias first, then others sorted by mtime descending
+ * Find the single bundle for a given repo+preset
+ * Returns single-item array if exists, empty array otherwise
  */
 export async function listBundles(options: ListBundlesOptions): Promise<BundleListEntry[]> {
   const { bundleDir, repoId, presetId } = options;
   const targetDir = path.posix.join(bundleDir, "bundles", repoId, presetId);
   const prefix = `${repoId}_${presetId}_`;
-  const latestAlias = `${repoId}_${presetId}_LATEST.zip`;
-
-  const results: BundleListEntry[] = [];
-  let latestEntry: BundleListEntry | null = null;
 
   try {
     await fs.access(targetDir);
   } catch {
-    // Directory doesn't exist yet, return empty
     return [];
   }
 
   try {
     const entries = await fs.readdir(targetDir);
 
+    // Find the single matching bundle (should only be one)
     for (const fileName of entries) {
       if (!fileName.startsWith(prefix) || !fileName.endsWith(".zip")) continue;
 
       const wslPath = path.posix.join(targetDir, fileName);
       try {
         const stat = await fs.stat(wslPath);
-        const entry: BundleListEntry = {
-          wslPath,
-          windowsPath: wslToWindows(wslPath),
-          fileName,
-          bytes: stat.size,
-          mtimeMs: stat.mtimeMs,
-          isLatestAlias: fileName === latestAlias,
-        };
-
-        if (fileName === latestAlias) {
-          latestEntry = entry;
-        } else {
-          results.push(entry);
-        }
+        return [
+          {
+            wslPath,
+            windowsPath: wslToWindows(wslPath),
+            fileName,
+            bytes: stat.size,
+            mtimeMs: stat.mtimeMs,
+            isLatestAlias: true, // Always true since there's only one
+          },
+        ];
       } catch {
         logger.debug("Could not stat bundle", { fileName });
       }
     }
 
-    // Sort by mtime descending (newest first)
-    results.sort((a, b) => b.mtimeMs - a.mtimeMs);
-
-    // Put LATEST alias first if it exists
-    if (latestEntry) {
-      results.unshift(latestEntry);
-    }
-
-    return results;
+    return [];
   } catch (err) {
-    logger.warn("Failed to list bundles", {
+    logger.debug("Could not list bundle directory", {
       targetDir,
       error: err instanceof Error ? err.message : String(err),
     });

@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-01-30
+Updated on: 2026-01-31
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -93,8 +93,8 @@ Depends on: ADR-000, ADR-006, ADR-007
 ### Bundle interaction
 
 * Each preset has a **Build** button.
-* Built bundles appear in “Zip bundles” list, top-sorted by newest.
-* Each built bundle row is draggable.
+* Built bundles appear as the latest bundle row for the preset (single row).
+* The built bundle row is draggable.
 
 ### Visual style
 
@@ -176,9 +176,7 @@ Every generated zip includes:
 Bundles should be self-identifying:
 
 * `{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{gitShort?}.zip`
-* Additionally maintain a stable alias:
-
-  * `{repoId}_{presetId}_LATEST.zip` (overwritten)
+* Only the most recent bundle per repo + preset is retained (older bundles deleted before write).
 
 ### 7.7 Error handling
 
@@ -299,8 +297,7 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 * Multi-repo tabs
 * Config UI editor (or edit JSON and reload)
 * Bundle manifest injection
-* Stable LATEST zip alias
-* Cleanup/retention
+* Single latest bundle per preset (delete prior bundles before write)
 
 ### Nice-to-have
 

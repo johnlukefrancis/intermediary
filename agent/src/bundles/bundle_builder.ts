@@ -1,5 +1,5 @@
 // Path: agent/src/bundles/bundle_builder.ts
-// Description: Orchestrates bundle building process
+// Description: Orchestrates bundle building process (single timestamped file, no accumulation)
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -8,7 +8,6 @@ import { type PathBridgeConfig, wslToWindows } from "../staging/path_bridge.js";
 import { getGitInfo } from "./git_info.js";
 import { createManifest, serializeManifest } from "./manifest.js";
 import { writeZip } from "./zip_writer.js";
-import { cleanupOldBundles } from "./retention.js";
 import type { BuildBundleOptions, BuildBundleResult } from "./bundle_types.js";
 import { logger } from "../util/logger.js";
 import { scanBundleContents } from "./bundle_scan.js";
@@ -30,6 +29,27 @@ function formatTimestamp(date: Date): string {
   return `${y}${mo}${d}_${h}${mi}${s}`;
 }
 
+/**
+ * Delete any existing bundles for this repo+preset before writing new one
+ */
+async function cleanupExistingBundles(bundleDir: string, repoId: string, presetId: string): Promise<void> {
+  const prefix = `${repoId}_${presetId}_`;
+  try {
+    const entries = await fs.readdir(bundleDir);
+    for (const name of entries) {
+      if (name.startsWith(prefix) && name.endsWith(".zip")) {
+        try {
+          await fs.unlink(path.posix.join(bundleDir, name));
+        } catch {
+          // Ignore deletion errors
+        }
+      }
+    }
+  } catch {
+    // Directory may not exist yet
+  }
+}
+
 export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilder {
   async function buildBundle(options: BuildBundleOptions): Promise<BuildBundleResult> {
     const { repoId, repoRoot, presetId, presetName, selection, outputDir } = options;
@@ -43,24 +63,27 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
     // 2. Get git info (best-effort)
     const gitInfo = await getGitInfo(repoRoot);
 
-    // 3. Generate filename
+    // 3. Delete any existing bundles for this preset (only keep one)
+    await cleanupExistingBundles(bundleDir, repoId, presetId);
+
+    // 4. Generate timestamped filename (unique per build, recognizable)
     const timestamp = formatTimestamp(builtAt);
     const shortSha = gitInfo.shortSha;
     const baseName = `${repoId}_${presetId}_${timestamp}`;
     const fileName = shortSha ? `${baseName}_${shortSha}.zip` : `${baseName}.zip`;
     const wslPath = path.posix.join(bundleDir, fileName);
 
-    // 4. Create temp file for atomic write
+    // 5. Create temp file for atomic write
     const tempPath = wslPath + `.${crypto.randomUUID()}.tmp`;
 
-    // 5. Resolve entries and validate selection
+    // 6. Resolve entries and validate selection
     const scanResult = await scanBundleContents({
       repoRoot,
       includeRoot: selection.includeRoot,
       topLevelDirs: selection.topLevelDirs,
     });
 
-    // 6. Create manifest (best-effort totals)
+    // 7. Create manifest (best-effort totals)
     const manifestFileCount = scanResult.fileCount + 1;
     let totalBytesBestEffort = scanResult.totalBytes;
     let manifestJson = "";
@@ -84,27 +107,18 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
     }
 
     try {
-      // 7. Write zip with manifest
+      // 8. Write zip with manifest
       const zipResult = await writeZip({
         outputPath: tempPath,
         entries: scanResult.entries,
         manifestJson,
       });
 
-      // 8. Atomic rename
+      // 9. Atomic rename
       await fs.rename(tempPath, wslPath);
 
-      // 9. Update LATEST alias (copy, not rename)
-      const aliasFileName = `${repoId}_${presetId}_LATEST.zip`;
-      const aliasWslPath = path.posix.join(bundleDir, aliasFileName);
-      await fs.copyFile(wslPath, aliasWslPath);
-
-      // 10. Cleanup old bundles
-      await cleanupOldBundles({ bundleDir, repoId, presetId, keepCount: 10 });
-
-      // 11. Convert paths to Windows
+      // 10. Convert path to Windows
       const windowsPath = wslToWindows(wslPath);
-      const aliasWindowsPath = wslToWindows(aliasWslPath);
 
       logger.info("Bundle built", {
         repoId,
@@ -116,8 +130,8 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
       return {
         wslPath,
         windowsPath,
-        aliasWslPath,
-        aliasWindowsPath,
+        aliasWslPath: wslPath,
+        aliasWindowsPath: windowsPath,
         bytes: zipResult.bytes,
         fileCount: zipResult.fileCount,
         builtAtIso,

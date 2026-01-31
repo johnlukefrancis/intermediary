@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-01-30
+Updated on: 2026-01-31
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -74,7 +74,7 @@ Intermediary uses a **two-component architecture**:
 - **Key features:**
   - inotify-based file watching via chokidar (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing
-  - Bundle building with manifest injection and retention (keep last N)
+  - Bundle building with manifest injection (single latest bundle per preset; older bundles deleted)
   - Atomic file staging to Windows-accessible paths
   - Auto-stage on change (configurable)
 
@@ -147,7 +147,7 @@ intermediary/
 │       └── paths/          # Path resolution, WSL conversion
 ├── agent/                  # WSL agent (Node.js/TS)
 │   └── src/
-│       ├── bundles/        # Bundle building, retention
+│       ├── bundles/        # Bundle building
 │       ├── repos/          # File watching
 │       ├── server/         # WebSocket server, router
 │       ├── staging/        # File staging, path bridge
@@ -164,7 +164,7 @@ intermediary/
 
 1. **File Change → UI Update:** Repo file changes → inotify → WSL agent → WebSocket → UI updates recent list
 2. **Drag-out:** User drags row → UI requests staging → Agent copies to staging → UI initiates OS drag with Windows path
-3. **Bundle Build:** User clicks Build → UI requests bundle → Agent zips + writes manifest → Agent stages to Windows → UI shows in bundle list
+3. **Bundle Build:** User clicks Build → UI requests bundle → Agent deletes prior bundle for preset → Agent zips + writes manifest → Agent stages to Windows → UI shows the latest bundle
 
 ## Related docs
 

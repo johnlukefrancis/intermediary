@@ -1,5 +1,5 @@
 // Path: app/src/components/bundles/bundle_list.tsx
-// Description: List of built bundles with drag handles
+// Description: Single LATEST bundle row (inline, no header)
 
 import type React from "react";
 import type { BundleInfo } from "../../shared/protocol.js";
@@ -16,7 +16,10 @@ export function BundleList({
   onDragStart,
   emptyMessage = "No bundles yet",
 }: BundleListProps): React.JSX.Element {
-  if (bundles.length === 0) {
+  // Only show LATEST bundle (first one if exists)
+  const latestBundle = bundles[0];
+
+  if (!latestBundle) {
     const isWaiting = emptyMessage.toLowerCase().includes("waiting");
     const className = isWaiting ? "empty-state empty-state--waiting" : "empty-state";
     return (
@@ -28,16 +31,7 @@ export function BundleList({
 
   return (
     <div className="bundle-list">
-      <div className="bundle-list-header">Built Bundles</div>
-      <div className="bundle-list-items">
-        {bundles.map((bundle) => (
-          <BundleRow
-            key={bundle.windowsPath}
-            bundle={bundle}
-            onDragStart={onDragStart}
-          />
-        ))}
-      </div>
+      <BundleRow bundle={latestBundle} onDragStart={onDragStart} />
     </div>
   );
 }

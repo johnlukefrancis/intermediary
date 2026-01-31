@@ -3,11 +3,11 @@
   "entries": [
     {
       "path": "agent/src/bundles/bundle_builder.ts",
-      "summary": "Orchestrates bundle building process"
+      "summary": "Orchestrates bundle building process (single timestamped file, no accumulation)"
     },
     {
       "path": "agent/src/bundles/bundle_lister.ts",
-      "summary": "List existing bundles for a preset"
+      "summary": "Find the single bundle file for a preset"
     },
     {
       "path": "agent/src/bundles/bundle_scan.test.ts",
@@ -36,10 +36,6 @@
     {
       "path": "agent/src/bundles/manifest.ts",
       "summary": "Manifest generation for bundle zips"
-    },
-    {
-      "path": "agent/src/bundles/retention.ts",
-      "summary": "Bundle cleanup logic (keep last N)"
     },
     {
       "path": "agent/src/bundles/zip_writer.ts",
@@ -111,7 +107,7 @@
     },
     {
       "path": "app/src/components/bundles/bundle_list.tsx",
-      "summary": "List of built bundles with drag handles"
+      "summary": "Single LATEST bundle row (inline, no header)"
     },
     {
       "path": "app/src/components/bundles/bundle_row.tsx",
@@ -135,7 +131,7 @@
     },
     {
       "path": "app/src/components/file_row.tsx",
-      "summary": "Draggable file item with drag handle and metadata display"
+      "summary": "Draggable file row with state marker and timestamp"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
@@ -151,7 +147,7 @@
     },
     {
       "path": "app/src/components/tab_bar.tsx",
-      "summary": "Tab navigation component"
+      "summary": "Tab navigation component with Triangle Rain worktree dropdown"
     },
     {
       "path": "app/src/components/worktree_selector.tsx",
@@ -235,7 +231,7 @@
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "Hardware-style file row with left rail, state marker, and etched grip handle"
+      "summary": "Hardware-style file row with left rail and state marker"
     },
     {
       "path": "app/src/styles/main.css",
@@ -283,7 +279,7 @@
     },
     {
       "path": "app/src/tabs/triangle_rain_tab.tsx",
-      "summary": "Triangle Rain project tab with worktree selector and file lists"
+      "summary": "Triangle Rain project tab with file lists (worktree selector in tab bar)"
     },
     {
       "path": "app/src/types/app_paths.ts",
