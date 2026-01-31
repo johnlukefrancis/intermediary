@@ -142,7 +142,8 @@ Every generated zip includes `INTERMEDIARY_MANIFEST.json`:
   "presetName": "Full",
   "selection": {
     "includeRoot": true,
-    "topLevelDirsIncluded": ["app", "src-tauri", "docs"]
+    "topLevelDirsIncluded": ["app", "src-tauri", "docs"],
+    "excludedSubdirs": ["TriangleRain/Assets"]
   },
   "git": {
     "headSha": "abc1234",

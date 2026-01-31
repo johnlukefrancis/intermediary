@@ -13,6 +13,7 @@ export interface BundleManifest {
   selection: {
     includeRoot: boolean;
     topLevelDirsIncluded: string[];
+    excludedSubdirs: string[];
   };
   git: {
     headSha?: string;

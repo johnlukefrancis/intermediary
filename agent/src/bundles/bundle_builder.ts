@@ -88,6 +88,7 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
     const manifestFileCount = scanResult.fileCount + 1;
     let totalBytesBestEffort = scanResult.totalBytes;
     let manifestJson = "";
+    const excludedSubdirsSorted = [...(selection.excludedSubdirs ?? [])].sort();
     for (let i = 0; i < 2; i += 1) {
       const manifest = createManifest(
         repoId,
@@ -97,6 +98,7 @@ export function createBundleBuilder(_pathConfig: PathBridgeConfig): BundleBuilde
         {
           includeRoot: selection.includeRoot,
           topLevelDirsIncluded: scanResult.topLevelDirsIncluded,
+          excludedSubdirs: excludedSubdirsSorted,
         },
         gitInfo,
         manifestFileCount,

@@ -12,7 +12,11 @@ export function createManifest(
   repoRoot: string,
   presetId: string,
   presetName: string,
-  selection: { includeRoot: boolean; topLevelDirsIncluded: string[] },
+  selection: {
+    includeRoot: boolean;
+    topLevelDirsIncluded: string[];
+    excludedSubdirs: string[];
+  },
   git: GitInfo,
   fileCount: number,
   totalBytesBestEffort: number
