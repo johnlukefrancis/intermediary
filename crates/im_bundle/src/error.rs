@@ -45,16 +45,26 @@ pub enum BundleError {
         source: std::io::Error,
     },
 
-    #[error("failed to open file at {path}: {source}")]
-    FileOpenFailed {
+    #[error("failed to read file metadata at {path} for archive entry {archive_path}: {source}")]
+    FileMetadataFailed {
         path: PathBuf,
+        archive_path: String,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("failed to read file at {path}: {source}")]
+    #[error("failed to open file at {path} for archive entry {archive_path}: {source}")]
+    FileOpenFailed {
+        path: PathBuf,
+        archive_path: String,
+        #[source]
+        source: std::io::Error,
+    },
+
+    #[error("failed to read file at {path} for archive entry {archive_path}: {source}")]
     FileReadFailed {
         path: PathBuf,
+        archive_path: String,
         #[source]
         source: std::io::Error,
     },
@@ -66,8 +76,12 @@ pub enum BundleError {
         source: std::io::Error,
     },
 
-    #[error("archive write failed: {0}")]
-    ArchiveWriteFailed(#[from] zip::result::ZipError),
+    #[error("archive write failed for entry {archive_path}: {source}")]
+    ArchiveWriteFailed {
+        archive_path: String,
+        #[source]
+        source: zip::result::ZipError,
+    },
 
     #[error("failed to finalize archive: {0}")]
     FinalizeFailed(String),

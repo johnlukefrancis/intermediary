@@ -16,6 +16,8 @@ pnpm install
 ```bash
 pnpm run headers:list -- app
 pnpm run headers:write -- app
+pnpm run headers:list -- crates
+pnpm run headers:write -- crates
 pnpm run gen:ledger
 ```
 
@@ -36,4 +38,10 @@ This checks the entire workspace. For package-specific checks:
 ```bash
 cargo check -p intermediary
 cargo check -p im_zip
+```
+
+## Rust tests (im_bundle)
+
+```bash
+cargo test -p im_bundle
 ```

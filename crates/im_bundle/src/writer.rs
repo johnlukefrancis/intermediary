@@ -97,13 +97,18 @@ fn write_zip(
         entries.len() as u64 + 1,
     )?;
 
-    zip.start_file(MANIFEST_NAME, options)?;
+    zip.start_file(MANIFEST_NAME, options).map_err(|source| BundleError::ArchiveWriteFailed {
+        archive_path: MANIFEST_NAME.to_string(),
+        source,
+    })?;
     zip.write_all(manifest_json.as_bytes())
-        .map_err(|e| BundleError::FinalizeFailed(format!("failed to write manifest: {e}")))?;
+        .map_err(|e| BundleError::FinalizeFailed(format!("failed to write manifest entry {MANIFEST_NAME}: {e}")))?;
     files_done += 1;
     progress.emit_progress("zipping", files_done, files_total);
 
-    let writer = zip.finish()?;
+    let writer = zip
+        .finish()
+        .map_err(|e| BundleError::FinalizeFailed(format!("failed to finish archive: {e}")))?;
     let file = writer
         .into_inner()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to flush buffer: {e}")))?;
@@ -132,12 +137,23 @@ fn write_entry(
 ) -> Result<u64> {
     let source_file = File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
         path: entry.source_path.clone(),
+        archive_path: entry.archive_path.clone(),
         source,
     })?;
-    let current_bytes_total = source_file.metadata().ok().map(|metadata| metadata.len());
-    let mut reader = BufReader::new(source_file);
+    let current_bytes_total = source_file
+        .metadata()
+        .map(|metadata| metadata.len())
+        .map_err(|source| BundleError::FileMetadataFailed {
+            path: entry.source_path.clone(),
+            archive_path: entry.archive_path.clone(),
+            source,
+        })?;
+    let mut reader = BufReader::new(source_file).take(current_bytes_total);
 
-    zip.start_file(&entry.archive_path, options)?;
+    zip.start_file(&entry.archive_path, options).map_err(|source| BundleError::ArchiveWriteFailed {
+        archive_path: entry.archive_path.clone(),
+        source,
+    })?;
 
     let mut total = 0u64;
     progress.emit_file_progress(
@@ -146,20 +162,24 @@ fn write_entry(
         files_total,
         &entry.archive_path,
         total,
-        current_bytes_total,
+        Some(current_bytes_total),
         bytes_done_total,
         true,
     );
     loop {
         let bytes_read = reader.read(buffer).map_err(|source| BundleError::FileReadFailed {
             path: entry.source_path.clone(),
+            archive_path: entry.archive_path.clone(),
             source,
         })?;
         if bytes_read == 0 {
             break;
         }
         zip.write_all(&buffer[..bytes_read])
-            .map_err(|e| BundleError::FinalizeFailed(format!("failed to write to archive: {e}")))?;
+            .map_err(|source| BundleError::ArchiveWriteFailed {
+                archive_path: entry.archive_path.clone(),
+                source: zip::result::ZipError::Io(source),
+            })?;
         total += bytes_read as u64;
         progress.emit_file_progress(
             "zipping",
@@ -167,7 +187,7 @@ fn write_entry(
             files_total,
             &entry.archive_path,
             total,
-            current_bytes_total,
+            Some(current_bytes_total),
             bytes_done_total + total,
             false,
         );
@@ -179,7 +199,7 @@ fn write_entry(
         files_total,
         &entry.archive_path,
         total,
-        current_bytes_total,
+        Some(current_bytes_total),
         bytes_done_total + total,
         true,
     );

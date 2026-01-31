@@ -318,6 +318,10 @@
       "summary": "Bundle zip writer with scanning, manifest, and progress"
     },
     {
+      "path": "crates/im_bundle/tests/size_capped_reads_test.rs",
+      "summary": "Ensures bundle writes only the bytes present at file-open time even if file grows"
+    },
+    {
       "path": "crates/im_zip/src/bin/im_zip_cli.rs",
       "summary": "CLI entry point for im_zip - accepts plan file, outputs progress JSON"
     },
