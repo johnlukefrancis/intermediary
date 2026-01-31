@@ -232,6 +232,18 @@
         "close": true
       },
       "group": "build"
+    },
+    {
+      "label": "Downscale noise",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/textures/downscale.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "close": true
+      },
+      "group": "build"
     }
   ]
 }

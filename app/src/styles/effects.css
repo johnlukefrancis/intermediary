@@ -21,8 +21,9 @@
     inset 0 0 60px 0 var(--color-accent-glow);
 }
 
-/* ===== SUBSTRATE (dot grid + grain) ===== */
+/* ===== SUBSTRATE (custom texture + dot grid) ===== */
 /* Sits BEHIND content at z-index: 0 - no text fuzzing */
+/* Swap texture by replacing app/assets/noise.png */
 .app::before {
   content: "";
   position: absolute;
@@ -31,10 +32,10 @@
   pointer-events: none;
   border-radius: var(--radius-deck-sm);
 
-  /* Composite layers: grain + dot grid */
+  /* Composite layers: texture + dot grid */
   background:
-    /* Grain layer */
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    /* Custom texture layer (swap noise.png to try different textures) */
+    url("../../assets/noise.png"),
     /* Dot grid layer */
     radial-gradient(
       circle at center,
