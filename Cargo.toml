@@ -1,0 +1,13 @@
+# Path: Cargo.toml
+# Description: Cargo workspace root - orchestrates Rust crates
+
+[workspace]
+resolver = "2"
+members = [
+    "src-tauri",
+    "crates/im_zip",
+]
+
+[workspace.package]
+edition = "2021"
+authors = ["JL"]

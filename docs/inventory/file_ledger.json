@@ -1,5 +1,5 @@
 {
-  "scope": "src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
+  "scope": "src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
       "path": "agent/src/bundles/bundle_builder.ts",
@@ -292,6 +292,10 @@
     {
       "path": "app/src/vite_env.d.ts",
       "summary": "Vite client type declarations"
+    },
+    {
+      "path": "crates/im_zip/src/lib.rs",
+      "summary": "Library root - zip archive creation API"
     },
     {
       "path": "scripts/fileledger/add_file_headers.mjs",

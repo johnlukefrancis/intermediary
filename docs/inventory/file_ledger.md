@@ -1,6 +1,6 @@
 # File Ledger
 
-Scope: src-tauri, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
+Scope: src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
 agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process (single timestamped file, no accumulation)
@@ -76,6 +76,7 @@ app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
 app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (worktree selector in tab bar)
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_zip/src/lib.rs - Library root - zip archive creation API
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.
 scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as...

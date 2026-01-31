@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const defaultRootNames = [
     'src-tauri',
+    'crates',
     'app',
     'agent',
     'scripts'

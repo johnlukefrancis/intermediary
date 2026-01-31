@@ -1,5 +1,5 @@
 # Workflow Closeout Commands
-Updated on: 2026-01-29
+Updated on: 2026-01-31
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -29,5 +29,11 @@ pnpm exec eslint
 ## Rust checks
 
 ```bash
-cargo check --manifest-path src-tauri/Cargo.toml
+cargo check
+```
+
+This checks the entire workspace. For package-specific checks:
+```bash
+cargo check -p intermediary
+cargo check -p im_zip
 ```

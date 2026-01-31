@@ -31,6 +31,8 @@ export default tseslint.config(
       "node_modules/**",
       "scripts/**",
       "src-tauri/**",
+      "target/**",
+      "crates/**",
       "*.config.*",
     ],
   }

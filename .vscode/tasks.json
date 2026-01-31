@@ -6,7 +6,7 @@
       "type": "shell",
       "command": "cargo check",
       "options": {
-        "cwd": "${workspaceFolder}/src-tauri"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -21,7 +21,7 @@
       "type": "shell",
       "command": "cargo build",
       "options": {
-        "cwd": "${workspaceFolder}/src-tauri"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -36,7 +36,7 @@
       "type": "shell",
       "command": "cargo test",
       "options": {
-        "cwd": "${workspaceFolder}/src-tauri"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -51,7 +51,7 @@
       "type": "shell",
       "command": "cargo clippy",
       "options": {
-        "cwd": "${workspaceFolder}/src-tauri"
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
