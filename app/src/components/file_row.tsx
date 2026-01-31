@@ -76,13 +76,12 @@ export function FileRow({
 
   return (
     <div className="file-row">
+      <span className={`file-state-marker file-state-marker--${file.changeType}`} />
       <div
         className="file-drag-handle"
         onMouseDown={handleMouseDown}
         title="Drag to share"
-      >
-        ⋮⋮
-      </div>
+      />
       <div className="file-info">
         <span className="file-name">{fileName}</span>
         {directory && <span className="file-dir">{directory}</span>}

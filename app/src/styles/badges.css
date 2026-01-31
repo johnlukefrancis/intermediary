@@ -1,81 +1,103 @@
 /*
  * Path: app/src/styles/badges.css
- * Description: Unified badge primitive for status indicators and labels
+ * Description: Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
  */
 
-/* ===== BASE BADGE ===== */
+/* ===== BASE BADGE (Bracket Tag) ===== */
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-full);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-deck-xs);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   line-height: var(--leading-tight);
-  border: 1px solid transparent;
-  background: var(--color-bg-elevated);
+  background: transparent;
   color: var(--color-text-secondary);
   white-space: nowrap;
   user-select: none;
 }
 
+/* Bracket pseudo-elements (60% opacity for subtle look) */
+.badge::before {
+  content: '[';
+  opacity: 0.6;
+  margin-right: 1px;
+}
+
+.badge::after {
+  content: ']';
+  opacity: 0.6;
+  margin-left: 1px;
+}
+
 /* ===== FILE CHANGE VARIANTS ===== */
 .badge--add {
-  background: var(--color-success-soft);
   color: var(--color-success);
-  border-color: var(--color-success-muted);
 }
 
 .badge--modify {
-  background: var(--color-info-soft);
   color: var(--color-info);
-  border-color: var(--color-info-muted);
 }
 
 .badge--delete {
-  background: var(--color-error-soft);
   color: var(--color-error);
-  border-color: var(--color-error-muted);
 }
 
 /* ===== STATUS VARIANTS ===== */
 .badge--staged {
-  background: var(--color-accent-soft);
   color: var(--color-accent);
-  border-color: var(--color-accent);
 }
 
 .badge--latest {
-  background: var(--color-accent);
-  color: var(--color-text-primary);
-  border-color: transparent;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent);
 }
 
-/* ===== SEMANTIC VARIANTS (mirror state-pill) ===== */
+.badge--latest::before,
+.badge--latest::after {
+  opacity: 1;
+}
+
+/* ===== SEMANTIC VARIANTS ===== */
 .badge--success {
-  background: var(--color-success-soft);
   color: var(--color-success);
-  border-color: var(--color-success-muted);
 }
 
 .badge--error {
-  background: var(--color-error-soft);
   color: var(--color-error);
-  border-color: var(--color-error-muted);
 }
 
 .badge--warning {
-  background: var(--color-warning-soft);
   color: var(--color-warning);
-  border-color: var(--color-warning);
 }
 
 .badge--info {
-  background: var(--color-info-soft);
   color: var(--color-info);
+}
+
+/* ===== EMPHASIZED VARIANT (with background) ===== */
+.badge--filled {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+}
+
+.badge--filled.badge--add {
+  background: var(--color-success-soft);
+  border-color: var(--color-success-muted);
+}
+
+.badge--filled.badge--modify {
+  background: var(--color-info-soft);
   border-color: var(--color-info-muted);
+}
+
+.badge--filled.badge--delete {
+  background: var(--color-error-soft);
+  border-color: var(--color-error-muted);
 }

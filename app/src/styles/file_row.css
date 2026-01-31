@@ -1,19 +1,49 @@
 /*
  * Path: app/src/styles/file_row.css
- * Description: Styles for file row component with glass grab chip
+ * Description: Hardware-style file row with left rail, state marker, and etched grip handle
  */
+
+/* ===== FILE LIST CONTAINER ===== */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
 /* ===== ROW LAYOUT ===== */
 .file-row {
+  position: relative;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 6px auto 1fr auto;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--deck-stroke-thin) + var(--space-2));
   border-radius: var(--radius-deck-sm);
   transition:
     background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Left rail accent line */
+.file-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  width: var(--deck-stroke-thin);
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-deck-none);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.file-row:hover::before,
+.file-row:focus-within::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
 }
 
 .file-row:hover {
@@ -21,7 +51,28 @@
   box-shadow: var(--shadow-drop-sm);
 }
 
-/* ===== DRAG HANDLE (GRAB CHIP) ===== */
+/* ===== STATE MARKER ===== */
+.file-state-marker {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.file-state-marker--add {
+  background: var(--color-success);
+}
+
+.file-state-marker--change {
+  background: var(--color-info);
+}
+
+.file-state-marker--unlink {
+  background: var(--color-error);
+}
+
+/* ===== DRAG HANDLE (ETCHED GRIP) ===== */
 .file-drag-handle {
   display: flex;
   align-items: center;
@@ -32,29 +83,58 @@
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-deck-xs);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
-  letter-spacing: 1px;
   user-select: none;
   transition:
     background var(--duration-normal) var(--ease-out),
     border-color var(--duration-normal) var(--ease-out),
-    color var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Etched grip pattern: 3 horizontal lines */
+.file-drag-handle::before {
+  content: '';
+  width: 12px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-muted) 0px,
+    var(--color-text-muted) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  border-radius: var(--radius-deck-none);
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 .file-drag-handle:hover {
   background: var(--color-bg-elevated);
   border-color: var(--color-accent);
-  color: var(--color-text-secondary);
   box-shadow: var(--shadow-inset-subtle);
+}
+
+.file-drag-handle:hover::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-secondary) 0px,
+    var(--color-text-secondary) 2px,
+    transparent 2px,
+    transparent 4px
+  );
 }
 
 .file-drag-handle:active {
   cursor: grabbing;
   background: var(--color-bg-active);
-  color: var(--color-text-primary);
+}
+
+.file-drag-handle:active::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-primary) 0px,
+    var(--color-text-primary) 2px,
+    transparent 2px,
+    transparent 4px
+  );
 }
 
 /* ===== FILE INFO ===== */

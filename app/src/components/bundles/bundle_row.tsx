@@ -48,13 +48,12 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
 
   return (
     <div className={`bundle-row ${isDragging ? "dragging" : ""}`}>
+      <span className={`bundle-state-marker${bundle.isLatestAlias ? " bundle-state-marker--latest" : ""}`} />
       <div
         className="bundle-drag-handle"
         onMouseDown={(e) => void handleMouseDown(e)}
         title="Drag to share"
-      >
-        ⋮⋮
-      </div>
+      />
       <div className="bundle-info">
         <span className="bundle-filename">
           {bundle.fileName}

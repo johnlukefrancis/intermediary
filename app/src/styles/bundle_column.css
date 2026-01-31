@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/bundle_column.css
- * Description: Styles for bundle column components
+ * Description: Hardware-style bundle column with segmented controls and command buttons
  */
 
 /* ===== COLUMN LAYOUT ===== */
@@ -19,38 +19,60 @@
   padding: var(--space-5);
 }
 
-/* ===== PRESET SELECTOR ===== */
+/* ===== PRESET SELECTOR (Segmented Hardware Switch) ===== */
 .preset-selector {
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur-sm));
-  -webkit-backdrop-filter: blur(var(--blur-sm));
-  border: 1px solid var(--glass-border);
+  gap: 0;
+  padding: 0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-sm);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .preset-tab {
   flex: 1;
-  padding: 6px var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   border: none;
-  border-radius: var(--radius-deck-xs);
+  border-right: 1px solid var(--color-border-subtle);
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: var(--text-base);
-  transition: all var(--duration-normal) var(--ease-out);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
 }
 
-.preset-tab:hover {
-  background: var(--color-bg-surface);
+.preset-tab:last-child {
+  border-right: none;
+}
+
+.preset-tab:hover:not(.active) {
+  background: var(--color-bg-hover);
   color: var(--color-text-primary);
 }
 
 .preset-tab.active {
-  background: var(--color-accent);
-  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  color: var(--color-accent);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.preset-tab.active::before {
+  content: '[ ';
+  opacity: 0.7;
+}
+
+.preset-tab.active::after {
+  content: ' ]';
+  opacity: 0.7;
 }
 
 .preset-tab:focus {
@@ -59,7 +81,7 @@
 
 .preset-tab:focus-visible {
   outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* ===== SELECTION PANEL ===== */
@@ -196,33 +218,52 @@
   color: var(--color-error);
 }
 
-/* ===== BUILD BUTTON ===== */
+/* ===== BUILD BUTTON (Command Key) ===== */
 .build-button {
   padding: var(--space-3) var(--space-4);
-  background: var(--color-accent);
-  border: none;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-accent);
   border-radius: var(--radius-deck-sm);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-text-primary);
+  color: var(--color-accent);
   cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.3);
   transition:
+    background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
-    filter var(--duration-normal) var(--ease-out);
+    color var(--duration-normal) var(--ease-out);
 }
 
 .build-button:hover:not(:disabled) {
-  filter: brightness(1.1);
-  box-shadow: var(--shadow-glow-sm) var(--color-accent-glow);
+  background: var(--color-accent-soft);
+  color: var(--color-text-primary);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+    0 0 8px 0 var(--color-accent-glow);
+}
+
+.build-button:active:not(:disabled) {
+  background: var(--color-accent);
+  color: var(--color-text-primary);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 12px 0 var(--color-accent-glow);
 }
 
 .build-button:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
-  filter: saturate(0.5);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  box-shadow: none;
 }
 
 .build-button:focus {
@@ -265,15 +306,38 @@
 
 /* ===== BUNDLE ROW ===== */
 .bundle-row {
+  position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 6px auto 1fr;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--deck-stroke-thin) + var(--space-2));
   border-bottom: 1px solid var(--color-border-subtle);
   transition:
     background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Left rail accent line */
+.bundle-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  width: var(--deck-stroke-thin);
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-deck-none);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.bundle-row:hover::before,
+.bundle-row:focus-within::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
 }
 
 .bundle-row:hover {
@@ -289,7 +353,26 @@
     0 0 0 1px var(--color-accent-glow);
 }
 
-/* ===== BUNDLE DRAG HANDLE (GRAB CHIP) ===== */
+.bundle-row.dragging::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
+}
+
+/* ===== BUNDLE STATE MARKER ===== */
+.bundle-state-marker {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.bundle-state-marker--latest {
+  background: var(--color-accent);
+  box-shadow: 0 0 4px 0 var(--color-accent-glow);
+}
+
+/* ===== BUNDLE DRAG HANDLE (Etched Grip) ===== */
 .bundle-drag-handle {
   display: flex;
   align-items: center;
@@ -300,27 +383,58 @@
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-deck-xs);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-base);
-  letter-spacing: 1px;
   user-select: none;
   transition:
     background var(--duration-normal) var(--ease-out),
     border-color var(--duration-normal) var(--ease-out),
-    color var(--duration-normal) var(--ease-out);
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Etched grip pattern: 3 horizontal lines */
+.bundle-drag-handle::before {
+  content: '';
+  width: 12px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-muted) 0px,
+    var(--color-text-muted) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+  border-radius: var(--radius-deck-none);
+  transition: background var(--duration-normal) var(--ease-out);
 }
 
 .bundle-drag-handle:hover {
   background: var(--color-bg-elevated);
   border-color: var(--color-accent);
-  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-inset-subtle);
+}
+
+.bundle-drag-handle:hover::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-secondary) 0px,
+    var(--color-text-secondary) 2px,
+    transparent 2px,
+    transparent 4px
+  );
 }
 
 .bundle-drag-handle:active {
   cursor: grabbing;
   background: var(--color-bg-active);
-  color: var(--color-text-primary);
+}
+
+.bundle-drag-handle:active::before {
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-text-primary) 0px,
+    var(--color-text-primary) 2px,
+    transparent 2px,
+    transparent 4px
+  );
 }
 
 /* ===== BUNDLE INFO ===== */
