@@ -81,18 +81,25 @@ export interface BundleCliOptions {
 const CLI_PATH_ENV = "IM_BUNDLE_CLI_PATH";
 const PROGRESS_STALL_TIMEOUT_MS = 30_000;
 
-async function resolveCliPath(): Promise<string | null> {
-  const override = process.env[CLI_PATH_ENV];
-  if (override) return override;
+type BundleCliProfile = "release" | "debug";
 
-  const candidates = [
-    path.join(process.cwd(), "target", "release", "im_bundle_cli"),
-    path.join(process.cwd(), "target", "debug", "im_bundle_cli"),
+interface ResolvedCliPath {
+  path: string;
+  profile: BundleCliProfile;
+}
+
+async function resolveCliPath(): Promise<ResolvedCliPath | null> {
+  const override = process.env[CLI_PATH_ENV];
+  if (override) return { path: override, profile: "release" };
+
+  const candidates: Array<{ path: string; profile: BundleCliProfile }> = [
+    { path: path.join(process.cwd(), "target", "release", "im_bundle_cli"), profile: "release" },
+    { path: path.join(process.cwd(), "target", "debug", "im_bundle_cli"), profile: "debug" },
   ];
 
   for (const candidate of candidates) {
     try {
-      await fs.access(candidate);
+      await fs.access(candidate.path);
       return candidate;
     } catch {
       // Try next candidate.
@@ -162,8 +169,8 @@ function buildPlan(options: BundleCliOptions): BundlePlan {
 }
 
 export async function writeBundleWithRustCli(options: BundleCliOptions): Promise<BundleResult> {
-  const cliPath = await resolveCliPath();
-  if (!cliPath) {
+  const resolved = await resolveCliPath();
+  if (!resolved) {
     throw new AgentError(
       "BUNDLE_CLI_NOT_FOUND",
       "im_bundle_cli not found; build the Rust CLI or set IM_BUNDLE_CLI_PATH",
@@ -175,6 +182,7 @@ export async function writeBundleWithRustCli(options: BundleCliOptions): Promise
       }
     );
   }
+  const cliPath = resolved.path;
 
   const planPath = `${options.outputPath}.bundle_plan.json`;
   const plan = buildPlan(options);
@@ -187,6 +195,11 @@ export async function writeBundleWithRustCli(options: BundleCliOptions): Promise
   let stderr = "";
 
   try {
+    logger.info("Bundle CLI resolved", {
+      path: cliPath,
+      profile: resolved.profile,
+    });
+
     const child = spawn(cliPath, [planPath], {
       stdio: ["ignore", "pipe", "pipe"],
     });

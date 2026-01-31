@@ -11,3 +11,8 @@ members = [
 [workspace.package]
 edition = "2021"
 authors = ["JL"]
+
+[profile.dev.package.im_bundle]
+opt-level = 3
+debug = 1
+codegen-units = 1

@@ -36,3 +36,5 @@ To run bundle CLI crate unit tests:
 ```bash
 cargo test -p im_bundle
 ```
+
+For building and verifying the bundle CLI binary, see `docs/commands/bundle_cli.md`.

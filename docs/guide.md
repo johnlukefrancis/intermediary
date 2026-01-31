@@ -66,6 +66,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/dev_wsl_agent.md](commands/dev_wsl_agent.md) | Start the WSL agent for local development |
 | [docs/commands/setup_wsl_node.md](commands/setup_wsl_node.md) | Install Node.js + pnpm in WSL for agent runs |
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
+| [docs/commands/bundle_cli.md](commands/bundle_cli.md) | Build and verify the Rust bundle CLI |
 | [docs/commands/zip_bundles.md](commands/zip_bundles.md) | Context bundle creation for ChatGPT |
 | [docs/commands/workflow/closeout_checks.md](commands/workflow/closeout_checks.md) | Required dependency sync, ledger updates, and closeout checks |
 
