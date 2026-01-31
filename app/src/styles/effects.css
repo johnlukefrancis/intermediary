@@ -5,20 +5,21 @@
 
 /* ===== DECK CHASSIS ===== */
 .app {
-  /* Base gradient (darkened for instrument deck) */
+  /* Base gradient + edge glows (gradients have no harsh edge) */
   background:
+    /* Left edge glow - fades to transparent */
+    linear-gradient(to right, var(--color-accent-glow) 0%, transparent 18px),
+    /* Right edge glow */
+    linear-gradient(to left, var(--color-accent-glow) 0%, transparent 18px),
+    /* Bottom edge glow */
+    linear-gradient(to top, var(--color-accent-glow) 0%, transparent 18px),
+    /* Original gradients */
     radial-gradient(
       ellipse 80% 60% at 50% 0%,
       var(--color-gradient-top) 0%,
       transparent 60%
     ),
     linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-gradient-bottom) 100%);
-
-  /* Chassis frame: outer border + inner highlight + accent glow */
-  box-shadow:
-    inset 0 0 0 var(--deck-stroke-thin) var(--deck-frame-outer),
-    inset 0 0 0 calc(var(--deck-stroke-thin) + 1px) var(--deck-frame-inner),
-    inset 0 0 60px 0 var(--color-accent-glow);
 }
 
 /* ===== SUBSTRATE (custom texture + dot grid) ===== */
@@ -27,10 +28,9 @@
 .app::before {
   content: "";
   position: absolute;
-  inset: var(--deck-frame-inset);
+  inset: 0;
   z-index: 0;
   pointer-events: none;
-  border-radius: var(--radius-deck-sm);
 
   /* Composite layers: texture + dot grid */
   background:
