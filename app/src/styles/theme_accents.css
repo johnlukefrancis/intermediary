@@ -28,7 +28,7 @@
 }
 
 /* ===== TEXTURE PORTAL - Deep purple ===== */
-[data-active-tab="texture-portal"] {
+[data-active-tab="textureportal"] {
   --accent-primary: #7c3aed;
   --accent-soft: rgba(124, 58, 237, 0.15);
   --accent-glow: rgba(124, 58, 237, 0.4);
@@ -41,7 +41,7 @@
 }
 
 /* ===== TRIANGLE RAIN - Muted emerald ===== */
-[data-active-tab="triangle-rain"] {
+[data-active-tab="triangle-rain-tr-engine"] {
   --accent-primary: #16a34a;
   --accent-soft: rgba(22, 163, 74, 0.12);
   --accent-glow: rgba(22, 163, 74, 0.35);

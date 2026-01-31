@@ -111,7 +111,7 @@ pub fn save_to_disk(path: &Path, config: &PersistedConfig) -> Result<(), ConfigE
 
 /// Apply migrations from older config versions
 fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
-    // Version 0 -> 1: No changes needed (initial version)
+    // Version 1 -> 2: Add excludedSubdirs to bundle selections
     if config.config_version < 2 {
         for repo in config.bundle_selections.values_mut() {
             for selection in repo.values_mut() {
@@ -121,6 +121,10 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
             }
         }
     }
+
+    // Version 2 -> 3: Remove tabId, worktreeId, lastTriangleRainWorktreeId
+    // These fields are simply ignored during deserialization (serde ignores unknown fields).
+    // Old lastActiveTabId values may not match repoIds; app.tsx handles fallback.
 
     // Update version to current
     config.config_version = CONFIG_VERSION;

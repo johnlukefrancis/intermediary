@@ -87,7 +87,7 @@
     },
     {
       "path": "app/src/app.tsx",
-      "summary": "Root component with tab state management"
+      "summary": "Root component with config-driven tab state management"
     },
     {
       "path": "app/src/components/bundles/bundle_column.tsx",
@@ -135,11 +135,7 @@
     },
     {
       "path": "app/src/components/tab_bar.tsx",
-      "summary": "Tab navigation component with Triangle Rain worktree dropdown"
-    },
-    {
-      "path": "app/src/components/worktree_selector.tsx",
-      "summary": "Worktree selector dropdown for Triangle Rain"
+      "summary": "Tab navigation component driven by config repos"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -180,10 +176,6 @@
     {
       "path": "app/src/shared/config.ts",
       "summary": "AppConfig Zod schema and types"
-    },
-    {
-      "path": "app/src/shared/ids.ts",
-      "summary": "Shared identifiers for tabs and worktrees"
     },
     {
       "path": "app/src/shared/protocol.ts",
@@ -262,16 +254,8 @@
       "summary": "Design system tokens - spacing, radii, blur, shadows, typography, motion"
     },
     {
-      "path": "app/src/tabs/intermediary_tab.tsx",
-      "summary": "Intermediary project tab with file lists"
-    },
-    {
-      "path": "app/src/tabs/texture_portal_tab.tsx",
-      "summary": "TexturePortal project tab with file lists"
-    },
-    {
-      "path": "app/src/tabs/triangle_rain_tab.tsx",
-      "summary": "Triangle Rain project tab with file lists (worktree selector in tab bar)"
+      "path": "app/src/tabs/repo_tab.tsx",
+      "summary": "Generic repo tab component with 3-column layout"
     },
     {
       "path": "app/src/types/app_paths.ts",

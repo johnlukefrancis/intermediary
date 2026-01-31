@@ -4,9 +4,6 @@
 import { z } from "zod";
 import { AppConfigSchema } from "./config.js";
 
-export { TabIdSchema, WorktreeIdSchema } from "./ids.js";
-export type { TabId, WorktreeId } from "./ids.js";
-
 // -----------------------------------------------------------------------------
 // File metadata
 // -----------------------------------------------------------------------------

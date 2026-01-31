@@ -65,7 +65,7 @@ Intermediary uses a **two-component architecture**:
   - Three-column layout per repo: Docs, Code, Zip Bundles
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
-  - **Triangle Rain tab:** A repo-group tab with worktree switcher inside (v0 ships with only `tr-engine` configured; schema anticipates multiple worktrees later)
+  - Tabs are driven by configured repos (repoId + label), no project-specific UI
 
 ### WSL Agent
 
@@ -116,7 +116,7 @@ Layout under the staging root:
 
 User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
-- **UI state:** Last active tab, last Triangle Rain worktree selection
+- **UI state:** Last active repo (by repoId)
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.

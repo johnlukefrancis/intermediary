@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 2;
+pub const CONFIG_VERSION: u32 = 3;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,10 +45,8 @@ impl Default for PersistedConfig {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UiState {
-    /// Last active tab ID
+    /// Last active repo (by repoId)
     pub last_active_tab_id: Option<String>,
-    /// Last selected Triangle Rain worktree
-    pub last_triangle_rain_worktree_id: Option<String>,
 }
 
 /// Bundle selection state for a preset
@@ -74,11 +72,6 @@ pub struct RepoConfig {
     pub label: String,
     /// Absolute WSL path to repo root
     pub wsl_path: String,
-    /// Tab this repo belongs to
-    pub tab_id: String,
-    /// Optional worktree ID (for Triangle Rain)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub worktree_id: Option<String>,
     /// Whether to auto-stage changes
     pub auto_stage: bool,
     /// Globs for docs classification
@@ -139,7 +132,6 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
         validate_non_empty(&repo.repo_id, "repo.repo_id")?;
         validate_non_empty(&repo.label, "repo.label")?;
         validate_non_empty(&repo.wsl_path, "repo.wsl_path")?;
-        validate_non_empty(&repo.tab_id, "repo.tab_id")?;
 
         if !repo_ids.insert(repo.repo_id.as_str()) {
             return Err(format!("duplicate repo_id: {}", repo.repo_id));
@@ -167,8 +159,6 @@ fn default_repos() -> Vec<RepoConfig> {
             repo_id: "textureportal".to_string(),
             label: "TexturePortal".to_string(),
             wsl_path: "/home/johnf/code/textureportal".to_string(),
-            tab_id: "texture-portal".to_string(),
-            worktree_id: None,
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),
@@ -177,10 +167,8 @@ fn default_repos() -> Vec<RepoConfig> {
         },
         RepoConfig {
             repo_id: "triangle-rain-tr-engine".to_string(),
-            label: "Triangle Rain (tr-engine)".to_string(),
+            label: "Triangle Rain".to_string(),
             wsl_path: "/home/johnf/code/worktrees/tr-engine".to_string(),
-            tab_id: "triangle-rain".to_string(),
-            worktree_id: Some("tr-engine".to_string()),
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),
@@ -191,8 +179,6 @@ fn default_repos() -> Vec<RepoConfig> {
             repo_id: "intermediary".to_string(),
             label: "Intermediary".to_string(),
             wsl_path: "/home/johnf/code/intermediary".to_string(),
-            tab_id: "intermediary".to_string(),
-            worktree_id: None,
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),

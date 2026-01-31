@@ -18,7 +18,6 @@ import {
   getDefaultPersistedConfig,
   parsePersistedConfig,
 } from "../shared/config.js";
-import type { TabId, WorktreeId } from "../shared/ids.js";
 
 /** Debounce delay for saving config (ms) */
 const SAVE_DEBOUNCE_MS = 500;
@@ -32,10 +31,8 @@ interface ConfigContextValue {
   loadError: string | null;
   /** Update auto-stage global setting */
   setAutoStageGlobal: (value: boolean) => void;
-  /** Update last active tab */
-  setLastActiveTabId: (tabId: TabId | null) => void;
-  /** Update last Triangle Rain worktree */
-  setLastTriangleRainWorktreeId: (worktreeId: WorktreeId | null) => void;
+  /** Update last active tab (by repoId) */
+  setLastActiveTabId: (repoId: string | null) => void;
   /** Update bundle selection for a repo/preset */
   setBundleSelection: (
     repoId: string,
@@ -182,25 +179,11 @@ export function ConfigProvider({
   );
 
   const setLastActiveTabId = useCallback(
-    (tabId: TabId | null) => {
+    (repoId: string | null) => {
       setConfig((prev) => {
         const next = {
           ...prev,
-          uiState: { ...prev.uiState, lastActiveTabId: tabId },
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setLastTriangleRainWorktreeId = useCallback(
-    (worktreeId: WorktreeId | null) => {
-      setConfig((prev) => {
-        const next = {
-          ...prev,
-          uiState: { ...prev.uiState, lastTriangleRainWorktreeId: worktreeId },
+          uiState: { ...prev.uiState, lastActiveTabId: repoId },
         };
         saveConfig(next);
         return next;
@@ -236,7 +219,6 @@ export function ConfigProvider({
     loadError,
     setAutoStageGlobal,
     setLastActiveTabId,
-    setLastTriangleRainWorktreeId,
     setBundleSelection,
   };
 

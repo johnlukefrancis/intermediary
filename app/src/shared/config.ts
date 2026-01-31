@@ -2,7 +2,6 @@
 // Description: AppConfig Zod schema and types
 
 import { z } from "zod";
-import { TabIdSchema, WorktreeIdSchema } from "./ids.js";
 
 // -----------------------------------------------------------------------------
 // Bundle preset configuration
@@ -82,7 +81,7 @@ export const DEFAULT_IGNORE_GLOBS = [
 ];
 
 /**
- * Configuration for a single repository/worktree
+ * Configuration for a single repository
  */
 export const RepoConfigSchema = z.object({
   /** Unique identifier for this repo config */
@@ -91,10 +90,6 @@ export const RepoConfigSchema = z.object({
   label: z.string(),
   /** Absolute WSL path to the repo root */
   wslPath: z.string(),
-  /** Which tab this repo belongs to */
-  tabId: TabIdSchema,
-  /** Optional worktree ID for Triangle Rain */
-  worktreeId: WorktreeIdSchema.optional(),
   /** Whether to auto-stage file changes */
   autoStage: z.boolean().default(true),
   /** Globs that classify docs */
@@ -148,7 +143,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       repoId: "textureportal",
       label: "TexturePortal",
       wslPath: "/home/johnf/code/textureportal",
-      tabId: "texture-portal",
       autoStage: true,
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
@@ -157,10 +151,8 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
     },
     {
       repoId: "triangle-rain-tr-engine",
-      label: "Triangle Rain (tr-engine)",
+      label: "Triangle Rain",
       wslPath: "/home/johnf/code/worktrees/tr-engine",
-      tabId: "triangle-rain",
-      worktreeId: "tr-engine",
       autoStage: true,
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
@@ -171,7 +163,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
       repoId: "intermediary",
       label: "Intermediary",
       wslPath: "/home/johnf/code/intermediary",
-      tabId: "intermediary",
       autoStage: true,
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,
@@ -186,14 +177,12 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
 // -----------------------------------------------------------------------------
 
 /** Current config schema version */
-export const CONFIG_VERSION = 2;
+export const CONFIG_VERSION = 3;
 
 /** Remembered UI state */
 export const UiStateSchema = z.object({
-  /** Last active tab */
-  lastActiveTabId: TabIdSchema.nullable().default(null),
-  /** Last Triangle Rain worktree */
-  lastTriangleRainWorktreeId: WorktreeIdSchema.nullable().default(null),
+  /** Last active repo (by repoId) */
+  lastActiveTabId: z.string().nullable().default(null),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -261,7 +250,6 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     ...DEFAULT_APP_CONFIG,
     uiState: {
       lastActiveTabId: null,
-      lastTriangleRainWorktreeId: null,
     },
     bundleSelections: {},
   };
@@ -272,8 +260,11 @@ export function getDefaultPersistedConfig(): PersistedConfig {
  */
 function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v1 -> v2: Add excludedSubdirs to bundle selections
-  // Zod schema's .default([]) already ensures excludedSubdirs exists after parsing,
-  // so no data transformation is needed - just update the version number.
+  // Zod schema's .default([]) already ensures excludedSubdirs exists after parsing.
+
+  // Migration: v2 -> v3: Remove worktree fields, use repoId for tab identity
+  // Old lastActiveTabId values (e.g. "texture-portal") won't match repoIds,
+  // so app.tsx validation will gracefully fall back to first repo.
 
   return { ...config, configVersion: CONFIG_VERSION };
 }

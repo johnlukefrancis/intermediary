@@ -24,7 +24,7 @@ agent/src/util/errors.ts - Error types and helpers for the agent
 agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
-app/src/app.tsx - Root component with tab state management
+app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
@@ -36,8 +36,7 @@ app/src/components/file_row.tsx - Draggable file row with state marker and times
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
-app/src/components/tab_bar.tsx - Tab navigation component with Triangle Rain worktree dropdown
-app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
+app/src/components/tab_bar.tsx - Tab navigation component driven by config repos
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
@@ -48,7 +47,6 @@ app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - AppConfig Zod schema and types
-app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
@@ -68,9 +66,7 @@ app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed 
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/intermediary_tab.tsx - Intermediary project tab with file lists
-app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
-app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (worktree selector in tab bar)
+app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip

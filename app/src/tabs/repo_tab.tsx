@@ -1,5 +1,5 @@
-// Path: app/src/tabs/intermediary_tab.tsx
-// Description: Intermediary project tab with file lists
+// Path: app/src/tabs/repo_tab.tsx
+// Description: Generic repo tab component with 3-column layout
 
 import type React from "react";
 import { useCallback } from "react";
@@ -13,13 +13,22 @@ import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 
-const REPO_ID = "intermediary";
+interface RepoTabProps {
+  repoId: string;
+}
 
-export function IntermediaryTab(): React.JSX.Element {
+export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
-  const { recentDocs, recentCode, stagedByPath, isLoading, topLevelDirs, topLevelSubdirs, registerStaged } =
-    useRepoState(REPO_ID);
-  const bundleState = useBundleState(REPO_ID, topLevelDirs, topLevelSubdirs);
+  const {
+    recentDocs,
+    recentCode,
+    stagedByPath,
+    isLoading,
+    topLevelDirs,
+    topLevelSubdirs,
+    registerStaged,
+  } = useRepoState(repoId);
+  const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs);
   const { dragState, handleDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
@@ -43,7 +52,7 @@ export function IntermediaryTab(): React.JSX.Element {
       : "No recent files";
 
   return (
-    <div className="tab intermediary-tab">
+    <div className="tab repo-tab">
       {dragState.error && (
         <DragErrorNotice message={dragState.error} onDismiss={clearError} />
       )}
@@ -52,7 +61,7 @@ export function IntermediaryTab(): React.JSX.Element {
           <FileListColumn
             files={recentDocs}
             stagedByPath={stagedByPath}
-            repoId={REPO_ID}
+            repoId={repoId}
             emptyMessage={emptyMessage}
             onDragStart={handleDragStart}
           />
@@ -61,14 +70,14 @@ export function IntermediaryTab(): React.JSX.Element {
           <FileListColumn
             files={recentCode}
             stagedByPath={stagedByPath}
-            repoId={REPO_ID}
+            repoId={repoId}
             emptyMessage={emptyMessage}
             onDragStart={handleDragStart}
           />
         }
         zipsContent={
           <BundleColumn
-            repoId={REPO_ID}
+            repoId={repoId}
             bundleState={bundleState}
             onDragStart={handleBundleDragStart}
             emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
