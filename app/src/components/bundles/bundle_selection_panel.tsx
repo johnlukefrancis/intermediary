@@ -75,9 +75,15 @@ export function BundleSelectionPanel({
   const handleDirToggle = useCallback(
     (dir: string) => {
       const currentSet = new Set(selection.topLevelDirs);
+      const excludedSet = new Set(selection.excludedSubdirs);
 
       if (currentSet.has(dir)) {
         currentSet.delete(dir);
+        for (const path of excludedSet) {
+          if (path === dir || path.startsWith(`${dir}/`)) {
+            excludedSet.delete(path);
+          }
+        }
       } else {
         currentSet.add(dir);
       }
@@ -85,6 +91,7 @@ export function BundleSelectionPanel({
       onSelectionChange({
         ...selection,
         topLevelDirs: Array.from(currentSet).sort(),
+        excludedSubdirs: Array.from(excludedSet).sort(),
       });
     },
     [selection, onSelectionChange]
@@ -238,7 +245,7 @@ export function BundleSelectionPanel({
                             <input
                               id={subdirCheckboxId}
                               type="checkbox"
-                              checked={isIncluded}
+                              checked={isSelected && isIncluded}
                               disabled={!isSelected}
                               onChange={() => { handleSubdirToggle(dir, subdir); }}
                             />
