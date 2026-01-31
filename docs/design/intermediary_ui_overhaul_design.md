@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-01-31
+Updated on: 2026-01-31 (Phase 7 QA complete)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -187,6 +187,34 @@ Based on 4px unit:
 
 ---
 
+## V2: Deck Language Rules (Locked)
+
+These rules define what the V2 deck language is and prevent visual drift.
+
+### What's Forbidden
+
+- `--radius-sm`/`--radius-md`/`--radius-lg` on deck components (use `--radius-deck-*` only)
+- Pixel-based letter-spacing (use `em` units: 0.03em tight, 0.05em normal, 0.08em wide)
+- Inset focus rings (`outline-offset: -2px`) — always use outset (`2px`) for visibility
+- Texture overlays above content (grain/grid must stay at z-index: 0)
+- Backdrop-filter on content areas (only on glass surfaces like panels, toasts)
+
+### What's Allowed
+
+- Hardcoded 1-2px micro-spacing for sub-component details (too small for `--space-1`)
+- Multi-layer box-shadows for premium button styling (build button pattern)
+- Component-specific pixel dimensions (drag handles, toggles, LED dots)
+- Inline em-based letter-spacing values (already consistent: 0.03em, 0.05em, 0.08em)
+
+### Must Remain Consistent
+
+- All transitions: `--duration-normal` (150ms) + `--ease-out`
+- All focus rings: `outline: 2px solid var(--color-accent); outline-offset: 2px`
+- All panels: `--radius-deck-md` corners, multi-layer box-shadow
+- All rows: left rail accent with hover glow
+
+---
+
 ## Glass Surface Pattern
 
 For frosted glass panels, use the utility class or manual application:
@@ -334,6 +362,13 @@ Phase 6: Vintage Instrument Deck
 - [x] Vignette layer at z-index: 1 (radial gradient edge darkening)
 - [x] Update all component radii to use `--radius-deck-*` tokens
 - [x] Update this design doc
+
+Phase 7: QA & Polish (complete)
+- [x] Audit all UI controls for vintage deck consistency
+- [x] Fix pixel-based letter-spacing (`0.5px` → `0.05em`)
+- [x] Fix non-deck radii (`--radius-md/sm` → `--radius-deck-sm`)
+- [x] Fix inset focus ring (`outline-offset: -2px` → `2px`)
+- [x] Add V2 Deck Language Rules section (locked rules)
 
 ---
 
