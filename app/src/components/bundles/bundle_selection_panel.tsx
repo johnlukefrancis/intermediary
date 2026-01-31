@@ -1,7 +1,7 @@
 // Path: app/src/components/bundles/bundle_selection_panel.tsx
 // Description: Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
 
-import type React from "react";
+import React from "react";
 import { useCallback, useState, useRef, useEffect } from "react";
 import type { BundleBuildPhase, BundleSelection } from "../../shared/protocol.js";
 
@@ -38,6 +38,38 @@ function IndeterminateCheckbox({
     </label>
   );
 }
+
+function formatPathDepth(path: string, depth: number): string {
+  if (!path) return "";
+  const normalized = path.replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  if (parts.length <= depth) {
+    return normalized;
+  }
+  return `${parts.slice(0, depth).join("/")}/…`;
+}
+
+const BuildProgressDetails = React.memo(function BuildProgressDetails({
+  show,
+  currentFile,
+  depth,
+}: {
+  show: boolean;
+  currentFile?: string;
+  depth: number;
+}): React.JSX.Element {
+  const displayPath = show ? formatPathDepth(currentFile ?? "", depth) : "";
+  return (
+    <div
+      className={`build-progress-details${show ? "" : " hidden"}`}
+      aria-live={show ? "polite" : "off"}
+    >
+      <span className="build-progress-file" title={currentFile}>
+        {show ? `Writing ${displayPath}` : " "}
+      </span>
+    </div>
+  );
+});
 
 interface BundleSelectionPanelProps {
   selection: BundleSelection;
@@ -76,6 +108,7 @@ export function BundleSelectionPanel({
   const noneSelected = selection.topLevelDirs.length === 0;
   const currentFile = buildProgress?.currentFile;
   const showProgressDetails = Boolean(isBuilding && currentFile);
+  const displayDepth = 4;
 
   const handleIncludeRootChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,14 +223,11 @@ export function BundleSelectionPanel({
         )}
       </button>
 
-      <div
-        className={`build-progress-details${showProgressDetails ? "" : " hidden"}`}
-        aria-live={showProgressDetails ? "polite" : "off"}
-      >
-        <span className="build-progress-file" title={currentFile}>
-          {showProgressDetails ? `Writing ${currentFile}` : " "}
-        </span>
-      </div>
+      <BuildProgressDetails
+        show={showProgressDetails}
+        depth={displayDepth}
+        {...(currentFile !== undefined ? { currentFile } : {})}
+      />
 
       <div className="selection-header">
         <div className="include-root-toggle">
