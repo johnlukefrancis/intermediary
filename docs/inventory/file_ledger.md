@@ -77,6 +77,15 @@ app/src/tabs/texture_portal_tab.tsx - TexturePortal project tab with file lists
 app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (worktree selector in tab bar)
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
+crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
+crates/im_bundle/src/ignore_rules.rs - Always-ignored file and directory names for bundle scanning
+crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
+crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
+crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
+crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
+crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
+crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_zip/src/bin/im_zip_cli.rs - CLI entry point for im_zip - accepts plan file, outputs progress JSON
 crates/im_zip/src/error.rs - Error types for zip operations with actionable messages
 crates/im_zip/src/lib.rs - Library root - zip archive creation API

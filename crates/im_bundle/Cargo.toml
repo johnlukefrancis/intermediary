@@ -1,0 +1,25 @@
+# Path: crates/im_bundle/Cargo.toml
+# Description: Rust bundle builder (scan + zip) for Intermediary
+
+[package]
+name = "im_bundle"
+version = "0.1.0"
+edition = "2021"
+
+description = "Bundle scanning + zip creation for Intermediary"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "im_bundle_cli"
+path = "src/bin/im_bundle_cli.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+zip = { version = "2.1", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile = "3.10"

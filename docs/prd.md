@@ -227,7 +227,7 @@ Responsibilities:
 * Build zip bundles to staging (via `/mnt/c/...`)
 * Stage individual files on request
 
-Implementation: Node.js + TypeScript using chokidar for watch and Rust `im_zip_cli` for zip creation.
+Implementation: Node.js + TypeScript using chokidar for watch and Rust `im_bundle_cli` for bundle creation.
 
 #### C) IPC between UI and agent
 

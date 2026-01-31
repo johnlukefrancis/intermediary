@@ -298,6 +298,42 @@
       "summary": "Vite client type declarations"
     },
     {
+      "path": "crates/im_bundle/src/bin/im_bundle_cli.rs",
+      "summary": "CLI entry point for im_bundle - scans and writes bundle zip"
+    },
+    {
+      "path": "crates/im_bundle/src/error.rs",
+      "summary": "Error types for bundle scanning and zip writing"
+    },
+    {
+      "path": "crates/im_bundle/src/ignore_rules.rs",
+      "summary": "Always-ignored file and directory names for bundle scanning"
+    },
+    {
+      "path": "crates/im_bundle/src/lib.rs",
+      "summary": "Library root for bundle scanning and zip creation"
+    },
+    {
+      "path": "crates/im_bundle/src/manifest.rs",
+      "summary": "Bundle manifest structure and serialization"
+    },
+    {
+      "path": "crates/im_bundle/src/plan.rs",
+      "summary": "Bundle plan schema and loader for im_bundle_cli"
+    },
+    {
+      "path": "crates/im_bundle/src/progress.rs",
+      "summary": "Throttled NDJSON progress emitter for bundle scanning and zipping"
+    },
+    {
+      "path": "crates/im_bundle/src/scanner.rs",
+      "summary": "Bundle scanning logic with ignore rules and exclusions"
+    },
+    {
+      "path": "crates/im_bundle/src/writer.rs",
+      "summary": "Bundle zip writer with scanning, manifest, and progress"
+    },
+    {
       "path": "crates/im_zip/src/bin/im_zip_cli.rs",
       "summary": "CLI entry point for im_zip - accepts plan file, outputs progress JSON"
     },
