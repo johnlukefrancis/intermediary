@@ -7,7 +7,7 @@
 :root {
   --accent-primary: #c4688a;
   --accent-soft: rgba(196, 104, 138, 0.15);
-  --accent-glow: rgba(196, 104, 138, 0.4);
+  --accent-glow: rgba(196, 104, 138, 0.55);
   /* Default substrate (neutral) */
   --deck-grid-dot: rgba(255, 255, 255, 0.02);
   --deck-vignette-tint: rgba(0, 0, 0, 0.4);
@@ -17,11 +17,11 @@
 [data-active-tab="intermediary"] {
   --accent-primary: #c4688a;
   --accent-soft: rgba(196, 104, 138, 0.15);
-  --accent-glow: rgba(196, 104, 138, 0.4);
+  --accent-glow: rgba(196, 104, 138, 0.55);
   /* Must also set --color-accent-* because CSS vars resolve at definition, not use */
   --color-accent: #c4688a;
   --color-accent-soft: rgba(196, 104, 138, 0.15);
-  --color-accent-glow: rgba(196, 104, 138, 0.4);
+  --color-accent-glow: rgba(196, 104, 138, 0.55);
   /* Substrate: warm rose tint */
   --deck-grid-dot: rgba(196, 104, 138, 0.025);
   --deck-vignette-tint: rgba(196, 104, 138, 0.03);
@@ -31,10 +31,10 @@
 [data-active-tab="texture-portal"] {
   --accent-primary: #7c3aed;
   --accent-soft: rgba(124, 58, 237, 0.15);
-  --accent-glow: rgba(124, 58, 237, 0.4);
+  --accent-glow: rgba(124, 58, 237, 0.55);
   --color-accent: #7c3aed;
   --color-accent-soft: rgba(124, 58, 237, 0.15);
-  --color-accent-glow: rgba(124, 58, 237, 0.4);
+  --color-accent-glow: rgba(124, 58, 237, 0.55);
   /* Substrate: cool purple tint */
   --deck-grid-dot: rgba(124, 58, 237, 0.025);
   --deck-vignette-tint: rgba(124, 58, 237, 0.03);
@@ -44,10 +44,10 @@
 [data-active-tab="triangle-rain"] {
   --accent-primary: #16a34a;
   --accent-soft: rgba(22, 163, 74, 0.12);
-  --accent-glow: rgba(22, 163, 74, 0.35);
+  --accent-glow: rgba(22, 163, 74, 0.55);
   --color-accent: #16a34a;
   --color-accent-soft: rgba(22, 163, 74, 0.12);
-  --color-accent-glow: rgba(22, 163, 74, 0.35);
+  --color-accent-glow: rgba(22, 163, 74, 0.55);
   /* Substrate: cool emerald tint */
   --deck-grid-dot: rgba(22, 163, 74, 0.025);
   --deck-vignette-tint: rgba(22, 163, 74, 0.03);
