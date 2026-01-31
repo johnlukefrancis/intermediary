@@ -112,7 +112,15 @@ pub fn save_to_disk(path: &Path, config: &PersistedConfig) -> Result<(), ConfigE
 /// Apply migrations from older config versions
 fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 0 -> 1: No changes needed (initial version)
-    // Future migrations would go here as match arms
+    if config.config_version < 2 {
+        for repo in config.bundle_selections.values_mut() {
+            for selection in repo.values_mut() {
+                if selection.excluded_subdirs.is_empty() {
+                    selection.excluded_subdirs = Vec::new();
+                }
+            }
+        }
+    }
 
     // Update version to current
     config.config_version = CONFIG_VERSION;

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 1;
+pub const CONFIG_VERSION: u32 = 2;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,6 +59,9 @@ pub struct BundleSelection {
     pub include_root: bool,
     /// Selected top-level directories
     pub top_level_dirs: Vec<String>,
+    /// Subdirectories to exclude (e.g. "TriangleRain/Assets")
+    #[serde(default)]
+    pub excluded_subdirs: Vec<String>,
 }
 
 /// Configuration for a single repository
