@@ -75,13 +75,8 @@ export function FileRow({
   const changeBadge = getChangeBadge(file.changeType);
 
   return (
-    <div className="file-row">
+    <div className="file-row" onMouseDown={handleMouseDown} title="Drag to share">
       <span className={`file-state-marker file-state-marker--${file.changeType}`} />
-      <div
-        className="file-drag-handle"
-        onMouseDown={handleMouseDown}
-        title="Drag to share"
-      />
       <div className="file-info">
         <span className="file-name">{fileName}</span>
         {directory && <span className="file-dir">{directory}</span>}

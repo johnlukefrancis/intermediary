@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/file_row.css
- * Description: Hardware-style file row with left rail, state marker, and etched grip handle
+ * Description: Hardware-style file row with left rail and state marker
  */
 
 /* ===== FILE LIST CONTAINER ===== */
@@ -14,7 +14,9 @@
 .file-row {
   position: relative;
   display: grid;
-  grid-template-columns: 6px auto 1fr auto;
+  grid-template-columns: 6px 1fr auto;
+  cursor: grab;
+  user-select: none;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
@@ -51,6 +53,10 @@
   box-shadow: var(--shadow-drop-sm);
 }
 
+.file-row:active {
+  cursor: grabbing;
+}
+
 /* ===== STATE MARKER ===== */
 .file-state-marker {
   width: 6px;
@@ -70,71 +76,6 @@
 
 .file-state-marker--unlink {
   background: var(--color-error);
-}
-
-/* ===== DRAG HANDLE (ETCHED GRIP) ===== */
-.file-drag-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  cursor: grab;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-deck-xs);
-  user-select: none;
-  transition:
-    background var(--duration-normal) var(--ease-out),
-    border-color var(--duration-normal) var(--ease-out),
-    box-shadow var(--duration-normal) var(--ease-out);
-}
-
-/* Etched grip pattern: 3 horizontal lines */
-.file-drag-handle::before {
-  content: '';
-  width: 12px;
-  height: 10px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--color-text-muted) 0px,
-    var(--color-text-muted) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-  border-radius: var(--radius-deck-none);
-  transition: background var(--duration-normal) var(--ease-out);
-}
-
-.file-drag-handle:hover {
-  background: var(--color-bg-elevated);
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-inset-subtle);
-}
-
-.file-drag-handle:hover::before {
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--color-text-secondary) 0px,
-    var(--color-text-secondary) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-}
-
-.file-drag-handle:active {
-  cursor: grabbing;
-  background: var(--color-bg-active);
-}
-
-.file-drag-handle:active::before {
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--color-text-primary) 0px,
-    var(--color-text-primary) 2px,
-    transparent 2px,
-    transparent 4px
-  );
 }
 
 /* ===== FILE INFO ===== */
