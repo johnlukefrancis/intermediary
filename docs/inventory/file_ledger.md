@@ -27,7 +27,7 @@ agent/src/util/errors.ts - Error types and helpers for the agent
 agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
-app/src/app.tsx - Root component with tab state management and offline banner
+app/src/app.tsx - Root component with tab state management
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
@@ -37,8 +37,7 @@ app/src/components/drag_error_notice.tsx - Small inline error notice for drag fa
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
 app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
-app/src/components/offline_banner.tsx - Connection status banner shown when agent is offline
-app/src/components/status_bar.tsx - Status bar with auto-stage toggle, staging path, and error display
+app/src/components/status_bar.tsx - Status bar with auto-stage toggle, connection status LED, staging path, and error display
 app/src/components/tab_bar.tsx - Tab navigation component with Triangle Rain worktree dropdown
 app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook

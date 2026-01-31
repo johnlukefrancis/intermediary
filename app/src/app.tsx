@@ -1,9 +1,8 @@
 // Path: app/src/app.tsx
-// Description: Root component with tab state management and offline banner
+// Description: Root component with tab state management
 
 import React, { useState, useCallback, useEffect } from "react";
 import { TabBar } from "./components/tab_bar.js";
-import { OfflineBanner } from "./components/offline_banner.js";
 import { StatusBar } from "./components/status_bar.js";
 import { TexturePortalTab } from "./tabs/texture_portal_tab.js";
 import { TriangleRainTab } from "./tabs/triangle_rain_tab.js";
@@ -41,7 +40,6 @@ export function App(): React.JSX.Element {
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         <StatusBar />
       </header>
-      <OfflineBanner />
       <main className="tab-content">
         {activeTab === "texture-portal" && <TexturePortalTab />}
         {activeTab === "triangle-rain" && <TriangleRainTab />}

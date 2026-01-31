@@ -39,12 +39,6 @@
   color: var(--color-text-muted);
 }
 
-.status-hint {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
 .status-error {
   font-size: var(--text-sm);
   color: var(--color-error);
@@ -97,4 +91,39 @@
 
 .status-connection.disconnected {
   color: var(--color-error);
+}
+
+/* Connecting state: blue LED */
+.status-connection.connecting .led-dot {
+  background: var(--color-info);
+  box-shadow: 0 0 4px var(--color-info);
+}
+
+.status-connection.connecting {
+  color: var(--color-info);
+}
+
+/* Reconnecting state: yellow/warning LED */
+.status-connection.reconnecting .led-dot {
+  background: var(--color-warning);
+  box-shadow: 0 0 4px var(--color-warning);
+}
+
+.status-connection.reconnecting {
+  color: var(--color-warning);
+}
+
+/* Pulsing animation for connecting/reconnecting */
+.status-connection.pulsing .led-dot {
+  animation: gentle-pulse 2s var(--ease-in-out) infinite;
+}
+
+@keyframes gentle-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }

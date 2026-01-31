@@ -1,20 +1,42 @@
 // Path: app/src/components/status_bar.tsx
-// Description: Status bar with auto-stage toggle, staging path, and error display
+// Description: Status bar with auto-stage toggle, connection status LED, staging path, and error display
 
 import { useCallback, useState } from "react";
 import type React from "react";
 import { useAgent } from "../hooks/use_agent.js";
+import type { ConnectionStatus } from "../lib/agent/connection_state.js";
 import "../styles/status_bar.css";
+
+interface ConnectionDisplay {
+  cssClass: string;
+  label: string;
+  showPulse: boolean;
+}
+
+function getConnectionDisplay(status: ConnectionStatus, attempts: number): ConnectionDisplay {
+  switch (status) {
+    case "connected":
+      return { cssClass: "connected", label: "Connected", showPulse: false };
+    case "connecting":
+      return { cssClass: "connecting", label: "Connecting...", showPulse: true };
+    case "reconnecting":
+      return { cssClass: "reconnecting", label: `Reconnecting (${attempts})`, showPulse: true };
+    case "disconnected":
+      return { cssClass: "disconnected", label: "Offline", showPulse: false };
+  }
+}
 
 export function StatusBar(): React.JSX.Element {
   const { autoStageOnChange, setAutoStageOnChange, connectionState, appPaths, helloState } =
     useAgent();
-  const isConnected = connectionState.status === "connected";
   const [copyFeedback, setCopyFeedback] = useState(false);
 
+  const { status, reconnectAttempts, lastError: connectionError } = connectionState;
+  const display = getConnectionDisplay(status, reconnectAttempts);
   const stagingPath = appPaths?.stagingWindowsRoot ?? null;
-  const lastError = helloState.lastError;
-  const connectionLabel = isConnected ? "Connected" : "Disconnected";
+
+  // Show connection error when not connected, hello error when connected
+  const errorToShow = status === "connected" ? helloState.lastError : connectionError;
 
   const handleCopyPath = useCallback(() => {
     if (!stagingPath) return;
@@ -43,27 +65,21 @@ export function StatusBar(): React.JSX.Element {
           </label>
         </div>
         <span className="chrome-sep" aria-hidden="true">·</span>
-        <span className={`status-connection ${isConnected ? "connected" : "disconnected"}`}>
+        <span className={`status-connection ${display.cssClass}${display.showPulse ? " pulsing" : ""}`}>
           <span className="led-dot" aria-hidden="true" />
-          <span className="led-label">Agent: {connectionLabel}</span>
+          <span className="led-label">Agent: {display.label}</span>
         </span>
-        {!isConnected && (
+        {errorToShow && (
           <>
             <span className="chrome-sep" aria-hidden="true">·</span>
-            <span className="status-hint">Applies on reconnect</span>
+            <span className="status-error" title={errorToShow}>
+              {errorToShow.length > 50 ? `${errorToShow.slice(0, 50)}...` : errorToShow}
+            </span>
           </>
         )}
       </div>
 
       <div className="status-right">
-        {lastError && (
-          <>
-            <span className="status-error" title={lastError}>
-              Error: {lastError.length > 40 ? `${lastError.slice(0, 40)}...` : lastError}
-            </span>
-            <span className="chrome-sep" aria-hidden="true">·</span>
-          </>
-        )}
         {stagingPath && (
           <button
             type="button"

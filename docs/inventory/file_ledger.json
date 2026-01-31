@@ -99,7 +99,7 @@
     },
     {
       "path": "app/src/app.tsx",
-      "summary": "Root component with tab state management and offline banner"
+      "summary": "Root component with tab state management"
     },
     {
       "path": "app/src/components/bundles/bundle_column.tsx",
@@ -138,12 +138,8 @@
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },
     {
-      "path": "app/src/components/offline_banner.tsx",
-      "summary": "Connection status banner shown when agent is offline"
-    },
-    {
       "path": "app/src/components/status_bar.tsx",
-      "summary": "Status bar with auto-stage toggle, staging path, and error display"
+      "summary": "Status bar with auto-stage toggle, connection status LED, staging path, and error display"
     },
     {
       "path": "app/src/components/tab_bar.tsx",
