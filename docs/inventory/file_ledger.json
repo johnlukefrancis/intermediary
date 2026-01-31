@@ -10,14 +10,6 @@
       "summary": "Find the single bundle file for a preset"
     },
     {
-      "path": "agent/src/bundles/bundle_scan.test.ts",
-      "summary": "Unit tests for bundle selection validation"
-    },
-    {
-      "path": "agent/src/bundles/bundle_scan.ts",
-      "summary": "Resolve bundle entries and validate selection"
-    },
-    {
       "path": "agent/src/bundles/bundle_types.ts",
       "summary": "Type definitions for bundle building"
     },
@@ -34,16 +26,8 @@
       "summary": "Centralized ignore patterns for bundle building"
     },
     {
-      "path": "agent/src/bundles/manifest.ts",
-      "summary": "Manifest generation for bundle zips"
-    },
-    {
-      "path": "agent/src/bundles/rust_zip_cli.ts",
-      "summary": "Run the Rust im_zip_cli to build zip bundles with progress parsing"
-    },
-    {
-      "path": "agent/src/bundles/zip_writer.ts",
-      "summary": "Zip writer wrapper that invokes the Rust zip CLI"
+      "path": "agent/src/bundles/rust_bundle_cli.ts",
+      "summary": "Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing"
     },
     {
       "path": "agent/src/dev/staging_probe.ts",

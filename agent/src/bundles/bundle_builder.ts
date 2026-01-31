@@ -6,12 +6,10 @@ import * as fs from "node:fs/promises";
 import * as crypto from "node:crypto";
 import { type PathBridgeConfig, wslToWindows } from "../staging/path_bridge.js";
 import { getGitInfo } from "./git_info.js";
-import { createManifest, serializeManifest } from "./manifest.js";
-import { writeZip } from "./zip_writer.js";
 import type { BuildBundleOptions, BuildBundleResult } from "./bundle_types.js";
 import { logger } from "../util/logger.js";
-import { scanBundleContents } from "./bundle_scan.js";
 import type { AgentEvent } from "../../../app/src/shared/protocol.js";
+import { writeBundleWithRustCli } from "./rust_bundle_cli.js";
 
 export interface BundleBuilder {
   buildBundle(options: BuildBundleOptions): Promise<BuildBundleResult>;
@@ -77,8 +75,6 @@ export function createBundleBuilder(
       });
     };
 
-    emitBundleProgress("scanning", 0, 0);
-
     // 1. Ensure output directory exists
     const bundleDir = path.posix.join(outputDir, "bundles", repoId, presetId);
     await fs.mkdir(bundleDir, { recursive: true });
@@ -99,53 +95,33 @@ export function createBundleBuilder(
     // 5. Create temp file for atomic write
     const tempPath = wslPath + `.${crypto.randomUUID()}.tmp`;
 
-    // 6. Resolve entries and validate selection
-    const scanResult = await scanBundleContents({
-      repoRoot,
-      includeRoot: selection.includeRoot,
-      topLevelDirs: selection.topLevelDirs,
-      excludedSubdirs: selection.excludedSubdirs ?? [],
-    });
+    try {
+      // 6. Scan + zip via Rust bundle CLI
+      const git = {
+        ...(gitInfo.headSha !== undefined ? { headSha: gitInfo.headSha } : {}),
+        ...(gitInfo.shortSha !== undefined ? { shortSha: gitInfo.shortSha } : {}),
+        ...(gitInfo.branch !== undefined ? { branch: gitInfo.branch } : {}),
+      };
 
-    // 7. Create manifest (best-effort totals)
-    const manifestFileCount = scanResult.fileCount + 1;
-    let totalBytesBestEffort = scanResult.totalBytes;
-    let manifestJson = "";
-    const excludedSubdirsSorted = [...(selection.excludedSubdirs ?? [])].sort();
-    for (let i = 0; i < 2; i += 1) {
-      const manifest = createManifest(
-        repoId,
+      const bundleResult = await writeBundleWithRustCli({
+        outputPath: tempPath,
         repoRoot,
+        repoId,
         presetId,
         presetName,
-        {
+        selection: {
           includeRoot: selection.includeRoot,
-          topLevelDirsIncluded: scanResult.topLevelDirsIncluded,
-          excludedSubdirs: excludedSubdirsSorted,
+          topLevelDirs: selection.topLevelDirs,
+          excludedSubdirs: selection.excludedSubdirs ?? [],
         },
-        gitInfo,
-        manifestFileCount,
-        totalBytesBestEffort
-      );
-      manifestJson = serializeManifest(manifest);
-      const manifestBytes = Buffer.byteLength(manifestJson, "utf8");
-      totalBytesBestEffort = scanResult.totalBytes + manifestBytes;
-    }
-
-    try {
-      // 8. Write zip with manifest
-      const totalFiles = scanResult.fileCount + 1;
-      emitBundleProgress("zipping", 0, totalFiles);
-      const zipResult = await writeZip({
-        outputPath: tempPath,
-        entries: scanResult.entries,
-        manifestJson,
+        git,
+        builtAtIso,
         onProgress: (progress) => {
-          emitBundleProgress("zipping", progress.filesDone, progress.filesTotal);
+          emitBundleProgress(progress.phase, progress.filesDone, progress.filesTotal);
         },
       });
 
-      emitBundleProgress("finalizing", zipResult.fileCount, zipResult.fileCount);
+      emitBundleProgress("finalizing", bundleResult.fileCount, bundleResult.fileCount);
 
       // 9. Atomic rename
       await fs.rename(tempPath, wslPath);
@@ -153,11 +129,20 @@ export function createBundleBuilder(
       // 10. Convert path to Windows
       const windowsPath = wslToWindows(wslPath);
 
+      if (bundleResult.scanMs !== undefined || bundleResult.zipMs !== undefined) {
+        logger.info("Bundle timing", {
+          repoId,
+          presetId,
+          scanMs: bundleResult.scanMs ?? null,
+          zipMs: bundleResult.zipMs ?? null,
+        });
+      }
+
       logger.info("Bundle built", {
         repoId,
         presetId,
-        fileCount: zipResult.fileCount,
-        bytes: zipResult.bytes,
+        fileCount: bundleResult.fileCount,
+        bytes: bundleResult.bytes,
       });
 
       return {
@@ -165,8 +150,8 @@ export function createBundleBuilder(
         windowsPath,
         aliasWslPath: wslPath,
         aliasWindowsPath: windowsPath,
-        bytes: zipResult.bytes,
-        fileCount: zipResult.fileCount,
+        bytes: bundleResult.bytes,
+        fileCount: bundleResult.fileCount,
         builtAtIso,
       };
     } catch (err) {

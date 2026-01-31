@@ -5,15 +5,11 @@ Scope: src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .
 ```text
 agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process (single timestamped file, no accumulation)
 agent/src/bundles/bundle_lister.ts - Find the single bundle file for a preset
-agent/src/bundles/bundle_scan.test.ts - Unit tests for bundle selection validation
-agent/src/bundles/bundle_scan.ts - Resolve bundle entries and validate selection
 agent/src/bundles/bundle_types.ts - Type definitions for bundle building
 agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manifests
 agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
 agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
-agent/src/bundles/manifest.ts - Manifest generation for bundle zips
-agent/src/bundles/rust_zip_cli.ts - Run the Rust im_zip_cli to build zip bundles with progress parsing
-agent/src/bundles/zip_writer.ts - Zip writer wrapper that invokes the Rust zip CLI
+agent/src/bundles/rust_bundle_cli.ts - Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing
 agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
