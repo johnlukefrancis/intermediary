@@ -35,6 +35,10 @@ interface BundleProgressLine {
   phase: "scanning" | "zipping";
   files_done: number;
   files_total: number;
+  current_file?: string;
+  current_bytes_done?: number;
+  current_bytes_total?: number;
+  bytes_done_total_best_effort?: number;
 }
 
 interface BundleDoneLine {
@@ -49,6 +53,10 @@ export interface BundleProgress {
   phase: "scanning" | "zipping";
   filesDone: number;
   filesTotal: number;
+  currentFile?: string;
+  currentBytesDone?: number;
+  currentBytesTotal?: number;
+  bytesDoneTotalBestEffort?: number;
 }
 
 export interface BundleResult {
@@ -71,6 +79,7 @@ export interface BundleCliOptions {
 }
 
 const CLI_PATH_ENV = "IM_BUNDLE_CLI_PATH";
+const PROGRESS_STALL_TIMEOUT_MS = 30_000;
 
 async function resolveCliPath(): Promise<string | null> {
   const override = process.env[CLI_PATH_ENV];
@@ -96,12 +105,20 @@ async function resolveCliPath(): Promise<string | null> {
 function isProgressLine(value: unknown): value is BundleProgressLine {
   if (!value || typeof value !== "object") return false;
   const line = value as Record<string, unknown>;
-  return (
+  const baseValid = (
     line.type === "progress" &&
     (line.phase === "scanning" || line.phase === "zipping") &&
     typeof line.files_done === "number" &&
     typeof line.files_total === "number"
   );
+  if (!baseValid) return false;
+  if (line.current_file !== undefined && typeof line.current_file !== "string") return false;
+  if (line.current_bytes_done !== undefined && typeof line.current_bytes_done !== "number") return false;
+  if (line.current_bytes_total !== undefined && typeof line.current_bytes_total !== "number") return false;
+  if (line.bytes_done_total_best_effort !== undefined && typeof line.bytes_done_total_best_effort !== "number") {
+    return false;
+  }
+  return true;
 }
 
 function isDoneLine(value: unknown): value is BundleDoneLine {
@@ -173,6 +190,40 @@ export async function writeBundleWithRustCli(options: BundleCliOptions): Promise
     const child = spawn(cliPath, [planPath], {
       stdio: ["ignore", "pipe", "pipe"],
     });
+    let watchdog: NodeJS.Timeout | null = null;
+    let lastProgress: { phase: BundleProgress["phase"]; currentFile?: string } | null = null;
+    let stallReject: ((err: AgentError) => void) | null = null;
+    const stallPromise = new Promise<never>((_, reject) => {
+      stallReject = reject;
+    });
+
+    const stopWatchdog = (): void => {
+      if (watchdog) {
+        clearTimeout(watchdog);
+        watchdog = null;
+      }
+    };
+
+    const resetWatchdog = (): void => {
+      stopWatchdog();
+      watchdog = setTimeout(() => {
+        if (!stallReject) return;
+        const fileSuffix = lastProgress?.currentFile ? ` (last file: ${lastProgress.currentFile})` : "";
+        const error = new AgentError(
+          "BUNDLE_CLI_STALLED",
+          `Bundle build stalled during ${lastProgress?.phase ?? "unknown"} phase${fileSuffix}`,
+          {
+            phase: lastProgress?.phase ?? null,
+            currentFile: lastProgress?.currentFile ?? null,
+          }
+        );
+        stallReject(error);
+        stallReject = null;
+        child.kill("SIGKILL");
+      }, PROGRESS_STALL_TIMEOUT_MS);
+    };
+
+    resetWatchdog();
 
     let buffer = "";
     child.stdout.setEncoding("utf8");
@@ -186,11 +237,32 @@ export async function writeBundleWithRustCli(options: BundleCliOptions): Promise
           try {
             const parsed = JSON.parse(line) as unknown;
             if (isProgressLine(parsed)) {
-              options.onProgress?.({
+              const progress: BundleProgress = {
                 phase: parsed.phase,
                 filesDone: parsed.files_done,
                 filesTotal: parsed.files_total,
-              });
+              };
+              if (parsed.current_file !== undefined) {
+                progress.currentFile = parsed.current_file;
+              }
+              if (parsed.current_bytes_done !== undefined) {
+                progress.currentBytesDone = parsed.current_bytes_done;
+              }
+              if (parsed.current_bytes_total !== undefined) {
+                progress.currentBytesTotal = parsed.current_bytes_total;
+              }
+              if (parsed.bytes_done_total_best_effort !== undefined) {
+                progress.bytesDoneTotalBestEffort = parsed.bytes_done_total_best_effort;
+              }
+              const snapshot: { phase: BundleProgress["phase"]; currentFile?: string } = {
+                phase: parsed.phase,
+              };
+              if (parsed.current_file !== undefined) {
+                snapshot.currentFile = parsed.current_file;
+              }
+              lastProgress = snapshot;
+              resetWatchdog();
+              options.onProgress?.(progress);
             } else if (isDoneLine(parsed)) {
               bytesWritten = parsed.bytes_written;
               fileCount = parsed.file_count;
@@ -213,14 +285,20 @@ export async function writeBundleWithRustCli(options: BundleCliOptions): Promise
       stderr += chunk;
     });
 
-    const exitCode: number = await new Promise((resolve, reject) => {
+    const exitPromise = new Promise<number>((resolve, reject) => {
       child.on("error", (err) => {
+        stopWatchdog();
+        stallReject = null;
         reject(err);
       });
       child.on("close", (code) => {
+        stopWatchdog();
+        stallReject = null;
         resolve(code ?? 1);
       });
     });
+
+    const exitCode: number = await Promise.race([exitPromise, stallPromise]);
 
     if (exitCode !== 0) {
       const message = stderr.trim() || `im_bundle_cli exited with code ${exitCode}`;

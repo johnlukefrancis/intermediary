@@ -60,18 +60,28 @@ export function createBundleBuilder(
     const builtAt = new Date();
     const builtAtIso = builtAt.toISOString();
 
-    const emitBundleProgress = (
-      phase: "scanning" | "zipping" | "finalizing",
-      filesDone: number,
-      filesTotal: number
-    ): void => {
+    const emitBundleProgress = (payload: {
+      phase: "scanning" | "zipping" | "finalizing";
+      filesDone: number;
+      filesTotal: number;
+      currentFile?: string;
+      currentBytesDone?: number;
+      currentBytesTotal?: number;
+      bytesDoneTotalBestEffort?: number;
+    }): void => {
       emitProgress?.({
         type: "bundleBuildProgress",
         repoId,
         presetId,
-        phase,
-        filesDone,
-        filesTotal,
+        phase: payload.phase,
+        filesDone: payload.filesDone,
+        filesTotal: payload.filesTotal,
+        ...(payload.currentFile !== undefined ? { currentFile: payload.currentFile } : {}),
+        ...(payload.currentBytesDone !== undefined ? { currentBytesDone: payload.currentBytesDone } : {}),
+        ...(payload.currentBytesTotal !== undefined ? { currentBytesTotal: payload.currentBytesTotal } : {}),
+        ...(payload.bytesDoneTotalBestEffort !== undefined
+          ? { bytesDoneTotalBestEffort: payload.bytesDoneTotalBestEffort }
+          : {}),
       });
     };
 
@@ -117,11 +127,40 @@ export function createBundleBuilder(
         git,
         builtAtIso,
         onProgress: (progress) => {
-          emitBundleProgress(progress.phase, progress.filesDone, progress.filesTotal);
+          const payload: {
+            phase: "scanning" | "zipping";
+            filesDone: number;
+            filesTotal: number;
+            currentFile?: string;
+            currentBytesDone?: number;
+            currentBytesTotal?: number;
+            bytesDoneTotalBestEffort?: number;
+          } = {
+            phase: progress.phase,
+            filesDone: progress.filesDone,
+            filesTotal: progress.filesTotal,
+          };
+          if (progress.currentFile !== undefined) {
+            payload.currentFile = progress.currentFile;
+          }
+          if (progress.currentBytesDone !== undefined) {
+            payload.currentBytesDone = progress.currentBytesDone;
+          }
+          if (progress.currentBytesTotal !== undefined) {
+            payload.currentBytesTotal = progress.currentBytesTotal;
+          }
+          if (progress.bytesDoneTotalBestEffort !== undefined) {
+            payload.bytesDoneTotalBestEffort = progress.bytesDoneTotalBestEffort;
+          }
+          emitBundleProgress(payload);
         },
       });
 
-      emitBundleProgress("finalizing", bundleResult.fileCount, bundleResult.fileCount);
+      emitBundleProgress({
+        phase: "finalizing",
+        filesDone: bundleResult.fileCount,
+        filesTotal: bundleResult.fileCount,
+      });
 
       // 9. Atomic rename
       await fs.rename(tempPath, wslPath);

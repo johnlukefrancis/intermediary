@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-01-30
+Updated on: 2026-01-31
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -23,7 +23,7 @@ Depends on: ADR-000, ADR-007
 
 ## P1 — Major functionality broken
 
-*None*
+- 2026-01-31: Bundle build can stall during zipping; UI progress may appear stuck around mid-build.
 
 ---
 

@@ -91,6 +91,10 @@ export const BundleBuildProgressEventSchema = z.object({
   phase: BundleBuildPhaseSchema,
   filesDone: z.number().int().nonnegative(),
   filesTotal: z.number().int().nonnegative(),
+  currentFile: z.string().optional(),
+  currentBytesDone: z.number().int().nonnegative().optional(),
+  currentBytesTotal: z.number().int().nonnegative().optional(),
+  bytesDoneTotalBestEffort: z.number().int().nonnegative().optional(),
 });
 export type BundleBuildProgressEvent = z.infer<typeof BundleBuildProgressEventSchema>;
 

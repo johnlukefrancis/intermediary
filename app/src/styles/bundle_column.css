@@ -396,6 +396,31 @@
   outline-offset: 2px;
 }
 
+/* ===== BUILD BUTTON DETAIL ===== */
+.build-progress-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.build-progress-file {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.build-progress-bytes {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ===== BUNDLE LIST ===== */
 .bundle-list {
   /* Don't grow - let selection panel take available space */

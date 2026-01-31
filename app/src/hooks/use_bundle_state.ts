@@ -17,6 +17,10 @@ interface BundleBuildProgress {
   phase: BundleBuildPhase;
   filesDone: number;
   filesTotal: number;
+  currentFile?: string;
+  currentBytesDone?: number;
+  currentBytesTotal?: number;
+  bytesDoneTotalBestEffort?: number;
 }
 
 export interface BundlePresetState {
@@ -301,14 +305,27 @@ export function useBundleState(
           const next = new Map(prev);
           const preset = next.get(event.presetId);
           if (preset) {
+            const progress: BundleBuildProgress = {
+              phase: event.phase,
+              filesDone: event.filesDone,
+              filesTotal: event.filesTotal,
+            };
+            if (event.currentFile !== undefined) {
+              progress.currentFile = event.currentFile;
+            }
+            if (event.currentBytesDone !== undefined) {
+              progress.currentBytesDone = event.currentBytesDone;
+            }
+            if (event.currentBytesTotal !== undefined) {
+              progress.currentBytesTotal = event.currentBytesTotal;
+            }
+            if (event.bytesDoneTotalBestEffort !== undefined) {
+              progress.bytesDoneTotalBestEffort = event.bytesDoneTotalBestEffort;
+            }
             next.set(event.presetId, {
               ...preset,
               isBuilding: true,
-              buildProgress: {
-                phase: event.phase,
-                filesDone: event.filesDone,
-                filesTotal: event.filesTotal,
-              },
+              buildProgress: progress,
               lastBuildError: null,
             });
           }
