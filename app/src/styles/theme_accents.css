@@ -8,6 +8,9 @@
   --accent-primary: #c4688a;
   --accent-soft: rgba(196, 104, 138, 0.15);
   --accent-glow: rgba(196, 104, 138, 0.4);
+  /* Default substrate (neutral) */
+  --deck-grid-dot: rgba(255, 255, 255, 0.02);
+  --deck-vignette-tint: rgba(0, 0, 0, 0.4);
 }
 
 /* ===== INTERMEDIARY - Dusty rose ===== */
@@ -19,6 +22,9 @@
   --color-accent: #c4688a;
   --color-accent-soft: rgba(196, 104, 138, 0.15);
   --color-accent-glow: rgba(196, 104, 138, 0.4);
+  /* Substrate: warm rose tint */
+  --deck-grid-dot: rgba(196, 104, 138, 0.025);
+  --deck-vignette-tint: rgba(196, 104, 138, 0.03);
 }
 
 /* ===== TEXTURE PORTAL - Deep purple ===== */
@@ -29,6 +35,9 @@
   --color-accent: #7c3aed;
   --color-accent-soft: rgba(124, 58, 237, 0.15);
   --color-accent-glow: rgba(124, 58, 237, 0.4);
+  /* Substrate: cool purple tint */
+  --deck-grid-dot: rgba(124, 58, 237, 0.025);
+  --deck-vignette-tint: rgba(124, 58, 237, 0.03);
 }
 
 /* ===== TRIANGLE RAIN - Muted emerald ===== */
@@ -39,4 +48,7 @@
   --color-accent: #16a34a;
   --color-accent-soft: rgba(22, 163, 74, 0.12);
   --color-accent-glow: rgba(22, 163, 74, 0.35);
+  /* Substrate: cool emerald tint */
+  --deck-grid-dot: rgba(22, 163, 74, 0.025);
+  --deck-vignette-tint: rgba(22, 163, 74, 0.03);
 }

@@ -23,6 +23,16 @@
   --radius-xl: 12px;
   --radius-full: 999px;
 
+  /* ===== DECK RADII (hardware feel - crisper corners) ===== */
+  --radius-deck-none: 0;
+  --radius-deck-xs: 2px;
+  --radius-deck-sm: 3px;
+  --radius-deck-md: 4px;
+
+  /* ===== DECK STROKES ===== */
+  --deck-stroke-hairline: 1px;
+  --deck-stroke-thin: 2px;
+
   /* ===== BLUR LEVELS ===== */
   --blur-none: 0;
   --blur-sm: 4px;
@@ -116,4 +126,16 @@
   --color-gradient-bottom: var(--theme-gradient-bottom);
   --color-bg-hover-subtle: var(--theme-bg-hover-subtle);
   --color-scanline: var(--theme-scanline);
+
+  /* ===== DECK FRAME ===== */
+  --deck-frame-inset: 8px;
+  --deck-frame-outer: var(--theme-deck-frame-outer);
+  --deck-frame-inner: var(--theme-deck-frame-inner);
+
+  /* ===== DECK SUBSTRATE ===== */
+  --deck-grid-dot: var(--theme-deck-grid-dot);
+  --deck-grid-size: 16px;
+  --deck-grain-opacity: 0.4;
+  --deck-vignette-strength: 0.35;
+  --deck-vignette-tint: var(--theme-deck-vignette-tint);
 }

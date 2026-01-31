@@ -10,7 +10,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-deck-sm);
   transition:
     background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
@@ -31,7 +31,7 @@
   cursor: grab;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-deck-xs);
   color: var(--color-text-muted);
   font-family: var(--font-mono);
   font-size: var(--text-base);

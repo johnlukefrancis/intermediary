@@ -1,10 +1,11 @@
 /*
  * Path: app/src/styles/effects.css
- * Description: Background gradient, grain noise, and glass surface utilities
+ * Description: Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
  */
 
-/* ===== BACKGROUND GRADIENT ===== */
+/* ===== DECK CHASSIS ===== */
 .app {
+  /* Base gradient (darkened for instrument deck) */
   background:
     radial-gradient(
       ellipse 80% 60% at 50% 0%,
@@ -12,41 +13,53 @@
       transparent 60%
     ),
     linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-gradient-bottom) 100%);
+
+  /* Chassis frame: outer border + inner highlight + accent glow */
+  box-shadow:
+    inset 0 0 0 var(--deck-stroke-thin) var(--deck-frame-outer),
+    inset 0 0 0 calc(var(--deck-stroke-thin) + 1px) var(--deck-frame-inner),
+    inset 0 0 60px 0 var(--color-accent-glow);
 }
 
-/* ===== GRAIN/NOISE OVERLAY ===== */
-/* CSS-only noise using pseudo-element with SVG filter */
+/* ===== SUBSTRATE (dot grid + grain) ===== */
+/* Sits BEHIND content at z-index: 0 - no text fuzzing */
 .app::before {
   content: "";
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  inset: var(--deck-frame-inset);
+  z-index: 0;
   pointer-events: none;
-  z-index: 9999;
-  opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-  background-size: 256px 256px;
+  border-radius: var(--radius-deck-sm);
+
+  /* Composite layers: grain + dot grid */
+  background:
+    /* Grain layer */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+    /* Dot grid layer */
+    radial-gradient(
+      circle at center,
+      var(--deck-grid-dot) 1px,
+      transparent 1px
+    );
+  background-size: 256px 256px, var(--deck-grid-size) var(--deck-grid-size);
+  opacity: var(--deck-grain-opacity);
 }
 
-/* ===== OPTIONAL SCANLINES ===== */
-/* Uncomment to enable subtle CRT-style scanlines */
-/*
+/* ===== VIGNETTE ===== */
+/* Subtle edge darkening - sits above substrate but below content */
 .app::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
-  z-index: 9998;
-  opacity: 0.015;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.3) 2px,
-    rgba(0, 0, 0, 0.3) 4px
+  background: radial-gradient(
+    ellipse 100% 100% at 50% 50%,
+    transparent 40%,
+    var(--deck-vignette-tint) 100%
   );
+  opacity: var(--deck-vignette-strength);
 }
-*/
 
 /* ===== GLASS SURFACE UTILITY ===== */
 .glass-surface {

@@ -15,7 +15,7 @@
   box-shadow:
     var(--shadow-inset-subtle),
     var(--shadow-drop-sm);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-deck-md);
   overflow: hidden;
 }
 

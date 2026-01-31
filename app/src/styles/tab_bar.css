@@ -18,7 +18,7 @@
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
   cursor: pointer;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border-radius: var(--radius-deck-xs) var(--radius-deck-xs) 0 0;
   transition: color var(--duration-normal) var(--ease-out),
     background var(--duration-normal) var(--ease-out);
 }

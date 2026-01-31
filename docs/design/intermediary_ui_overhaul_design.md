@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-01-30
+Updated on: 2026-01-31
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -8,11 +8,14 @@ Depends on: ADR-000, ADR-005, ADR-006
 
 ## Design Principles
 
-1. **Ink and Glass** — Deep dark backgrounds with frosted glass surfaces create depth without distraction.
-2. **Controlled Illumination** — Accent colors provide focal points, not visual noise. Use sparingly.
-3. **Quiet Texture** — Subtle grain adds analog warmth without overwhelming content.
-4. **Per-Tab Identity** — Each tab has a distinct accent color for quick visual orientation.
-5. **Token-Driven** — All visual values flow from design tokens. No hardcoded colors in components.
+**V2: Vintage Instrument Deck** — The UI reads as a physical device, not a floating web app.
+
+1. **Chassis Frame** — The app window has a visible border frame with subtle accent glow, like a hardware faceplate.
+2. **Layered Substrate** — Dot grid + grain texture sits BEHIND content (z-index: 0), adding depth without fuzzing text.
+3. **Aggressive Dark** — Base palette is ~35% darker than V1, creating maximum contrast and drama.
+4. **Hardware Radii** — Corners are crisper (2-4px) to evoke instruments, not soft rounded app UI.
+5. **Per-Tab Substrate** — Each tab modulates the substrate's grid dot color and vignette tint.
+6. **Token-Driven** — All visual values flow from design tokens. No hardcoded colors in components.
 
 ---
 
@@ -38,25 +41,25 @@ main.css          → Layout reset and base structure
 
 | File | Purpose | LOC |
 |------|---------|-----|
-| `tokens.css` | Spacing, radii, blur, shadows, typography, motion, semantic color slots | ~110 |
-| `theme_dark.css` | Dark theme values, semantic states, glass surface, legacy bridge | ~65 |
-| `theme_accents.css` | Per-tab accent mapping via `[data-active-tab]` | ~35 |
-| `effects.css` | Background gradient, grain overlay, glass/glow utilities | ~75 |
+| `tokens.css` | Spacing, radii, deck radii, blur, shadows, typography, motion, semantic color slots | ~130 |
+| `theme_dark.css` | Dark theme values (V2: aggressive), semantic states, glass surface, deck frame/substrate | ~85 |
+| `theme_accents.css` | Per-tab accent + substrate mapping via `[data-active-tab]` | ~50 |
+| `effects.css` | Deck chassis frame, substrate (grid + grain at z:0), vignette, glass/glow utilities | ~80 |
 | `main.css` | Reset, document sizing, app shell layout | ~90 |
 
 ---
 
 ## Color Palette
 
-### Backgrounds
+### Backgrounds (V2: Aggressive Dark)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--color-bg-base` | `#0d0d14` | App background, deepest layer |
-| `--color-bg-surface` | `#14141f` | Panels, cards, columns |
-| `--color-bg-elevated` | `#1a1a28` | Headers, dropdowns, elevated surfaces |
-| `--color-bg-hover` | `#222233` | Hover states |
-| `--color-bg-active` | `#2a2a3d` | Active/pressed states |
+| `--color-bg-base` | `#050508` | App background, deepest layer |
+| `--color-bg-surface` | `#0a0a10` | Panels, cards, columns |
+| `--color-bg-elevated` | `#0f0f18` | Headers, dropdowns, elevated surfaces |
+| `--color-bg-hover` | `#151520` | Hover states |
+| `--color-bg-active` | `#1a1a28` | Active/pressed states |
 
 ### Text
 
@@ -66,13 +69,13 @@ main.css          → Layout reset and base structure
 | `--color-text-secondary` | `#9898a8` | Labels, metadata, secondary info |
 | `--color-text-muted` | `#606070` | Disabled text, hints |
 
-### Borders
+### Borders (V2: Adjusted for darker palette)
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `--color-border` | `#2a2a3d` | Standard borders |
-| `--color-border-subtle` | `#1f1f2d` | Subtle dividers |
-| `--color-border-highlight` | `rgba(255,255,255,0.08)` | Glass edge highlights |
+| `--color-border` | `#1a1a28` | Standard borders |
+| `--color-border-subtle` | `#12121a` | Subtle dividers |
+| `--color-border-highlight` | `rgba(255,255,255,0.06)` | Glass edge highlights |
 
 ### Accents by Tab
 
@@ -125,6 +128,44 @@ Based on 4px unit:
 
 ---
 
+## V2: Deck Tokens
+
+### Deck Radii (Hardware Feel)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--radius-deck-none` | 0 | Square corners |
+| `--radius-deck-xs` | 2px | Tabs, small controls |
+| `--radius-deck-sm` | 3px | Buttons, chips |
+| `--radius-deck-md` | 4px | Panels |
+
+### Deck Strokes
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--deck-stroke-hairline` | 1px | Fine details |
+| `--deck-stroke-thin` | 2px | Chassis frame |
+
+### Deck Frame
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--deck-frame-inset` | 8px | Substrate margin from window edge |
+| `--deck-frame-outer` | `#1a1a24` | Outer frame border color |
+| `--deck-frame-inner` | `rgba(255,255,255,0.04)` | Inner highlight stroke |
+
+### Deck Substrate
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--deck-grid-dot` | Per-tab (2-3% opacity) | Dot grid color |
+| `--deck-grid-size` | 16px | Dot grid spacing |
+| `--deck-grain-opacity` | 0.4 | Grain layer opacity |
+| `--deck-vignette-strength` | 0.35 | Edge darkening intensity |
+| `--deck-vignette-tint` | Per-tab | Vignette color tint |
+
+---
+
 ## Do / Don't
 
 ### DO
@@ -132,8 +173,8 @@ Based on 4px unit:
 - Use semantic tokens (`--color-success`) instead of raw hex values
 - Apply `.glass-surface` class for frosted panel effects
 - Use `var(--color-accent)` for interactive highlights (changes per tab)
-- Keep grain opacity at 0.025 or lower
-- Test backdrop-filter blur on actual scrolling content
+- Use `--radius-deck-*` tokens for panel/button corners (V2)
+- Test substrate visibility on actual content
 
 ### DON'T
 
@@ -142,6 +183,7 @@ Based on 4px unit:
 - Apply backdrop-filter blur to large scrolling areas (performance)
 - Mix multiple accent colors within the same component
 - Add external image assets for texture effects
+- Apply grain as a topmost overlay (causes text fuzzing)
 
 ---
 
@@ -281,8 +323,23 @@ Phase 5: Polish (complete)
 
 ---
 
+## V2 Implementation (complete)
+
+Phase 6: Vintage Instrument Deck
+- [x] Add deck tokens (`--radius-deck-*`, `--deck-stroke-*`, `--deck-frame-*`, `--deck-grid-*`)
+- [x] Aggressive palette darkening (~35% darker)
+- [x] Per-tab substrate hooks (`--deck-grid-dot`, `--deck-vignette-tint`)
+- [x] Chassis frame on `.app` (box-shadow: outer border + inner highlight + accent glow)
+- [x] Substrate layer at z-index: 0 (dot grid + grain, behind content)
+- [x] Vignette layer at z-index: 1 (radial gradient edge darkening)
+- [x] Update all component radii to use `--radius-deck-*` tokens
+- [x] Update this design doc
+
+---
+
 ## Future Enhancements
 
 - Light theme variant (`theme_light.css`)
 - Additional accent color presets
 - Component-specific glass variants (lighter/heavier blur)
+- Alternative substrate patterns (line grid, crosshatch)
