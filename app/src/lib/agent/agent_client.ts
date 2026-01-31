@@ -14,6 +14,7 @@ import {
 } from "./connection_state.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const BUILD_BUNDLE_TIMEOUT_MS = 5 * 60_000;
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 
@@ -174,6 +175,13 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
     pendingRequests.clear();
   }
 
+  function getRequestTimeoutMs(command: UiCommand): number {
+    if (command.type === "buildBundle") {
+      return BUILD_BUNDLE_TIMEOUT_MS;
+    }
+    return REQUEST_TIMEOUT_MS;
+  }
+
   function send<T extends UiResponse>(command: UiCommand): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -186,7 +194,7 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
       const timeout = setTimeout(() => {
         pendingRequests.delete(requestId);
         reject(new Error(`Request timeout: ${command.type}`));
-      }, REQUEST_TIMEOUT_MS);
+      }, getRequestTimeoutMs(command));
 
       pendingRequests.set(requestId, {
         resolve: resolve as (r: UiResponse) => void,
