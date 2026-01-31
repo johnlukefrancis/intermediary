@@ -62,6 +62,14 @@ export function BundleSelectionPanel({
 
   return (
     <div className="bundle-selection-panel">
+      <button
+        className="build-button"
+        onClick={onBuild}
+        disabled={isBuilding || (!selection.includeRoot && selection.topLevelDirs.length === 0)}
+      >
+        {isBuilding ? "Building..." : "Build Bundle"}
+      </button>
+
       <div className="selection-header">
         <div className="include-root-toggle">
           <label className="vintage-toggle">
@@ -126,14 +134,6 @@ export function BundleSelectionPanel({
       {lastBuildError && (
         <div className="build-error">{lastBuildError}</div>
       )}
-
-      <button
-        className="build-button"
-        onClick={onBuild}
-        disabled={isBuilding || (!selection.includeRoot && selection.topLevelDirs.length === 0)}
-      >
-        {isBuilding ? "Building..." : "Build Bundle"}
-      </button>
     </div>
   );
 }
