@@ -8,12 +8,6 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-
-  /* Top trim glow (extends CRT phosphor to window edge) */
-  border-top: 2px solid var(--color-accent);
-  box-shadow:
-    inset 0 3px 15px -3px var(--color-accent-glow),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
 /* ===== CHROME SEPARATOR ===== */
