@@ -84,12 +84,6 @@ crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle 
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
-crates/im_zip/src/bin/im_zip_cli.rs - CLI entry point for im_zip - accepts plan file, outputs progress JSON
-crates/im_zip/src/error.rs - Error types for zip operations with actionable messages
-crates/im_zip/src/lib.rs - Library root - zip archive creation API
-crates/im_zip/src/plan.rs - ZipPlan schema and validation for plan file parsing
-crates/im_zip/src/progress.rs - Throttled JSON progress reporter for stdout
-crates/im_zip/src/writer.rs - Core zip writing logic with streaming and progress
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.
 scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as...

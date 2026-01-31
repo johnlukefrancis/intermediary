@@ -27,12 +27,12 @@ To check only the Tauri app:
 cargo check -p intermediary
 ```
 
-To check only the zip library:
+To check only the bundle CLI crate:
 ```bash
-cargo check -p im_zip
+cargo check -p im_bundle
 ```
 
-To run zip library unit tests:
+To run bundle CLI crate unit tests:
 ```bash
-cargo test -p im_zip
+cargo test -p im_bundle
 ```

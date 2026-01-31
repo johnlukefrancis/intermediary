@@ -89,7 +89,7 @@ intermediary/
 │
 ├── crates/                 # Rust workspace crates
 │   ├── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
-│   └── im_zip/              # Rust zip library (plan-driven)
+│   └── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
 │
 ├── agent/                  # WSL agent daemon
 │   ├── src/

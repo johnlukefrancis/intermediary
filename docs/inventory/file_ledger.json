@@ -326,30 +326,6 @@
       "summary": "Ensures bundle writes only the bytes present at file-open time even if file grows"
     },
     {
-      "path": "crates/im_zip/src/bin/im_zip_cli.rs",
-      "summary": "CLI entry point for im_zip - accepts plan file, outputs progress JSON"
-    },
-    {
-      "path": "crates/im_zip/src/error.rs",
-      "summary": "Error types for zip operations with actionable messages"
-    },
-    {
-      "path": "crates/im_zip/src/lib.rs",
-      "summary": "Library root - zip archive creation API"
-    },
-    {
-      "path": "crates/im_zip/src/plan.rs",
-      "summary": "ZipPlan schema and validation for plan file parsing"
-    },
-    {
-      "path": "crates/im_zip/src/progress.rs",
-      "summary": "Throttled JSON progress reporter for stdout"
-    },
-    {
-      "path": "crates/im_zip/src/writer.rs",
-      "summary": "Core zip writing logic with streaming and progress"
-    },
-    {
       "path": "scripts/fileledger/add_file_headers.mjs",
       "summary": "Adds missing header comments (path + description) to source files using the ledger output."
     },

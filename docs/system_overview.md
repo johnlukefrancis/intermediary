@@ -146,8 +146,7 @@ intermediary/
 │       ├── obs/            # Observability (logging)
 │       └── paths/          # Path resolution, WSL conversion
 ├── crates/                 # Rust workspace crates
-│   ├── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
-│   └── im_zip/              # Rust zip library (plan-driven)
+│   └── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
 ├── agent/                  # WSL agent (Node.js/TS)
 │   └── src/
 │       ├── bundles/        # Bundle building

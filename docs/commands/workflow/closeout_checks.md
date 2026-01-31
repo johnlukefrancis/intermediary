@@ -37,7 +37,6 @@ cargo check
 This checks the entire workspace. For package-specific checks:
 ```bash
 cargo check -p intermediary
-cargo check -p im_zip
 ```
 
 ## Rust tests (im_bundle)

@@ -1509,17 +1509,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "im_zip"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "zip",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
