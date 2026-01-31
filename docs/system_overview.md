@@ -69,12 +69,12 @@ Intermediary uses a **two-component architecture**:
 
 ### WSL Agent
 
-- **Stack:** Node.js/TypeScript with chokidar for file watching
+- **Stack:** Node.js/TypeScript with chokidar for file watching; Rust zip CLI (`crates/im_zip`)
 - **Purpose:** File watching and bundle generation inside WSL
 - **Key features:**
   - inotify-based file watching via chokidar (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing
-  - Bundle building with manifest injection (single latest bundle per preset; older bundles deleted)
+  - Bundle building with manifest injection via Rust zip CLI (single latest bundle per preset; older bundles deleted)
   - Atomic file staging to Windows-accessible paths
   - Auto-stage on change (configurable)
 
@@ -145,6 +145,8 @@ intermediary/
 │       ├── config/         # Config persistence (types, io)
 │       ├── obs/            # Observability (logging)
 │       └── paths/          # Path resolution, WSL conversion
+├── crates/                 # Rust workspace crates
+│   └── im_zip/              # Rust zip CLI + library (bundle writing)
 ├── agent/                  # WSL agent (Node.js/TS)
 │   └── src/
 │       ├── bundles/        # Bundle building

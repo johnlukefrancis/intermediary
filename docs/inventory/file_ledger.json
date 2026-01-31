@@ -43,7 +43,7 @@
     },
     {
       "path": "agent/src/bundles/zip_writer.ts",
-      "summary": "Zip writer wrapper with Rust CLI primary path and archiver fallback"
+      "summary": "Zip writer wrapper that invokes the Rust zip CLI"
     },
     {
       "path": "agent/src/dev/staging_probe.ts",

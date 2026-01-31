@@ -57,7 +57,7 @@ A single-window "handoff console" that:
 | Backend | Rust |
 | WSL Agent | Node.js + TypeScript |
 | File Watching | chokidar (inotify on Linux) |
-| Bundling | archiver |
+| Bundling | Rust `im_zip_cli` (crates/im_zip) |
 | IPC | WebSocket (JSON request/response + events) |
 | Drag-out | `tauri-plugin-drag` |
 
@@ -87,7 +87,8 @@ intermediary/
 │   ├── Cargo.toml
 │   └── tauri.conf.json
 │
-├── crates/                 # Rust crates (if present)
+├── crates/                 # Rust workspace crates
+│   └── im_zip/              # Rust zip CLI + library (bundle writing)
 │
 ├── agent/                  # WSL agent daemon
 │   ├── src/

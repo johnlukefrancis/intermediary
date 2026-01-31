@@ -293,53 +293,24 @@
   letter-spacing: 0.03em;
 }
 
-/* ===== BUILD PROGRESS ===== */
-.build-progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-deck-xs);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-secondary);
-}
-
-.build-progress-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.build-progress-bar {
-  position: relative;
-  height: 8px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.build-progress-fill {
-  display: block;
-  height: 100%;
+/* ===== BUILD BUTTON PROGRESS (In-Button) ===== */
+.build-button-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
   width: 0%;
   background: linear-gradient(90deg, var(--color-accent), var(--color-accent-soft));
   transition: width 160ms var(--ease-out);
+  pointer-events: none;
 }
 
-.build-progress-bar.indeterminate .build-progress-fill {
-  position: absolute;
+.build-button-progress.indeterminate {
   width: 35%;
-  animation: build-progress-sweep 1.2s infinite var(--ease-out);
+  animation: build-button-sweep 1.2s infinite var(--ease-out);
 }
 
-@keyframes build-progress-sweep {
+@keyframes build-button-sweep {
   0% {
     transform: translateX(-100%);
   }
@@ -363,6 +334,8 @@
 
 /* ===== BUILD BUTTON (Command Key) ===== */
 .build-button {
+  position: relative;
+  overflow: hidden;
   padding: var(--space-3) var(--space-4);
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-accent);
@@ -381,7 +354,12 @@
   transition:
     background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out),
-    color var(--duration-normal) var(--ease-out);
+    color var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out);
+}
+
+.build-button.building {
+  border-color: var(--color-accent-soft);
 }
 
 .build-button:hover:not(:disabled) {

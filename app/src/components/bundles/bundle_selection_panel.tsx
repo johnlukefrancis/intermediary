@@ -162,50 +162,27 @@ export function BundleSelectionPanel({
   return (
     <div className="bundle-selection-panel">
       <button
-        className="build-button"
+        className={`build-button${isBuilding ? " building" : ""}`}
         onClick={onBuild}
         disabled={isBuilding || (!selection.includeRoot && selection.topLevelDirs.length === 0)}
+        aria-busy={isBuilding}
       >
         {isBuilding ? "Building..." : "Build Bundle"}
+        {isBuilding && buildProgress && (
+          <span
+            className={`build-button-progress${buildProgress.filesTotal === 0 ? " indeterminate" : ""}`}
+            role="progressbar"
+            aria-valuenow={buildProgress.filesTotal > 0 ? buildProgress.filesDone : undefined}
+            aria-valuemax={buildProgress.filesTotal > 0 ? buildProgress.filesTotal : undefined}
+            aria-label="Build progress"
+            style={
+              buildProgress.filesTotal > 0
+                ? { width: `${Math.round((buildProgress.filesDone / buildProgress.filesTotal) * 100)}%` }
+                : undefined
+            }
+          />
+        )}
       </button>
-
-      {isBuilding && buildProgress && (
-        <div className="build-progress">
-          <div className="build-progress-header">
-            <span className="build-progress-phase">
-              {buildProgress.phase === "scanning" && "Scanning..."}
-              {buildProgress.phase === "zipping" && "Zipping..."}
-              {buildProgress.phase === "finalizing" && "Finalizing..."}
-            </span>
-            {buildProgress.filesTotal > 0 && (
-              <span className="build-progress-count">
-                {buildProgress.filesDone}/{buildProgress.filesTotal}
-              </span>
-            )}
-          </div>
-          <div
-            className={`build-progress-bar${
-              buildProgress.filesTotal === 0 ? " indeterminate" : ""
-            }`}
-          >
-            <span
-              className="build-progress-fill"
-              style={
-                buildProgress.filesTotal > 0
-                  ? {
-                      width: `${Math.min(
-                        100,
-                        Math.round(
-                          (buildProgress.filesDone / buildProgress.filesTotal) * 100
-                        )
-                      )}%`,
-                    }
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-      )}
 
       <div className="selection-header">
         <div className="include-root-toggle">
