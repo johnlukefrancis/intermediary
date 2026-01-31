@@ -1,12 +1,14 @@
 /*
  * Path: app/src/styles/columns.css
- * Description: Three-column grid layout (Docs | Code | Zips)
+ * Description: Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
  */
 
 .three-column {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+  /* Slightly wider Zips column for visual balance */
+  grid-template-columns: 1fr 1fr 1.1fr;
+  /* Deck gutters: wider spacing for module separation */
+  gap: var(--space-4);
   flex: 1;
   min-height: 0;
 }
@@ -15,6 +17,7 @@
 @media (max-width: 768px) {
   .three-column {
     grid-template-columns: 1fr;
+    gap: var(--space-3);
     overflow-y: auto;
   }
 

@@ -37,7 +37,7 @@ app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle 
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
 app/src/components/file_row.tsx - Draggable file item with drag handle and metadata display
-app/src/components/layout/three_column.tsx - Three-column layout component (Docs | Code | Zips)
+app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/offline_banner.tsx - Connection status banner shown when agent is offline
 app/src/components/status_bar.tsx - Status bar with auto-stage toggle, staging path, and error display
 app/src/components/tab_bar.tsx - Tab navigation component
@@ -58,16 +58,16 @@ app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states
 app/src/styles/badges.css - Unified badge primitive for status indicators and labels
 app/src/styles/bundle_column.css - Styles for bundle column components
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
-app/src/styles/columns.css - Three-column grid layout (Docs | Code | Zips)
+app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
-app/src/styles/effects.css - Background gradient, grain noise, and glass surface utilities
+app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/file_row.css - Styles for file row component with glass grab chip
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
-app/src/styles/panels.css - Glass panel surfaces, headers, and empty states for deck columns
+app/src/styles/panels.css - Modular deck panel surfaces with framed edges, corner brackets, and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
-app/src/styles/status_bar.css - Status bar command strip styles
-app/src/styles/tab_bar.css - Tab bar navigation styles with glass pill aesthetic
+app/src/styles/status_bar.css - Status bar command strip with LED indicators and instrument typography
+app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion

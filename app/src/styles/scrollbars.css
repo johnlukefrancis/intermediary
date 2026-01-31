@@ -26,6 +26,7 @@
 
 .panel-content::-webkit-scrollbar-thumb:active {
   background: var(--color-accent);
+  box-shadow: 0 0 4px var(--color-accent-glow);
 }
 
 .panel-content::-webkit-scrollbar-corner {

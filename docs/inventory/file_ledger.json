@@ -139,7 +139,7 @@
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
-      "summary": "Three-column layout component (Docs | Code | Zips)"
+      "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },
     {
       "path": "app/src/components/offline_banner.tsx",
@@ -223,7 +223,7 @@
     },
     {
       "path": "app/src/styles/columns.css",
-      "summary": "Three-column grid layout (Docs | Code | Zips)"
+      "summary": "Three-column deck grid layout with intentional gutters (Docs | Code | Zips)"
     },
     {
       "path": "app/src/styles/drag_error_notice.css",
@@ -231,7 +231,7 @@
     },
     {
       "path": "app/src/styles/effects.css",
-      "summary": "Background gradient, grain noise, and glass surface utilities"
+      "summary": "Deck chassis frame, substrate (grid + grain), vignette, and glass utilities"
     },
     {
       "path": "app/src/styles/file_row.css",
@@ -247,7 +247,7 @@
     },
     {
       "path": "app/src/styles/panels.css",
-      "summary": "Glass panel surfaces, headers, and empty states for deck columns"
+      "summary": "Modular deck panel surfaces with framed edges, corner brackets, and etched headers"
     },
     {
       "path": "app/src/styles/scrollbars.css",
@@ -255,11 +255,11 @@
     },
     {
       "path": "app/src/styles/status_bar.css",
-      "summary": "Status bar command strip styles"
+      "summary": "Status bar command strip with LED indicators and instrument typography"
     },
     {
       "path": "app/src/styles/tab_bar.css",
-      "summary": "Tab bar navigation styles with glass pill aesthetic"
+      "summary": "Tab bar navigation with ASCII-instrument bracketed labels"
     },
     {
       "path": "app/src/styles/theme_accents.css",
