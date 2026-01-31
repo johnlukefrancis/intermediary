@@ -86,10 +86,14 @@ export const DEFAULT_IGNORE_GLOBS = [
 export const RepoConfigSchema = z.object({
   /** Unique identifier for this repo config */
   repoId: z.string(),
-  /** Display name in the UI */
+  /** Display name in the UI (shown in dropdown for grouped repos) */
   label: z.string(),
   /** Absolute WSL path to the repo root */
   wslPath: z.string(),
+  /** Optional group ID - repos with same groupId share a tab with dropdown */
+  groupId: z.string().optional(),
+  /** Group display name (shown as tab label for grouped repos) */
+  groupLabel: z.string().optional(),
   /** Whether to auto-stage file changes */
   autoStage: z.boolean().default(true),
   /** Globs that classify docs */
@@ -151,8 +155,10 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
     },
     {
       repoId: "triangle-rain-tr-engine",
-      label: "Triangle Rain",
+      label: "tr-engine",
       wslPath: "/home/johnf/code/worktrees/tr-engine",
+      groupId: "triangle-rain",
+      groupLabel: "Triangle Rain",
       autoStage: true,
       docsGlobs: DEFAULT_DOCS_GLOBS,
       codeGlobs: DEFAULT_CODE_GLOBS,

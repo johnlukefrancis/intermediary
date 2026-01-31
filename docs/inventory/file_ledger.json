@@ -135,7 +135,7 @@
     },
     {
       "path": "app/src/components/tab_bar.tsx",
-      "summary": "Tab navigation component driven by config repos"
+      "summary": "Tab navigation with grouped repo dropdown support"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",

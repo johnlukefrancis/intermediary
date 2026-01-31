@@ -68,10 +68,16 @@ pub struct BundleSelection {
 pub struct RepoConfig {
     /// Unique identifier for this repo
     pub repo_id: String,
-    /// Display name in UI
+    /// Display name in UI (shown in dropdown for grouped repos)
     pub label: String,
     /// Absolute WSL path to repo root
     pub wsl_path: String,
+    /// Optional group ID - repos with same groupId share a tab with dropdown
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_id: Option<String>,
+    /// Group display name (shown as tab label for grouped repos)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub group_label: Option<String>,
     /// Whether to auto-stage changes
     pub auto_stage: bool,
     /// Globs for docs classification
@@ -159,6 +165,8 @@ fn default_repos() -> Vec<RepoConfig> {
             repo_id: "textureportal".to_string(),
             label: "TexturePortal".to_string(),
             wsl_path: "/home/johnf/code/textureportal".to_string(),
+            group_id: None,
+            group_label: None,
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),
@@ -167,8 +175,10 @@ fn default_repos() -> Vec<RepoConfig> {
         },
         RepoConfig {
             repo_id: "triangle-rain-tr-engine".to_string(),
-            label: "Triangle Rain".to_string(),
+            label: "tr-engine".to_string(),
             wsl_path: "/home/johnf/code/worktrees/tr-engine".to_string(),
+            group_id: Some("triangle-rain".to_string()),
+            group_label: Some("Triangle Rain".to_string()),
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),
@@ -179,6 +189,8 @@ fn default_repos() -> Vec<RepoConfig> {
             repo_id: "intermediary".to_string(),
             label: "Intermediary".to_string(),
             wsl_path: "/home/johnf/code/intermediary".to_string(),
+            group_id: None,
+            group_label: None,
             auto_stage: true,
             docs_globs: default_docs_globs(),
             code_globs: default_code_globs(),

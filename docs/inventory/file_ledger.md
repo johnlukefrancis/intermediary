@@ -36,7 +36,7 @@ app/src/components/file_row.tsx - Draggable file row with state marker and times
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
-app/src/components/tab_bar.tsx - Tab navigation component driven by config repos
+app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
