@@ -138,8 +138,12 @@
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },
     {
+      "path": "app/src/components/options_overlay.tsx",
+      "summary": "Full-screen transparent overlay with options panel for app settings"
+    },
+    {
       "path": "app/src/components/status_bar.tsx",
-      "summary": "Status bar with auto-stage toggle, connection status LED, staging path, and error display"
+      "summary": "Status bar with connection status LED, error display, and options button"
     },
     {
       "path": "app/src/components/tab_bar.tsx",
@@ -238,6 +242,10 @@
       "summary": "Motion utilities, transition presets, and reduced-motion support"
     },
     {
+      "path": "app/src/styles/options_overlay.css",
+      "summary": "Full-screen transparent overlay with centered glass panel for app options"
+    },
+    {
       "path": "app/src/styles/panels.css",
       "summary": "Modular deck panel surfaces with framed edges and etched headers"
     },
@@ -247,7 +255,7 @@
     },
     {
       "path": "app/src/styles/status_bar.css",
-      "summary": "Status bar command strip with LED indicators and instrument typography"
+      "summary": "Status bar with connection LED, error display, and options button"
     },
     {
       "path": "app/src/styles/tab_bar.css",

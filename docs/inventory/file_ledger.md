@@ -37,7 +37,8 @@ app/src/components/drag_error_notice.tsx - Small inline error notice for drag fa
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
 app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
-app/src/components/status_bar.tsx - Status bar with auto-stage toggle, connection status LED, staging path, and error display
+app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
+app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation component with Triangle Rain worktree dropdown
 app/src/components/worktree_selector.tsx - Worktree selector dropdown for Triangle Rain
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
@@ -62,9 +63,10 @@ app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vigne
 app/src/styles/file_row.css - Hardware-style file row with left rail and state marker
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
+app/src/styles/options_overlay.css - Full-screen transparent overlay with centered glass panel for app options
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
-app/src/styles/status_bar.css - Status bar command strip with LED indicators and instrument typography
+app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots

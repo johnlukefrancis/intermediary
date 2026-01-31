@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/status_bar.css
- * Description: Status bar command strip with LED indicators and instrument typography
+ * Description: Status bar with connection LED, error display, and options button
  */
 
 .status-bar {
@@ -24,19 +24,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.status-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.status-label {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
 }
 
 .status-error {
@@ -126,4 +113,36 @@
   50% {
     opacity: 0.4;
   }
+}
+
+/* ===== OPTIONS BUTTON ===== */
+.options-button {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-sm);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+.options-button:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.options-button:focus {
+  outline: none;
+}
+
+.options-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
