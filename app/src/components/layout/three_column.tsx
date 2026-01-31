@@ -19,7 +19,7 @@ export function ThreeColumn({
     <div className="three-column">
       <section className="panel" data-panel="docs">
         <header className="panel-header">
-          <span className="panel-title">Docs</span>
+          <h2 className="panel-title">Docs</h2>
           <span className="panel-cue" aria-hidden="true" />
         </header>
         <div className="panel-content">
@@ -28,7 +28,7 @@ export function ThreeColumn({
       </section>
       <section className="panel" data-panel="code">
         <header className="panel-header">
-          <span className="panel-title">Code</span>
+          <h2 className="panel-title">Code</h2>
           <span className="panel-cue" aria-hidden="true" />
         </header>
         <div className="panel-content">
@@ -37,7 +37,7 @@ export function ThreeColumn({
       </section>
       <section className="panel" data-panel="zips">
         <header className="panel-header">
-          <span className="panel-title">Zips</span>
+          <h2 className="panel-title">Zips</h2>
           <span className="panel-cue" aria-hidden="true" />
         </header>
         <div className="panel-content">
