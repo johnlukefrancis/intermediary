@@ -2,6 +2,7 @@
 // Description: Library root for bundle scanning and zip creation
 
 pub mod error;
+pub mod compression_policy;
 pub mod ignore_rules;
 pub mod manifest;
 pub mod plan;

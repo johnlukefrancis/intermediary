@@ -74,6 +74,7 @@ app/src/tabs/triangle_rain_tab.tsx - Triangle Rain project tab with file lists (
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
+crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
 crates/im_bundle/src/ignore_rules.rs - Always-ignored file and directory names for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation

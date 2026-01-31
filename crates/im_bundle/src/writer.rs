@@ -8,13 +8,15 @@ use std::time::Instant;
 use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 
+use crate::compression_policy::compression_method_for;
 use crate::error::{BundleError, Result};
 use crate::manifest::build_manifest;
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
 use crate::scanner::{scan_bundle, ScanEntry};
 
-const BUFFER_SIZE: usize = 64 * 1024;
+const BUFFER_SIZE: usize = 256 * 1024;
+const OUTPUT_BUFFER_SIZE: usize = 256 * 1024;
 const MANIFEST_NAME: &str = "INTERMEDIARY_MANIFEST.json";
 const COMPRESSION_LEVEL: i64 = 6;
 
@@ -63,10 +65,10 @@ fn write_zip(
         }
     })?;
 
-    let writer = BufWriter::new(output_file);
+    let writer = BufWriter::with_capacity(OUTPUT_BUFFER_SIZE, output_file);
     let mut zip = zip::ZipWriter::new(writer);
 
-    let options = SimpleFileOptions::default()
+    let manifest_options = SimpleFileOptions::default()
         .compression_method(CompressionMethod::Deflated)
         .compression_level(Some(COMPRESSION_LEVEL));
 
@@ -79,7 +81,6 @@ fn write_zip(
         bytes_copied += write_entry(
             &mut zip,
             entry,
-            options,
             &mut buffer,
             progress,
             files_done,
@@ -97,7 +98,8 @@ fn write_zip(
         entries.len() as u64 + 1,
     )?;
 
-    zip.start_file(MANIFEST_NAME, options).map_err(|source| BundleError::ArchiveWriteFailed {
+    zip.start_file(MANIFEST_NAME, manifest_options)
+        .map_err(|source| BundleError::ArchiveWriteFailed {
         archive_path: MANIFEST_NAME.to_string(),
         source,
     })?;
@@ -128,7 +130,6 @@ fn write_zip(
 fn write_entry(
     zip: &mut zip::ZipWriter<BufWriter<File>>,
     entry: &ScanEntry,
-    options: SimpleFileOptions,
     buffer: &mut [u8],
     progress: &mut ProgressEmitter,
     files_done: u64,
@@ -150,7 +151,10 @@ fn write_entry(
         })?;
     let mut reader = BufReader::new(source_file).take(current_bytes_total);
 
-    zip.start_file(&entry.archive_path, options).map_err(|source| BundleError::ArchiveWriteFailed {
+    let entry_options = build_entry_options(&entry.archive_path, current_bytes_total);
+
+    zip.start_file(&entry.archive_path, entry_options)
+        .map_err(|source| BundleError::ArchiveWriteFailed {
         archive_path: entry.archive_path.clone(),
         source,
     })?;
@@ -205,6 +209,15 @@ fn write_entry(
     );
 
     Ok(total)
+}
+
+fn build_entry_options(archive_path: &str, size_bytes: u64) -> SimpleFileOptions {
+    let method = compression_method_for(archive_path, size_bytes);
+    let mut options = SimpleFileOptions::default().compression_method(method);
+    if method == CompressionMethod::Deflated {
+        options = options.compression_level(Some(COMPRESSION_LEVEL));
+    }
+    options
 }
 
 fn build_manifest_json(

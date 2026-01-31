@@ -286,6 +286,10 @@
       "summary": "CLI entry point for im_bundle - scans and writes bundle zip"
     },
     {
+      "path": "crates/im_bundle/src/compression_policy.rs",
+      "summary": "Compression policy for bundle entries based on extension and size"
+    },
+    {
       "path": "crates/im_bundle/src/error.rs",
       "summary": "Error types for bundle scanning and zip writing"
     },
