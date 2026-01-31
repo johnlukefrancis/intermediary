@@ -55,16 +55,16 @@ app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/ids.ts - Shared identifiers for tabs and worktrees
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
-app/src/styles/badges.css - Unified badge primitive for status indicators and labels
-app/src/styles/bundle_column.css - Styles for bundle column components
+app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
+app/src/styles/bundle_column.css - Hardware-style bundle column with segmented controls and command buttons
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
-app/src/styles/file_row.css - Styles for file row component with glass grab chip
+app/src/styles/file_row.css - Hardware-style file row with left rail, state marker, and etched grip handle
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
-app/src/styles/panels.css - Modular deck panel surfaces with framed edges, corner brackets, and etched headers
+app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar command strip with LED indicators and instrument typography
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels

@@ -211,11 +211,11 @@
     },
     {
       "path": "app/src/styles/badges.css",
-      "summary": "Unified badge primitive for status indicators and labels"
+      "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]"
     },
     {
       "path": "app/src/styles/bundle_column.css",
-      "summary": "Styles for bundle column components"
+      "summary": "Hardware-style bundle column with segmented controls and command buttons"
     },
     {
       "path": "app/src/styles/chrome.css",
@@ -235,7 +235,7 @@
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "Styles for file row component with glass grab chip"
+      "summary": "Hardware-style file row with left rail, state marker, and etched grip handle"
     },
     {
       "path": "app/src/styles/main.css",
@@ -247,7 +247,7 @@
     },
     {
       "path": "app/src/styles/panels.css",
-      "summary": "Modular deck panel surfaces with framed edges, corner brackets, and etched headers"
+      "summary": "Modular deck panel surfaces with framed edges and etched headers"
     },
     {
       "path": "app/src/styles/scrollbars.css",

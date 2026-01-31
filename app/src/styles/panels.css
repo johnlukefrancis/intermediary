@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/panels.css
- * Description: Modular deck panel surfaces with framed edges, corner brackets, and etched headers
+ * Description: Modular deck panel surfaces with framed edges and etched headers
  */
 
 /* ===== PANEL SURFACE (Module Frame) ===== */
@@ -28,45 +28,6 @@
     var(--shadow-drop-sm);
   border-radius: var(--radius-deck-md);
   overflow: hidden;
-}
-
-/* ===== CORNER BRACKETS (Bottom Pair) ===== */
-/* Bottom-left bracket */
-.panel::before {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 4px;
-  width: 10px;
-  height: 10px;
-  border-bottom: 1px solid var(--color-border);
-  border-left: 1px solid var(--color-border);
-  pointer-events: none;
-  z-index: 3;
-  transition: border-color var(--duration-normal) var(--ease-out);
-}
-
-/* Bottom-right bracket */
-.panel::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 10px;
-  height: 10px;
-  border-bottom: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  pointer-events: none;
-  z-index: 3;
-  transition: border-color var(--duration-normal) var(--ease-out);
-}
-
-/* Corner bracket hover/focus glow */
-.panel:hover::before,
-.panel:hover::after,
-.panel:focus-within::before,
-.panel:focus-within::after {
-  border-color: var(--color-accent-soft);
 }
 
 /* ===== PANEL HEADER (Etched with Brackets) ===== */
