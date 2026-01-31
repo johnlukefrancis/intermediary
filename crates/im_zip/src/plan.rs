@@ -57,6 +57,20 @@ impl ZipPlan {
 
 /// Reject archive paths that could escape the archive root.
 fn validate_archive_path(archive_path: &str) -> Result<()> {
+    if archive_path.is_empty() {
+        return Err(ZipError::InvalidArchivePath {
+            archive_path: archive_path.to_string(),
+            reason: "archive path cannot be empty",
+        });
+    }
+
+    if archive_path.contains('\\') {
+        return Err(ZipError::InvalidArchivePath {
+            archive_path: archive_path.to_string(),
+            reason: "archive path must use forward slashes",
+        });
+    }
+
     // Reject leading slash (absolute path)
     if archive_path.starts_with('/') || archive_path.starts_with('\\') {
         return Err(ZipError::PathTraversal {
@@ -164,5 +178,21 @@ mod tests {
 
         let result = ZipPlan::load(file.path());
         assert!(matches!(result, Err(ZipError::PathTraversal { .. })));
+    }
+
+    #[test]
+    fn reject_backslash_archive_path() {
+        let json = r#"{
+            "outputPath": "/tmp/test.zip",
+            "entries": [
+                {"sourcePath": "/src/file.txt", "archivePath": "dir\\file.txt"}
+            ]
+        }"#;
+
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(json.as_bytes()).unwrap();
+
+        let result = ZipPlan::load(file.path());
+        assert!(matches!(result, Err(ZipError::InvalidArchivePath { .. })));
     }
 }

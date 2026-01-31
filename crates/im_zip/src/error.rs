@@ -23,6 +23,13 @@ pub enum ZipError {
     #[error("path traversal rejected in archive path: {archive_path}")]
     PathTraversal { archive_path: String },
 
+    /// Archive path is invalid for zip entries.
+    #[error("invalid archive path '{archive_path}': {reason}")]
+    InvalidArchivePath {
+        archive_path: String,
+        reason: &'static str,
+    },
+
     /// Failed to create the output zip file.
     #[error("failed to create output file at {path}: {source}")]
     OutputCreateFailed {

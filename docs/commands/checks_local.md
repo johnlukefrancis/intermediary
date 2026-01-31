@@ -31,3 +31,8 @@ To check only the zip library:
 ```bash
 cargo check -p im_zip
 ```
+
+To run zip library unit tests:
+```bash
+cargo test -p im_zip
+```
