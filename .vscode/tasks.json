@@ -109,7 +109,7 @@
         "--",
         "bash",
         "-lc",
-        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; if [ -s \"/home/johnf/.nvm/nvm.sh\" ]; then . \"/home/johnf/.nvm/nvm.sh\"; else echo \"nvm.sh not found at /home/johnf/.nvm\" >&2; exit 1; fi; nvm use 20 >/dev/null; corepack enable; cd /home/johnf/code/intermediary && pnpm run agent:dev"
+        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; set -e; if [ -s \"/home/johnf/.nvm/nvm.sh\" ]; then . \"/home/johnf/.nvm/nvm.sh\"; else echo \"nvm.sh not found at /home/johnf/.nvm\" >&2; exit 1; fi; if [ -s \"/home/johnf/.cargo/env\" ]; then . \"/home/johnf/.cargo/env\"; else echo \"cargo env not found at /home/johnf/.cargo/env\" >&2; exit 1; fi; nvm use 20 >/dev/null; corepack enable; cd /home/johnf/code/intermediary; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; cargo build -p im_bundle; if [ ! -x \"/home/johnf/code/intermediary/target/debug/im_bundle_cli\" ]; then echo \"im_bundle_cli missing after build\" >&2; exit 1; fi; export IM_BUNDLE_CLI_PATH=\"/home/johnf/code/intermediary/target/debug/im_bundle_cli\"; pnpm run agent:dev"
       ],
       "isBackground": true,
       "problemMatcher": [
