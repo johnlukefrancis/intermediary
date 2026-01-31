@@ -26,18 +26,30 @@ pub enum ProgressMessage {
 
 pub struct ProgressEmitter {
     last_emit: Option<Instant>,
+    last_phase: Option<&'static str>,
 }
 
 impl ProgressEmitter {
     pub fn new() -> Self {
-        Self { last_emit: None }
+        Self {
+            last_emit: None,
+            last_phase: None,
+        }
     }
 
     pub fn emit_progress(&mut self, phase: &'static str, files_done: u64, files_total: u64) {
         let now = Instant::now();
-        let should_emit = match self.last_emit {
+        let phase_changed = match self.last_phase {
             None => true,
-            Some(last) => now.duration_since(last) >= THROTTLE_INTERVAL,
+            Some(last_phase) => last_phase != phase,
+        };
+        let should_emit = if phase_changed {
+            true
+        } else {
+            match self.last_emit {
+                None => true,
+                Some(last) => now.duration_since(last) >= THROTTLE_INTERVAL,
+            }
         };
 
         if should_emit {
@@ -48,6 +60,7 @@ impl ProgressEmitter {
             };
             emit_json(&msg);
             self.last_emit = Some(now);
+            self.last_phase = Some(phase);
         }
     }
 
@@ -60,6 +73,7 @@ impl ProgressEmitter {
         };
         emit_json(&msg);
         self.last_emit = None;
+        self.last_phase = None;
     }
 }
 
