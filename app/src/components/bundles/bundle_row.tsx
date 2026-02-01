@@ -36,6 +36,11 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
   const handleMouseDown = useCallback(
     async (e: React.MouseEvent) => {
       if (e.button !== 0) return;
+
+      // Copy context text to clipboard for pasting after drop
+      const contextText = `Latest bundle: ${bundle.fileName}`;
+      void navigator.clipboard.writeText(contextText);
+
       setIsDragging(true);
       try {
         await onDragStart(bundle.windowsPath);
@@ -43,14 +48,14 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
         setIsDragging(false);
       }
     },
-    [bundle.windowsPath, onDragStart]
+    [bundle.windowsPath, bundle.fileName, onDragStart]
   );
 
   return (
     <div
       className={`bundle-row ${isDragging ? "dragging" : ""}`}
       onMouseDown={(e) => void handleMouseDown(e)}
-      title="Drag to share"
+      title="Drag to share (filename copied to clipboard)"
     >
       <span className={`bundle-state-marker${bundle.isLatestAlias ? " bundle-state-marker--latest" : ""}`} />
       <div className="bundle-info">
