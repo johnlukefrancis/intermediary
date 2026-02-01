@@ -50,7 +50,14 @@ app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and messa
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
-app/src/shared/config.ts - AppConfig Zod schema and types
+app/src/shared/config.ts - Shared config barrel exports
+app/src/shared/config/app_config.ts - AppConfig schema, types, and defaults
+app/src/shared/config/bundle_presets.ts - Bundle preset schema, type, and defaults
+app/src/shared/config/glob_defaults.ts - Default glob patterns for docs, code, and ignores
+app/src/shared/config/persisted_config_migrations.ts - Persisted config migrations and legacy normalization
+app/src/shared/config/persisted_config.ts - Persisted config schema, types, and defaults
+app/src/shared/config/repo_config.ts - RepoConfig schema and type
+app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling

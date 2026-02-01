@@ -191,7 +191,35 @@
     },
     {
       "path": "app/src/shared/config.ts",
-      "summary": "AppConfig Zod schema and types"
+      "summary": "Shared config barrel exports"
+    },
+    {
+      "path": "app/src/shared/config/app_config.ts",
+      "summary": "AppConfig schema, types, and defaults"
+    },
+    {
+      "path": "app/src/shared/config/bundle_presets.ts",
+      "summary": "Bundle preset schema, type, and defaults"
+    },
+    {
+      "path": "app/src/shared/config/glob_defaults.ts",
+      "summary": "Default glob patterns for docs, code, and ignores"
+    },
+    {
+      "path": "app/src/shared/config/persisted_config_migrations.ts",
+      "summary": "Persisted config migrations and legacy normalization"
+    },
+    {
+      "path": "app/src/shared/config/persisted_config.ts",
+      "summary": "Persisted config schema, types, and defaults"
+    },
+    {
+      "path": "app/src/shared/config/repo_config.ts",
+      "summary": "RepoConfig schema and type"
+    },
+    {
+      "path": "app/src/shared/config/version.ts",
+      "summary": "Persisted config schema version"
     },
     {
       "path": "app/src/shared/global_excludes.ts",
