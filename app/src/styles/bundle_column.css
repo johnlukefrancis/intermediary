@@ -24,7 +24,7 @@
   display: flex;
   gap: 0;
   padding: 0;
-  background: var(--color-bg-surface);
+  background: var(--glass-vintage-content);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-sm);
   overflow: hidden;
@@ -84,16 +84,14 @@
   outline-offset: 2px;
 }
 
-/* ===== SELECTION PANEL ===== */
+/* ===== SELECTION PANEL (Vintage Glass) ===== */
 .bundle-selection-panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-3);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur-sm));
-  -webkit-backdrop-filter: blur(var(--blur-sm));
-  border: 1px solid var(--glass-border);
+  background: transparent;
+  border: 1px solid var(--glass-vintage-edge);
   border-radius: var(--radius-deck-sm);
   box-shadow: var(--shadow-inset-subtle);
   /* Grow to fill available space, shrink if needed, scroll internally */
@@ -148,7 +146,7 @@
 
 .dir-action-btn {
   padding: 2px var(--space-2);
-  background: var(--color-bg-surface);
+  background: var(--glass-vintage-header);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-xs);
   font-family: var(--font-mono);
@@ -186,7 +184,7 @@
   gap: var(--space-2);
   overflow-y: auto;
   padding: var(--space-2);
-  background: var(--color-bg-surface);
+  background: var(--glass-vintage-content);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-deck-xs);
   /* Grow to fill available space, scroll when content overflows */

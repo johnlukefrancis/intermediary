@@ -121,6 +121,14 @@
   --glass-border: var(--theme-glass-border);
   --glass-blur: var(--blur-lg);
 
+  /* Vintage glass (transparent panels with dithering) */
+  --glass-vintage-bg: var(--theme-glass-vintage-bg);
+  --glass-vintage-header: var(--theme-glass-vintage-header);
+  --glass-vintage-content: var(--theme-glass-vintage-content);
+  --glass-vintage-reflection: var(--theme-glass-vintage-reflection);
+  --glass-vintage-edge: var(--theme-glass-vintage-edge);
+  --glass-vintage-dither: var(--theme-glass-vintage-dither);
+
   /* Effect colors */
   --color-gradient-top: var(--theme-gradient-top);
   --color-gradient-bottom: var(--theme-gradient-bottom);

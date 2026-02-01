@@ -3,26 +3,18 @@
  * Description: Modular deck panel surfaces with framed edges and etched headers
  */
 
-/* ===== PANEL SURFACE (Module Frame) ===== */
+/* ===== PANEL SURFACE (Vintage Glass Frame with Dithering) ===== */
 .panel {
   position: relative;
   display: flex;
   flex-direction: column;
-  background:
-    /* Scanline texture (behind content, not over text) */
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      var(--color-scanline) 2px,
-      var(--color-scanline) 4px
-    ),
-    var(--glass-bg);
+  background: var(--glass-vintage-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
-  /* Multi-layer frame: outer stroke + inner highlight + drop shadow */
+  border: 1px solid var(--glass-vintage-edge);
+  /* Multi-layer frame: outer stroke + inner highlight + top reflection + drop shadow */
   box-shadow:
+    inset 0 1px 0 0 var(--glass-vintage-reflection),
     inset 0 0 0 var(--deck-stroke-hairline) var(--deck-frame-outer),
     inset 0 0 0 calc(var(--deck-stroke-hairline) + 1px) var(--deck-frame-inner),
     var(--shadow-drop-sm);
@@ -30,7 +22,20 @@
   overflow: hidden;
 }
 
-/* ===== PANEL HEADER (Etched with Brackets) ===== */
+/* Dither overlay - breaks up blobby blur with noise grain */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: url("../../assets/noise.png");
+  background-size: 128px 128px;
+  opacity: var(--glass-vintage-dither);
+  border-radius: inherit;
+}
+
+/* ===== PANEL HEADER (Etched with Brackets, Vintage Glass) ===== */
 .panel-header {
   display: flex;
   align-items: center;
@@ -39,8 +44,10 @@
   top: 0;
   z-index: 2;
   padding: var(--space-3) var(--space-4);
-  background: var(--color-bg-elevated);
+  background: var(--glass-vintage-header);
   border-bottom: 1px solid var(--color-border-subtle);
+  /* Subtle bottom glow for separation */
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* Bracketed title [ DOCS ] — h2 for a11y, reset browser defaults */
@@ -72,16 +79,16 @@
   min-width: 1em;
 }
 
-/* ===== PANEL CONTENT ===== */
+/* ===== PANEL CONTENT (Vintage Glass) ===== */
 .panel-content {
   position: relative;
-  z-index: 0;
+  z-index: 1;
   flex: 1;
   padding: var(--space-3);
   overflow-y: auto;
   overflow-x: hidden;
-  /* Solid background ensures text is crisp over scanlines */
-  background: var(--color-bg-surface);
+  /* Semi-transparent - substrate visible but not blobby */
+  background: var(--glass-vintage-content);
 }
 
 /* When panel content only contains an empty state, center it */

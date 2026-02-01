@@ -49,6 +49,14 @@
   --theme-glass-bg: rgba(10, 10, 16, 0.85);
   --theme-glass-border: rgba(255, 255, 255, 0.05);
 
+  /* ===== VINTAGE GLASS (More opaque to reduce blobby blur) ===== */
+  --theme-glass-vintage-bg: rgba(8, 8, 14, 0.25);
+  --theme-glass-vintage-header: rgba(10, 10, 18, 0.50);
+  --theme-glass-vintage-content: rgba(6, 6, 12, 0.25);
+  --theme-glass-vintage-reflection: rgba(255, 255, 255, 0.03);
+  --theme-glass-vintage-edge: rgba(255, 255, 255, 0.08);
+  --theme-glass-vintage-dither: 0.12;
+
   /* ===== EFFECT COLORS ===== */
   --theme-gradient-top: rgba(20, 20, 35, 0.5);
   --theme-gradient-bottom: #030305;
