@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-01-31
+Updated on: 2026-02-01
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -41,7 +41,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* **v0:** All repos must be in the **WSL Linux filesystem** (e.g., `/home/<user>/code`). Windows-native paths are a later enhancement.
+* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Windows/UNC paths are converted to WSL `/mnt/<drive>/...` paths for the agent.
 * Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
@@ -117,7 +117,7 @@ Users add and remove repositories via the UI:
 Each repo has:
 
 * `repoId`, `label` (auto-generated from folder name, editable)
-* `wslPath`: **WSL paths only** for v0 (Windows-native paths are a later enhancement)
+* `wslPath`: WSL paths (Windows/UNC selections are converted to WSL `/mnt/<drive>/...` for the agent)
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
@@ -331,7 +331,7 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 
 The following assumptions are locked for v0:
 
-* **Repo location:** All repos must be in WSL Linux FS (user adds via directory picker). The WSL agent is required.
+* **Repo location:** Repos may be in WSL Linux FS or on Windows drives (user adds via directory picker). The WSL agent is required.
 * **Initial repo set:** Empty by default. Users add repos via the "+" button in the tab bar.
 * **Grouped repos:** Repos with matching `groupId` share a tab with a dropdown. Useful for worktrees of the same project.
 * **Bundle selection UI:** Top-level folders only + "include root files" toggle (default ON). No nested subfolder selection in v0.

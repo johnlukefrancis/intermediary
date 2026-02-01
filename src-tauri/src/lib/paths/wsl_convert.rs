@@ -5,6 +5,11 @@
 ///
 /// Example: `C:\Users\john\AppData` -> `/mnt/c/Users/john/AppData`
 pub fn windows_to_wsl_path(windows_path: &str) -> Option<String> {
+    // Already a WSL/Linux path.
+    if windows_path.starts_with('/') {
+        return Some(windows_path.replace('\\', "/"));
+    }
+
     // Handle UNC paths like \\wsl$\Ubuntu\...
     if windows_path.starts_with(r"\\wsl$\") || windows_path.starts_with(r"\\wsl.localhost\") {
         // Extract path after distro name
@@ -98,6 +103,10 @@ mod tests {
         assert_eq!(
             windows_to_wsl_path("C:/"),
             Some("/mnt/c".to_string())
+        );
+        assert_eq!(
+            windows_to_wsl_path("/home/john/code/project"),
+            Some("/home/john/code/project".to_string())
         );
     }
 

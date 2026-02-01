@@ -2,6 +2,7 @@
 // Description: Config file I/O with atomic writes and error handling
 
 use crate::config::types::{PersistedConfig, CONFIG_VERSION};
+use crate::paths::wsl_convert::windows_to_wsl_path;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -70,9 +71,14 @@ pub fn load_from_disk(path: &Path) -> Result<LoadResult, ConfigError> {
     }
 
     // Apply migrations if needed
-    let migration_applied = config.config_version < CONFIG_VERSION;
+    let mut migration_applied = config.config_version < CONFIG_VERSION;
     if migration_applied {
         config = migrate_config(config);
+    }
+
+    // Normalize repo paths to WSL form (accept Windows/UNC inputs).
+    if normalize_repo_paths(&mut config) {
+        migration_applied = true;
     }
 
     Ok(LoadResult {
@@ -129,6 +135,19 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Update version to current
     config.config_version = CONFIG_VERSION;
     config
+}
+
+fn normalize_repo_paths(config: &mut PersistedConfig) -> bool {
+    let mut changed = false;
+    for repo in &mut config.repos {
+        if let Some(normalized) = windows_to_wsl_path(&repo.wsl_path) {
+            if normalized != repo.wsl_path {
+                repo.wsl_path = normalized;
+                changed = true;
+            }
+        }
+    }
+    changed
 }
 
 #[cfg(test)]

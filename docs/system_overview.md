@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-01-31
+Updated on: 2026-02-01
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -48,7 +48,7 @@ Intermediary uses a **two-component architecture**:
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                   Watched Repos                     │    │
-│  │     (User-configured WSL paths)                     │    │
+│  │     (User-configured WSL/Windows paths)             │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -123,7 +123,7 @@ Config is loaded on app startup via Tauri command and saved with debounce (500ms
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
 
-**v0 constraint:** All repos must be in WSL Linux FS (users add via the "+" button in the tab bar), so the WSL agent is required for v0. Windows-native repo support (where the agent would not be needed) is a later enhancement.
+**v0 constraint:** Repos may be in WSL Linux FS or on Windows drives (users add via the "+" button in the tab bar), and Windows/UNC paths are converted to WSL `/mnt/<drive>/...` paths for the agent. The WSL agent is required for v0.
 
 ## Directory Structure
 
