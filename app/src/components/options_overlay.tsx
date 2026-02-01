@@ -57,12 +57,12 @@ export function OptionsOverlay({
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [advancedSectionsOpen, setAdvancedSectionsOpen] = useState({
-    directories: true,
-    dirSuffixes: true,
-    fileNames: true,
-    fileSuffixes: true,
-    extensions: true,
-    patterns: true,
+    directories: false,
+    dirSuffixes: false,
+    fileNames: false,
+    fileSuffixes: false,
+    extensions: false,
+    patterns: false,
   });
 
   const toggleAdvanced = useCallback(() => {
@@ -352,16 +352,14 @@ export function OptionsOverlay({
               Recommended excludes
             </span>
           </label>
-        </div>
 
-        <div className="options-section">
           <button
             type="button"
             className="options-section-toggle"
             onClick={toggleAdvanced}
             aria-expanded={advancedOpen}
           >
-            <span className="options-section-title">Advanced</span>
+            <span className="options-section-title">Exclude Presets</span>
             <span className={`options-chevron ${advancedOpen ? "open" : ""}`}>
               ▸
             </span>

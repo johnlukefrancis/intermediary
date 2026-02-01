@@ -109,20 +109,23 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0;
+  padding: var(--space-2) 0;
   background: transparent;
   border: none;
   cursor: pointer;
   color: inherit;
 }
 
+/* Make main Advanced toggle more prominent than sub-section toggles */
 .options-section-toggle .options-section-title {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
   margin-bottom: 0;
   transition: color var(--duration-normal) var(--ease-out);
 }
 
 .options-section-toggle:hover .options-section-title {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .options-section-toggle:focus-visible {
@@ -147,12 +150,28 @@
 
 .options-advanced-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-  gap: var(--space-2) var(--space-4);
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  margin-top: var(--space-2);
+  gap: var(--space-1) var(--space-3);
+}
+
+/* Tighter padding for checkboxes in grid context */
+.options-advanced-grid .options-checkbox-row {
+  padding: var(--space-1) 0;
+}
+
+/* Visual separation between sub-groups */
+.options-advanced-group {
+  padding-top: var(--space-3);
+}
+
+.options-advanced-group:first-child {
+  padding-top: 0;
 }
 
 .options-advanced-group + .options-advanced-group {
-  margin-top: var(--space-3);
+  margin-top: 0;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .options-advanced-title {
@@ -173,6 +192,16 @@
   border: none;
   padding: 0;
   cursor: pointer;
+}
+
+/* Keep sub-section toggles subordinate to main Advanced toggle */
+.options-advanced-toggle .options-advanced-title {
+  margin-bottom: 0;
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.options-advanced-toggle:hover .options-advanced-title {
+  color: var(--color-text-secondary);
 }
 
 .options-advanced-toggle:focus-visible {
