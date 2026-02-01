@@ -66,11 +66,9 @@
   background: var(--color-bg-hover-subtle);
 }
 
-/* Active state: latched with brackets */
+/* Active state: latched with brackets, no background box */
 .tab-button.active {
   color: var(--color-accent);
-  background: var(--color-bg-active);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .tab-button.active .tab-label::before,
