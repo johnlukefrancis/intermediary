@@ -2,30 +2,92 @@
 // Description: Always-ignored file and directory names for bundle scanning
 
 const IGNORED_DIRS: &[&str] = &[
-    "node_modules",
-    ".git",
-    "dist",
-    "build",
-    "target",
-    ".next",
     ".cache",
-    "logs",
-    ".turbo",
-    ".vercel",
-    "__pycache__",
+    ".git",
+    ".huggingface",
     ".mypy_cache",
+    ".next",
+    ".nyc_output",
+    ".nuxt",
+    ".parcel-cache",
     ".pytest_cache",
+    ".ruff_cache",
+    ".svelte-kit",
+    ".tox",
+    ".turbo",
+    ".venv",
+    ".gradle",
+    ".hypothesis",
+    ".nox",
+    "__pycache__",
+    "build",
+    "checkpoints",
     "coverage",
+    "dist",
+    "env",
+    "huggingface_hub",
+    "logs",
+    "mlruns",
+    "models",
+    "node_modules",
+    "out",
+    "target",
+    "venv",
+    "wandb",
+    "weights",
 ];
 
-const IGNORED_FILES: &[&str] = &[".DS_Store", "Thumbs.db", ".env", ".env.local"];
+const IGNORED_DIR_SUFFIXES: &[&str] = &[".egg-info"];
+
+const IGNORED_FILES: &[&str] = &[
+    ".DS_Store",
+    ".coverage",
+    ".env",
+    ".env.local",
+    ".eslintcache",
+    "Thumbs.db",
+    "thumbs.db",
+];
+
+const IGNORED_FILE_SUFFIXES: &[&str] = &[
+    ".bak",
+    ".bin",
+    ".ckpt",
+    ".h5",
+    ".keras",
+    ".log",
+    ".onnx",
+    ".old",
+    ".orig",
+    ".pb",
+    ".pt",
+    ".pth",
+    ".pyc",
+    ".pyd",
+    ".pyo",
+    ".safetensors",
+    ".swo",
+    ".swp",
+    ".tmp",
+    "~",
+];
 
 pub fn is_ignored_dir(name: &str) -> bool {
-    IGNORED_DIRS.contains(&name)
+    if IGNORED_DIRS.contains(&name) {
+        return true;
+    }
+    IGNORED_DIR_SUFFIXES
+        .iter()
+        .any(|suffix| name.ends_with(suffix))
 }
 
 pub fn is_ignored_file(name: &str) -> bool {
-    IGNORED_FILES.contains(&name)
+    if IGNORED_FILES.contains(&name) {
+        return true;
+    }
+    IGNORED_FILE_SUFFIXES
+        .iter()
+        .any(|suffix| name.ends_with(suffix))
 }
 
 #[cfg(test)]
@@ -36,7 +98,12 @@ mod tests {
     fn ignore_rules_match() {
         assert!(is_ignored_dir("node_modules"));
         assert!(is_ignored_dir(".git"));
+        assert!(is_ignored_dir("package.egg-info"));
+        assert!(is_ignored_dir("wandb"));
         assert!(is_ignored_file(".env"));
+        assert!(is_ignored_file("debug.log"));
+        assert!(is_ignored_file("module.pyc"));
+        assert!(is_ignored_file("model.safetensors"));
         assert!(!is_ignored_file("README.md"));
     }
 }

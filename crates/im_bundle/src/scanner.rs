@@ -113,9 +113,7 @@ fn validate_top_level_dirs(repo_root: &Path, dirs: &[String]) -> Result<Vec<Stri
             continue;
         }
         if is_ignored_dir(trimmed) {
-            return Err(BundleError::TopLevelDirIgnored {
-                dir: trimmed.to_string(),
-            });
+            continue;
         }
         let dir_path = repo_root.join(trimmed);
         if !dir_path.exists() {
@@ -312,5 +310,38 @@ mod tests {
         let mut progress = ProgressEmitter::new();
         let result = scan_bundle(&plan, &mut progress);
         assert!(matches!(result, Err(BundleError::InvalidPlan(_))));
+    }
+
+    #[test]
+    fn ignores_top_level_ignored_dirs_without_error() {
+        let dir = tempdir().unwrap();
+        let repo_root = dir.path();
+
+        std::fs::create_dir(repo_root.join("app")).unwrap();
+        std::fs::create_dir(repo_root.join("node_modules")).unwrap();
+        std::fs::write(repo_root.join("app/index.ts"), "code").unwrap();
+
+        let plan = BundlePlan {
+            output_path: repo_root.join("out.zip"),
+            repo_root: repo_root.to_path_buf(),
+            repo_id: "repo".to_string(),
+            preset_id: "full".to_string(),
+            preset_name: "Full".to_string(),
+            selection: BundleSelection {
+                include_root: false,
+                top_level_dirs: vec!["app".to_string(), "node_modules".to_string()],
+                excluded_subdirs: vec![],
+            },
+            git: BundleGitInfo {
+                head_sha: None,
+                short_sha: None,
+                branch: None,
+            },
+            built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+        };
+
+        let mut progress = ProgressEmitter::new();
+        let result = scan_bundle(&plan, &mut progress).unwrap();
+        assert_eq!(result.top_level_dirs_included, vec!["app".to_string()]);
     }
 }
