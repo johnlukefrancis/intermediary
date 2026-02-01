@@ -9,6 +9,11 @@ import {
   GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
   GLOBAL_EXCLUDE_RECOMMENDED_FILES,
   GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS,
+  GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS,
+  GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS,
+  GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS,
+  GLOBAL_EXCLUDE_HF_CACHE_PATTERNS,
+  GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS,
   GlobalExcludesSchema,
 } from "./global_excludes.js";
 
@@ -286,11 +291,41 @@ function migrateConfig(config: PersistedConfig): PersistedConfig {
 function normalizeLegacyGlobalExcludes(input: unknown): unknown {
   if (!input || typeof input !== "object") return input;
   const raw = input as Record<string, unknown>;
+  const configVersion =
+    typeof raw.configVersion === "number" ? raw.configVersion : null;
+  if (configVersion !== null && configVersion >= CONFIG_VERSION) {
+    return input;
+  }
   const globalExcludes = raw.globalExcludes;
   if (!globalExcludes || typeof globalExcludes !== "object") {
     return input;
   }
   const rawExcludes = globalExcludes as Record<string, unknown>;
+  const presets =
+    rawExcludes.presets && typeof rawExcludes.presets === "object"
+      ? (rawExcludes.presets as Record<string, unknown>)
+      : null;
+
+  const presetFlags = {
+    modelWeights: presets?.modelWeights === true,
+    modelFormats: presets?.modelFormats === true,
+    modelDirs: presets?.modelDirs === true,
+    hfCaches: presets?.hfCaches === true,
+    experimentLogs: presets?.experimentLogs === true,
+  };
+  const hasExplicitPresetFlags = presets
+    ? [
+        "modelWeights",
+        "modelFormats",
+        "modelDirs",
+        "hfCaches",
+        "experimentLogs",
+      ].some((key) => key in presets)
+    : false;
+  const legacyMlArtifacts = presets?.mlArtifacts;
+  const useLegacyPresets =
+    hasExplicitPresetFlags || typeof legacyMlArtifacts === "boolean";
+
   const existingDirNames = Array.isArray(rawExcludes.dirNames)
     ? rawExcludes.dirNames.filter((value): value is string => typeof value === "string")
     : [];
@@ -307,21 +342,47 @@ function normalizeLegacyGlobalExcludes(input: unknown): unknown {
     ? rawExcludes.patterns.filter((value): value is string => typeof value === "string")
     : [];
 
-  const mergedDirNames = existingDirNames.length > 0
-    ? existingDirNames
-    : GLOBAL_EXCLUDE_RECOMMENDED_DIRS;
-  const mergedDirSuffixes = existingDirSuffixes.length > 0
-    ? existingDirSuffixes
-    : GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES;
-  const mergedFileNames = existingFileNames.length > 0
-    ? existingFileNames
-    : GLOBAL_EXCLUDE_RECOMMENDED_FILES;
-  const mergedExtensions = existingExtensions.length > 0
-    ? existingExtensions
-    : [...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS, ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES];
-  const mergedPatterns = existingPatterns.length > 0
-    ? existingPatterns
-    : GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS;
+  const mergedDirNames = mergeUnique(
+    GLOBAL_EXCLUDE_RECOMMENDED_DIRS,
+    existingDirNames
+  );
+  const mergedDirSuffixes = mergeUnique(
+    GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES,
+    existingDirSuffixes
+  );
+  const mergedFileNames = mergeUnique(
+    GLOBAL_EXCLUDE_RECOMMENDED_FILES,
+    existingFileNames
+  );
+
+  const mlExtensions: string[] = [];
+  const mlPatterns: string[] = [];
+  if (useLegacyPresets) {
+    const allMlEnabled =
+      typeof legacyMlArtifacts === "boolean" ? legacyMlArtifacts : true;
+    const modelWeights = hasExplicitPresetFlags ? presetFlags.modelWeights : allMlEnabled;
+    const modelFormats = hasExplicitPresetFlags ? presetFlags.modelFormats : allMlEnabled;
+    const modelDirs = hasExplicitPresetFlags ? presetFlags.modelDirs : allMlEnabled;
+    const hfCaches = hasExplicitPresetFlags ? presetFlags.hfCaches : allMlEnabled;
+    const experimentLogs = hasExplicitPresetFlags
+      ? presetFlags.experimentLogs
+      : allMlEnabled;
+    if (modelWeights) mlExtensions.push(...GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS);
+    if (modelFormats) mlExtensions.push(...GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS);
+    if (modelDirs) mlPatterns.push(...GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS);
+    if (hfCaches) mlPatterns.push(...GLOBAL_EXCLUDE_HF_CACHE_PATTERNS);
+    if (experimentLogs) mlPatterns.push(...GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS);
+  } else {
+    mlExtensions.push(...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS);
+    mlPatterns.push(...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS);
+  }
+
+  const mergedExtensions = mergeUnique(
+    GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+    existingExtensions,
+    mlExtensions
+  );
+  const mergedPatterns = mergeUnique(existingPatterns, mlPatterns);
 
   return {
     ...raw,
@@ -334,6 +395,14 @@ function normalizeLegacyGlobalExcludes(input: unknown): unknown {
       patterns: mergedPatterns,
     },
   };
+}
+
+function mergeUnique(...groups: string[][]): string[] {
+  const merged = new Set<string>();
+  groups.forEach((group) => {
+    group.forEach((value) => merged.add(value));
+  });
+  return Array.from(merged);
 }
 
 /**

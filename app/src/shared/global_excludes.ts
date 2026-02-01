@@ -23,6 +23,27 @@ export interface GlobalExcludeExtensionOption {
   label: string;
 }
 
+export const GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS = [
+  ".safetensors",
+  ".ckpt",
+  ".pt",
+  ".pth",
+  ".bin",
+];
+
+export const GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS = [
+  ".onnx",
+  ".pb",
+  ".h5",
+  ".keras",
+];
+
+export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "checkpoints", "weights"];
+
+export const GLOBAL_EXCLUDE_HF_CACHE_PATTERNS = [".huggingface", "huggingface_hub"];
+
+export const GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS = ["wandb", "mlruns", "lightning_logs"];
+
 export interface GlobalExcludeDirOption {
   value: string;
   label: string;
@@ -95,15 +116,14 @@ export const GLOBAL_EXCLUDE_SUFFIX_OPTIONS: GlobalExcludeSuffixOption[] = [
 ];
 
 export const GLOBAL_EXCLUDE_EXTENSION_OPTIONS: GlobalExcludeExtensionOption[] = [
-  { value: ".safetensors", label: ".safetensors" },
-  { value: ".ckpt", label: ".ckpt" },
-  { value: ".pt", label: ".pt" },
-  { value: ".pth", label: ".pth" },
-  { value: ".bin", label: ".bin" },
-  { value: ".onnx", label: ".onnx" },
-  { value: ".pb", label: ".pb" },
-  { value: ".h5", label: ".h5" },
-  { value: ".keras", label: ".keras" },
+  ...GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS.map((value) => ({
+    value,
+    label: value,
+  })),
+  ...GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS.map((value) => ({
+    value,
+    label: value,
+  })),
 ];
 
 export interface GlobalExcludePatternOption {
@@ -112,14 +132,18 @@ export interface GlobalExcludePatternOption {
 }
 
 export const GLOBAL_EXCLUDE_PATTERN_OPTIONS: GlobalExcludePatternOption[] = [
-  { value: "models", label: "models/" },
-  { value: "checkpoints", label: "checkpoints/" },
-  { value: "weights", label: "weights/" },
-  { value: ".huggingface", label: ".huggingface/" },
-  { value: "huggingface_hub", label: "huggingface_hub/" },
-  { value: "wandb", label: "wandb/" },
-  { value: "mlruns", label: "mlruns/" },
-  { value: "lightning_logs", label: "lightning_logs/" },
+  ...GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS.map((value) => ({
+    value,
+    label: `${value}/`,
+  })),
+  ...GLOBAL_EXCLUDE_HF_CACHE_PATTERNS.map((value) => ({
+    value,
+    label: `${value}/`,
+  })),
+  ...GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS.map((value) => ({
+    value,
+    label: `${value}/`,
+  })),
 ];
 
 export const GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS = GLOBAL_EXCLUDE_EXTENSION_OPTIONS.map(

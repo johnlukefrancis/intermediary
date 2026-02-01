@@ -33,6 +33,7 @@ interface OptionsOverlayProps {
 function normalizeExtension(value: string): string {
   const trimmed = value.trim().toLowerCase();
   if (trimmed.length === 0) return "";
+  if (trimmed === "~") return "~";
   return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
 }
 
