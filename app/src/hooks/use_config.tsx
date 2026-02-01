@@ -94,24 +94,23 @@ export function ConfigProvider({
     }, SAVE_DEBOUNCE_MS);
   }, []);
 
-  // Save immediately (for beforeunload)
-  const saveConfigImmediate = useCallback(() => {
-    if (!isDirtyRef.current) return;
-
-    // Clear pending debounced save
+  const saveConfigNow = useCallback((newConfig: PersistedConfig) => {
     if (saveTimeoutRef.current !== null) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
-
     isDirtyRef.current = false;
-
-    // Synchronous save attempt via sendBeacon or blocking invoke
-    // Note: invoke is async but we try anyway on unload
-    invoke("save_config", { config: configRef.current }).catch(() => {
-      // Ignore errors on unload
+    configRef.current = newConfig;
+    invoke("save_config", { config: newConfig }).catch((err: unknown) => {
+      console.error("[ConfigProvider] Failed to save config:", err);
     });
   }, []);
+
+  // Save immediately (for beforeunload)
+  const saveConfigImmediate = useCallback(() => {
+    if (!isDirtyRef.current) return;
+    saveConfigNow(configRef.current);
+  }, [saveConfigNow]);
 
   // Load config on mount
   useEffect(() => {
@@ -214,11 +213,12 @@ export function ConfigProvider({
             },
           },
         };
-        saveConfig(next);
+        // Persist bundle selections immediately and cancel pending saves.
+        saveConfigNow(next);
         return next;
       });
     },
-    [saveConfig]
+    [saveConfigNow]
   );
 
   const setGlobalExcludes = useCallback(
