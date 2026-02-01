@@ -15,7 +15,7 @@ pub struct BundleSelection {
     pub excluded_subdirs: Vec<String>,
 }
 
-/// Global excludes for bundle building (user-configurable, supplements hardcoded excludes)
+/// Global excludes for bundle building (user-configurable)
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GlobalExcludes {
@@ -61,7 +61,7 @@ pub struct BundlePlan {
     pub selection: BundleSelection,
     pub git: BundleGitInfo,
     pub built_at_iso: String,
-    /// User-configurable global excludes (supplements hardcoded excludes)
+    /// User-configurable global excludes
     #[serde(default)]
     pub global_excludes: GlobalExcludes,
 }

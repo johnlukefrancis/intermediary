@@ -25,10 +25,21 @@
 /* ===== SUBSTRATE (custom texture + dot grid) ===== */
 /* Sits BEHIND content at z-index: 0 - no text fuzzing */
 /* Swap texture by replacing app/assets/noise.png */
+
+@keyframes substrate-drift {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-256px); }
+}
+
+@keyframes substrate-breathe {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.6; }
+}
+
 .app::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 -256px 0; /* extend below viewport for seamless drift loop */
   z-index: 0;
   pointer-events: none;
 
@@ -44,6 +55,10 @@
     );
   background-size: 256px 256px, var(--deck-grid-size) var(--deck-grid-size);
   opacity: var(--deck-grain-opacity);
+  animation:
+    substrate-breathe 12s ease-in-out infinite,
+    substrate-drift 180s linear infinite;
+  will-change: transform, opacity;
 }
 
 /* ===== VIGNETTE ===== */

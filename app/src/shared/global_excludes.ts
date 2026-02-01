@@ -25,6 +25,7 @@ export interface GlobalExcludeExtensionOption {
 
 export const GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS = [
   ".safetensors",
+  ".gguf",
   ".ckpt",
   ".pt",
   ".pth",
@@ -36,6 +37,16 @@ export const GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS = [
   ".pb",
   ".h5",
   ".keras",
+];
+
+export const GLOBAL_EXCLUDE_BINARY_EXTENSIONS = [
+  ".exe",
+  ".dll",
+  ".so",
+  ".dylib",
+  ".pdb",
+  ".lib",
+  ".a",
 ];
 
 export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "checkpoints", "weights"];
@@ -121,6 +132,10 @@ export const GLOBAL_EXCLUDE_EXTENSION_OPTIONS: GlobalExcludeExtensionOption[] = 
     label: value,
   })),
   ...GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS.map((value) => ({
+    value,
+    label: value,
+  })),
+  ...GLOBAL_EXCLUDE_BINARY_EXTENSIONS.map((value) => ({
     value,
     label: value,
   })),

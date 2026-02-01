@@ -55,6 +55,7 @@ const RECOMMENDED_FILE_SUFFIXES: &[&str] = &[
     ".swp",
     ".tmp",
     "~",
+    ".gguf",
     ".safetensors",
     ".ckpt",
     ".pt",
@@ -64,6 +65,13 @@ const RECOMMENDED_FILE_SUFFIXES: &[&str] = &[
     ".pb",
     ".h5",
     ".keras",
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".pdb",
+    ".lib",
+    ".a",
 ];
 
 const RECOMMENDED_PATH_SEGMENTS: &[&str] = &[
