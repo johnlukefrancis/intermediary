@@ -2,7 +2,7 @@
 // Description: Agent<->UI WebSocket protocol types with Zod validation
 
 import { z } from "zod";
-import { AppConfigSchema } from "./config.js";
+import { AppConfigSchema, GlobalExcludesSchema } from "./config.js";
 
 // -----------------------------------------------------------------------------
 // File metadata
@@ -148,6 +148,8 @@ export const BuildBundleCommandSchema = z.object({
   repoId: z.string(),
   presetId: z.string(),
   selection: BundleSelectionSchema,
+  /** Global excludes (extensions and patterns) */
+  globalExcludes: GlobalExcludesSchema.optional(),
 });
 
 /** Handshake from UI with config and staging paths */

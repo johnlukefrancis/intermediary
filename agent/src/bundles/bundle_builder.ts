@@ -126,6 +126,7 @@ export function createBundleBuilder(
         },
         git,
         builtAtIso,
+        ...(options.globalExcludes ? { globalExcludes: options.globalExcludes } : {}),
         onProgress: (progress) => {
           const payload: {
             phase: "scanning" | "zipping";

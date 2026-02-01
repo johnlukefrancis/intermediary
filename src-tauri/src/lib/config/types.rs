@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 3;
+pub const CONFIG_VERSION: u32 = 5;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,6 +25,9 @@ pub struct PersistedConfig {
     pub ui_state: UiState,
     /// Bundle selections per repo/preset
     pub bundle_selections: HashMap<String, HashMap<String, BundleSelection>>,
+    /// Global bundle excludes (extensions and patterns)
+    #[serde(default)]
+    pub global_excludes: GlobalExcludes,
 }
 
 impl Default for PersistedConfig {
@@ -37,6 +40,7 @@ impl Default for PersistedConfig {
             repos: default_repos(),
             ui_state: UiState::default(),
             bundle_selections: HashMap::new(),
+            global_excludes: GlobalExcludes::default(),
         }
     }
 }
@@ -47,6 +51,40 @@ impl Default for PersistedConfig {
 pub struct UiState {
     /// Last active repo (by repoId)
     pub last_active_tab_id: Option<String>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// Global exclude preset toggles.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalExcludePresets {
+    /// Exclude ML artifacts (model weights + experiment caches).
+    #[serde(default = "default_true")]
+    pub ml_artifacts: bool,
+}
+
+impl Default for GlobalExcludePresets {
+    fn default() -> Self {
+        Self { ml_artifacts: true }
+    }
+}
+
+/// Global excludes for bundle building (not per-repo, not per-preset)
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalExcludes {
+    /// Preset toggles for common large artifacts.
+    #[serde(default)]
+    pub presets: GlobalExcludePresets,
+    /// File extensions to exclude (e.g. ".safetensors", ".ckpt")
+    #[serde(default)]
+    pub extensions: Vec<String>,
+    /// Path patterns to exclude (e.g. "models/", "checkpoints/")
+    #[serde(default)]
+    pub patterns: Vec<String>,
 }
 
 /// Bundle selection state for a preset

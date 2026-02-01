@@ -258,7 +258,7 @@ fn build_manifest_json(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plan::{BundleGitInfo, BundleSelection};
+    use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
     use std::io::Read;
     use tempfile::tempdir;
 
@@ -290,6 +290,7 @@ mod tests {
                 branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+            global_excludes: GlobalExcludes::default(),
         };
 
         let result = write_bundle(&plan).unwrap();

@@ -25,6 +25,17 @@ export interface BundleManifest {
 }
 
 /**
+ * Global excludes for bundle building
+ */
+export interface GlobalExcludes {
+  presets: {
+    mlArtifacts: boolean;
+  };
+  extensions: string[];
+  patterns: string[];
+}
+
+/**
  * Options for building a bundle
  */
 export interface BuildBundleOptions {
@@ -38,6 +49,8 @@ export interface BuildBundleOptions {
     excludedSubdirs?: string[];
   };
   outputDir: string;
+  /** User-configurable global excludes */
+  globalExcludes?: GlobalExcludes;
 }
 
 /**

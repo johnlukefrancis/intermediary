@@ -13,6 +13,14 @@ interface BundleSelectionPlan {
   excludedSubdirs: string[];
 }
 
+interface GlobalExcludesPlan {
+  presets: {
+    mlArtifacts: boolean;
+  };
+  extensions: string[];
+  patterns: string[];
+}
+
 interface BundleGitPlan {
   headSha?: string;
   shortSha?: string;
@@ -28,6 +36,7 @@ interface BundlePlan {
   selection: BundleSelectionPlan;
   git: BundleGitPlan;
   builtAtIso: string;
+  globalExcludes: GlobalExcludesPlan;
 }
 
 interface BundleProgressLine {
@@ -75,6 +84,7 @@ export interface BundleCliOptions {
   selection: BundleSelectionPlan;
   git: BundleGitPlan;
   builtAtIso: string;
+  globalExcludes?: GlobalExcludesPlan;
   onProgress?: (progress: BundleProgress) => void;
 }
 
@@ -165,6 +175,11 @@ function buildPlan(options: BundleCliOptions): BundlePlan {
     },
     git,
     builtAtIso: options.builtAtIso,
+    globalExcludes: options.globalExcludes ?? {
+      presets: { mlArtifacts: true },
+      extensions: [],
+      patterns: [],
+    },
   };
 }
 

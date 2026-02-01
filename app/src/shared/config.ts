@@ -150,7 +150,31 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
 // -----------------------------------------------------------------------------
 
 /** Current config schema version */
-export const CONFIG_VERSION = 3;
+export const CONFIG_VERSION = 5;
+
+// -----------------------------------------------------------------------------
+// Global bundle excludes (user-configurable)
+// -----------------------------------------------------------------------------
+
+/**
+ * Global excludes for bundle building (not per-repo, not per-preset).
+ * User's personal "never zip these" preferences that supplement hardcoded excludes.
+ */
+export const GlobalExcludePresetsSchema = z.object({
+  /** Exclude ML artifacts (model weights + experiment caches) */
+  mlArtifacts: z.boolean().default(true),
+});
+
+export const GlobalExcludesSchema = z.object({
+  /** Preset toggles for common large artifacts */
+  presets: GlobalExcludePresetsSchema.default({ mlArtifacts: true }),
+  /** File extensions to exclude (e.g. ".safetensors", ".ckpt") */
+  extensions: z.array(z.string()).default([]),
+  /** Path segments to exclude (e.g. "models", "checkpoints") */
+  patterns: z.array(z.string()).default([]),
+});
+
+export type GlobalExcludes = z.infer<typeof GlobalExcludesSchema>;
 
 /** Remembered UI state */
 export const UiStateSchema = z.object({
@@ -195,6 +219,12 @@ export const PersistedConfigSchema = z.object({
   uiState: UiStateSchema.default({}),
   /** Bundle selections per repo/preset */
   bundleSelections: BundleSelectionsSchema.default({}),
+  /** Global bundle excludes (extensions and patterns) */
+  globalExcludes: GlobalExcludesSchema.default({
+    presets: { mlArtifacts: true },
+    extensions: [],
+    patterns: [],
+  }),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -225,6 +255,11 @@ export function getDefaultPersistedConfig(): PersistedConfig {
       lastActiveTabId: null,
     },
     bundleSelections: {},
+    globalExcludes: {
+      presets: { mlArtifacts: true },
+      extensions: [],
+      patterns: [],
+    },
   };
 }
 
@@ -238,6 +273,12 @@ function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v2 -> v3: Remove worktree fields, use repoId for tab identity
   // Old lastActiveTabId values (e.g. "texture-portal") won't match repoIds,
   // so app.tsx validation will gracefully fall back to first repo.
+
+  // Migration: v3 -> v4: Add globalExcludes
+  // Zod schema defaults handle missing globalExcludes fields.
+
+  // Migration: v4 -> v5: Add globalExcludes presets (mlArtifacts).
+  // Zod schema defaults apply when field is missing.
 
   return { ...config, configVersion: CONFIG_VERSION };
 }

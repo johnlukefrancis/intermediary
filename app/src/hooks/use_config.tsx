@@ -16,6 +16,7 @@ import {
   type LoadConfigResult,
   type BundleSelection,
   type RepoConfig,
+  type GlobalExcludes,
   getDefaultPersistedConfig,
   parsePersistedConfig,
 } from "../shared/config.js";
@@ -40,6 +41,8 @@ interface ConfigContextValue {
     presetId: string,
     selection: BundleSelection
   ) => void;
+  /** Update global excludes (extensions and patterns) */
+  setGlobalExcludes: (excludes: GlobalExcludes) => void;
   /** Add a new repo to config */
   addRepo: (repo: RepoConfig) => void;
   /** Remove a repo by repoId (also cleans up bundleSelections) */
@@ -218,6 +221,20 @@ export function ConfigProvider({
     [saveConfig]
   );
 
+  const setGlobalExcludes = useCallback(
+    (excludes: GlobalExcludes) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          globalExcludes: excludes,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
   const addRepo = useCallback(
     (repo: RepoConfig) => {
       setConfig((prev) => {
@@ -268,6 +285,7 @@ export function ConfigProvider({
     setAutoStageGlobal,
     setLastActiveTabId,
     setBundleSelection,
+    setGlobalExcludes,
     addRepo,
     removeRepo,
   };

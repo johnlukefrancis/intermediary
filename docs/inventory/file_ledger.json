@@ -306,6 +306,10 @@
       "summary": "Error types for bundle scanning and zip writing"
     },
     {
+      "path": "crates/im_bundle/src/global_excludes.rs",
+      "summary": "Normalize and apply user-configurable global excludes for bundle scanning"
+    },
+    {
       "path": "crates/im_bundle/src/ignore_rules.rs",
       "summary": "Always-ignored file and directory names for bundle scanning"
     },
@@ -332,6 +336,10 @@
     {
       "path": "crates/im_bundle/src/writer.rs",
       "summary": "Bundle zip writer with scanning, manifest, and progress"
+    },
+    {
+      "path": "crates/im_bundle/tests/scanner_test.rs",
+      "summary": "Integration tests for bundle scanner behavior"
     },
     {
       "path": "crates/im_bundle/tests/size_capped_reads_test.rs",

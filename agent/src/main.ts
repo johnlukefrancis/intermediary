@@ -206,6 +206,7 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         presetName: preset.presetName,
         selection: command.selection,
         outputDir: state.stagingWslRoot,
+        ...(command.globalExcludes ? { globalExcludes: command.globalExcludes } : {}),
       });
 
       router.broadcastEvent({

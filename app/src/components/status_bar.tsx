@@ -4,6 +4,7 @@
 import { useState } from "react";
 import type React from "react";
 import { useAgent } from "../hooks/use_agent.js";
+import { useConfig } from "../hooks/use_config.js";
 import type { ConnectionStatus } from "../lib/agent/connection_state.js";
 import { OptionsOverlay } from "./options_overlay.js";
 import "../styles/status_bar.css";
@@ -30,6 +31,7 @@ function getConnectionDisplay(status: ConnectionStatus, attempts: number): Conne
 export function StatusBar(): React.JSX.Element {
   const { autoStageOnChange, setAutoStageOnChange, connectionState, appPaths, helloState } =
     useAgent();
+  const { config, setGlobalExcludes } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   const { status, reconnectAttempts, lastError: connectionError } = connectionState;
@@ -75,6 +77,8 @@ export function StatusBar(): React.JSX.Element {
           autoStageOnChange={autoStageOnChange}
           setAutoStageOnChange={setAutoStageOnChange}
           stagingPath={stagingPath}
+          globalExcludes={config.globalExcludes}
+          setGlobalExcludes={setGlobalExcludes}
           onClose={() => {
             setOptionsOpen(false);
           }}

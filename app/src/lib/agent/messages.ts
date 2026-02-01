@@ -2,7 +2,7 @@
 // Description: Typed helper functions for sending agent commands
 
 import type { AgentClient } from "./agent_client.js";
-import type { AppConfig } from "../../shared/config.js";
+import type { AppConfig, GlobalExcludes } from "../../shared/config.js";
 import type {
   ClientHelloResult,
   StageFileResult,
@@ -76,13 +76,15 @@ export async function sendBuildBundle(
   client: AgentClient,
   repoId: string,
   presetId: string,
-  selection: BundleSelection
+  selection: BundleSelection,
+  globalExcludes?: GlobalExcludes
 ): Promise<BuildBundleResult> {
   return client.send<BuildBundleResult>({
     type: "buildBundle",
     repoId,
     presetId,
     selection,
+    globalExcludes,
   });
 }
 

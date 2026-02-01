@@ -238,7 +238,9 @@ export function useBundleState(
       });
 
       try {
-        await sendBuildBundle(client, repoId, presetId, preset.selection);
+        // Pass global excludes from persisted config
+        const globalExcludes = persistedConfig.globalExcludes;
+        await sendBuildBundle(client, repoId, presetId, preset.selection, globalExcludes);
         // Bundle list will be refreshed via bundleBuilt event
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -257,7 +259,7 @@ export function useBundleState(
         });
       }
     },
-    [client, connectionState.status, presets, repoId]
+    [client, connectionState.status, presets, repoId, persistedConfig.globalExcludes]
   );
 
   // Refresh bundle list for a preset

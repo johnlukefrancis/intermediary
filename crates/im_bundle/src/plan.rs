@@ -15,6 +15,40 @@ pub struct BundleSelection {
     pub excluded_subdirs: Vec<String>,
 }
 
+fn default_true() -> bool {
+    true
+}
+
+/// Global exclude preset toggles.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalExcludePresets {
+    /// Exclude ML artifacts (model weights + experiment caches).
+    #[serde(default = "default_true")]
+    pub ml_artifacts: bool,
+}
+
+impl Default for GlobalExcludePresets {
+    fn default() -> Self {
+        Self { ml_artifacts: true }
+    }
+}
+
+/// Global excludes for bundle building (user-configurable, supplements hardcoded excludes)
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalExcludes {
+    /// Preset toggles for common large artifacts.
+    #[serde(default)]
+    pub presets: GlobalExcludePresets,
+    /// File extensions to exclude (e.g. ".safetensors", ".ckpt")
+    #[serde(default)]
+    pub extensions: Vec<String>,
+    /// Path patterns to exclude (e.g. "models/", "checkpoints/")
+    #[serde(default)]
+    pub patterns: Vec<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BundleGitInfo {
@@ -34,6 +68,9 @@ pub struct BundlePlan {
     pub selection: BundleSelection,
     pub git: BundleGitInfo,
     pub built_at_iso: String,
+    /// User-configurable global excludes (supplements hardcoded excludes)
+    #[serde(default)]
+    pub global_excludes: GlobalExcludes,
 }
 
 impl BundlePlan {

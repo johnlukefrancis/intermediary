@@ -79,6 +79,7 @@ app/src/vite_env.d.ts - Vite client type declarations
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
+crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/ignore_rules.rs - Always-ignored file and directory names for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
@@ -86,6 +87,7 @@ crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
+crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.

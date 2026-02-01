@@ -4,7 +4,6 @@
 const IGNORED_DIRS: &[&str] = &[
     ".cache",
     ".git",
-    ".huggingface",
     ".mypy_cache",
     ".next",
     ".nyc_output",
@@ -21,20 +20,14 @@ const IGNORED_DIRS: &[&str] = &[
     ".nox",
     "__pycache__",
     "build",
-    "checkpoints",
     "coverage",
     "dist",
     "env",
-    "huggingface_hub",
     "logs",
-    "mlruns",
-    "models",
     "node_modules",
     "out",
     "target",
     "venv",
-    "wandb",
-    "weights",
 ];
 
 const IGNORED_DIR_SUFFIXES: &[&str] = &[".egg-info"];
@@ -51,21 +44,12 @@ const IGNORED_FILES: &[&str] = &[
 
 const IGNORED_FILE_SUFFIXES: &[&str] = &[
     ".bak",
-    ".bin",
-    ".ckpt",
-    ".h5",
-    ".keras",
     ".log",
-    ".onnx",
     ".old",
     ".orig",
-    ".pb",
-    ".pt",
-    ".pth",
     ".pyc",
     ".pyd",
     ".pyo",
-    ".safetensors",
     ".swo",
     ".swp",
     ".tmp",
@@ -99,11 +83,9 @@ mod tests {
         assert!(is_ignored_dir("node_modules"));
         assert!(is_ignored_dir(".git"));
         assert!(is_ignored_dir("package.egg-info"));
-        assert!(is_ignored_dir("wandb"));
         assert!(is_ignored_file(".env"));
         assert!(is_ignored_file("debug.log"));
         assert!(is_ignored_file("module.pyc"));
-        assert!(is_ignored_file("model.safetensors"));
         assert!(!is_ignored_file("README.md"));
     }
 }
