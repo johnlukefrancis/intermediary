@@ -14,13 +14,9 @@ interface BundleSelectionPlan {
 }
 
 interface GlobalExcludesPlan {
-  presets: {
-    modelWeights: boolean;
-    modelFormats: boolean;
-    modelDirs: boolean;
-    hfCaches: boolean;
-    experimentLogs: boolean;
-  };
+  dirNames: string[];
+  dirSuffixes: string[];
+  fileNames: string[];
   extensions: string[];
   patterns: string[];
 }
@@ -180,13 +176,9 @@ function buildPlan(options: BundleCliOptions): BundlePlan {
     git,
     builtAtIso: options.builtAtIso,
     globalExcludes: options.globalExcludes ?? {
-      presets: {
-        modelWeights: true,
-        modelFormats: true,
-        modelDirs: true,
-        hfCaches: true,
-        experimentLogs: true,
-      },
+      dirNames: [],
+      dirSuffixes: [],
+      fileNames: [],
       extensions: [],
       patterns: [],
     },

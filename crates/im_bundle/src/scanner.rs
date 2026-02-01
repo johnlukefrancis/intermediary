@@ -5,8 +5,13 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use crate::error::{BundleError, Result};
-use crate::global_excludes::{is_globally_excluded_dir, is_globally_excluded_file, normalize_global_excludes, NormalizedGlobalExcludes};
-use crate::ignore_rules::{is_ignored_dir, is_ignored_file};
+use crate::global_excludes::{
+    is_globally_excluded_dir_name,
+    is_globally_excluded_file_name,
+    is_globally_excluded_path,
+    normalize_global_excludes,
+    NormalizedGlobalExcludes,
+};
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
 
@@ -59,11 +64,10 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
                 continue;
             }
             if file_type.is_file() {
-                if is_ignored_file(&name_str) {
-                    continue;
-                }
                 let archive_path = name_str.to_string();
-                if is_globally_excluded_file(&archive_path, &global_excludes) {
+                if is_globally_excluded_file_name(&name_str, &global_excludes)
+                    || is_globally_excluded_path(&archive_path, &global_excludes)
+                {
                     continue;
                 }
                 entries.push(ScanEntry {
@@ -79,7 +83,9 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
     let top_level_dirs = validate_top_level_dirs(repo_root, &plan.selection.top_level_dirs)?;
     let mut top_level_dirs_included = Vec::new();
     for dir in &top_level_dirs {
-        if is_globally_excluded_dir(dir, &global_excludes) {
+        if is_globally_excluded_dir_name(dir, &global_excludes)
+            || is_globally_excluded_path(dir, &global_excludes)
+        {
             continue;
         }
         top_level_dirs_included.push(dir.to_string());
@@ -123,9 +129,6 @@ fn validate_top_level_dirs(repo_root: &Path, dirs: &[String]) -> Result<Vec<Stri
         if !unique.insert(trimmed.to_string()) {
             continue;
         }
-        if is_ignored_dir(trimmed) {
-            continue;
-        }
         let dir_path = repo_root.join(trimmed);
         if !dir_path.exists() {
             return Err(BundleError::TopLevelDirMissing {
@@ -157,8 +160,8 @@ fn collect_dir_entries(
         return Ok(());
     }
 
-    // Check if this directory matches a global exclude pattern
-    if is_globally_excluded_dir(archive_root, global_excludes) {
+    // Check if this directory matches a global exclude path segment
+    if is_globally_excluded_path(archive_root, global_excludes) {
         return Ok(());
     }
 
@@ -185,7 +188,9 @@ fn collect_dir_entries(
 
         let next_archive = join_archive(archive_root, &name_str);
         if file_type.is_dir() {
-            if is_ignored_dir(&name_str) {
+            if is_globally_excluded_dir_name(&name_str, global_excludes)
+                || is_globally_excluded_path(&next_archive, global_excludes)
+            {
                 continue;
             }
             collect_dir_entries(
@@ -201,10 +206,9 @@ fn collect_dir_entries(
         }
 
         if file_type.is_file() {
-            if is_ignored_file(&name_str) {
-                continue;
-            }
-            if is_globally_excluded_file(&next_archive, global_excludes) {
+            if is_globally_excluded_file_name(&name_str, global_excludes)
+                || is_globally_excluded_path(&next_archive, global_excludes)
+            {
                 continue;
             }
             entries.push(ScanEntry {

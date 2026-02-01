@@ -18,7 +18,7 @@ fn caps_file_reads_to_initial_length() {
 
     let initial_size = 16 * 1024 * 1024;
     let original_bytes = vec![b'a'; initial_size];
-    // Use .dat extension - .bin is excluded by default ML artifact preset
+    // Use .dat extension to avoid matching any exclude lists.
     let file_path = repo_root.join("data.dat");
     fs::write(&file_path, &original_bytes).unwrap();
 

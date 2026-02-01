@@ -2,6 +2,18 @@
 // Description: AppConfig Zod schema and types
 
 import { z } from "zod";
+import {
+  GLOBAL_EXCLUDE_RECOMMENDED_DIRS,
+  GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES,
+  GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+  GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+  GLOBAL_EXCLUDE_RECOMMENDED_FILES,
+  GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS,
+  GlobalExcludesSchema,
+} from "./global_excludes.js";
+
+export { GlobalExcludesSchema } from "./global_excludes.js";
+export type { GlobalExcludes } from "./global_excludes.js";
 
 // -----------------------------------------------------------------------------
 // Bundle preset configuration
@@ -150,45 +162,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
 // -----------------------------------------------------------------------------
 
 /** Current config schema version */
-export const CONFIG_VERSION = 5;
-
-// -----------------------------------------------------------------------------
-// Global bundle excludes (user-configurable)
-// -----------------------------------------------------------------------------
-
-/**
- * Global excludes for bundle building (not per-repo, not per-preset).
- * User's personal "never zip these" preferences that supplement hardcoded excludes.
- */
-export const GlobalExcludePresetsSchema = z.object({
-  /** Exclude model weight binaries */
-  modelWeights: z.boolean().default(true),
-  /** Exclude model format binaries */
-  modelFormats: z.boolean().default(true),
-  /** Exclude model directories (models/checkpoints/weights) */
-  modelDirs: z.boolean().default(true),
-  /** Exclude Hugging Face caches */
-  hfCaches: z.boolean().default(true),
-  /** Exclude experiment tracking logs */
-  experimentLogs: z.boolean().default(true),
-});
-
-export const GlobalExcludesSchema = z.object({
-  /** Preset toggles for common large artifacts */
-  presets: GlobalExcludePresetsSchema.default({
-    modelWeights: true,
-    modelFormats: true,
-    modelDirs: true,
-    hfCaches: true,
-    experimentLogs: true,
-  }),
-  /** File extensions to exclude (e.g. ".safetensors", ".ckpt") */
-  extensions: z.array(z.string()).default([]),
-  /** Path segments to exclude (e.g. "models", "checkpoints") */
-  patterns: z.array(z.string()).default([]),
-});
-
-export type GlobalExcludes = z.infer<typeof GlobalExcludesSchema>;
+export const CONFIG_VERSION = 7;
 
 /** Remembered UI state */
 export const UiStateSchema = z.object({
@@ -235,15 +209,14 @@ export const PersistedConfigSchema = z.object({
   bundleSelections: BundleSelectionsSchema.default({}),
   /** Global bundle excludes (extensions and patterns) */
   globalExcludes: GlobalExcludesSchema.default({
-    presets: {
-      modelWeights: true,
-      modelFormats: true,
-      modelDirs: true,
-      hfCaches: true,
-      experimentLogs: true,
-    },
-    extensions: [],
-    patterns: [],
+    dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
+    dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
+    fileNames: [...GLOBAL_EXCLUDE_RECOMMENDED_FILES],
+    extensions: [
+      ...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+      ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+    ],
+    patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
   }),
 });
 
@@ -260,7 +233,8 @@ export interface LoadConfigResult {
  * Parse persisted config, applying migrations if needed
  */
 export function parsePersistedConfig(input: unknown): PersistedConfig {
-  const parsed = PersistedConfigSchema.parse(input);
+  const normalized = normalizeLegacyGlobalExcludes(input);
+  const parsed = PersistedConfigSchema.parse(normalized);
   return migrateConfig(parsed);
 }
 
@@ -276,15 +250,14 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     },
     bundleSelections: {},
     globalExcludes: {
-      presets: {
-        modelWeights: true,
-        modelFormats: true,
-        modelDirs: true,
-        hfCaches: true,
-        experimentLogs: true,
-      },
-      extensions: [],
-      patterns: [],
+      dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
+      dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
+      fileNames: [...GLOBAL_EXCLUDE_RECOMMENDED_FILES],
+      extensions: [
+        ...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+        ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+      ],
+      patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     },
   };
 }
@@ -303,10 +276,64 @@ function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v3 -> v4: Add globalExcludes
   // Zod schema defaults handle missing globalExcludes fields.
 
-  // Migration: v4 -> v5: Add globalExcludes presets.
-  // Zod schema defaults apply when field is missing.
+  // Migration: v4 -> v5: Add globalExcludes presets (deprecated in v6).
+  // Migration: v5 -> v6: Drop presets in favor of explicit extension/pattern lists.
+  // Migration: v6 -> v7: Add explicit dir/file exclude lists.
 
   return { ...config, configVersion: CONFIG_VERSION };
+}
+
+function normalizeLegacyGlobalExcludes(input: unknown): unknown {
+  if (!input || typeof input !== "object") return input;
+  const raw = input as Record<string, unknown>;
+  const globalExcludes = raw.globalExcludes;
+  if (!globalExcludes || typeof globalExcludes !== "object") {
+    return input;
+  }
+  const rawExcludes = globalExcludes as Record<string, unknown>;
+  const existingDirNames = Array.isArray(rawExcludes.dirNames)
+    ? rawExcludes.dirNames.filter((value): value is string => typeof value === "string")
+    : [];
+  const existingDirSuffixes = Array.isArray(rawExcludes.dirSuffixes)
+    ? rawExcludes.dirSuffixes.filter((value): value is string => typeof value === "string")
+    : [];
+  const existingFileNames = Array.isArray(rawExcludes.fileNames)
+    ? rawExcludes.fileNames.filter((value): value is string => typeof value === "string")
+    : [];
+  const existingExtensions = Array.isArray(rawExcludes.extensions)
+    ? rawExcludes.extensions.filter((value): value is string => typeof value === "string")
+    : [];
+  const existingPatterns = Array.isArray(rawExcludes.patterns)
+    ? rawExcludes.patterns.filter((value): value is string => typeof value === "string")
+    : [];
+
+  const mergedDirNames = existingDirNames.length > 0
+    ? existingDirNames
+    : GLOBAL_EXCLUDE_RECOMMENDED_DIRS;
+  const mergedDirSuffixes = existingDirSuffixes.length > 0
+    ? existingDirSuffixes
+    : GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES;
+  const mergedFileNames = existingFileNames.length > 0
+    ? existingFileNames
+    : GLOBAL_EXCLUDE_RECOMMENDED_FILES;
+  const mergedExtensions = existingExtensions.length > 0
+    ? existingExtensions
+    : [...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS, ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES];
+  const mergedPatterns = existingPatterns.length > 0
+    ? existingPatterns
+    : GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS;
+
+  return {
+    ...raw,
+    globalExcludes: {
+      ...rawExcludes,
+      dirNames: mergedDirNames,
+      dirSuffixes: mergedDirSuffixes,
+      fileNames: mergedFileNames,
+      extensions: mergedExtensions,
+      patterns: mergedPatterns,
+    },
+  };
 }
 
 /**

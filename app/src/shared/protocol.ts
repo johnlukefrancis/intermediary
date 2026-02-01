@@ -2,7 +2,8 @@
 // Description: Agent<->UI WebSocket protocol types with Zod validation
 
 import { z } from "zod";
-import { AppConfigSchema, GlobalExcludesSchema } from "./config.js";
+import { AppConfigSchema } from "./config.js";
+import { GlobalExcludesSchema } from "./global_excludes.js";
 
 // -----------------------------------------------------------------------------
 // File metadata

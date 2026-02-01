@@ -194,6 +194,10 @@
       "summary": "AppConfig Zod schema and types"
     },
     {
+      "path": "app/src/shared/global_excludes.ts",
+      "summary": "Global bundle exclude schema and UI options"
+    },
+    {
       "path": "app/src/shared/protocol.ts",
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
     },
@@ -308,10 +312,6 @@
     {
       "path": "crates/im_bundle/src/global_excludes.rs",
       "summary": "Normalize and apply user-configurable global excludes for bundle scanning"
-    },
-    {
-      "path": "crates/im_bundle/src/ignore_rules.rs",
-      "summary": "Always-ignored file and directory names for bundle scanning"
     },
     {
       "path": "crates/im_bundle/src/lib.rs",

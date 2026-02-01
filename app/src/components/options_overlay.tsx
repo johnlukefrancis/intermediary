@@ -2,9 +2,23 @@
 // Description: Full-screen transparent overlay with options panel for app settings
 
 import type React from "react";
-import { useCallback, useState, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import type { GlobalExcludes } from "../shared/config.js";
+import type { GlobalExcludes } from "../shared/global_excludes.js";
+import {
+  GLOBAL_EXCLUDE_DIR_OPTIONS,
+  GLOBAL_EXCLUDE_DIR_SUFFIX_OPTIONS,
+  GLOBAL_EXCLUDE_EXTENSION_OPTIONS,
+  GLOBAL_EXCLUDE_FILE_OPTIONS,
+  GLOBAL_EXCLUDE_SUFFIX_OPTIONS,
+  GLOBAL_EXCLUDE_PATTERN_OPTIONS,
+  GLOBAL_EXCLUDE_RECOMMENDED_DIRS,
+  GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES,
+  GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+  GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+  GLOBAL_EXCLUDE_RECOMMENDED_FILES,
+  GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS,
+} from "../shared/global_excludes.js";
 import "../styles/options_overlay.css";
 
 interface OptionsOverlayProps {
@@ -16,38 +30,19 @@ interface OptionsOverlayProps {
   onClose: () => void;
 }
 
-/**
- * Parse comma-separated string to array of trimmed values
- */
-function parseCommaSeparated(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+function normalizeExtension(value: string): string {
+  const trimmed = value.trim().toLowerCase();
+  if (trimmed.length === 0) return "";
+  return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
 }
 
-function normalizeExtensions(values: string[]): string[] {
-  return values
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .map((value) => value.toLowerCase())
-    .map((value) => (value.startsWith(".") ? value : `.${value}`));
+function normalizePattern(value: string): string {
+  const trimmed = value.trim().replace(/^\/+|\/+$/g, "").toLowerCase();
+  return trimmed;
 }
 
-function normalizePatterns(values: string[]): string[] {
-  return values
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .map((value) => value.replace(/^\/+|\/+$/g, ""))
-    .filter((value) => value.length > 0)
-    .map((value) => value.toLowerCase());
-}
-
-/**
- * Format array to comma-separated string
- */
-function formatCommaSeparated(arr: string[]): string {
-  return arr.join(", ");
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export function OptionsOverlay({
@@ -60,32 +55,45 @@ export function OptionsOverlay({
 }: OptionsOverlayProps): React.JSX.Element {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [advancedSectionsOpen, setAdvancedSectionsOpen] = useState({
+    directories: true,
+    dirSuffixes: true,
+    fileNames: true,
+    fileSuffixes: true,
+    extensions: true,
+    patterns: true,
+  });
 
   const toggleAdvanced = useCallback(() => {
     setAdvancedOpen((prev) => !prev);
   }, []);
 
-  // Local state for text inputs (commit on blur)
-  const [extensionsText, setExtensionsText] = useState(() =>
-    formatCommaSeparated(globalExcludes.extensions)
-  );
-  const [patternsText, setPatternsText] = useState(() =>
-    formatCommaSeparated(globalExcludes.patterns)
+  const toggleAdvancedSection = useCallback(
+    (key: keyof typeof advancedSectionsOpen) => {
+      setAdvancedSectionsOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+    },
+    []
   );
 
-  useEffect(() => {
-    setExtensionsText(formatCommaSeparated(globalExcludes.extensions));
-    setPatternsText(formatCommaSeparated(globalExcludes.patterns));
-  }, [globalExcludes.extensions, globalExcludes.patterns]);
-
-  // Derive whether inputs are "dirty" (different from saved)
-  const savedExtensionsText = useMemo(
-    () => formatCommaSeparated(globalExcludes.extensions),
+  const normalizedExtensions = useMemo(
+    () => globalExcludes.extensions.map(normalizeExtension).filter((value) => value.length > 0),
     [globalExcludes.extensions]
   );
-  const savedPatternsText = useMemo(
-    () => formatCommaSeparated(globalExcludes.patterns),
+  const normalizedPatterns = useMemo(
+    () => globalExcludes.patterns.map(normalizePattern).filter((value) => value.length > 0),
     [globalExcludes.patterns]
+  );
+  const normalizedDirNames = useMemo(
+    () => globalExcludes.dirNames.map(normalizePattern).filter((value) => value.length > 0),
+    [globalExcludes.dirNames]
+  );
+  const normalizedDirSuffixes = useMemo(
+    () => globalExcludes.dirSuffixes.map(normalizeExtension).filter((value) => value.length > 0),
+    [globalExcludes.dirSuffixes]
+  );
+  const normalizedFileNames = useMemo(
+    () => globalExcludes.fileNames.map(normalizeName).filter((value) => value.length > 0),
+    [globalExcludes.fileNames]
   );
 
   const handleCopyPath = useCallback(() => {
@@ -98,33 +106,9 @@ export function OptionsOverlay({
     });
   }, [stagingPath]);
 
-  const commitExcludes = useCallback(() => {
-    const newExtensions = normalizeExtensions(parseCommaSeparated(extensionsText));
-    const newPatterns = normalizePatterns(parseCommaSeparated(patternsText));
-    // Only update if changed
-    if (
-      formatCommaSeparated(newExtensions) !== savedExtensionsText ||
-      formatCommaSeparated(newPatterns) !== savedPatternsText
-    ) {
-      setGlobalExcludes({
-        presets: globalExcludes.presets,
-        extensions: newExtensions,
-        patterns: newPatterns,
-      });
-    }
-  }, [
-    extensionsText,
-    patternsText,
-    savedExtensionsText,
-    savedPatternsText,
-    globalExcludes.presets,
-    setGlobalExcludes,
-  ]);
-
   const handleClose = useCallback(() => {
-    commitExcludes();
     onClose();
-  }, [commitExcludes, onClose]);
+  }, [onClose]);
 
   const handleBackdropClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -135,60 +119,196 @@ export function OptionsOverlay({
     [handleClose]
   );
 
-  const setPresetValue = useCallback(
-    (key: keyof GlobalExcludes["presets"], value: boolean) => {
-      setGlobalExcludes({
-        presets: {
-          ...globalExcludes.presets,
-          [key]: value,
-        },
-        extensions: globalExcludes.extensions,
-        patterns: globalExcludes.patterns,
-      });
-    },
-    [globalExcludes, setGlobalExcludes]
-  );
-
-  const allPresetsEnabled = useMemo(() => {
-    const presets = globalExcludes.presets;
-    return (
-      presets.modelWeights &&
-      presets.modelFormats &&
-      presets.modelDirs &&
-      presets.hfCaches &&
-      presets.experimentLogs
+  const recommendedEnabled = useMemo(() => {
+    const extensionSet = new Set(normalizedExtensions);
+    const patternSet = new Set(normalizedPatterns);
+    const dirNameSet = new Set(normalizedDirNames);
+    const dirSuffixSet = new Set(normalizedDirSuffixes);
+    const fileNameSet = new Set(normalizedFileNames);
+    const hasAllExtensions = GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS.every((ext) =>
+      extensionSet.has(ext)
     );
-  }, [globalExcludes.presets]);
+    const hasAllFileSuffixes = GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES.every((ext) =>
+      extensionSet.has(ext)
+    );
+    const hasAllPatterns = GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS.every((pattern) =>
+      patternSet.has(pattern)
+    );
+    const hasAllDirNames = GLOBAL_EXCLUDE_RECOMMENDED_DIRS.every((name) =>
+      dirNameSet.has(name)
+    );
+    const hasAllDirSuffixes = GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES.every((suffix) =>
+      dirSuffixSet.has(suffix)
+    );
+    const hasAllFileNames = GLOBAL_EXCLUDE_RECOMMENDED_FILES.every((name) =>
+      fileNameSet.has(name)
+    );
+    return (
+      hasAllExtensions &&
+      hasAllFileSuffixes &&
+      hasAllPatterns &&
+      hasAllDirNames &&
+      hasAllDirSuffixes &&
+      hasAllFileNames
+    );
+  }, [
+    normalizedDirNames,
+    normalizedDirSuffixes,
+    normalizedExtensions,
+    normalizedFileNames,
+    normalizedPatterns,
+  ]);
 
   const handleRecommendedToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.checked;
+      const enabled = event.target.checked;
       setGlobalExcludes({
-        presets: {
-          modelWeights: value,
-          modelFormats: value,
-          modelDirs: value,
-          hfCaches: value,
-          experimentLogs: value,
-        },
-        extensions: globalExcludes.extensions,
-        patterns: globalExcludes.patterns,
+        dirNames: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS] : [],
+        dirSuffixes: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES] : [],
+        fileNames: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_FILES] : [],
+        extensions: enabled
+          ? [...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS, ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES]
+          : [],
+        patterns: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS] : [],
       });
     },
-    [globalExcludes.extensions, globalExcludes.patterns, setGlobalExcludes]
+    [setGlobalExcludes]
   );
 
-  const advancedSummary = useMemo(() => {
-    const extCount = globalExcludes.extensions.length;
-    const patternCount = globalExcludes.patterns.length;
-    if (extCount === 0 && patternCount === 0) {
-      return "Advanced";
-    }
-    const parts = [];
-    if (extCount > 0) parts.push(`${extCount} ext`);
-    if (patternCount > 0) parts.push(`${patternCount} path`);
-    return `Advanced (${parts.join(", ")})`;
-  }, [globalExcludes.extensions.length, globalExcludes.patterns.length]);
+  const handleExtensionToggle = useCallback(
+    (value: string, enabled: boolean) => {
+      const normalized = normalizeExtension(value);
+      const extensionSet = new Set(normalizedExtensions);
+      if (enabled) {
+        extensionSet.add(normalized);
+      } else {
+        extensionSet.delete(normalized);
+      }
+      setGlobalExcludes({
+        dirNames: normalizedDirNames,
+        dirSuffixes: normalizedDirSuffixes,
+        fileNames: normalizedFileNames,
+        extensions: Array.from(extensionSet),
+        patterns: normalizedPatterns,
+      });
+    },
+    [
+      normalizedDirNames,
+      normalizedDirSuffixes,
+      normalizedExtensions,
+      normalizedFileNames,
+      normalizedPatterns,
+      setGlobalExcludes,
+    ]
+  );
+
+  const handlePatternToggle = useCallback(
+    (value: string, enabled: boolean) => {
+      const normalized = normalizePattern(value);
+      const patternSet = new Set(normalizedPatterns);
+      if (enabled) {
+        patternSet.add(normalized);
+      } else {
+        patternSet.delete(normalized);
+      }
+      setGlobalExcludes({
+        dirNames: normalizedDirNames,
+        dirSuffixes: normalizedDirSuffixes,
+        fileNames: normalizedFileNames,
+        extensions: normalizedExtensions,
+        patterns: Array.from(patternSet),
+      });
+    },
+    [
+      normalizedDirNames,
+      normalizedDirSuffixes,
+      normalizedExtensions,
+      normalizedFileNames,
+      normalizedPatterns,
+      setGlobalExcludes,
+    ]
+  );
+
+  const handleDirToggle = useCallback(
+    (value: string, enabled: boolean) => {
+      const normalized = normalizePattern(value);
+      const dirSet = new Set(normalizedDirNames);
+      if (enabled) {
+        dirSet.add(normalized);
+      } else {
+        dirSet.delete(normalized);
+      }
+      setGlobalExcludes({
+        dirNames: Array.from(dirSet),
+        dirSuffixes: normalizedDirSuffixes,
+        fileNames: normalizedFileNames,
+        extensions: normalizedExtensions,
+        patterns: normalizedPatterns,
+      });
+    },
+    [
+      normalizedDirNames,
+      normalizedDirSuffixes,
+      normalizedExtensions,
+      normalizedFileNames,
+      normalizedPatterns,
+      setGlobalExcludes,
+    ]
+  );
+
+  const handleDirSuffixToggle = useCallback(
+    (value: string, enabled: boolean) => {
+      const normalized = normalizeExtension(value);
+      const suffixSet = new Set(normalizedDirSuffixes);
+      if (enabled) {
+        suffixSet.add(normalized);
+      } else {
+        suffixSet.delete(normalized);
+      }
+      setGlobalExcludes({
+        dirNames: normalizedDirNames,
+        dirSuffixes: Array.from(suffixSet),
+        fileNames: normalizedFileNames,
+        extensions: normalizedExtensions,
+        patterns: normalizedPatterns,
+      });
+    },
+    [
+      normalizedDirNames,
+      normalizedDirSuffixes,
+      normalizedExtensions,
+      normalizedFileNames,
+      normalizedPatterns,
+      setGlobalExcludes,
+    ]
+  );
+
+  const handleFileNameToggle = useCallback(
+    (value: string, enabled: boolean) => {
+      const normalized = normalizeName(value);
+      const fileSet = new Set(normalizedFileNames);
+      if (enabled) {
+        fileSet.add(normalized);
+      } else {
+        fileSet.delete(normalized);
+      }
+      setGlobalExcludes({
+        dirNames: normalizedDirNames,
+        dirSuffixes: normalizedDirSuffixes,
+        fileNames: Array.from(fileSet),
+        extensions: normalizedExtensions,
+        patterns: normalizedPatterns,
+      });
+    },
+    [
+      normalizedDirNames,
+      normalizedDirSuffixes,
+      normalizedExtensions,
+      normalizedFileNames,
+      normalizedPatterns,
+      setGlobalExcludes,
+    ]
+  );
 
   return createPortal(
     <div className="options-overlay" onClick={handleBackdropClick}>
@@ -220,81 +340,15 @@ export function OptionsOverlay({
         </div>
 
         <div className="options-section">
-          <div className="options-section-title">Recommended Excludes</div>
+          <div className="options-section-title">EXCLUDES</div>
           <label className="options-checkbox-row">
             <input
               type="checkbox"
-              checked={allPresetsEnabled}
+              checked={recommendedEnabled}
               onChange={handleRecommendedToggle}
             />
             <span>
-              Recommended (toggle all presets)
-              <span className="options-hint">Safe defaults for large ML artifacts.</span>
-            </span>
-          </label>
-
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={globalExcludes.presets.modelWeights}
-              onChange={(event) => {
-                setPresetValue("modelWeights", event.target.checked);
-              }}
-            />
-            <span>
-              Model weights (.safetensors, .ckpt, .pt, .pth, .bin)
-            </span>
-          </label>
-
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={globalExcludes.presets.modelFormats}
-              onChange={(event) => {
-                setPresetValue("modelFormats", event.target.checked);
-              }}
-            />
-            <span>
-              Model formats (.onnx, .pb, .h5, .keras)
-            </span>
-          </label>
-
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={globalExcludes.presets.modelDirs}
-              onChange={(event) => {
-                setPresetValue("modelDirs", event.target.checked);
-              }}
-            />
-            <span>
-              Model directories (models/, checkpoints/, weights/)
-            </span>
-          </label>
-
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={globalExcludes.presets.hfCaches}
-              onChange={(event) => {
-                setPresetValue("hfCaches", event.target.checked);
-              }}
-            />
-            <span>
-              Hugging Face cache (.huggingface/, huggingface_hub/)
-            </span>
-          </label>
-
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={globalExcludes.presets.experimentLogs}
-              onChange={(event) => {
-                setPresetValue("experimentLogs", event.target.checked);
-              }}
-            />
-            <span>
-              Experiment logs (wandb/, mlruns/, lightning_logs/)
+              Recommended excludes
             </span>
           </label>
         </div>
@@ -306,7 +360,7 @@ export function OptionsOverlay({
             onClick={toggleAdvanced}
             aria-expanded={advancedOpen}
           >
-            <span className="options-section-title">{advancedSummary}</span>
+            <span className="options-section-title">Advanced</span>
             <span className={`options-chevron ${advancedOpen ? "open" : ""}`}>
               ▸
             </span>
@@ -314,32 +368,214 @@ export function OptionsOverlay({
 
           {advancedOpen && (
             <div className="options-section-content">
-              <div className="options-row stacked">
-                <span className="options-row-label">Extensions (comma-separated)</span>
-                <input
-                  type="text"
-                  className="options-text-input"
-                  value={extensionsText}
-                  onChange={(e) => { setExtensionsText(e.target.value); }}
-                  onBlur={commitExcludes}
-                  placeholder=".safetensors, .ckpt, .pt"
-                  title="Comma-separated file extensions to exclude from bundles"
-                />
-                <span className="options-hint">Case-insensitive; dot optional.</span>
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("directories");
+                  }}
+                  aria-expanded={advancedSectionsOpen.directories}
+                >
+                  <span className="options-advanced-title">Directories</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.directories ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.directories && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_DIR_OPTIONS.map((option) => {
+                      const checked = normalizedDirNames.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handleDirToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              <div className="options-row stacked">
-                <span className="options-row-label">Path segments (comma-separated)</span>
-                <input
-                  type="text"
-                  className="options-text-input"
-                  value={patternsText}
-                  onChange={(e) => { setPatternsText(e.target.value); }}
-                  onBlur={commitExcludes}
-                  placeholder="models, checkpoints, wandb"
-                  title="Comma-separated path segments to exclude from bundles"
-                />
-                <span className="options-hint">Matches path segments only; no wildcards.</span>
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("dirSuffixes");
+                  }}
+                  aria-expanded={advancedSectionsOpen.dirSuffixes}
+                >
+                  <span className="options-advanced-title">Directory Suffixes</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.dirSuffixes ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.dirSuffixes && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_DIR_SUFFIX_OPTIONS.map((option) => {
+                      const checked = normalizedDirSuffixes.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handleDirSuffixToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("fileNames");
+                  }}
+                  aria-expanded={advancedSectionsOpen.fileNames}
+                >
+                  <span className="options-advanced-title">File Names</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.fileNames ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.fileNames && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_FILE_OPTIONS.map((option) => {
+                      const checked = normalizedFileNames.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handleFileNameToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("fileSuffixes");
+                  }}
+                  aria-expanded={advancedSectionsOpen.fileSuffixes}
+                >
+                  <span className="options-advanced-title">File Suffixes</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.fileSuffixes ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.fileSuffixes && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_SUFFIX_OPTIONS.map((option) => {
+                      const checked = normalizedExtensions.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handleExtensionToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("extensions");
+                  }}
+                  aria-expanded={advancedSectionsOpen.extensions}
+                >
+                  <span className="options-advanced-title">Extensions</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.extensions ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.extensions && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_EXTENSION_OPTIONS.map((option) => {
+                      const checked = normalizedExtensions.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handleExtensionToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="options-advanced-group">
+                <button
+                  type="button"
+                  className="options-advanced-toggle"
+                  onClick={() => {
+                    toggleAdvancedSection("patterns");
+                  }}
+                  aria-expanded={advancedSectionsOpen.patterns}
+                >
+                  <span className="options-advanced-title">Path Segments</span>
+                  <span className={`options-chevron ${advancedSectionsOpen.patterns ? "open" : ""}`}>
+                    ▸
+                  </span>
+                </button>
+                {advancedSectionsOpen.patterns && (
+                  <div className="options-advanced-grid">
+                    {GLOBAL_EXCLUDE_PATTERN_OPTIONS.map((option) => {
+                      const checked = normalizedPatterns.includes(option.value);
+                      return (
+                        <label key={option.value} className="options-checkbox-row">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(event) => {
+                              handlePatternToggle(option.value, event.target.checked);
+                            }}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}

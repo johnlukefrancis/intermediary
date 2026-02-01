@@ -28,13 +28,9 @@ export interface BundleManifest {
  * Global excludes for bundle building
  */
 export interface GlobalExcludes {
-  presets: {
-    modelWeights: boolean;
-    modelFormats: boolean;
-    modelDirs: boolean;
-    hfCaches: boolean;
-    experimentLogs: boolean;
-  };
+  dirNames: string[];
+  dirSuffixes: string[];
+  fileNames: string[];
   extensions: string[];
   patterns: string[];
 }

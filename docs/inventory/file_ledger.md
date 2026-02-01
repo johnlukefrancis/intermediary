@@ -51,6 +51,7 @@ app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - AppConfig Zod schema and types
+app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
@@ -80,7 +81,6 @@ crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scan
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
-crates/im_bundle/src/ignore_rules.rs - Always-ignored file and directory names for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli

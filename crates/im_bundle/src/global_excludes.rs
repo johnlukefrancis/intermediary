@@ -3,98 +3,132 @@
 
 use crate::plan::GlobalExcludes;
 
-const MODEL_WEIGHT_EXTENSIONS: &[&str] = &[
+const RECOMMENDED_DIR_NAMES: &[&str] = &[
+    ".cache",
+    ".git",
+    ".mypy_cache",
+    ".next",
+    ".nyc_output",
+    ".nuxt",
+    ".parcel-cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".svelte-kit",
+    ".tox",
+    ".turbo",
+    ".venv",
+    ".gradle",
+    ".hypothesis",
+    ".nox",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "env",
+    "logs",
+    "node_modules",
+    "out",
+    "target",
+    "venv",
+];
+
+const RECOMMENDED_DIR_SUFFIXES: &[&str] = &[".egg-info"];
+
+const RECOMMENDED_FILE_NAMES: &[&str] = &[
+    ".ds_store",
+    ".coverage",
+    ".env",
+    ".env.local",
+    ".eslintcache",
+    "thumbs.db",
+];
+
+const RECOMMENDED_FILE_SUFFIXES: &[&str] = &[
+    ".bak",
+    ".log",
+    ".old",
+    ".orig",
+    ".pyc",
+    ".pyd",
+    ".pyo",
+    ".swo",
+    ".swp",
+    ".tmp",
+    "~",
     ".safetensors",
     ".ckpt",
     ".pt",
     ".pth",
     ".bin",
-];
-
-const MODEL_FORMAT_EXTENSIONS: &[&str] = &[
     ".onnx",
     ".pb",
     ".h5",
     ".keras",
 ];
 
-const MODEL_DIR_PATTERNS: &[&str] = &[
+const RECOMMENDED_PATH_SEGMENTS: &[&str] = &[
     "models",
     "checkpoints",
     "weights",
+    ".huggingface",
+    "huggingface_hub",
+    "wandb",
+    "mlruns",
+    "lightning_logs",
 ];
-
-const HF_CACHE_PATTERNS: &[&str] = &[".huggingface", "huggingface_hub"];
-
-const EXPERIMENT_PATTERNS: &[&str] = &["wandb", "mlruns", "lightning_logs"];
 
 #[derive(Debug, Clone)]
 pub struct NormalizedGlobalExcludes {
-    extensions: Vec<String>,
-    patterns: Vec<String>,
+    dir_names: Vec<String>,
+    dir_suffixes: Vec<String>,
+    file_names: Vec<String>,
+    file_suffixes: Vec<String>,
+    path_segments: Vec<String>,
 }
 
 pub fn normalize_global_excludes(excludes: &GlobalExcludes) -> NormalizedGlobalExcludes {
-    let mut extensions = Vec::new();
-    let mut patterns = Vec::new();
-
-    if excludes.presets.model_weights {
-        extensions.extend(MODEL_WEIGHT_EXTENSIONS.iter().map(|ext| ext.to_string()));
-    }
-    if excludes.presets.model_formats {
-        extensions.extend(MODEL_FORMAT_EXTENSIONS.iter().map(|ext| ext.to_string()));
-    }
-    if excludes.presets.model_dirs {
-        patterns.extend(MODEL_DIR_PATTERNS.iter().map(|pattern| pattern.to_string()));
-    }
-    if excludes.presets.hf_caches {
-        patterns.extend(HF_CACHE_PATTERNS.iter().map(|pattern| pattern.to_string()));
-    }
-    if excludes.presets.experiment_logs {
-        patterns.extend(EXPERIMENT_PATTERNS.iter().map(|pattern| pattern.to_string()));
-    }
-
-    extensions.extend(excludes.extensions.iter().cloned());
-    patterns.extend(excludes.patterns.iter().cloned());
-
-    let normalized_extensions = normalize_extensions(&extensions);
-    let normalized_patterns = normalize_patterns(&patterns);
+    let normalized_dir_names = normalize_names(&excludes.dir_names);
+    let normalized_dir_suffixes = normalize_suffixes(&excludes.dir_suffixes);
+    let normalized_file_names = normalize_names(&excludes.file_names);
+    let normalized_file_suffixes = normalize_suffixes(&excludes.extensions);
+    let normalized_path_segments = normalize_patterns(&excludes.patterns);
 
     NormalizedGlobalExcludes {
-        extensions: normalized_extensions,
-        patterns: normalized_patterns,
+        dir_names: normalized_dir_names,
+        dir_suffixes: normalized_dir_suffixes,
+        file_names: normalized_file_names,
+        file_suffixes: normalized_file_suffixes,
+        path_segments: normalized_path_segments,
     }
 }
 
-pub fn is_globally_excluded_file(archive_path: &str, excludes: &NormalizedGlobalExcludes) -> bool {
-    let lowered_path = archive_path.to_lowercase();
-
-    for ext in &excludes.extensions {
-        if lowered_path.ends_with(ext) {
-            return true;
-        }
+pub fn is_globally_excluded_dir_name(name: &str, excludes: &NormalizedGlobalExcludes) -> bool {
+    let lowered = name.to_lowercase();
+    if excludes.dir_names.iter().any(|value| value == &lowered) {
+        return true;
     }
+    matches_suffix(&lowered, &excludes.dir_suffixes)
+}
 
-    for pattern in &excludes.patterns {
+pub fn is_globally_excluded_file_name(name: &str, excludes: &NormalizedGlobalExcludes) -> bool {
+    let lowered = name.to_lowercase();
+    if excludes.file_names.iter().any(|value| value == &lowered) {
+        return true;
+    }
+    matches_suffix(&lowered, &excludes.file_suffixes)
+}
+
+pub fn is_globally_excluded_path(archive_path: &str, excludes: &NormalizedGlobalExcludes) -> bool {
+    let lowered_path = archive_path.to_lowercase();
+    for pattern in &excludes.path_segments {
         if matches_pattern(&lowered_path, pattern) {
             return true;
         }
     }
-
     false
 }
 
-pub fn is_globally_excluded_dir(archive_path: &str, excludes: &NormalizedGlobalExcludes) -> bool {
-    let lowered_path = archive_path.to_lowercase();
-    for pattern in &excludes.patterns {
-        if matches_pattern(&lowered_path, pattern) {
-            return true;
-        }
-    }
-    false
-}
-
-fn normalize_extensions(values: &[String]) -> Vec<String> {
+fn normalize_suffixes(values: &[String]) -> Vec<String> {
     values
         .iter()
         .filter_map(|value| {
@@ -103,12 +137,28 @@ fn normalize_extensions(values: &[String]) -> Vec<String> {
                 return None;
             }
             let lowered = trimmed.to_lowercase();
+            if lowered == "~" {
+                return Some("~".to_string());
+            }
             let normalized = if lowered.starts_with('.') {
                 lowered
             } else {
                 format!(".{lowered}")
             };
             Some(normalized)
+        })
+        .collect()
+}
+
+fn normalize_names(values: &[String]) -> Vec<String> {
+    values
+        .iter()
+        .filter_map(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+            Some(trimmed.to_lowercase())
         })
         .collect()
 }
@@ -137,37 +187,59 @@ fn matches_pattern(path: &str, pattern: &str) -> bool {
         || path.contains(&format!("/{pattern}/"))
 }
 
+fn matches_suffix(name: &str, suffixes: &[String]) -> bool {
+    suffixes.iter().any(|suffix| {
+        if suffix == "~" {
+            name.ends_with('~')
+        } else {
+            name.ends_with(suffix)
+        }
+    })
+}
+
+pub fn recommended_global_excludes() -> GlobalExcludes {
+    GlobalExcludes {
+        dir_names: RECOMMENDED_DIR_NAMES.iter().map(|value| value.to_string()).collect(),
+        dir_suffixes: RECOMMENDED_DIR_SUFFIXES
+            .iter()
+            .map(|value| value.to_string())
+            .collect(),
+        file_names: RECOMMENDED_FILE_NAMES.iter().map(|value| value.to_string()).collect(),
+        extensions: RECOMMENDED_FILE_SUFFIXES
+            .iter()
+            .map(|value| value.to_string())
+            .collect(),
+        patterns: RECOMMENDED_PATH_SEGMENTS.iter().map(|value| value.to_string()).collect(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plan::{BundleGitInfo, BundlePlan, BundleSelection, GlobalExcludes, GlobalExcludePresets};
+    use crate::plan::{BundleGitInfo, BundlePlan, BundleSelection, GlobalExcludes};
     use crate::scanner::scan_bundle;
     use crate::progress::ProgressEmitter;
     use tempfile::tempdir;
 
     #[test]
-    fn normalizes_extensions_and_patterns() {
+    fn normalizes_excludes() {
         let excludes = GlobalExcludes {
-            presets: GlobalExcludePresets {
-                model_weights: false,
-                model_formats: false,
-                model_dirs: false,
-                hf_caches: false,
-                experiment_logs: false,
-            },
+            dir_names: vec![],
+            dir_suffixes: vec![],
+            file_names: vec![],
             extensions: vec!["CKPT".to_string(), ".PT".to_string()],
             patterns: vec!["/Models/".to_string(), "  wandb  ".to_string()],
         };
 
         let normalized = normalize_global_excludes(&excludes);
-        assert!(normalized.extensions.contains(&".ckpt".to_string()));
-        assert!(normalized.extensions.contains(&".pt".to_string()));
-        assert!(normalized.patterns.contains(&"models".to_string()));
-        assert!(normalized.patterns.contains(&"wandb".to_string()));
+        assert!(normalized.file_suffixes.contains(&".ckpt".to_string()));
+        assert!(normalized.file_suffixes.contains(&".pt".to_string()));
+        assert!(normalized.path_segments.contains(&"models".to_string()));
+        assert!(normalized.path_segments.contains(&"wandb".to_string()));
     }
 
     #[test]
-    fn ml_artifact_preset_filters_known_artifacts() {
+    fn global_excludes_filter_known_artifacts() {
         let dir = tempdir().unwrap();
         let repo_root = dir.path();
 
@@ -197,7 +269,13 @@ mod tests {
                 branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
-            global_excludes: GlobalExcludes::default(),
+            global_excludes: GlobalExcludes {
+                dir_names: vec![],
+                dir_suffixes: vec![],
+                file_names: vec![],
+                extensions: vec![".safetensors".to_string(), ".ckpt".to_string(), ".bin".to_string()],
+                patterns: vec!["models".to_string()],
+            },
         };
 
         let mut progress = ProgressEmitter::new();
@@ -243,7 +321,13 @@ mod tests {
                 branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
-            global_excludes: GlobalExcludes::default(),
+            global_excludes: GlobalExcludes {
+                dir_names: vec![],
+                dir_suffixes: vec![],
+                file_names: vec![],
+                extensions: vec![],
+                patterns: vec!["models".to_string()],
+            },
         };
 
         let mut progress = ProgressEmitter::new();

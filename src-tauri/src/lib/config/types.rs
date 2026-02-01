@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 5;
+pub const CONFIG_VERSION: u32 = 7;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,50 +53,19 @@ pub struct UiState {
     pub last_active_tab_id: Option<String>,
 }
 
-fn default_true() -> bool {
-    true
-}
-
-/// Global exclude preset toggles.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GlobalExcludePresets {
-    /// Exclude model weight binaries.
-    #[serde(default = "default_true")]
-    pub model_weights: bool,
-    /// Exclude model format binaries.
-    #[serde(default = "default_true")]
-    pub model_formats: bool,
-    /// Exclude model directories (models/checkpoints/weights).
-    #[serde(default = "default_true")]
-    pub model_dirs: bool,
-    /// Exclude Hugging Face caches.
-    #[serde(default = "default_true")]
-    pub hf_caches: bool,
-    /// Exclude experiment tracking logs.
-    #[serde(default = "default_true")]
-    pub experiment_logs: bool,
-}
-
-impl Default for GlobalExcludePresets {
-    fn default() -> Self {
-        Self {
-            model_weights: true,
-            model_formats: true,
-            model_dirs: true,
-            hf_caches: true,
-            experiment_logs: true,
-        }
-    }
-}
-
 /// Global excludes for bundle building (not per-repo, not per-preset)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct GlobalExcludes {
-    /// Preset toggles for common large artifacts.
+    /// Directory names to exclude (exact match)
     #[serde(default)]
-    pub presets: GlobalExcludePresets,
+    pub dir_names: Vec<String>,
+    /// Directory name suffixes to exclude (e.g. ".egg-info")
+    #[serde(default)]
+    pub dir_suffixes: Vec<String>,
+    /// File names to exclude (exact match)
+    #[serde(default)]
+    pub file_names: Vec<String>,
     /// File extensions to exclude (e.g. ".safetensors", ".ckpt")
     #[serde(default)]
     pub extensions: Vec<String>,
