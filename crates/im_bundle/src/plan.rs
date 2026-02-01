@@ -23,14 +23,32 @@ fn default_true() -> bool {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GlobalExcludePresets {
-    /// Exclude ML artifacts (model weights + experiment caches).
+    /// Exclude model weight binaries.
     #[serde(default = "default_true")]
-    pub ml_artifacts: bool,
+    pub model_weights: bool,
+    /// Exclude model format binaries.
+    #[serde(default = "default_true")]
+    pub model_formats: bool,
+    /// Exclude model directories (models/checkpoints/weights).
+    #[serde(default = "default_true")]
+    pub model_dirs: bool,
+    /// Exclude Hugging Face caches.
+    #[serde(default = "default_true")]
+    pub hf_caches: bool,
+    /// Exclude experiment tracking logs.
+    #[serde(default = "default_true")]
+    pub experiment_logs: bool,
 }
 
 impl Default for GlobalExcludePresets {
     fn default() -> Self {
-        Self { ml_artifacts: true }
+        Self {
+            model_weights: true,
+            model_formats: true,
+            model_dirs: true,
+            hf_caches: true,
+            experiment_logs: true,
+        }
     }
 }
 

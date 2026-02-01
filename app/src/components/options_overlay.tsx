@@ -59,6 +59,11 @@ export function OptionsOverlay({
   onClose,
 }: OptionsOverlayProps): React.JSX.Element {
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const toggleAdvanced = useCallback(() => {
+    setAdvancedOpen((prev) => !prev);
+  }, []);
 
   // Local state for text inputs (commit on blur)
   const [extensionsText, setExtensionsText] = useState(() =>
@@ -130,12 +135,12 @@ export function OptionsOverlay({
     [handleClose]
   );
 
-  const handleMlArtifactsToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+  const setPresetValue = useCallback(
+    (key: keyof GlobalExcludes["presets"], value: boolean) => {
       setGlobalExcludes({
         presets: {
           ...globalExcludes.presets,
-          mlArtifacts: event.target.checked,
+          [key]: value,
         },
         extensions: globalExcludes.extensions,
         patterns: globalExcludes.patterns,
@@ -143,6 +148,47 @@ export function OptionsOverlay({
     },
     [globalExcludes, setGlobalExcludes]
   );
+
+  const allPresetsEnabled = useMemo(() => {
+    const presets = globalExcludes.presets;
+    return (
+      presets.modelWeights &&
+      presets.modelFormats &&
+      presets.modelDirs &&
+      presets.hfCaches &&
+      presets.experimentLogs
+    );
+  }, [globalExcludes.presets]);
+
+  const handleRecommendedToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.checked;
+      setGlobalExcludes({
+        presets: {
+          modelWeights: value,
+          modelFormats: value,
+          modelDirs: value,
+          hfCaches: value,
+          experimentLogs: value,
+        },
+        extensions: globalExcludes.extensions,
+        patterns: globalExcludes.patterns,
+      });
+    },
+    [globalExcludes.extensions, globalExcludes.patterns, setGlobalExcludes]
+  );
+
+  const advancedSummary = useMemo(() => {
+    const extCount = globalExcludes.extensions.length;
+    const patternCount = globalExcludes.patterns.length;
+    if (extCount === 0 && patternCount === 0) {
+      return "Advanced";
+    }
+    const parts = [];
+    if (extCount > 0) parts.push(`${extCount} ext`);
+    if (patternCount > 0) parts.push(`${patternCount} path`);
+    return `Advanced (${parts.join(", ")})`;
+  }, [globalExcludes.extensions.length, globalExcludes.patterns.length]);
 
   return createPortal(
     <div className="options-overlay" onClick={handleBackdropClick}>
@@ -178,45 +224,125 @@ export function OptionsOverlay({
           <label className="options-checkbox-row">
             <input
               type="checkbox"
-              checked={globalExcludes.presets.mlArtifacts}
-              onChange={handleMlArtifactsToggle}
+              checked={allPresetsEnabled}
+              onChange={handleRecommendedToggle}
             />
             <span>
-              ML artifacts (model weights + experiment caches)
-              <span className="options-hint">.safetensors/.ckpt + models/, wandb/, mlruns/</span>
+              Recommended (toggle all presets)
+              <span className="options-hint">Safe defaults for large ML artifacts.</span>
+            </span>
+          </label>
+
+          <label className="options-checkbox-row">
+            <input
+              type="checkbox"
+              checked={globalExcludes.presets.modelWeights}
+              onChange={(event) => {
+                setPresetValue("modelWeights", event.target.checked);
+              }}
+            />
+            <span>
+              Model weights (.safetensors, .ckpt, .pt, .pth, .bin)
+            </span>
+          </label>
+
+          <label className="options-checkbox-row">
+            <input
+              type="checkbox"
+              checked={globalExcludes.presets.modelFormats}
+              onChange={(event) => {
+                setPresetValue("modelFormats", event.target.checked);
+              }}
+            />
+            <span>
+              Model formats (.onnx, .pb, .h5, .keras)
+            </span>
+          </label>
+
+          <label className="options-checkbox-row">
+            <input
+              type="checkbox"
+              checked={globalExcludes.presets.modelDirs}
+              onChange={(event) => {
+                setPresetValue("modelDirs", event.target.checked);
+              }}
+            />
+            <span>
+              Model directories (models/, checkpoints/, weights/)
+            </span>
+          </label>
+
+          <label className="options-checkbox-row">
+            <input
+              type="checkbox"
+              checked={globalExcludes.presets.hfCaches}
+              onChange={(event) => {
+                setPresetValue("hfCaches", event.target.checked);
+              }}
+            />
+            <span>
+              Hugging Face cache (.huggingface/, huggingface_hub/)
+            </span>
+          </label>
+
+          <label className="options-checkbox-row">
+            <input
+              type="checkbox"
+              checked={globalExcludes.presets.experimentLogs}
+              onChange={(event) => {
+                setPresetValue("experimentLogs", event.target.checked);
+              }}
+            />
+            <span>
+              Experiment logs (wandb/, mlruns/, lightning_logs/)
             </span>
           </label>
         </div>
 
         <div className="options-section">
-          <div className="options-section-title">Custom Excludes</div>
-          <div className="options-row stacked">
-            <span className="options-row-label">Extensions (comma-separated)</span>
-            <input
-              type="text"
-              className="options-text-input"
-              value={extensionsText}
-              onChange={(e) => { setExtensionsText(e.target.value); }}
-              onBlur={commitExcludes}
-              placeholder=".safetensors, .ckpt, .pt"
-              title="Comma-separated file extensions to exclude from bundles"
-            />
-            <span className="options-hint">Case-insensitive; dot optional.</span>
-          </div>
+          <button
+            type="button"
+            className="options-section-toggle"
+            onClick={toggleAdvanced}
+            aria-expanded={advancedOpen}
+          >
+            <span className="options-section-title">{advancedSummary}</span>
+            <span className={`options-chevron ${advancedOpen ? "open" : ""}`}>
+              ▸
+            </span>
+          </button>
 
-          <div className="options-row stacked">
-            <span className="options-row-label">Path segments (comma-separated)</span>
-            <input
-              type="text"
-              className="options-text-input"
-              value={patternsText}
-              onChange={(e) => { setPatternsText(e.target.value); }}
-              onBlur={commitExcludes}
-              placeholder="models, checkpoints, wandb"
-              title="Comma-separated path segments to exclude from bundles"
-            />
-            <span className="options-hint">Matches path segments only; no wildcards.</span>
-          </div>
+          {advancedOpen && (
+            <div className="options-section-content">
+              <div className="options-row stacked">
+                <span className="options-row-label">Extensions (comma-separated)</span>
+                <input
+                  type="text"
+                  className="options-text-input"
+                  value={extensionsText}
+                  onChange={(e) => { setExtensionsText(e.target.value); }}
+                  onBlur={commitExcludes}
+                  placeholder=".safetensors, .ckpt, .pt"
+                  title="Comma-separated file extensions to exclude from bundles"
+                />
+                <span className="options-hint">Case-insensitive; dot optional.</span>
+              </div>
+
+              <div className="options-row stacked">
+                <span className="options-row-label">Path segments (comma-separated)</span>
+                <input
+                  type="text"
+                  className="options-text-input"
+                  value={patternsText}
+                  onChange={(e) => { setPatternsText(e.target.value); }}
+                  onBlur={commitExcludes}
+                  placeholder="models, checkpoints, wandb"
+                  title="Comma-separated path segments to exclude from bundles"
+                />
+                <span className="options-hint">Matches path segments only; no wildcards.</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {stagingPath && (

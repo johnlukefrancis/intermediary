@@ -15,7 +15,11 @@ interface BundleSelectionPlan {
 
 interface GlobalExcludesPlan {
   presets: {
-    mlArtifacts: boolean;
+    modelWeights: boolean;
+    modelFormats: boolean;
+    modelDirs: boolean;
+    hfCaches: boolean;
+    experimentLogs: boolean;
   };
   extensions: string[];
   patterns: string[];
@@ -176,7 +180,13 @@ function buildPlan(options: BundleCliOptions): BundlePlan {
     git,
     builtAtIso: options.builtAtIso,
     globalExcludes: options.globalExcludes ?? {
-      presets: { mlArtifacts: true },
+      presets: {
+        modelWeights: true,
+        modelFormats: true,
+        modelDirs: true,
+        hfCaches: true,
+        experimentLogs: true,
+      },
       extensions: [],
       patterns: [],
     },

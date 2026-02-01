@@ -29,7 +29,11 @@ export interface BundleManifest {
  */
 export interface GlobalExcludes {
   presets: {
-    mlArtifacts: boolean;
+    modelWeights: boolean;
+    modelFormats: boolean;
+    modelDirs: boolean;
+    hfCaches: boolean;
+    experimentLogs: boolean;
   };
   extensions: string[];
   patterns: string[];

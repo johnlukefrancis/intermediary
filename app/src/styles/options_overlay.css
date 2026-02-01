@@ -103,6 +103,48 @@
   margin-bottom: var(--space-2);
 }
 
+/* ===== COLLAPSIBLE SECTION ===== */
+.options-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.options-section-toggle .options-section-title {
+  margin-bottom: 0;
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.options-section-toggle:hover .options-section-title {
+  color: var(--color-text-secondary);
+}
+
+.options-section-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-deck-sm);
+}
+
+.options-chevron {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.options-chevron.open {
+  transform: rotate(90deg);
+}
+
+.options-section-content {
+  margin-top: var(--space-3);
+}
+
 .options-checkbox-row {
   display: flex;
   align-items: flex-start;

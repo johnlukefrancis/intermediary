@@ -3,28 +3,30 @@
 
 use crate::plan::GlobalExcludes;
 
-const ML_ARTIFACT_EXTENSIONS: &[&str] = &[
+const MODEL_WEIGHT_EXTENSIONS: &[&str] = &[
     ".safetensors",
     ".ckpt",
     ".pt",
     ".pth",
     ".bin",
+];
+
+const MODEL_FORMAT_EXTENSIONS: &[&str] = &[
     ".onnx",
     ".pb",
     ".h5",
     ".keras",
 ];
 
-const ML_ARTIFACT_PATTERNS: &[&str] = &[
+const MODEL_DIR_PATTERNS: &[&str] = &[
     "models",
     "checkpoints",
     "weights",
-    ".huggingface",
-    "huggingface_hub",
-    "wandb",
-    "mlruns",
-    "lightning_logs",
 ];
+
+const HF_CACHE_PATTERNS: &[&str] = &[".huggingface", "huggingface_hub"];
+
+const EXPERIMENT_PATTERNS: &[&str] = &["wandb", "mlruns", "lightning_logs"];
 
 #[derive(Debug, Clone)]
 pub struct NormalizedGlobalExcludes {
@@ -36,9 +38,20 @@ pub fn normalize_global_excludes(excludes: &GlobalExcludes) -> NormalizedGlobalE
     let mut extensions = Vec::new();
     let mut patterns = Vec::new();
 
-    if excludes.presets.ml_artifacts {
-        extensions.extend(ML_ARTIFACT_EXTENSIONS.iter().map(|ext| ext.to_string()));
-        patterns.extend(ML_ARTIFACT_PATTERNS.iter().map(|pattern| pattern.to_string()));
+    if excludes.presets.model_weights {
+        extensions.extend(MODEL_WEIGHT_EXTENSIONS.iter().map(|ext| ext.to_string()));
+    }
+    if excludes.presets.model_formats {
+        extensions.extend(MODEL_FORMAT_EXTENSIONS.iter().map(|ext| ext.to_string()));
+    }
+    if excludes.presets.model_dirs {
+        patterns.extend(MODEL_DIR_PATTERNS.iter().map(|pattern| pattern.to_string()));
+    }
+    if excludes.presets.hf_caches {
+        patterns.extend(HF_CACHE_PATTERNS.iter().map(|pattern| pattern.to_string()));
+    }
+    if excludes.presets.experiment_logs {
+        patterns.extend(EXPERIMENT_PATTERNS.iter().map(|pattern| pattern.to_string()));
     }
 
     extensions.extend(excludes.extensions.iter().cloned());
@@ -135,7 +148,13 @@ mod tests {
     #[test]
     fn normalizes_extensions_and_patterns() {
         let excludes = GlobalExcludes {
-            presets: GlobalExcludePresets { ml_artifacts: false },
+            presets: GlobalExcludePresets {
+                model_weights: false,
+                model_formats: false,
+                model_dirs: false,
+                hf_caches: false,
+                experiment_logs: false,
+            },
             extensions: vec!["CKPT".to_string(), ".PT".to_string()],
             patterns: vec!["/Models/".to_string(), "  wandb  ".to_string()],
         };

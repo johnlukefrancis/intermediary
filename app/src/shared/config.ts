@@ -161,13 +161,27 @@ export const CONFIG_VERSION = 5;
  * User's personal "never zip these" preferences that supplement hardcoded excludes.
  */
 export const GlobalExcludePresetsSchema = z.object({
-  /** Exclude ML artifacts (model weights + experiment caches) */
-  mlArtifacts: z.boolean().default(true),
+  /** Exclude model weight binaries */
+  modelWeights: z.boolean().default(true),
+  /** Exclude model format binaries */
+  modelFormats: z.boolean().default(true),
+  /** Exclude model directories (models/checkpoints/weights) */
+  modelDirs: z.boolean().default(true),
+  /** Exclude Hugging Face caches */
+  hfCaches: z.boolean().default(true),
+  /** Exclude experiment tracking logs */
+  experimentLogs: z.boolean().default(true),
 });
 
 export const GlobalExcludesSchema = z.object({
   /** Preset toggles for common large artifacts */
-  presets: GlobalExcludePresetsSchema.default({ mlArtifacts: true }),
+  presets: GlobalExcludePresetsSchema.default({
+    modelWeights: true,
+    modelFormats: true,
+    modelDirs: true,
+    hfCaches: true,
+    experimentLogs: true,
+  }),
   /** File extensions to exclude (e.g. ".safetensors", ".ckpt") */
   extensions: z.array(z.string()).default([]),
   /** Path segments to exclude (e.g. "models", "checkpoints") */
@@ -221,7 +235,13 @@ export const PersistedConfigSchema = z.object({
   bundleSelections: BundleSelectionsSchema.default({}),
   /** Global bundle excludes (extensions and patterns) */
   globalExcludes: GlobalExcludesSchema.default({
-    presets: { mlArtifacts: true },
+    presets: {
+      modelWeights: true,
+      modelFormats: true,
+      modelDirs: true,
+      hfCaches: true,
+      experimentLogs: true,
+    },
     extensions: [],
     patterns: [],
   }),
@@ -256,7 +276,13 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     },
     bundleSelections: {},
     globalExcludes: {
-      presets: { mlArtifacts: true },
+      presets: {
+        modelWeights: true,
+        modelFormats: true,
+        modelDirs: true,
+        hfCaches: true,
+        experimentLogs: true,
+      },
       extensions: [],
       patterns: [],
     },
@@ -277,7 +303,7 @@ function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v3 -> v4: Add globalExcludes
   // Zod schema defaults handle missing globalExcludes fields.
 
-  // Migration: v4 -> v5: Add globalExcludes presets (mlArtifacts).
+  // Migration: v4 -> v5: Add globalExcludes presets.
   // Zod schema defaults apply when field is missing.
 
   return { ...config, configVersion: CONFIG_VERSION };
