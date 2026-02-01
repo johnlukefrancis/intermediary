@@ -25,6 +25,7 @@
   "dependencies": {
     "@crabnebula/tauri-plugin-drag": "^2.1.0",
     "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
     "chokidar": "^3.6.0",
     "minimatch": "^9.0.3",
     "react": "^18.3.1",

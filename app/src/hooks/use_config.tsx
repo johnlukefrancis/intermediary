@@ -15,6 +15,7 @@ import {
   type PersistedConfig,
   type LoadConfigResult,
   type BundleSelection,
+  type RepoConfig,
   getDefaultPersistedConfig,
   parsePersistedConfig,
 } from "../shared/config.js";
@@ -39,6 +40,10 @@ interface ConfigContextValue {
     presetId: string,
     selection: BundleSelection
   ) => void;
+  /** Add a new repo to config */
+  addRepo: (repo: RepoConfig) => void;
+  /** Remove a repo by repoId (also cleans up bundleSelections) */
+  removeRepo: (repoId: string) => void;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -213,6 +218,49 @@ export function ConfigProvider({
     [saveConfig]
   );
 
+  const addRepo = useCallback(
+    (repo: RepoConfig) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          repos: [...prev.repos, repo],
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
+  const removeRepo = useCallback(
+    (repoId: string) => {
+      setConfig((prev) => {
+        // Remove from repos array
+        const newRepos = prev.repos.filter((r) => r.repoId !== repoId);
+
+        // Clean up bundleSelections for this repo
+        const { [repoId]: _removed, ...newBundleSelections } =
+          prev.bundleSelections;
+
+        // Clear lastActiveTabId if it was this repo
+        const newUiState =
+          prev.uiState.lastActiveTabId === repoId
+            ? { ...prev.uiState, lastActiveTabId: null }
+            : prev.uiState;
+
+        const next: PersistedConfig = {
+          ...prev,
+          repos: newRepos,
+          bundleSelections: newBundleSelections,
+          uiState: newUiState,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
   const value: ConfigContextValue = {
     config,
     isLoaded,
@@ -220,6 +268,8 @@ export function ConfigProvider({
     setAutoStageGlobal,
     setLastActiveTabId,
     setBundleSelection,
+    addRepo,
+    removeRepo,
   };
 
   return (

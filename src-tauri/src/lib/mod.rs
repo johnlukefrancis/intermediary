@@ -7,7 +7,7 @@ pub mod obs;
 pub mod paths;
 
 use commands::config::{load_config, save_config};
-use commands::paths::get_app_paths;
+use commands::paths::{convert_windows_to_wsl, get_app_paths};
 use commands::wsl::resolve_wsl_host;
 use obs::logging;
 
@@ -15,6 +15,7 @@ use obs::logging;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_drag::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Initialize logging
             if let Some(log_dir) = logging::resolve_log_dir(app.handle()) {
@@ -27,7 +28,8 @@ pub fn run() {
             get_app_paths,
             load_config,
             save_config,
-            resolve_wsl_host
+            resolve_wsl_host,
+            convert_windows_to_wsl
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri application");

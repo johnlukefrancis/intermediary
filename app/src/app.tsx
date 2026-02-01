@@ -5,6 +5,7 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { StatusBar } from "./components/status_bar.js";
 import { RepoTab } from "./tabs/repo_tab.js";
+import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
 import type { RepoConfig } from "./shared/config.js";
 
@@ -87,13 +88,19 @@ export function App(): React.JSX.Element {
     return validateRepoId(config.uiState.lastActiveTabId);
   });
 
-  // Update local state when config loads (handles async load)
+  // Update local state when config loads or repos change
   useEffect(() => {
     if (isLoaded) {
-      const validRepoId = validateRepoId(config.uiState.lastActiveTabId);
-      setActiveRepoIdState(validRepoId);
+      // Validate current activeRepoId against current repos
+      const validRepoId = validateRepoId(activeRepoId ?? config.uiState.lastActiveTabId);
+      if (validRepoId !== activeRepoId) {
+        setActiveRepoIdState(validRepoId);
+        if (validRepoId) {
+          setLastActiveTabId(validRepoId);
+        }
+      }
     }
-  }, [isLoaded, config.uiState.lastActiveTabId, validateRepoId]);
+  }, [isLoaded, config.repos, activeRepoId, config.uiState.lastActiveTabId, validateRepoId, setLastActiveTabId]);
 
   // Wrap setter to also persist
   const setActiveRepoId = useCallback(
@@ -104,6 +111,28 @@ export function App(): React.JSX.Element {
     [setLastActiveTabId]
   );
 
+  // Handle new repo added - auto-select it
+  const handleRepoAdded = useCallback(
+    (repoId: string) => {
+      setActiveRepoId(repoId);
+    },
+    [setActiveRepoId]
+  );
+
+  // Empty state: no repos configured
+  if (config.repos.length === 0) {
+    return (
+      <div className="app">
+        <header className="header-stack glass-surface">
+          <StatusBar />
+        </header>
+        <main className="tab-content">
+          <EmptyRepoState onRepoAdded={handleRepoAdded} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app" data-active-tab={activeRepoId}>
       <header className="header-stack glass-surface">
@@ -111,6 +140,7 @@ export function App(): React.JSX.Element {
           tabs={tabs}
           activeRepoId={activeRepoId}
           onRepoChange={setActiveRepoId}
+          onRepoAdded={handleRepoAdded}
         />
         <StatusBar />
       </header>

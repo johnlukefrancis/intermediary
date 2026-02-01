@@ -25,18 +25,22 @@ agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
 app/src/app.tsx - Root component with config-driven tab state management
+app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
+app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
+app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
 app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
+app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
@@ -48,13 +52,16 @@ app/src/lib/agent/messages.ts - Typed helper functions for sending agent command
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - AppConfig Zod schema and types
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
+app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
 app/src/styles/bundle_column.css - Hardware-style bundle column with segmented controls and command buttons
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
+app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
+app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/file_row.css - Hardware-style file row with left rail and state marker
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
@@ -89,7 +96,7 @@ src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
-src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation
+src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/wsl.rs - WSL host resolution for Windows->WSL agent connections
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
 src-tauri/src/lib/config/mod.rs - Configuration persistence module

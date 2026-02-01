@@ -4,12 +4,15 @@
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
+import { AddRepoButton } from "./add_repo_button.js";
+import { TabRemoveButton } from "./tab_remove_button.js";
 import "../styles/tab_bar.css";
 
 interface TabBarProps {
   tabs: TabItem[];
   activeRepoId: string | null;
   onRepoChange: (repoId: string) => void;
+  onRepoAdded?: (repoId: string) => void;
 }
 
 /** Check if the active repo belongs to this group */
@@ -23,7 +26,7 @@ function getActiveRepoLabel(group: GroupTab, activeRepoId: string | null): strin
   return repo?.label ?? group.repos[0]?.label ?? "";
 }
 
-export function TabBar({ tabs, activeRepoId, onRepoChange }: TabBarProps): React.JSX.Element {
+export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBarProps): React.JSX.Element {
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -78,12 +81,17 @@ export function TabBar({ tabs, activeRepoId, onRepoChange }: TabBarProps): React
       {tabs.map((tab) => {
         if (tab.type === "single") {
           return (
-            <SingleTabButton
-              key={tab.repoId}
-              tab={tab}
-              isActive={activeRepoId === tab.repoId}
-              onClick={() => { onRepoChange(tab.repoId); }}
-            />
+            <div key={tab.repoId} className="single-tab-container">
+              <SingleTabButton
+                tab={tab}
+                isActive={activeRepoId === tab.repoId}
+                onClick={() => { onRepoChange(tab.repoId); }}
+              />
+              <TabRemoveButton
+                repoId={tab.repoId}
+                label={tab.label}
+              />
+            </div>
           );
         } else {
           const isActive = isGroupActive(tab, activeRepoId);
@@ -121,15 +129,21 @@ export function TabBar({ tabs, activeRepoId, onRepoChange }: TabBarProps): React
                   {tab.repos.map((repo) => {
                     const isSelected = activeRepoId === repo.repoId;
                     return (
-                      <button
-                        key={repo.repoId}
-                        className={`group-dropdown-item ${isSelected ? "selected" : ""}`}
-                        onClick={() => { handleRepoSelect(repo.repoId); }}
-                        type="button"
-                      >
-                        <span className="group-radio">{isSelected ? "●" : "○"}</span>
-                        {repo.label}
-                      </button>
+                      <div key={repo.repoId} className="group-dropdown-row">
+                        <button
+                          className={`group-dropdown-item ${isSelected ? "selected" : ""}`}
+                          onClick={() => { handleRepoSelect(repo.repoId); }}
+                          type="button"
+                        >
+                          <span className="group-radio">{isSelected ? "●" : "○"}</span>
+                          {repo.label}
+                        </button>
+                        <TabRemoveButton
+                          repoId={repo.repoId}
+                          label={repo.label}
+                          className="group-dropdown-remove"
+                        />
+                      </div>
                     );
                   })}
                 </div>
@@ -138,6 +152,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange }: TabBarProps): React
           );
         }
       })}
+      <AddRepoButton {...(onRepoAdded ? { onRepoAdded } : {})} />
     </nav>
   );
 }

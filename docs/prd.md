@@ -41,7 +41,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* **v0:** All repos live in **WSL Linux filesystem** under `/home/johnf/code`. Windows-path support is a later enhancement.
+* **v0:** All repos must be in the **WSL Linux filesystem** (e.g., `/home/<user>/code`). Windows-native paths are a later enhancement.
 * Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
@@ -70,7 +70,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 ### Layout (single window)
 
-* **Top tab bar:** one tab per repo. Triangle Rain is a single tab containing a **worktree switcher** (v0 ships with only `tr-engine` configured; schema anticipates multiple worktrees later).
+* **Top tab bar:** one tab per repo. Repos with matching `groupId` and `groupLabel` are shown as a single tab with a dropdown switcher (useful for worktrees). A "+" button adds new repos.
 * **Three columns per tab:**
 
   1. **Docs** (recently changed doc-like files)
@@ -108,15 +108,16 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 ### 7.1 Repository configuration
 
+Users add and remove repositories via the UI:
+
+* **Add repository**: Click the "+" button in the tab bar to open a directory picker. The selected Windows/UNC path is converted to a WSL path for the agent.
+* **Remove repository**: Click the "×" button on a tab (or in a group dropdown), confirm via modal. Removes the repo and its bundle selections.
+* **Empty state**: When no repos are configured, a centered prompt with "Add Repository" button is shown.
+
 Each repo has:
 
-* `repoId`, `label`
-* `location`: **v0 supports WSL paths only** (distro + Linux path). Windows-native paths are a later enhancement.
-
-  * v0 initial roots:
-    * `/home/johnf/code/textureportal`
-    * `/home/johnf/code/worktrees/tr-engine` (Triangle Rain worktree)
-    * `/home/johnf/code/intermediary`
+* `repoId`, `label` (auto-generated from folder name, editable)
+* `wslPath`: **WSL paths only** for v0 (Windows-native paths are a later enhancement)
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
@@ -330,9 +331,9 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 
 The following assumptions are locked for v0:
 
-* **Repo location:** All repos live in WSL Linux FS under `/home/johnf/code`. The WSL agent is required.
-* **Initial repo set:** textureportal, worktrees/tr-engine (Triangle Rain), intermediary.
-* **Triangle Rain tab model:** Single tab with worktree switcher inside; v0 ships with only tr-engine configured.
+* **Repo location:** All repos must be in WSL Linux FS (user adds via directory picker). The WSL agent is required.
+* **Initial repo set:** Empty by default. Users add repos via the "+" button in the tab bar.
+* **Grouped repos:** Repos with matching `groupId` share a tab with a dropdown. Useful for worktrees of the same project.
 * **Bundle selection UI:** Top-level folders only + "include root files" toggle (default ON). No nested subfolder selection in v0.
 * **Staging strategy:** Auto-stage on change is default ON. Boolean toggle (global + per-repo) to disable; stage-on-drag is fallback when off.
 

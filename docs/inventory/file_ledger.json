@@ -90,6 +90,10 @@
       "summary": "Root component with config-driven tab state management"
     },
     {
+      "path": "app/src/components/add_repo_button.tsx",
+      "summary": "\"+\" button for adding new repositories via directory picker"
+    },
+    {
       "path": "app/src/components/bundles/bundle_column.tsx",
       "summary": "Main bundles column component"
     },
@@ -110,8 +114,16 @@
       "summary": "Preset tabs/buttons for bundle building"
     },
     {
+      "path": "app/src/components/confirm_modal.tsx",
+      "summary": "Generic confirmation dialog with portal rendering"
+    },
+    {
       "path": "app/src/components/drag_error_notice.tsx",
       "summary": "Small inline error notice for drag failures"
+    },
+    {
+      "path": "app/src/components/empty_repo_state.tsx",
+      "summary": "Empty state UI when no repos are configured"
     },
     {
       "path": "app/src/components/file_list_column.tsx",
@@ -136,6 +148,10 @@
     {
       "path": "app/src/components/tab_bar.tsx",
       "summary": "Tab navigation with grouped repo dropdown support"
+    },
+    {
+      "path": "app/src/components/tab_remove_button.tsx",
+      "summary": "\"x\" button for removing repos with confirmation"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -182,6 +198,10 @@
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
     },
     {
+      "path": "app/src/shared/repo_utils.ts",
+      "summary": "Utility functions for repo ID generation and path handling"
+    },
+    {
       "path": "app/src/styles/a11y.css",
       "summary": "Accessibility utilities - focus rings, disabled states, screen reader helpers"
     },
@@ -202,12 +222,20 @@
       "summary": "Three-column deck grid layout with intentional gutters (Docs | Code | Zips)"
     },
     {
+      "path": "app/src/styles/confirm_modal.css",
+      "summary": "Confirmation dialog overlay with glass panel styling"
+    },
+    {
       "path": "app/src/styles/drag_error_notice.css",
       "summary": "Inline glass toast for drag errors"
     },
     {
       "path": "app/src/styles/effects.css",
       "summary": "Deck chassis frame, substrate (grid + grain), vignette, and glass utilities"
+    },
+    {
+      "path": "app/src/styles/empty_repo_state.css",
+      "summary": "Empty state display when no repositories are configured"
     },
     {
       "path": "app/src/styles/file_row.css",
@@ -347,7 +375,7 @@
     },
     {
       "path": "src-tauri/src/lib/commands/paths.rs",
-      "summary": "get_app_paths command implementation"
+      "summary": "get_app_paths command implementation and path conversion utilities"
     },
     {
       "path": "src-tauri/src/lib/commands/wsl.rs",

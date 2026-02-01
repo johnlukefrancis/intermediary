@@ -142,40 +142,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
   agentHost: "localhost",
   agentPort: 3141,
   autoStageGlobal: true,
-  repos: [
-    {
-      repoId: "textureportal",
-      label: "TexturePortal",
-      wslPath: "/home/johnf/code/textureportal",
-      autoStage: true,
-      docsGlobs: DEFAULT_DOCS_GLOBS,
-      codeGlobs: DEFAULT_CODE_GLOBS,
-      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
-      bundlePresets: [DEFAULT_BUNDLE_PRESET],
-    },
-    {
-      repoId: "triangle-rain-tr-engine",
-      label: "tr-engine",
-      wslPath: "/home/johnf/code/worktrees/tr-engine",
-      groupId: "triangle-rain",
-      groupLabel: "Triangle Rain",
-      autoStage: true,
-      docsGlobs: DEFAULT_DOCS_GLOBS,
-      codeGlobs: DEFAULT_CODE_GLOBS,
-      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
-      bundlePresets: [DEFAULT_BUNDLE_PRESET],
-    },
-    {
-      repoId: "intermediary",
-      label: "Intermediary",
-      wslPath: "/home/johnf/code/intermediary",
-      autoStage: true,
-      docsGlobs: DEFAULT_DOCS_GLOBS,
-      codeGlobs: DEFAULT_CODE_GLOBS,
-      ignoreGlobs: DEFAULT_IGNORE_GLOBS,
-      bundlePresets: [DEFAULT_BUNDLE_PRESET],
-    },
-  ],
+  repos: [], // Empty by default - users add repos via the UI
 });
 
 // -----------------------------------------------------------------------------

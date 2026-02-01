@@ -48,9 +48,7 @@ Intermediary uses a **two-component architecture**:
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                   Watched Repos                     │    │
-│  │     /home/johnf/code/textureportal                  │    │
-│  │     /home/johnf/code/worktrees/tr-engine            │    │
-│  │     /home/johnf/code/intermediary                   │    │
+│  │     (User-configured WSL paths)                     │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -125,7 +123,7 @@ Config is loaded on app startup via Tauri command and saved with debounce (500ms
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
 
-**v0 constraint:** All repos live in WSL Linux FS under `/home/johnf/code`, so the WSL agent is required for v0. Windows-native repo support (where the agent would not be needed) is a later enhancement.
+**v0 constraint:** All repos must be in WSL Linux FS (users add via the "+" button in the tab bar), so the WSL agent is required for v0. Windows-native repo support (where the agent would not be needed) is a later enhancement.
 
 ## Directory Structure
 

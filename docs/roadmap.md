@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-01-30
+Updated on: 2026-02-01
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -20,10 +20,7 @@ Depends on: ADR-000, ADR-007
 
 **Status:** Core functionality complete. Ready for daily use.
 
-Configured repos (WSL Linux FS):
-- `/home/johnf/code/textureportal`
-- `/home/johnf/code/worktrees/tr-engine`
-- `/home/johnf/code/intermediary`
+Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with no default repos.
 
 **Next:** Maintenance and enhancements based on real-world usage.
 
@@ -45,9 +42,10 @@ Configured repos (WSL Linux FS):
 - WSL agent with file watching and auto-staging
 - Native drag-out via tauri-plugin-drag
 - Bundle building with manifest and retention
-- Config persistence (tab, worktree, bundle selections)
+- Config persistence (tab, bundle selections)
 - Status bar with staging path and error display
 - VS Code tasks for Windows development workflow
+- UI-based repo management (add via "+" button, remove via "×" with confirmation)
 
 ---
 
