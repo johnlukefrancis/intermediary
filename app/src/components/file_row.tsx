@@ -120,7 +120,7 @@ export function FileRow({
         aria-label={isStarred ? "Unstar file" : "Star file"}
         aria-pressed={isStarred}
       >
-        {isStarred ? "★" : "☆"}
+        ★
       </button>
     </div>
   );

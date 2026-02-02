@@ -152,13 +152,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: 16px;
   cursor: pointer;
   border-radius: var(--radius-deck-xs);
   transition:
