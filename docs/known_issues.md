@@ -35,7 +35,7 @@ Depends on: ADR-000, ADR-007
 
 ## P3 — Minor issues
 
-*None*
+- 2026-02-02: Background GPU usage from substrate animations when minimized. Motion governor implemented; pending verification that GPU drops to near-idle when minimized.
 
 ---
 

@@ -62,6 +62,7 @@ app/src/hooks/use_config_actions.ts - Core config action factory functions for r
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
+app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos

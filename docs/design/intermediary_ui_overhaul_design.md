@@ -279,6 +279,15 @@ All animations and transitions respect `prefers-reduced-motion: reduce`. When en
 
 This is handled globally in `motion.css` — no per-component opt-out needed.
 
+### Motion Governor
+
+Substrate animations (`substrate-breathe`, `substrate-drift`) are automatically paused when the window is minimized or hidden. This prevents background GPU usage from continuous compositing.
+
+- **Detection:** Uses `document.visibilitychange` + Tauri window focus events
+- **CSS gate:** `[data-motion="paused"]` on `.app` element
+- **Behavior:** Animations pause in place (`animation-play-state: paused`) and resume seamlessly when the window becomes visible
+- **Implementation:** `app/src/hooks/use_motion_governor.ts`
+
 ---
 
 ## Accessibility

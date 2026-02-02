@@ -238,6 +238,10 @@
       "summary": "Drag-out logic with on-demand staging"
     },
     {
+      "path": "app/src/hooks/use_motion_governor.ts",
+      "summary": "Pauses motion when window is hidden/minimized to save GPU"
+    },
+    {
       "path": "app/src/hooks/use_repo_state.ts",
       "summary": "Per-repo file state management with event subscription"
     },

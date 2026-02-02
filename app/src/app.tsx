@@ -7,6 +7,7 @@ import { StatusBar } from "./components/status_bar.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
+import { useMotionGovernor } from "./hooks/use_motion_governor.js";
 import type { RepoConfig } from "./shared/config.js";
 import {
   hexToAccentCssVars,
@@ -72,6 +73,7 @@ function deriveTabsFromRepos(repos: RepoConfig[]): TabItem[] {
 
 export function App(): React.JSX.Element {
   const { config, isLoaded, setLastActiveTabId } = useConfig();
+  const { motionPaused } = useMotionGovernor();
 
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);
@@ -165,7 +167,7 @@ export function App(): React.JSX.Element {
   // Empty state: no repos configured
   if (config.repos.length === 0) {
     return (
-      <div className="app" style={themeStyle}>
+      <div className="app" data-motion={motionPaused ? "paused" : undefined} style={themeStyle}>
         <header className="header-stack glass-surface">
           <StatusBar />
         </header>
@@ -177,7 +179,12 @@ export function App(): React.JSX.Element {
   }
 
   return (
-    <div className="app" data-active-tab={activeRepoId} style={themeStyle}>
+    <div
+      className="app"
+      data-active-tab={activeRepoId}
+      data-motion={motionPaused ? "paused" : undefined}
+      style={themeStyle}
+    >
       <header className="header-stack glass-surface">
         <TabBar
           tabs={tabs}

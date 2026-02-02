@@ -94,3 +94,10 @@
 .accent-glow-strong {
   box-shadow: var(--shadow-glow-md) var(--color-accent-glow);
 }
+
+/* ===== MOTION GOVERNOR ===== */
+/* Pause substrate animations when window is hidden to save GPU */
+.app[data-motion="paused"]::before {
+  animation-play-state: paused;
+  will-change: auto; /* Release compositor hint while paused */
+}
