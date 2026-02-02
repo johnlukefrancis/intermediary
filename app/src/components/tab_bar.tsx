@@ -133,8 +133,8 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                   onClick={(e) => { toggleDropdown(e, tab.repoId); }}
                   type="button"
                   aria-expanded={isOpen}
-                  aria-label={`Add folder to ${tab.label}`}
-                  title={`Add folder to ${tab.label}`}
+                  aria-label={`Add subfolder to ${tab.label}`}
+                  title={`Add subfolder to ${tab.label}`}
                 >
                   {isOpen ? "▲" : "▼"}
                 </button>
@@ -155,7 +155,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                     disabled={isAdding}
                     type="button"
                   >
-                    + Add folder
+                    + Add subfolder
                   </button>
                 </div>
               )}
@@ -188,8 +188,8 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                   onClick={(e) => { toggleDropdown(e, tab.groupId); }}
                   type="button"
                   aria-expanded={isOpen}
-                  aria-label={`Select ${tab.groupLabel} folder`}
-                  title={`Select ${tab.groupLabel} folder`}
+                  aria-label={`Add subfolder to ${tab.groupLabel}`}
+                  title={`Add subfolder to ${tab.groupLabel}`}
                 >
                   {isOpen ? "▲" : "▼"}
                 </button>
@@ -227,7 +227,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                     disabled={isAdding}
                     type="button"
                   >
-                    + Add folder
+                    + Add subfolder
                   </button>
                 </div>
               )}
