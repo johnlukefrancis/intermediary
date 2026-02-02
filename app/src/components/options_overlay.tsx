@@ -177,7 +177,7 @@ export function OptionsOverlay({
         {/* Tab Colors Section */}
         {themeEntries.length > 0 && (
           <div className="options-section">
-            <div className="options-section-title">Tab Colors</div>
+            <div className="options-section-title">Theme Colors</div>
             <div className="options-theme-list">
               {themeEntries.map((entry) => {
                 const currentHex =
@@ -211,7 +211,7 @@ export function OptionsOverlay({
                           }}
                           title="Reset to default"
                         >
-                          Reset
+                          ×
                         </button>
                       )}
                     </div>

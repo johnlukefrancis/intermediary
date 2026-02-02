@@ -82,7 +82,7 @@ main.css          → Layout reset and base structure
 Per-tab accent colors are now **config-driven** rather than hardcoded in CSS:
 
 - **Default**: `#c4688a` (dusty rose) when no custom theme is set
-- **User-configurable**: Users can set custom accent colors per tab via Options → Tab Colors
+- **User-configurable**: Users can set custom accent colors per tab via Options → Theme Colors
 - **Storage**: `config.tabThemes[tabKey].accentHex` where tabKey is groupId (for grouped repos) or repoId
 
 **Runtime application** (in `app.tsx`):
