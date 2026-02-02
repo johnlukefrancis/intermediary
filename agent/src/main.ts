@@ -3,40 +3,27 @@
 
 import * as path from "node:path";
 import type { WebSocket } from "ws";
-import type {
-  UiCommand,
-  UiResponse,
-  FileChangedEvent,
-  StagedInfo,
-} from "../../app/src/shared/protocol.js";
-import type { RepoConfig } from "../../app/src/shared/config.js";
+import type { UiCommand, UiResponse } from "../../app/src/shared/protocol.js";
 import { createWsServer, type WsServer } from "./server/ws_server.js";
 import { createRouter, type Router } from "./server/router.js";
-import { createRepoWatcher, type RepoWatcher } from "./repos/repo_watcher.js";
-import { createRecentFilesStore, type RecentFilesStore } from "./repos/recent_files_store.js";
+import { createRecentFilesStore } from "./repos/recent_files_store.js";
 import { getRepoTopLevel, isValidRepoRoot } from "./repos/repo_top_level.js";
-import { createStager, type Stager, type StageResult } from "./staging/stager.js";
+import { createStager } from "./staging/stager.js";
 import { type PathBridgeConfig } from "./staging/path_bridge.js";
-import { createBundleBuilder, type BundleBuilder } from "./bundles/bundle_builder.js";
+import { createBundleBuilder } from "./bundles/bundle_builder.js";
 import { listBundles } from "./bundles/bundle_lister.js";
-import { shouldAutoStage } from "./util/categorizer.js";
 import { logger, setLogLevel } from "./util/logger.js";
 import { AgentError } from "./util/errors.js";
+import {
+  type AgentRuntimeState,
+  resetWatchers,
+  shutdown,
+  startWatcher,
+} from "./agent_runtime.js";
 
 const AGENT_VERSION = "0.1.0";
 
-interface AgentState {
-  watchers: Map<string, RepoWatcher>;
-  repoRoots: Map<string, string>;
-  repoConfigs: Map<string, RepoConfig>;
-  stager: Stager | null;
-  bundleBuilder: BundleBuilder | null;
-  recentFilesStore: RecentFilesStore | null;
-  stagingWslRoot: string | null;
-  autoStageOnChange: boolean;
-}
-
-const state: AgentState = {
+const state: AgentRuntimeState = {
   watchers: new Map(),
   repoRoots: new Map(),
   repoConfigs: new Map(),
@@ -53,7 +40,7 @@ let server: WsServer;
 async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResponse> {
   switch (command.type) {
     case "clientHello": {
-      await resetWatchers();
+      await resetWatchers(state);
 
       // Configure staging
       const config: PathBridgeConfig = {
@@ -68,8 +55,8 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
       state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
 
       // Create recent files store for persistence
-      // stateDir is sibling to files/bundles: staging/state
-      const stateDir = path.posix.join(path.posix.dirname(command.stagingWslRoot), "state");
+      // stateDir lives under staging: staging/state
+      const stateDir = path.posix.join(command.stagingWslRoot, "state");
       state.recentFilesStore = createRecentFilesStore(stateDir);
 
       // Start watchers for configured repos (async)
@@ -80,7 +67,7 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
 
         if (await isValidRepoRoot(repo.wslPath)) {
           watchedRepoIds.push(repo.repoId);
-          void startWatcher(repo).catch((err: unknown) => {
+          void startWatcher(state, { router }, repo).catch((err: unknown) => {
             logger.error("Failed to start repo watcher", {
               repoId: repo.repoId,
               error: err instanceof Error ? err.message : String(err),
@@ -133,7 +120,7 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
       if (!(await isValidRepoRoot(rootPath))) {
         throw new AgentError("INVALID_REPO", `Invalid repo root: ${rootPath}`);
       }
-      await startWatcher(repoConfig);
+      await startWatcher(state, { router }, repoConfig);
       return { type: "watchRepoResult", repoId: command.repoId };
     }
 
@@ -270,111 +257,6 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
   throw new AgentError("UNKNOWN_COMMAND", `Unsupported command: ${String(exhaustiveCheck)}`);
 }
 
-async function startWatcher(repoConfig: RepoConfig): Promise<void> {
-  const repoId = repoConfig.repoId;
-  const repoRoot = repoConfig.wslPath;
-
-  // Load persisted recent files if store is available
-  const initialEntries = state.recentFilesStore?.load(repoId, repoRoot) ?? [];
-
-  const watcher = createRepoWatcher(repoId, repoRoot, {
-    docsGlobs: repoConfig.docsGlobs,
-    codeGlobs: repoConfig.codeGlobs,
-    ignoreGlobs: repoConfig.ignoreGlobs,
-    initialEntries,
-    onPersist: (entries) => {
-      state.recentFilesStore?.scheduleSave(repoId, repoRoot, entries);
-    },
-    onBeforeStop: () => {
-      // Flush is handled at agent level, but cancel pending writes for this repo
-      state.recentFilesStore?.cancelPending(repoId);
-      return Promise.resolve();
-    },
-  });
-
-  watcher.onFileChange((event) => {
-    const rootPath = repoRoot;
-    const baseEvent: FileChangedEvent = {
-      type: "fileChanged",
-      repoId: event.repoId,
-      path: event.relativePath,
-      kind: event.kind,
-      changeType: event.eventType,
-      mtime: event.mtime.toISOString(),
-    };
-
-    // Auto-stage if enabled and file type qualifies
-    if (
-      state.autoStageOnChange &&
-      state.stager &&
-      event.eventType !== "unlink" &&
-      shouldAutoStage(event.kind) &&
-      repoConfig.autoStage
-    ) {
-      state.stager.scheduleAutoStage(
-        event.repoId,
-        rootPath,
-        event.relativePath,
-        (result: StageResult) => {
-          const staged: StagedInfo = {
-            wslPath: result.wslPath,
-            windowsPath: result.windowsPath,
-            bytesCopied: result.bytesCopied,
-            mtimeMs: result.mtimeMs,
-          };
-          router.broadcastEvent({ ...baseEvent, staged });
-        },
-        () => {
-          router.broadcastEvent(baseEvent);
-        }
-      );
-    } else {
-      router.broadcastEvent(baseEvent);
-    }
-  });
-
-  state.watchers.set(repoId, watcher);
-  state.repoRoots.set(repoId, repoRoot);
-
-  try {
-    await watcher.start();
-    router.broadcastEvent({
-      type: "snapshot",
-      repoId,
-      recent: watcher.getRecentChanges(),
-    });
-  } catch (err) {
-    state.watchers.delete(repoId);
-    throw err;
-  }
-}
-
-async function shutdown(): Promise<void> {
-  logger.info("Shutting down agent...");
-  // Flush recent files store before stopping watchers
-  if (state.recentFilesStore) {
-    await state.recentFilesStore.flush();
-  }
-  for (const watcher of state.watchers.values()) {
-    await watcher.stop();
-  }
-  await server.stop();
-  process.exit(0);
-}
-
-async function resetWatchers(): Promise<void> {
-  // Flush recent files store before stopping watchers
-  if (state.recentFilesStore) {
-    await state.recentFilesStore.flush();
-  }
-  for (const watcher of state.watchers.values()) {
-    await watcher.stop();
-  }
-  state.watchers.clear();
-  state.repoRoots.clear();
-  state.repoConfigs.clear();
-}
-
 async function main(): Promise<void> {
   if (process.env["DEBUG"]) {
     setLogLevel("debug");
@@ -386,8 +268,8 @@ async function main(): Promise<void> {
   server = createWsServer({ router });
   router.setBroadcaster((msg) => { server.broadcast(msg); });
 
-  process.on("SIGINT", () => void shutdown());
-  process.on("SIGTERM", () => void shutdown());
+  process.on("SIGINT", () => void shutdown(state, { router, server }));
+  process.on("SIGTERM", () => void shutdown(state, { router, server }));
 
   await server.start();
   logger.info("Agent ready", { version: AGENT_VERSION, port: server.port });

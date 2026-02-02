@@ -1,5 +1,5 @@
 # Workflow Closeout Commands
-Updated on: 2026-01-31
+Updated on: 2026-02-02
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -16,6 +16,8 @@ pnpm install
 ```bash
 pnpm run headers:list -- app
 pnpm run headers:write -- app
+pnpm run headers:list -- agent
+pnpm run headers:write -- agent
 pnpm run headers:list -- crates
 pnpm run headers:write -- crates
 pnpm run gen:ledger

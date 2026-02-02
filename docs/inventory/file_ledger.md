@@ -3,6 +3,7 @@
 Scope: src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
+agent/src/agent_runtime.ts - Watcher lifecycle helpers and shutdown logic for the agent runtime
 agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process (single timestamped file, no accumulation)
 agent/src/bundles/bundle_lister.ts - Find the single bundle file for a preset
 agent/src/bundles/bundle_types.ts - Type definitions for bundle building

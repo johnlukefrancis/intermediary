@@ -2,6 +2,10 @@
   "scope": "src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
+      "path": "agent/src/agent_runtime.ts",
+      "summary": "Watcher lifecycle helpers and shutdown logic for the agent runtime"
+    },
+    {
       "path": "agent/src/bundles/bundle_builder.ts",
       "summary": "Orchestrates bundle building process (single timestamped file, no accumulation)"
     },
