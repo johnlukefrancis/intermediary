@@ -34,6 +34,7 @@ export {
   BundleSelectionSchema,
   BundleSelectionsSchema,
   PersistedConfigSchema,
+  TabThemeSchema,
   UiStateSchema,
   getDefaultPersistedConfig,
   parsePersistedConfig,
@@ -43,5 +44,6 @@ export type {
   BundleSelections,
   LoadConfigResult,
   PersistedConfig,
+  TabTheme,
   UiState,
 } from "./config/persisted_config.js";

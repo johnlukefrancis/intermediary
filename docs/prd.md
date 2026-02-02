@@ -136,7 +136,8 @@ Each repo has:
 
 * All draggables originate from a **staging directory** on the Windows filesystem:
 
-  * Root: `%LOCALAPPDATA%\Intermediary\staging`
+  * **Default root:** `%LOCALAPPDATA%\Intermediary\staging`
+  * **Custom root:** Users can set an `outputWindowsRoot` override in config. When set, staging uses that path as the root.
   * Files: `staging\files\<repoId>\...`
   * Bundles: `staging\bundles\<repoId>\<presetId>\...`
 * Staging rules:

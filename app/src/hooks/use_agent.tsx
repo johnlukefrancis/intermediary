@@ -55,7 +55,7 @@ interface AgentProviderProps {
 }
 
 export function AgentProvider({ children }: AgentProviderProps): React.JSX.Element {
-  const { config: persistedConfig, setAutoStageGlobal } = useConfig();
+  const { config: persistedConfig, isLoaded: configIsLoaded, setAutoStageGlobal } = useConfig();
   const config = useMemo(
     () => extractAppConfig(persistedConfig),
     [
@@ -81,6 +81,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const autoStageRef = useRef(autoStageOnChange);
+  const outputWindowsRootRef = useRef(persistedConfig.outputWindowsRoot);
 
   const subscribe = useCallback((handler: EventHandler) => {
     handlersRef.current.add(handler);
@@ -114,14 +115,22 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     }
   }, [autoStageOnChange, client, config.autoStageGlobal, connectionState.status]);
 
-  // Initialize on mount
+  // Initialize on mount (after config is loaded)
   useEffect(() => {
+    // Don't initialize until config is loaded
+    if (!configIsLoaded) return;
+
     let mounted = true;
     let agentClient: AgentClient | null = null;
 
     async function init(): Promise<void> {
       try {
-        const paths = await invoke<AppPaths>("get_app_paths");
+        // Sync ref to the loaded config before resolving paths
+        outputWindowsRootRef.current = persistedConfig.outputWindowsRoot;
+        const outputRoot = outputWindowsRootRef.current;
+        const paths = await invoke<AppPaths>("get_app_paths", {
+          outputWindowsRoot: outputRoot,
+        });
         if (!mounted) return;
         setAppPaths(paths);
 
@@ -161,7 +170,32 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         agentClient.disconnect();
       }
     };
-  }, [config.agentHost, config.agentPort, handleEvent]);
+    // Note: outputWindowsRootRef is used instead of persistedConfig.outputWindowsRoot
+    // to avoid reconnecting when only the output path changes. The refreshPaths effect
+    // handles output path changes without triggering a full agent reconnection.
+  }, [configIsLoaded, config.agentHost, config.agentPort, handleEvent]);
+
+  // Refresh appPaths when outputWindowsRoot changes (after initial init)
+  useEffect(() => {
+    if (!configIsLoaded) return;
+    // Skip if this is the first run or value hasn't changed
+    if (persistedConfig.outputWindowsRoot === outputWindowsRootRef.current) return;
+
+    async function refreshPaths(): Promise<void> {
+      try {
+        const paths = await invoke<AppPaths>("get_app_paths", {
+          outputWindowsRoot: persistedConfig.outputWindowsRoot,
+        });
+        setAppPaths(paths);
+        outputWindowsRootRef.current = persistedConfig.outputWindowsRoot;
+        // The clientHello effect will re-send when appPaths changes
+      } catch (err) {
+        console.error("[AgentProvider] Failed to refresh paths:", err);
+      }
+    }
+
+    void refreshPaths();
+  }, [configIsLoaded, persistedConfig.outputWindowsRoot]);
 
   // Send clientHello when connected
   useEffect(() => {

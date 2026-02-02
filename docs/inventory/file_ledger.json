@@ -406,6 +406,10 @@
       "summary": "Tauri commands for config persistence"
     },
     {
+      "path": "src-tauri/src/lib/commands/file_manager.rs",
+      "summary": "Open folders in OS file manager (Windows Explorer)"
+    },
+    {
       "path": "src-tauri/src/lib/commands/mod.rs",
       "summary": "Tauri command exports"
     },

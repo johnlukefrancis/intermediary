@@ -2,4 +2,4 @@
 // Description: Persisted config schema version
 
 /** Current config schema version */
-export const CONFIG_VERSION = 8;
+export const CONFIG_VERSION = 9;

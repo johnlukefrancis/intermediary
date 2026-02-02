@@ -47,6 +47,12 @@ interface ConfigContextValue {
   addRepo: (repo: RepoConfig) => void;
   /** Remove a repo by repoId (also cleans up bundleSelections) */
   removeRepo: (repoId: string) => void;
+  /** Set custom output folder override (null to reset to default) */
+  setOutputWindowsRoot: (path: string | null) => void;
+  /** Set accent color for a tab */
+  setTabThemeAccent: (tabKey: string, accentHex: string) => void;
+  /** Clear theme for a tab */
+  clearTabTheme: (tabKey: string) => void;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -265,11 +271,61 @@ export function ConfigProvider({
             ? { ...prev.uiState, lastActiveTabId: null }
             : prev.uiState;
 
+        // Clean up tabThemes entry for this repoId (if present)
+        const { [repoId]: _removedTheme, ...newTabThemes } = prev.tabThemes;
+
         const next: PersistedConfig = {
           ...prev,
           repos: newRepos,
           bundleSelections: newBundleSelections,
           uiState: newUiState,
+          tabThemes: newTabThemes,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
+  const setOutputWindowsRoot = useCallback(
+    (path: string | null) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          outputWindowsRoot: path,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
+  const setTabThemeAccent = useCallback(
+    (tabKey: string, accentHex: string) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          tabThemes: {
+            ...prev.tabThemes,
+            [tabKey]: { accentHex },
+          },
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
+  const clearTabTheme = useCallback(
+    (tabKey: string) => {
+      setConfig((prev) => {
+        const { [tabKey]: _removed, ...remaining } = prev.tabThemes;
+        const next: PersistedConfig = {
+          ...prev,
+          tabThemes: remaining,
         };
         saveConfig(next);
         return next;
@@ -288,6 +344,9 @@ export function ConfigProvider({
     setGlobalExcludes,
     addRepo,
     removeRepo,
+    setOutputWindowsRoot,
+    setTabThemeAccent,
+    clearTabTheme,
   };
 
   return (

@@ -104,6 +104,7 @@ scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for Ch
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
+src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/wsl.rs - WSL host resolution for Windows->WSL agent connections

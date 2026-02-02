@@ -6,9 +6,13 @@ use crate::paths::wsl_convert::windows_to_wsl_path;
 use tauri::AppHandle;
 
 /// Returns resolved application paths for staging, logging, etc.
+/// If `output_windows_root` is provided, uses it as the staging root.
 #[tauri::command]
-pub fn get_app_paths(app: AppHandle) -> Result<AppPaths, String> {
-    AppPaths::resolve(&app).map_err(|e| e.to_string())
+pub fn get_app_paths(
+    app: AppHandle,
+    output_windows_root: Option<String>,
+) -> Result<AppPaths, String> {
+    AppPaths::resolve(&app, output_windows_root.as_deref()).map_err(|e| e.to_string())
 }
 
 /// Convert a Windows path to WSL path format.

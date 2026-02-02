@@ -24,8 +24,12 @@ pub struct AppPaths {
 }
 
 impl AppPaths {
-    /// Resolve all application paths from the Tauri app handle
-    pub fn resolve(app: &AppHandle) -> Result<Self, AppPathsError> {
+    /// Resolve all application paths from the Tauri app handle.
+    /// If `output_windows_root` is provided, use it as the staging root.
+    pub fn resolve(
+        app: &AppHandle,
+        output_windows_root: Option<&str>,
+    ) -> Result<Self, AppPathsError> {
         let app_local_data = app
             .path()
             .app_local_data_dir()
@@ -34,7 +38,15 @@ impl AppPaths {
         ensure_dir(&app_local_data, "app local data directory")?;
         let app_local_data_str = path_to_string(&app_local_data)?;
 
-        let staging_windows = app_local_data.join("staging");
+        // Use override if provided, otherwise default to app_local_data/staging.
+        let staging_windows = match output_windows_root {
+            Some(override_path) => {
+                let trimmed = override_path.trim();
+                validate_windows_drive_path(trimmed)?;
+                PathBuf::from(trimmed)
+            }
+            None => app_local_data.join("staging"),
+        };
         ensure_dir(&staging_windows, "staging directory")?;
         let staging_windows_str = path_to_string(&staging_windows)?;
 
@@ -64,6 +76,7 @@ pub enum AppPathsError {
     NoAppLocalData,
     InvalidPath,
     WslConversionFailed,
+    InvalidOutputRoot(String),
     Io {
         context: &'static str,
         source: std::io::Error,
@@ -76,6 +89,9 @@ impl std::fmt::Display for AppPathsError {
             Self::NoAppLocalData => write!(f, "Could not resolve app local data directory"),
             Self::InvalidPath => write!(f, "Path contains invalid UTF-8"),
             Self::WslConversionFailed => write!(f, "Failed to convert Windows path to WSL path"),
+            Self::InvalidOutputRoot(reason) => {
+                write!(f, "Invalid output folder override: {reason}")
+            }
             Self::Io { context, source } => write!(f, "{context}: {source}"),
         }
     }
@@ -113,4 +129,36 @@ fn write_drag_icon_if_missing(path: &Path) -> Result<(), AppPathsError> {
     const DRAG_ICON_BYTES: &[u8] = include_bytes!("../../../icons/32x32.png");
     fs::write(path, DRAG_ICON_BYTES)
         .map_err(|source| AppPathsError::Io { context: "drag icon", source })
+}
+
+/// Validate that path is a Windows drive path (not UNC/wsl$).
+/// Valid paths start with a drive letter, colon, and slash/backslash (e.g., C:\Users\...).
+fn validate_windows_drive_path(path: &str) -> Result<(), AppPathsError> {
+    let trimmed = path.trim();
+
+    if trimmed.is_empty() {
+        return Err(AppPathsError::InvalidOutputRoot(
+            "path cannot be empty".to_string(),
+        ));
+    }
+
+    // Reject UNC paths (\\server\share or \\wsl$\...)
+    if trimmed.starts_with(r"\\") {
+        return Err(AppPathsError::InvalidOutputRoot(
+            "UNC paths (\\\\...) are not supported".to_string(),
+        ));
+    }
+
+    // Must start with drive letter followed by colon and slash/backslash
+    let mut chars = trimmed.chars();
+    let first = chars.next();
+    let second = chars.next();
+    let third = chars.next();
+
+    match (first, second, third) {
+        (Some(c), Some(':'), Some('\\' | '/')) if c.is_ascii_alphabetic() => Ok(()),
+        _ => Err(AppPathsError::InvalidOutputRoot(
+            "path must start with a drive root (e.g., C:\\\\Projects)".to_string(),
+        )),
+    }
 }

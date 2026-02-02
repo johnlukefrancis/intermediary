@@ -7,6 +7,7 @@ pub mod obs;
 pub mod paths;
 
 use commands::config::{load_config, save_config};
+use commands::file_manager::open_in_file_manager;
 use commands::paths::{convert_windows_to_wsl, get_app_paths};
 use commands::wsl::resolve_wsl_host;
 use obs::logging;
@@ -29,7 +30,8 @@ pub fn run() {
             load_config,
             save_config,
             resolve_wsl_host,
-            convert_windows_to_wsl
+            convert_windows_to_wsl,
+            open_in_file_manager
         ])
         .run(tauri::generate_context!())
         .expect("error running tauri application");

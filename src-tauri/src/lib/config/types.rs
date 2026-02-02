@@ -1,11 +1,13 @@
 // Path: src-tauri/src/lib/config/types.rs
 // Description: Persisted configuration types for Intermediary
 
+use once_cell::sync::Lazy;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 8;
+pub const CONFIG_VERSION: u32 = 9;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +30,12 @@ pub struct PersistedConfig {
     /// Global bundle excludes (extensions and patterns)
     #[serde(default)]
     pub global_excludes: GlobalExcludes,
+    /// Custom output folder override (Windows path)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_windows_root: Option<String>,
+    /// Per-tab accent colors, keyed by tabKey
+    #[serde(default)]
+    pub tab_themes: HashMap<String, TabTheme>,
 }
 
 impl Default for PersistedConfig {
@@ -41,6 +49,8 @@ impl Default for PersistedConfig {
             ui_state: UiState::default(),
             bundle_selections: HashMap::new(),
             global_excludes: GlobalExcludes::default(),
+            output_windows_root: None,
+            tab_themes: HashMap::new(),
         }
     }
 }
@@ -85,6 +95,14 @@ pub struct BundleSelection {
     /// Subdirectories to exclude (e.g. "TriangleRain/Assets")
     #[serde(default)]
     pub excluded_subdirs: Vec<String>,
+}
+
+/// Per-tab theme configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TabTheme {
+    /// Accent color in #RRGGBB format
+    pub accent_hex: String,
 }
 
 /// Configuration for a single repository
@@ -174,12 +192,30 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
         }
     }
 
+    // Validate tabTheme accent colors
+    for (tab_key, theme) in &config.tab_themes {
+        validate_accent_hex(&theme.accent_hex, tab_key)?;
+    }
+
     Ok(())
 }
 
 fn validate_non_empty(value: &str, field: &str) -> Result<(), String> {
     if value.trim().is_empty() {
         return Err(format!("{field} must not be empty"));
+    }
+    Ok(())
+}
+
+/// Regex for #RRGGBB hex color format
+static ACCENT_HEX_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^#[0-9A-Fa-f]{6}$").expect("valid regex"));
+
+fn validate_accent_hex(value: &str, tab_key: &str) -> Result<(), String> {
+    if !ACCENT_HEX_REGEX.is_match(value) {
+        return Err(format!(
+            "tabTheme accent_hex for {tab_key} must be #RRGGBB format, got: {value}"
+        ));
     }
     Ok(())
 }

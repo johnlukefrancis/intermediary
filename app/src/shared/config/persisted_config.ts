@@ -44,6 +44,14 @@ export const BundleSelectionsSchema = z.record(
 
 export type BundleSelections = z.infer<typeof BundleSelectionsSchema>;
 
+/** Per-tab theme configuration */
+export const TabThemeSchema = z.object({
+  /** Accent color in #RRGGBB format */
+  accentHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be #RRGGBB format"),
+});
+
+export type TabTheme = z.infer<typeof TabThemeSchema>;
+
 /**
  * Full persisted configuration (saved to disk)
  */
@@ -73,6 +81,10 @@ export const PersistedConfigSchema = z.object({
     ],
     patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
   }),
+  /** Custom output folder override (Windows path, null = default AppData) */
+  outputWindowsRoot: z.string().nullable().default(null),
+  /** Per-tab accent colors, keyed by tabKey */
+  tabThemes: z.record(z.string(), TabThemeSchema).default({}),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -114,5 +126,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
       ],
       patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     },
+    outputWindowsRoot: null,
+    tabThemes: {},
   };
 }
