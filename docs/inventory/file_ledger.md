@@ -23,6 +23,7 @@ agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging fi
 agent/src/staging/stager.test.ts - Unit tests for staging path validation
 agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
 agent/src/util/categorizer.ts - File kind classification (docs/code/other) based on path patterns
+agent/src/util/config_fingerprint.ts - Computes stable fingerprints for watcher-relevant config to detect changes
 agent/src/util/errors.ts - Error types and helpers for the agent
 agent/src/util/logger.ts - Structured logging to console with ISO timestamps
 agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo

@@ -17,9 +17,11 @@ import { AgentError } from "./util/errors.js";
 import {
   type AgentRuntimeState,
   resetWatchers,
+  shouldResetWatchers,
   shutdown,
   startWatcher,
 } from "./agent_runtime.js";
+import { computeConfigFingerprint } from "./util/config_fingerprint.js";
 
 const AGENT_VERSION = "0.1.0";
 
@@ -32,6 +34,7 @@ const state: AgentRuntimeState = {
   recentFilesStore: null,
   stagingWslRoot: null,
   autoStageOnChange: true,
+  configFingerprint: null,
 };
 
 let router: Router;
@@ -40,9 +43,30 @@ let server: WsServer;
 async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResponse> {
   switch (command.type) {
     case "clientHello": {
-      await resetWatchers(state);
+      // Compute fingerprint for new config
+      const autoStageResolved = command.autoStageOnChange ?? command.config.autoStageGlobal;
+      const newFingerprint = computeConfigFingerprint({
+        config: command.config,
+        stagingWslRoot: command.stagingWslRoot,
+        autoStageOnChange: autoStageResolved,
+      });
 
-      // Configure staging
+      // Check if reset is needed (idempotent reconnect)
+      const needsReset = shouldResetWatchers(state, newFingerprint);
+
+      if (needsReset) {
+        logger.info("clientHello: config changed, resetting watchers", {
+          isFirstHello: state.configFingerprint === null,
+        });
+        await resetWatchers(state);
+      } else {
+        logger.info("clientHello: config unchanged, keeping watchers");
+      }
+
+      // Update fingerprint
+      state.configFingerprint = newFingerprint;
+
+      // Configure staging (idempotent, safe to re-run)
       const config: PathBridgeConfig = {
         stagingWslRoot: command.stagingWslRoot,
         stagingWinRoot: command.stagingWinRoot,
@@ -52,18 +76,25 @@ async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResp
         router.broadcastEvent(event);
       });
       state.stagingWslRoot = command.stagingWslRoot;
-      state.autoStageOnChange = command.autoStageOnChange ?? command.config.autoStageGlobal;
+      state.autoStageOnChange = autoStageResolved;
 
       // Create recent files store for persistence
       // stateDir lives under staging: staging/state
       const stateDir = path.posix.join(command.stagingWslRoot, "state");
       state.recentFilesStore = createRecentFilesStore(stateDir);
 
-      // Start watchers for configured repos (async)
+      // Start watchers for configured repos (only those not already watched)
       const watchedRepoIds: string[] = [];
       for (const repo of command.config.repos) {
+        // Always update maps so commands like watchRepo have correct config
         state.repoRoots.set(repo.repoId, repo.wslPath);
         state.repoConfigs.set(repo.repoId, repo);
+
+        // Skip if already watching this repo
+        if (state.watchers.has(repo.repoId)) {
+          watchedRepoIds.push(repo.repoId);
+          continue;
+        }
 
         if (await isValidRepoRoot(repo.wslPath)) {
           watchedRepoIds.push(repo.repoId);

@@ -21,6 +21,7 @@ export interface AgentRuntimeState {
   recentFilesStore: RecentFilesStore | null;
   stagingWslRoot: string | null;
   autoStageOnChange: boolean;
+  configFingerprint: string | null;
 }
 
 export interface AgentRuntimeDeps {
@@ -101,7 +102,12 @@ export async function startWatcher(
       recent: watcher.getRecentChanges(),
     });
   } catch (err) {
+    // Clean up ALL maps to avoid poisoned state
     state.watchers.delete(repoId);
+    state.repoRoots.delete(repoId);
+    state.repoConfigs.delete(repoId);
+    state.recentFilesStore?.cancelPending(repoId);
+    logger.error("Watcher start failed, cleaned up state", { repoId });
     throw err;
   }
 }
@@ -131,4 +137,18 @@ export async function shutdown(
   }
   await deps.server.stop();
   process.exit(0);
+}
+
+/**
+ * Check if watchers need to be reset based on config fingerprint.
+ * Returns true on first clientHello or when config has changed.
+ */
+export function shouldResetWatchers(
+  state: AgentRuntimeState,
+  newFingerprint: string
+): boolean {
+  if (state.configFingerprint === null) {
+    return true; // First clientHello
+  }
+  return state.configFingerprint !== newFingerprint;
 }

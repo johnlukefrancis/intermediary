@@ -82,6 +82,10 @@
       "summary": "File kind classification (docs/code/other) based on path patterns"
     },
     {
+      "path": "agent/src/util/config_fingerprint.ts",
+      "summary": "Computes stable fingerprints for watcher-relevant config to detect changes"
+    },
+    {
       "path": "agent/src/util/errors.ts",
       "summary": "Error types and helpers for the agent"
     },
