@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-01-31 (Phase 7 QA complete)
+Updated on: 2026-02-02 (Config-driven themes)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -28,7 +28,7 @@ CSS imports must follow this order in `app/src/main.tsx`:
 ```
 tokens.css        → Abstract primitives (spacing, radii, blur, shadows, typography, motion)
 theme_dark.css    → Fills semantic slots with dark theme values
-theme_accents.css → Per-tab accent overrides via data-active-tab
+theme_accents.css → Default accent fallback (runtime values applied via inline styles)
 effects.css       → Background gradient, grain, glass utilities
 motion.css        → Transition presets, reduced-motion support
 a11y.css          → Focus rings, disabled states, screen reader utilities
@@ -43,7 +43,7 @@ main.css          → Layout reset and base structure
 |------|---------|-----|
 | `tokens.css` | Spacing, radii, deck radii, blur, shadows, typography, motion, semantic color slots | ~130 |
 | `theme_dark.css` | Dark theme values (V2: aggressive), semantic states, glass surface, deck frame/substrate | ~85 |
-| `theme_accents.css` | Per-tab accent + substrate mapping via `[data-active-tab]` | ~50 |
+| `theme_accents.css` | Default accent fallback only (runtime values applied via inline styles in app.tsx) | ~22 |
 | `effects.css` | Deck chassis frame, substrate (grid + grain at z:0), vignette, glass/glow utilities | ~80 |
 | `main.css` | Reset, document sizing, app shell layout | ~90 |
 
@@ -77,15 +77,27 @@ main.css          → Layout reset and base structure
 | `--color-border-subtle` | `#12121a` | Subtle dividers |
 | `--color-border-highlight` | `rgba(255,255,255,0.06)` | Glass edge highlights |
 
-### Accents by Tab
+### Accents (Config-Driven)
 
-| Tab | Primary | Soft | Glow |
-|-----|---------|------|------|
-| Intermediary | `#c4688a` (dusty rose) | `rgba(196,104,138,0.15)` | `rgba(196,104,138,0.4)` |
-| TexturePortal | `#7c3aed` (deep purple) | `rgba(124,58,237,0.15)` | `rgba(124,58,237,0.4)` |
-| Triangle Rain | `#16a34a` (muted emerald) | `rgba(22,163,74,0.12)` | `rgba(22,163,74,0.35)` |
+Per-tab accent colors are now **config-driven** rather than hardcoded in CSS:
 
-**Note**: Each `[data-active-tab]` selector must define both `--accent-*` and `--color-accent-*` variables. This is not duplication — CSS custom properties resolve at definition time, so `--color-accent: var(--accent-primary)` in `:root` captures the root value and won't update when `--accent-primary` changes lower in the tree.
+- **Default**: `#c4688a` (dusty rose) when no custom theme is set
+- **User-configurable**: Users can set custom accent colors per tab via Options → Tab Colors
+- **Storage**: `config.tabThemes[tabKey].accentHex` where tabKey is groupId (for grouped repos) or repoId
+
+**Runtime application** (in `app.tsx`):
+1. Compute `activeThemeKey` from the active repo (groupId if grouped, else repoId)
+2. Look up `config.tabThemes[activeThemeKey]?.accentHex` or use default
+3. Convert hex to CSS variables via `hexToAccentCssVars()` utility
+4. Apply as inline style on the `.app` element
+
+**Derived variants** (from `app/src/lib/theme/accent_utils.ts`):
+- `--accent-soft`: 15% opacity
+- `--accent-glow`: 40% opacity
+- `--deck-grid-dot`: 2.5% opacity
+- `--deck-vignette-tint`: 3% opacity
+
+**Note**: Both `--accent-*` and `--color-accent-*` variables are set to the same values. This is required because CSS custom properties resolve at definition time — `--color-accent: var(--accent-primary)` in `:root` would capture the root value and not update when inline styles change `--accent-primary`.
 
 ### Semantic States
 

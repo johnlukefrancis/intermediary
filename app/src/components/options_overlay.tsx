@@ -2,111 +2,49 @@
 // Description: Full-screen transparent overlay with options panel for app settings
 
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import type { GlobalExcludes } from "../shared/global_excludes.js";
-import {
-  GLOBAL_EXCLUDE_DIR_OPTIONS,
-  GLOBAL_EXCLUDE_DIR_SUFFIX_OPTIONS,
-  GLOBAL_EXCLUDE_EXTENSION_OPTIONS,
-  GLOBAL_EXCLUDE_FILE_OPTIONS,
-  GLOBAL_EXCLUDE_SUFFIX_OPTIONS,
-  GLOBAL_EXCLUDE_PATTERN_OPTIONS,
-  GLOBAL_EXCLUDE_RECOMMENDED_DIRS,
-  GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES,
-  GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
-  GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
-  GLOBAL_EXCLUDE_RECOMMENDED_FILES,
-  GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS,
-} from "../shared/global_excludes.js";
+import type { RepoConfig, TabTheme } from "../shared/config.js";
+import type { AppPaths } from "../types/app_paths.js";
+import { ExcludesSection } from "./options/excludes_section.js";
+import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 import "../styles/options_overlay.css";
 
 interface OptionsOverlayProps {
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
-  stagingPath: string | null;
+  appPaths: AppPaths | null;
   globalExcludes: GlobalExcludes;
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
+  setOutputWindowsRoot: (path: string | null) => void;
+  repos: RepoConfig[];
+  tabThemes: Record<string, TabTheme>;
+  setTabThemeAccent: (tabKey: string, accentHex: string) => void;
+  clearTabTheme: (tabKey: string) => void;
   onClose: () => void;
 }
 
-function normalizeExtension(value: string): string {
-  const trimmed = value.trim().toLowerCase();
-  if (trimmed.length === 0) return "";
-  if (trimmed === "~") return "~";
-  return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
-}
-
-function normalizePattern(value: string): string {
-  const trimmed = value.trim().replace(/^\/+|\/+$/g, "").toLowerCase();
-  return trimmed;
-}
-
-function normalizeName(value: string): string {
-  return value.trim().toLowerCase();
+interface ThemeEntry {
+  tabKey: string;
+  label: string;
 }
 
 export function OptionsOverlay({
   autoStageOnChange,
   setAutoStageOnChange,
-  stagingPath,
+  appPaths,
   globalExcludes,
   setGlobalExcludes,
+  setOutputWindowsRoot,
+  repos,
+  tabThemes,
+  setTabThemeAccent,
+  clearTabTheme,
   onClose,
 }: OptionsOverlayProps): React.JSX.Element {
-  const [copyFeedback, setCopyFeedback] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [advancedSectionsOpen, setAdvancedSectionsOpen] = useState({
-    directories: false,
-    dirSuffixes: false,
-    fileNames: false,
-    fileSuffixes: false,
-    extensions: false,
-    patterns: false,
-  });
-
-  const toggleAdvanced = useCallback(() => {
-    setAdvancedOpen((prev) => !prev);
-  }, []);
-
-  const toggleAdvancedSection = useCallback(
-    (key: keyof typeof advancedSectionsOpen) => {
-      setAdvancedSectionsOpen((prev) => ({ ...prev, [key]: !prev[key] }));
-    },
-    []
-  );
-
-  const normalizedExtensions = useMemo(
-    () => globalExcludes.extensions.map(normalizeExtension).filter((value) => value.length > 0),
-    [globalExcludes.extensions]
-  );
-  const normalizedPatterns = useMemo(
-    () => globalExcludes.patterns.map(normalizePattern).filter((value) => value.length > 0),
-    [globalExcludes.patterns]
-  );
-  const normalizedDirNames = useMemo(
-    () => globalExcludes.dirNames.map(normalizePattern).filter((value) => value.length > 0),
-    [globalExcludes.dirNames]
-  );
-  const normalizedDirSuffixes = useMemo(
-    () => globalExcludes.dirSuffixes.map(normalizeExtension).filter((value) => value.length > 0),
-    [globalExcludes.dirSuffixes]
-  );
-  const normalizedFileNames = useMemo(
-    () => globalExcludes.fileNames.map(normalizeName).filter((value) => value.length > 0),
-    [globalExcludes.fileNames]
-  );
-
-  const handleCopyPath = useCallback(() => {
-    if (!stagingPath) return;
-    void navigator.clipboard.writeText(stagingPath).then(() => {
-      setCopyFeedback(true);
-      setTimeout(() => {
-        setCopyFeedback(false);
-      }, 1500);
-    });
-  }, [stagingPath]);
-
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -120,196 +58,54 @@ export function OptionsOverlay({
     [handleClose]
   );
 
-  const recommendedEnabled = useMemo(() => {
-    const extensionSet = new Set(normalizedExtensions);
-    const patternSet = new Set(normalizedPatterns);
-    const dirNameSet = new Set(normalizedDirNames);
-    const dirSuffixSet = new Set(normalizedDirSuffixes);
-    const fileNameSet = new Set(normalizedFileNames);
-    const hasAllExtensions = GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS.every((ext) =>
-      extensionSet.has(ext)
-    );
-    const hasAllFileSuffixes = GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES.every((ext) =>
-      extensionSet.has(ext)
-    );
-    const hasAllPatterns = GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS.every((pattern) =>
-      patternSet.has(pattern)
-    );
-    const hasAllDirNames = GLOBAL_EXCLUDE_RECOMMENDED_DIRS.every((name) =>
-      dirNameSet.has(name)
-    );
-    const hasAllDirSuffixes = GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES.every((suffix) =>
-      dirSuffixSet.has(suffix)
-    );
-    const hasAllFileNames = GLOBAL_EXCLUDE_RECOMMENDED_FILES.every((name) =>
-      fileNameSet.has(name)
-    );
-    return (
-      hasAllExtensions &&
-      hasAllFileSuffixes &&
-      hasAllPatterns &&
-      hasAllDirNames &&
-      hasAllDirSuffixes &&
-      hasAllFileNames
-    );
-  }, [
-    normalizedDirNames,
-    normalizedDirSuffixes,
-    normalizedExtensions,
-    normalizedFileNames,
-    normalizedPatterns,
-  ]);
-
-  const handleRecommendedToggle = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const enabled = event.target.checked;
-      setGlobalExcludes({
-        dirNames: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS] : [],
-        dirSuffixes: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES] : [],
-        fileNames: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_FILES] : [],
-        extensions: enabled
-          ? [...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS, ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES]
-          : [],
-        patterns: enabled ? [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS] : [],
-      });
-    },
-    [setGlobalExcludes]
-  );
-
-  const handleExtensionToggle = useCallback(
-    (value: string, enabled: boolean) => {
-      const normalized = normalizeExtension(value);
-      const extensionSet = new Set(normalizedExtensions);
-      if (enabled) {
-        extensionSet.add(normalized);
-      } else {
-        extensionSet.delete(normalized);
+  const handleChooseOutputFolder = useCallback(async () => {
+    try {
+      const selected = await open({ directory: true, multiple: false });
+      if (selected && typeof selected === "string") {
+        setOutputWindowsRoot(selected);
       }
-      setGlobalExcludes({
-        dirNames: normalizedDirNames,
-        dirSuffixes: normalizedDirSuffixes,
-        fileNames: normalizedFileNames,
-        extensions: Array.from(extensionSet),
-        patterns: normalizedPatterns,
-      });
-    },
-    [
-      normalizedDirNames,
-      normalizedDirSuffixes,
-      normalizedExtensions,
-      normalizedFileNames,
-      normalizedPatterns,
-      setGlobalExcludes,
-    ]
-  );
+    } catch (err) {
+      console.error("[OptionsOverlay] Failed to choose output folder:", err);
+    }
+  }, [setOutputWindowsRoot]);
 
-  const handlePatternToggle = useCallback(
-    (value: string, enabled: boolean) => {
-      const normalized = normalizePattern(value);
-      const patternSet = new Set(normalizedPatterns);
-      if (enabled) {
-        patternSet.add(normalized);
-      } else {
-        patternSet.delete(normalized);
-      }
-      setGlobalExcludes({
-        dirNames: normalizedDirNames,
-        dirSuffixes: normalizedDirSuffixes,
-        fileNames: normalizedFileNames,
-        extensions: normalizedExtensions,
-        patterns: Array.from(patternSet),
+  const handleOpenOutputFolder = useCallback(async () => {
+    if (!appPaths?.stagingWindowsRoot) return;
+    try {
+      await invoke("open_in_file_manager", {
+        folderPath: appPaths.stagingWindowsRoot,
       });
-    },
-    [
-      normalizedDirNames,
-      normalizedDirSuffixes,
-      normalizedExtensions,
-      normalizedFileNames,
-      normalizedPatterns,
-      setGlobalExcludes,
-    ]
-  );
+    } catch (err) {
+      console.error("[OptionsOverlay] Failed to open output folder:", err);
+    }
+  }, [appPaths?.stagingWindowsRoot]);
 
-  const handleDirToggle = useCallback(
-    (value: string, enabled: boolean) => {
-      const normalized = normalizePattern(value);
-      const dirSet = new Set(normalizedDirNames);
-      if (enabled) {
-        dirSet.add(normalized);
-      } else {
-        dirSet.delete(normalized);
-      }
-      setGlobalExcludes({
-        dirNames: Array.from(dirSet),
-        dirSuffixes: normalizedDirSuffixes,
-        fileNames: normalizedFileNames,
-        extensions: normalizedExtensions,
-        patterns: normalizedPatterns,
-      });
-    },
-    [
-      normalizedDirNames,
-      normalizedDirSuffixes,
-      normalizedExtensions,
-      normalizedFileNames,
-      normalizedPatterns,
-      setGlobalExcludes,
-    ]
-  );
+  // Derive theme entries from repos (grouped: one per groupId, ungrouped: one per repoId)
+  const themeEntries = useMemo((): ThemeEntry[] => {
+    const seenGroups = new Set<string>();
+    const entries: ThemeEntry[] = [];
 
-  const handleDirSuffixToggle = useCallback(
-    (value: string, enabled: boolean) => {
-      const normalized = normalizeExtension(value);
-      const suffixSet = new Set(normalizedDirSuffixes);
-      if (enabled) {
-        suffixSet.add(normalized);
+    for (const repo of repos) {
+      if (repo.groupId) {
+        // Grouped repo: one entry per groupId
+        if (!seenGroups.has(repo.groupId)) {
+          seenGroups.add(repo.groupId);
+          entries.push({
+            tabKey: repo.groupId,
+            label: repo.groupLabel ?? repo.groupId,
+          });
+        }
       } else {
-        suffixSet.delete(normalized);
+        // Ungrouped repo: one entry per repoId
+        entries.push({
+          tabKey: repo.repoId,
+          label: repo.label,
+        });
       }
-      setGlobalExcludes({
-        dirNames: normalizedDirNames,
-        dirSuffixes: Array.from(suffixSet),
-        fileNames: normalizedFileNames,
-        extensions: normalizedExtensions,
-        patterns: normalizedPatterns,
-      });
-    },
-    [
-      normalizedDirNames,
-      normalizedDirSuffixes,
-      normalizedExtensions,
-      normalizedFileNames,
-      normalizedPatterns,
-      setGlobalExcludes,
-    ]
-  );
+    }
 
-  const handleFileNameToggle = useCallback(
-    (value: string, enabled: boolean) => {
-      const normalized = normalizeName(value);
-      const fileSet = new Set(normalizedFileNames);
-      if (enabled) {
-        fileSet.add(normalized);
-      } else {
-        fileSet.delete(normalized);
-      }
-      setGlobalExcludes({
-        dirNames: normalizedDirNames,
-        dirSuffixes: normalizedDirSuffixes,
-        fileNames: Array.from(fileSet),
-        extensions: normalizedExtensions,
-        patterns: normalizedPatterns,
-      });
-    },
-    [
-      normalizedDirNames,
-      normalizedDirSuffixes,
-      normalizedExtensions,
-      normalizedFileNames,
-      normalizedPatterns,
-      setGlobalExcludes,
-    ]
-  );
+    return entries;
+  }, [repos]);
 
   return createPortal(
     <div className="options-overlay" onClick={handleBackdropClick}>
@@ -323,6 +119,7 @@ export function OptionsOverlay({
           ×
         </button>
 
+        {/* General Section */}
         <div className="options-section">
           <div className="options-section-title">General</div>
           <div className="options-row">
@@ -340,259 +137,87 @@ export function OptionsOverlay({
           </div>
         </div>
 
+        {/* Excludes Section */}
+        <ExcludesSection
+          globalExcludes={globalExcludes}
+          setGlobalExcludes={setGlobalExcludes}
+        />
+
+        {/* Output Folder Section */}
         <div className="options-section">
-          <div className="options-section-title">EXCLUDES</div>
-          <label className="options-checkbox-row">
-            <input
-              type="checkbox"
-              checked={recommendedEnabled}
-              onChange={handleRecommendedToggle}
-            />
-            <span>
-              Recommended excludes
+          <div className="options-section-title">Output Folder</div>
+          <div className="options-row stacked">
+            <span
+              className={`options-path-display ${!appPaths ? "muted" : ""}`}
+              title={appPaths?.stagingWindowsRoot ?? "Loading..."}
+            >
+              {appPaths?.stagingWindowsRoot ?? "Loading..."}
             </span>
-          </label>
-
-          <button
-            type="button"
-            className="options-section-toggle"
-            onClick={toggleAdvanced}
-            aria-expanded={advancedOpen}
-          >
-            <span className="options-section-title">Exclude Presets</span>
-            <span className={`options-chevron ${advancedOpen ? "open" : ""}`}>
-              ▸
-            </span>
-          </button>
-
-          {advancedOpen && (
-            <div className="options-section-content">
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("directories");
-                  }}
-                  aria-expanded={advancedSectionsOpen.directories}
-                >
-                  <span className="options-advanced-title">Directories</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.directories ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.directories && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_DIR_OPTIONS.map((option) => {
-                      const checked = normalizedDirNames.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handleDirToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("dirSuffixes");
-                  }}
-                  aria-expanded={advancedSectionsOpen.dirSuffixes}
-                >
-                  <span className="options-advanced-title">Directory Suffixes</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.dirSuffixes ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.dirSuffixes && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_DIR_SUFFIX_OPTIONS.map((option) => {
-                      const checked = normalizedDirSuffixes.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handleDirSuffixToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("fileNames");
-                  }}
-                  aria-expanded={advancedSectionsOpen.fileNames}
-                >
-                  <span className="options-advanced-title">File Names</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.fileNames ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.fileNames && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_FILE_OPTIONS.map((option) => {
-                      const checked = normalizedFileNames.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handleFileNameToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("fileSuffixes");
-                  }}
-                  aria-expanded={advancedSectionsOpen.fileSuffixes}
-                >
-                  <span className="options-advanced-title">File Suffixes</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.fileSuffixes ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.fileSuffixes && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_SUFFIX_OPTIONS.map((option) => {
-                      const checked = normalizedExtensions.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handleExtensionToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("extensions");
-                  }}
-                  aria-expanded={advancedSectionsOpen.extensions}
-                >
-                  <span className="options-advanced-title">Extensions</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.extensions ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.extensions && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_EXTENSION_OPTIONS.map((option) => {
-                      const checked = normalizedExtensions.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handleExtensionToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="options-advanced-group">
-                <button
-                  type="button"
-                  className="options-advanced-toggle"
-                  onClick={() => {
-                    toggleAdvancedSection("patterns");
-                  }}
-                  aria-expanded={advancedSectionsOpen.patterns}
-                >
-                  <span className="options-advanced-title">Path Segments</span>
-                  <span className={`options-chevron ${advancedSectionsOpen.patterns ? "open" : ""}`}>
-                    ▸
-                  </span>
-                </button>
-                {advancedSectionsOpen.patterns && (
-                  <div className="options-advanced-grid">
-                    {GLOBAL_EXCLUDE_PATTERN_OPTIONS.map((option) => {
-                      const checked = normalizedPatterns.includes(option.value);
-                      return (
-                        <label key={option.value} className="options-checkbox-row">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => {
-                              handlePatternToggle(option.value, event.target.checked);
-                            }}
-                          />
-                          <span>{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {stagingPath && (
-          <div className="options-section">
-            <div className="options-section-title">Paths</div>
-            <div className="options-row stacked">
-              <span className="options-row-label">Staging Path</span>
+            <div className="options-button-row">
               <button
                 type="button"
-                className={`path-chip ${copyFeedback ? "copied" : ""}`}
-                onClick={handleCopyPath}
-                title="Click to copy staging path"
+                className="options-button"
+                onClick={() => void handleChooseOutputFolder()}
+                disabled={!appPaths}
               >
-                {copyFeedback ? "Copied!" : stagingPath}
+                Choose output folder
               </button>
+              <button
+                type="button"
+                className="options-button"
+                onClick={() => void handleOpenOutputFolder()}
+                disabled={!appPaths}
+              >
+                Open output folder
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Colors Section */}
+        {themeEntries.length > 0 && (
+          <div className="options-section">
+            <div className="options-section-title">Tab Colors</div>
+            <div className="options-theme-list">
+              {themeEntries.map((entry) => {
+                const currentHex =
+                  tabThemes[entry.tabKey]?.accentHex ?? DEFAULT_ACCENT_HEX;
+                const hasCustomTheme = entry.tabKey in tabThemes;
+
+                return (
+                  <div key={entry.tabKey} className="options-theme-row">
+                    <span
+                      className="options-theme-label"
+                      title={entry.label}
+                    >
+                      {entry.label}
+                    </span>
+                    <div className="options-theme-controls">
+                      <input
+                        type="color"
+                        value={currentHex}
+                        onChange={(e) => {
+                          setTabThemeAccent(entry.tabKey, e.target.value);
+                        }}
+                        className="options-color-input"
+                        title="Choose accent color"
+                      />
+                      {hasCustomTheme && (
+                        <button
+                          type="button"
+                          className="options-reset-button"
+                          onClick={() => {
+                            clearTabTheme(entry.tabKey);
+                          }}
+                          title="Reset to default"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

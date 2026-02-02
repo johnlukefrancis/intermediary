@@ -38,6 +38,12 @@ app/src/components/file_list_column.tsx - Column wrapper that renders a list of 
 app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
+app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
+app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
+app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
+app/src/components/options/excludes/excludes_recommendations.ts - Helpers for recommended global excludes toggles
+app/src/components/options/excludes/excludes_updates.ts - Pure update helpers for global excludes toggles
+app/src/components/options/excludes/use_excludes_state.ts - State and handlers for the excludes section UI
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -51,6 +57,7 @@ app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
+app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - Shared config barrel exports
 app/src/shared/config/app_config.ts - AppConfig schema, types, and defaults
@@ -81,7 +88,7 @@ app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
-app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
+app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout

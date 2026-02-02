@@ -8,6 +8,10 @@ import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
 import type { RepoConfig } from "./shared/config.js";
+import {
+  hexToAccentCssVars,
+  DEFAULT_ACCENT_HEX,
+} from "./lib/theme/accent_utils.js";
 
 /** A standalone repo tab */
 export interface SingleTab {
@@ -123,10 +127,30 @@ export function App(): React.JSX.Element {
     [setActiveRepoId]
   );
 
+  // Compute theme key: groupId if repo is grouped, else repoId
+  const activeThemeKey = useMemo((): string | null => {
+    if (!activeRepoId) return null;
+    const activeRepo = config.repos.find((r) => r.repoId === activeRepoId);
+    if (!activeRepo) return null;
+    return activeRepo.groupId ?? activeRepoId;
+  }, [activeRepoId, config.repos]);
+
+  // Get accent color from config or use default
+  const accentHex = useMemo((): string => {
+    if (!activeThemeKey) return DEFAULT_ACCENT_HEX;
+    return config.tabThemes[activeThemeKey]?.accentHex ?? DEFAULT_ACCENT_HEX;
+  }, [activeThemeKey, config.tabThemes]);
+
+  // Compute CSS variables as inline style
+  const accentStyle = useMemo(
+    (): React.CSSProperties => hexToAccentCssVars(accentHex) as React.CSSProperties,
+    [accentHex]
+  );
+
   // Empty state: no repos configured
   if (config.repos.length === 0) {
     return (
-      <div className="app">
+      <div className="app" style={accentStyle}>
         <header className="header-stack glass-surface">
           <StatusBar />
         </header>
@@ -138,7 +162,7 @@ export function App(): React.JSX.Element {
   }
 
   return (
-    <div className="app" data-active-tab={activeRepoId}>
+    <div className="app" data-active-tab={activeRepoId} style={accentStyle}>
       <header className="header-stack glass-surface">
         <TabBar
           tabs={tabs}

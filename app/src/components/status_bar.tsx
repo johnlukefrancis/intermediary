@@ -31,12 +31,17 @@ function getConnectionDisplay(status: ConnectionStatus, attempts: number): Conne
 export function StatusBar(): React.JSX.Element {
   const { autoStageOnChange, setAutoStageOnChange, connectionState, appPaths, helloState } =
     useAgent();
-  const { config, setGlobalExcludes } = useConfig();
+  const {
+    config,
+    setGlobalExcludes,
+    setOutputWindowsRoot,
+    setTabThemeAccent,
+    clearTabTheme,
+  } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   const { status, reconnectAttempts, lastError: connectionError } = connectionState;
   const display = getConnectionDisplay(status, reconnectAttempts);
-  const stagingPath = appPaths?.stagingWindowsRoot ?? null;
 
   // Show connection error when not connected, hello error when connected
   const errorToShow = status === "connected" ? helloState.lastError : connectionError;
@@ -76,9 +81,14 @@ export function StatusBar(): React.JSX.Element {
         <OptionsOverlay
           autoStageOnChange={autoStageOnChange}
           setAutoStageOnChange={setAutoStageOnChange}
-          stagingPath={stagingPath}
+          appPaths={appPaths}
           globalExcludes={config.globalExcludes}
           setGlobalExcludes={setGlobalExcludes}
+          setOutputWindowsRoot={setOutputWindowsRoot}
+          repos={config.repos}
+          tabThemes={config.tabThemes}
+          setTabThemeAccent={setTabThemeAccent}
+          clearTabTheme={clearTabTheme}
           onClose={() => {
             setOptionsOpen(false);
           }}

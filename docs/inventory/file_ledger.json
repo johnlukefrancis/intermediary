@@ -142,6 +142,30 @@
       "summary": "Full-screen transparent overlay with options panel for app settings"
     },
     {
+      "path": "app/src/components/options/excludes_section.tsx",
+      "summary": "Excludes configuration section for the options panel"
+    },
+    {
+      "path": "app/src/components/options/excludes/advanced_group.tsx",
+      "summary": "Collapsible checkbox group for advanced excludes options"
+    },
+    {
+      "path": "app/src/components/options/excludes/excludes_normalizers.ts",
+      "summary": "Normalization helpers for global excludes inputs"
+    },
+    {
+      "path": "app/src/components/options/excludes/excludes_recommendations.ts",
+      "summary": "Helpers for recommended global excludes toggles"
+    },
+    {
+      "path": "app/src/components/options/excludes/excludes_updates.ts",
+      "summary": "Pure update helpers for global excludes toggles"
+    },
+    {
+      "path": "app/src/components/options/excludes/use_excludes_state.ts",
+      "summary": "State and handlers for the excludes section UI"
+    },
+    {
       "path": "app/src/components/status_bar.tsx",
       "summary": "Status bar with connection status LED, error display, and options button"
     },
@@ -192,6 +216,10 @@
     {
       "path": "app/src/lib/agent/messages.ts",
       "summary": "Typed helper functions for sending agent commands"
+    },
+    {
+      "path": "app/src/lib/theme/accent_utils.ts",
+      "summary": "Convert hex accent color to CSS variable values for runtime theming"
     },
     {
       "path": "app/src/main.tsx",
@@ -315,7 +343,7 @@
     },
     {
       "path": "app/src/styles/theme_accents.css",
-      "summary": "Per-tab accent colors via data-active-tab attribute"
+      "summary": "Default accent color variables (runtime values applied via inline styles in app.tsx)"
     },
     {
       "path": "app/src/styles/theme_dark.css",
