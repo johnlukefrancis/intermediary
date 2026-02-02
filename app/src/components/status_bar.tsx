@@ -38,6 +38,7 @@ export function StatusBar(): React.JSX.Element {
     setTabThemeAccent,
     setTabThemeTexture,
     clearTabTheme,
+    setRecentFilesLimit,
   } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -86,6 +87,8 @@ export function StatusBar(): React.JSX.Element {
           globalExcludes={config.globalExcludes}
           setGlobalExcludes={setGlobalExcludes}
           setOutputWindowsRoot={setOutputWindowsRoot}
+          recentFilesLimit={config.recentFilesLimit}
+          setRecentFilesLimit={setRecentFilesLimit}
           repos={config.repos}
           tabThemes={config.tabThemes}
           setTabThemeAccent={setTabThemeAccent}

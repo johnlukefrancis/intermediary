@@ -20,6 +20,8 @@ interface OptionsOverlayProps {
   globalExcludes: GlobalExcludes;
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
   setOutputWindowsRoot: (path: string | null) => void;
+  recentFilesLimit: number;
+  setRecentFilesLimit: (value: number) => void;
   repos: RepoConfig[];
   tabThemes: Record<string, TabTheme>;
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
@@ -40,6 +42,8 @@ export function OptionsOverlay({
   globalExcludes,
   setGlobalExcludes,
   setOutputWindowsRoot,
+  recentFilesLimit,
+  setRecentFilesLimit,
   repos,
   tabThemes,
   setTabThemeAccent,
@@ -137,6 +141,23 @@ export function OptionsOverlay({
               <span className="vintage-toggle-track" aria-hidden="true" />
             </label>
           </div>
+          <div className="options-row">
+            <span className="options-row-label">Recent files limit</span>
+            <input
+              type="number"
+              className="options-number-input"
+              value={recentFilesLimit}
+              min={25}
+              max={2000}
+              onChange={(event) => {
+                const parsed = parseInt(event.target.value, 10);
+                if (!Number.isNaN(parsed)) {
+                  setRecentFilesLimit(parsed);
+                }
+              }}
+            />
+          </div>
+          <span className="options-hint">Higher values may impact UI performance</span>
         </div>
 
         {/* Excludes Section */}

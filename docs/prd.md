@@ -80,9 +80,15 @@ Depends on: ADR-000, ADR-006, ADR-007
 ### File item row
 
 * Filename + relative path
-* Last modified time (relative: “2m ago”)
+* Last modified time (relative: "2m ago")
 * Size (optional)
 * Status badge: `staged` / `source-only` / `building...` / `error`
+
+### File row interactions
+
+* **Click row** → copies `@<repo-relative-path>` to clipboard (forward slashes)
+* **Drag handle** → stages file, starts OS drag, also copies `@<path>` to clipboard
+* **Star button** → toggles starred status (does not copy or drag)
 
 ### Drag interaction
 
@@ -101,6 +107,20 @@ Depends on: ADR-000, ADR-006, ADR-007
 * Dark mode by default.
 * Glassmorphic panel styling, rounded corners, subtle borders, neon accent per tab.
 * No UI clutter: the app is a staging deck, not a file explorer.
+
+### Pane views (Recent / Starred)
+
+Each Docs and Code pane has two views:
+
+* **Recent** (default): Shows recently changed files
+* **Starred**: Shows user-starred files
+
+Header controls:
+
+* `[DOCS]`/`[CODE]` title is a button → returns to Recent view
+* Star icon button on right → switches to Starred view (disabled when empty)
+
+If starred count becomes zero, pane auto-switches back to Recent.
 
 ---
 
@@ -128,10 +148,17 @@ Each repo has:
 
 * Maintain a per-repo in-memory index of recent file changes:
 
-  * Store last N (configurable, default 200)
+  * Store last N (configurable via Options, default 200, range 25-2000)
   * Debounce rapid consecutive writes (default 250ms)
 * Show lists filtered into Docs/Code columns by globs.
 * Persist recent-file history under `staging/state/recent_files/<repoId>.json` to survive app/agent restarts.
+
+### 7.2.1 Starred files
+
+* Users can star/unstar any file in Docs or Code columns
+* Starred files persist in config per repo: `{ docs: string[], code: string[] }`
+* Starred files that aren't in the recent list show "—" for modification time
+* Dragging a starred file stages and drags normally (staging uses current file state)
 
 ### 7.3 Staging system
 
