@@ -43,9 +43,11 @@ app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown suppo
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
+app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
+app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
@@ -77,6 +79,7 @@ app/src/styles/options_overlay.css - Full-screen transparent overlay with center
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
+app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/theme_accents.css - Per-tab accent colors via data-active-tab attribute
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots

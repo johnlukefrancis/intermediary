@@ -3,24 +3,12 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
-import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
-import { useConfig } from "../hooks/use_config.js";
+import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import { TabRemoveButton } from "./tab_remove_button.js";
-import {
-  extractFolderName,
-  generateUniqueRepoId,
-} from "../shared/repo_utils.js";
-import {
-  type RepoConfig,
-  DEFAULT_DOCS_GLOBS,
-  DEFAULT_CODE_GLOBS,
-  DEFAULT_IGNORE_GLOBS,
-  DEFAULT_BUNDLE_PRESET,
-} from "../shared/config.js";
 import "../styles/tab_bar.css";
+import "../styles/tab_bar_dropdown.css";
 
 interface TabBarProps {
   tabs: TabItem[];
@@ -41,18 +29,16 @@ function getActiveRepoLabel(group: GroupTab, activeRepoId: string | null): strin
 }
 
 export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBarProps): React.JSX.Element {
-  const { config, addRepo, updateRepo } = useConfig();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Clear error after timeout
-  useEffect(() => {
-    if (!addError) return;
-    const timer = setTimeout(() => { setAddError(null); }, 3000);
-    return () => { clearTimeout(timer); };
-  }, [addError]);
+  const {
+    isAdding,
+    addError,
+    addWorktreeToGroup,
+    addWorktreeToSingle,
+  } = useWorktreeAdd(
+    onRepoAdded ? { onRepoChange, onRepoAdded } : { onRepoChange }
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -100,119 +86,24 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
     [onRepoChange]
   );
 
-  /** Add worktree to an existing group */
   const handleAddWorktreeToGroup = useCallback(
     async (groupId: string, groupLabel: string) => {
-      if (isAdding) return;
-      setIsAdding(true);
-      setAddError(null);
-
-      try {
-        const selected = await open({ directory: true, multiple: false });
-        if (!selected) return;
-
-        const wslPath = await invoke<string>("convert_windows_to_wsl", {
-          windowsPath: selected,
-        });
-
-        // Check for duplicate
-        const existingPaths = new Set(config.repos.map((r) => r.wslPath));
-        if (existingPaths.has(wslPath)) {
-          setAddError("This folder is already added");
-          return;
-        }
-
-        // Generate unique repoId
-        const folderName = extractFolderName(wslPath);
-        const existingIds = new Set(config.repos.map((r) => r.repoId));
-        const repoId = generateUniqueRepoId(folderName, existingIds);
-
-        const newRepo: RepoConfig = {
-          repoId,
-          label: folderName,
-          wslPath,
-          groupId,
-          groupLabel,
-          autoStage: true,
-          docsGlobs: DEFAULT_DOCS_GLOBS,
-          codeGlobs: DEFAULT_CODE_GLOBS,
-          ignoreGlobs: DEFAULT_IGNORE_GLOBS,
-          bundlePresets: [DEFAULT_BUNDLE_PRESET],
-        };
-
-        addRepo(newRepo);
-        onRepoChange(repoId);
-        onRepoAdded?.(repoId);
+      const didAdd = await addWorktreeToGroup(groupId, groupLabel);
+      if (didAdd) {
         setOpenDropdownId(null);
-      } catch (err) {
-        console.error("[TabBar] Failed to add worktree:", err);
-        setAddError("Failed to add worktree");
-      } finally {
-        setIsAdding(false);
       }
     },
-    [isAdding, config.repos, addRepo, onRepoChange, onRepoAdded]
+    [addWorktreeToGroup]
   );
 
-  /** Convert single tab to group and add worktree */
   const handleAddWorktreeToSingle = useCallback(
     async (singleTab: SingleTab) => {
-      if (isAdding) return;
-      setIsAdding(true);
-      setAddError(null);
-
-      try {
-        const selected = await open({ directory: true, multiple: false });
-        if (!selected) return;
-
-        const wslPath = await invoke<string>("convert_windows_to_wsl", {
-          windowsPath: selected,
-        });
-
-        // Check for duplicate
-        const existingPaths = new Set(config.repos.map((r) => r.wslPath));
-        if (existingPaths.has(wslPath)) {
-          setAddError("This folder is already added");
-          return;
-        }
-
-        // Generate groupId from original repo's repoId
-        const groupId = singleTab.repoId;
-        const groupLabel = singleTab.label;
-
-        // Update original repo to have groupId/groupLabel
-        updateRepo(singleTab.repoId, { groupId, groupLabel });
-
-        // Generate unique repoId for new worktree
-        const folderName = extractFolderName(wslPath);
-        const existingIds = new Set(config.repos.map((r) => r.repoId));
-        const repoId = generateUniqueRepoId(folderName, existingIds);
-
-        const newRepo: RepoConfig = {
-          repoId,
-          label: folderName,
-          wslPath,
-          groupId,
-          groupLabel,
-          autoStage: true,
-          docsGlobs: DEFAULT_DOCS_GLOBS,
-          codeGlobs: DEFAULT_CODE_GLOBS,
-          ignoreGlobs: DEFAULT_IGNORE_GLOBS,
-          bundlePresets: [DEFAULT_BUNDLE_PRESET],
-        };
-
-        addRepo(newRepo);
-        onRepoChange(repoId);
-        onRepoAdded?.(repoId);
+      const didAdd = await addWorktreeToSingle(singleTab);
+      if (didAdd) {
         setOpenDropdownId(null);
-      } catch (err) {
-        console.error("[TabBar] Failed to add worktree:", err);
-        setAddError("Failed to add worktree");
-      } finally {
-        setIsAdding(false);
       }
     },
-    [isAdding, config.repos, addRepo, updateRepo, onRepoChange, onRepoAdded]
+    [addWorktreeToSingle]
   );
 
   return (

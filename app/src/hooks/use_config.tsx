@@ -4,25 +4,16 @@
 import {
   createContext,
   useContext,
-  useEffect,
-  useState,
   useCallback,
-  useRef,
   type ReactNode,
 } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   type PersistedConfig,
-  type LoadConfigResult,
   type BundleSelection,
   type RepoConfig,
   type GlobalExcludes,
-  getDefaultPersistedConfig,
-  parsePersistedConfig,
 } from "../shared/config.js";
-
-/** Debounce delay for saving config (ms) */
-const SAVE_DEBOUNCE_MS = 500;
+import { useConfigStorage } from "./use_config_storage.js";
 
 interface ConfigContextValue {
   /** Current config (always available, defaults if load failed) */
@@ -69,121 +60,14 @@ interface ConfigProviderProps {
 export function ConfigProvider({
   children,
 }: ConfigProviderProps): React.JSX.Element {
-  const [config, setConfig] = useState<PersistedConfig>(() =>
-    getDefaultPersistedConfig()
-  );
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  // Ref to track pending save and current config for beforeunload
-  const saveTimeoutRef = useRef<number | null>(null);
-  const configRef = useRef(config);
-  const isDirtyRef = useRef(false);
-
-  // Keep configRef in sync
-  useEffect(() => {
-    configRef.current = config;
-  }, [config]);
-
-  // Save config to disk (debounced)
-  const saveConfig = useCallback((newConfig: PersistedConfig) => {
-    // Clear pending save
-    if (saveTimeoutRef.current !== null) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    isDirtyRef.current = true;
-
-    // Schedule save
-    saveTimeoutRef.current = window.setTimeout(() => {
-      saveTimeoutRef.current = null;
-      isDirtyRef.current = false;
-
-      invoke("save_config", { config: newConfig }).catch((err: unknown) => {
-        console.error("[ConfigProvider] Failed to save config:", err);
-      });
-    }, SAVE_DEBOUNCE_MS);
-  }, []);
-
-  const saveConfigNow = useCallback((newConfig: PersistedConfig) => {
-    if (saveTimeoutRef.current !== null) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-    isDirtyRef.current = false;
-    configRef.current = newConfig;
-    invoke("save_config", { config: newConfig }).catch((err: unknown) => {
-      console.error("[ConfigProvider] Failed to save config:", err);
-    });
-  }, []);
-
-  // Save immediately (for beforeunload)
-  const saveConfigImmediate = useCallback(() => {
-    if (!isDirtyRef.current) return;
-    saveConfigNow(configRef.current);
-  }, [saveConfigNow]);
-
-  // Load config on mount
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadConfig(): Promise<void> {
-      try {
-        const result = await invoke<LoadConfigResult>("load_config");
-        if (!mounted) return;
-
-        // Validate and migrate if needed
-        const validConfig = parsePersistedConfig(result.config);
-        setConfig(validConfig);
-        setIsLoaded(true);
-
-        if (result.wasCreated) {
-          console.log("[ConfigProvider] Created new config with defaults");
-        }
-        if (result.migrationApplied) {
-          console.log("[ConfigProvider] Applied config migration");
-          // Save migrated config
-          saveConfig(validConfig);
-        }
-      } catch (err: unknown) {
-        if (!mounted) return;
-
-        const message =
-          err instanceof Error ? err.message : "Failed to load config";
-        console.error("[ConfigProvider] Load failed:", err);
-        setLoadError(message);
-        setIsLoaded(true);
-        // Keep defaults
-      }
-    }
-
-    void loadConfig();
-
-    return () => {
-      mounted = false;
-    };
-  }, [saveConfig]);
-
-  // Save on beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = (): void => {
-      saveConfigImmediate();
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [saveConfigImmediate]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current !== null) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
+  const {
+    config,
+    setConfig,
+    isLoaded,
+    loadError,
+    saveConfig,
+    saveConfigNow,
+  } = useConfigStorage();
 
   const setAutoStageGlobal = useCallback(
     (value: boolean) => {

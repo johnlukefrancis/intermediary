@@ -162,6 +162,10 @@
       "summary": "Per-repo bundle state management with event subscription"
     },
     {
+      "path": "app/src/hooks/use_config_storage.ts",
+      "summary": "Config persistence + loading hook for use_config"
+    },
+    {
       "path": "app/src/hooks/use_config.tsx",
       "summary": "Config persistence context provider and hook"
     },
@@ -172,6 +176,10 @@
     {
       "path": "app/src/hooks/use_repo_state.ts",
       "summary": "Per-repo file state management with event subscription"
+    },
+    {
+      "path": "app/src/hooks/use_worktree_add.ts",
+      "summary": "Hook for adding worktrees to existing groups or single repos"
     },
     {
       "path": "app/src/lib/agent/agent_client.ts",
@@ -296,6 +304,10 @@
     {
       "path": "app/src/styles/status_bar.css",
       "summary": "Status bar with connection LED, error display, and options button"
+    },
+    {
+      "path": "app/src/styles/tab_bar_dropdown.css",
+      "summary": "Dropdown-specific styles for tab bar worktree actions"
     },
     {
       "path": "app/src/styles/tab_bar.css",
