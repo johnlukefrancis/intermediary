@@ -5,6 +5,7 @@ import chokidar, { type FSWatcher } from "chokidar";
 import * as path from "node:path";
 import type { FileEntry, FileKind } from "../../../app/src/shared/protocol.js";
 import { RingBuffer } from "../util/ring_buffer.js";
+import { createMruIndex, type MruIndex } from "./mru_index.js";
 import { type CategorizerConfig, categorizeFile } from "../util/categorizer.js";
 import { logger } from "../util/logger.js";
 
@@ -21,12 +22,19 @@ const DEFAULT_IGNORE_PATTERNS = [
   "**/Thumbs.db",
 ];
 
-const RING_BUFFER_CAPACITY = 200;
+const MRU_CAPACITY = 200;
+const OTHER_BUFFER_CAPACITY = 200;
 
 export interface RepoWatcherConfig {
   docsGlobs: string[];
   codeGlobs: string[];
   ignoreGlobs: string[];
+  /** Pre-seed with persisted entries */
+  initialEntries?: FileEntry[];
+  /** Called when MRU changes, for persistence */
+  onPersist?: (entries: FileEntry[]) => void;
+  /** Called before stop() completes, for flushing state */
+  onBeforeStop?: () => Promise<void>;
 }
 
 export interface FileChangeEvent {
@@ -56,12 +64,21 @@ export function createRepoWatcher(
 ): RepoWatcher {
   let watcher: FSWatcher | null = null;
   const handlers: FileChangeHandler[] = [];
-  const recentChanges = new RingBuffer<FileEntry>(RING_BUFFER_CAPACITY);
-  const otherChanges = new RingBuffer<FileEntry>(RING_BUFFER_CAPACITY);
+  const recentChanges: MruIndex = createMruIndex(MRU_CAPACITY);
+  const otherChanges = new RingBuffer<FileEntry>(OTHER_BUFFER_CAPACITY);
   const categorizerConfig: CategorizerConfig = {
     docsGlobs: config.docsGlobs,
     codeGlobs: config.codeGlobs,
   };
+
+  // Seed from persisted entries if provided
+  if (config.initialEntries && config.initialEntries.length > 0) {
+    recentChanges.loadFrom(config.initialEntries);
+    logger.debug("Seeded recent changes from persistence", {
+      repoId,
+      count: recentChanges.size,
+    });
+  }
 
   function emitChange(event: FileChangeEvent): void {
     for (const handler of handlers) {
@@ -97,15 +114,17 @@ export function createRepoWatcher(
       mtime: mtime.toISOString(),
     };
 
-    if (eventType !== "unlink") {
-      if (kind === "other") {
-        otherChanges.push(entry);
-        return;
-      }
-      recentChanges.push(entry);
-    }
-
+    // Handle MRU updates for docs/code files
     if (kind !== "other") {
+      if (eventType === "unlink") {
+        // Remove deleted files from MRU (they're not draggable)
+        recentChanges.remove(relativePath);
+      } else {
+        recentChanges.upsert(entry);
+      }
+      // Notify persistence layer
+      config.onPersist?.(recentChanges.entries());
+
       emitChange({
         repoId,
         relativePath,
@@ -113,6 +132,9 @@ export function createRepoWatcher(
         mtime,
         eventType,
       });
+    } else if (eventType !== "unlink") {
+      // "other" files only tracked in ring buffer, not MRU
+      otherChanges.push(entry);
     }
   }
 
@@ -159,6 +181,18 @@ export function createRepoWatcher(
   }
 
   async function stop(): Promise<void> {
+    // Flush pending state before closing
+    if (config.onBeforeStop) {
+      try {
+        await config.onBeforeStop();
+      } catch (err) {
+        logger.error("onBeforeStop callback failed", {
+          repoId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
     if (watcher) {
       await watcher.close();
       watcher = null;
@@ -173,7 +207,7 @@ export function createRepoWatcher(
       handlers.push(handler);
     },
     getRecentChanges() {
-      return recentChanges.toArray();
+      return recentChanges.entries();
     },
     getOtherChanges() {
       return otherChanges.toArray();

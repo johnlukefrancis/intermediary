@@ -12,6 +12,8 @@ agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle build
 agent/src/bundles/rust_bundle_cli.ts - Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing
 agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
+agent/src/repos/mru_index.ts - MRU (Most Recently Used) index for recent file changes with unique-by-path semantics
+agent/src/repos/recent_files_store.ts - Persistence layer for recent files with debounced atomic writes
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
 agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol

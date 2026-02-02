@@ -38,6 +38,14 @@
       "summary": "Agent entry point - bootstraps WebSocket server and watchers"
     },
     {
+      "path": "agent/src/repos/mru_index.ts",
+      "summary": "MRU (Most Recently Used) index for recent file changes with unique-by-path semantics"
+    },
+    {
+      "path": "agent/src/repos/recent_files_store.ts",
+      "summary": "Persistence layer for recent files with debounced atomic writes"
+    },
+    {
       "path": "agent/src/repos/repo_top_level.ts",
       "summary": "Scan top-level directories and files in a repo"
     },
