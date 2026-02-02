@@ -102,10 +102,8 @@ export async function startWatcher(
       recent: watcher.getRecentChanges(),
     });
   } catch (err) {
-    // Clean up ALL maps to avoid poisoned state
+    // Clean up watcher to avoid poisoned state
     state.watchers.delete(repoId);
-    state.repoRoots.delete(repoId);
-    state.repoConfigs.delete(repoId);
     state.recentFilesStore?.cancelPending(repoId);
     logger.error("Watcher start failed, cleaned up state", { repoId });
     throw err;

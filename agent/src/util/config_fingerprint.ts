@@ -6,7 +6,6 @@ import type { AppConfig } from "../../../app/src/shared/config.js";
 export interface WatcherConfigInput {
   config: AppConfig;
   stagingWslRoot: string;
-  autoStageOnChange: boolean;
 }
 
 interface RepoFingerprint {
@@ -20,7 +19,6 @@ interface RepoFingerprint {
 
 interface FingerprintData {
   stagingWslRoot: string;
-  autoStageGlobal: boolean;
   repos: RepoFingerprint[];
 }
 
@@ -42,16 +40,8 @@ export function computeConfigFingerprint(input: WatcherConfigInput): string {
 
   const data: FingerprintData = {
     stagingWslRoot: input.stagingWslRoot,
-    autoStageGlobal: input.autoStageOnChange,
     repos,
   };
 
   return JSON.stringify(data);
-}
-
-/**
- * Check if two fingerprints indicate config has changed.
- */
-export function configChanged(oldFp: string | null, newFp: string): boolean {
-  return oldFp === null || oldFp !== newFp;
 }

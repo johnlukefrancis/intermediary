@@ -1,27 +1,20 @@
 // Path: agent/src/main.ts
 // Description: Agent entry point - bootstraps WebSocket server and watchers
 
-import * as path from "node:path";
 import type { WebSocket } from "ws";
 import type { UiCommand, UiResponse } from "../../app/src/shared/protocol.js";
 import { createWsServer, type WsServer } from "./server/ws_server.js";
 import { createRouter, type Router } from "./server/router.js";
-import { createRecentFilesStore } from "./repos/recent_files_store.js";
 import { getRepoTopLevel, isValidRepoRoot } from "./repos/repo_top_level.js";
-import { createStager } from "./staging/stager.js";
-import { type PathBridgeConfig } from "./staging/path_bridge.js";
-import { createBundleBuilder } from "./bundles/bundle_builder.js";
 import { listBundles } from "./bundles/bundle_lister.js";
 import { logger, setLogLevel } from "./util/logger.js";
 import { AgentError } from "./util/errors.js";
 import {
   type AgentRuntimeState,
-  resetWatchers,
-  shouldResetWatchers,
   shutdown,
   startWatcher,
 } from "./agent_runtime.js";
-import { computeConfigFingerprint } from "./util/config_fingerprint.js";
+import { handleClientHello } from "./commands/client_hello.js";
 
 const AGENT_VERSION = "0.1.0";
 
@@ -43,86 +36,7 @@ let server: WsServer;
 async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResponse> {
   switch (command.type) {
     case "clientHello": {
-      // Compute fingerprint for new config
-      const autoStageResolved = command.autoStageOnChange ?? command.config.autoStageGlobal;
-      const newFingerprint = computeConfigFingerprint({
-        config: command.config,
-        stagingWslRoot: command.stagingWslRoot,
-        autoStageOnChange: autoStageResolved,
-      });
-
-      // Check if reset is needed (idempotent reconnect)
-      const needsReset = shouldResetWatchers(state, newFingerprint);
-
-      if (needsReset) {
-        logger.info("clientHello: config changed, resetting watchers", {
-          isFirstHello: state.configFingerprint === null,
-        });
-        await resetWatchers(state);
-      } else {
-        logger.info("clientHello: config unchanged, keeping watchers");
-      }
-
-      // Update fingerprint
-      state.configFingerprint = newFingerprint;
-
-      // Configure staging (idempotent, safe to re-run)
-      const config: PathBridgeConfig = {
-        stagingWslRoot: command.stagingWslRoot,
-        stagingWinRoot: command.stagingWinRoot,
-      };
-      state.stager = createStager(config);
-      state.bundleBuilder = createBundleBuilder(config, (event) => {
-        router.broadcastEvent(event);
-      });
-      state.stagingWslRoot = command.stagingWslRoot;
-      state.autoStageOnChange = autoStageResolved;
-
-      // Create recent files store for persistence
-      // stateDir lives under staging: staging/state
-      const stateDir = path.posix.join(command.stagingWslRoot, "state");
-      state.recentFilesStore = createRecentFilesStore(stateDir);
-
-      // Start watchers for configured repos (only those not already watched)
-      const watchedRepoIds: string[] = [];
-      for (const repo of command.config.repos) {
-        // Always update maps so commands like watchRepo have correct config
-        state.repoRoots.set(repo.repoId, repo.wslPath);
-        state.repoConfigs.set(repo.repoId, repo);
-
-        // Skip if already watching this repo
-        if (state.watchers.has(repo.repoId)) {
-          watchedRepoIds.push(repo.repoId);
-          continue;
-        }
-
-        if (await isValidRepoRoot(repo.wslPath)) {
-          watchedRepoIds.push(repo.repoId);
-          void startWatcher(state, { router }, repo).catch((err: unknown) => {
-            logger.error("Failed to start repo watcher", {
-              repoId: repo.repoId,
-              error: err instanceof Error ? err.message : String(err),
-            });
-            router.broadcastEvent({
-              type: "error",
-              scope: "watcher",
-              message: `Watcher failed for ${repo.repoId}`,
-              details: err instanceof Error ? err.message : String(err),
-            });
-          });
-        } else {
-          logger.warn("Invalid repo root, skipping", {
-            repoId: repo.repoId,
-            rootPath: repo.wslPath,
-          });
-        }
-      }
-
-      return {
-        type: "clientHelloResult",
-        agentVersion: AGENT_VERSION,
-        watchedRepoIds,
-      };
+      return handleClientHello(state, router, command, AGENT_VERSION);
     }
 
     case "setOptions": {

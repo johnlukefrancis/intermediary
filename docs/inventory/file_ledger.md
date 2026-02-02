@@ -11,6 +11,7 @@ agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manif
 agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
 agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
 agent/src/bundles/rust_bundle_cli.ts - Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing
+agent/src/commands/client_hello.ts - Handles clientHello command with watcher-safe idempotency
 agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
 agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
 agent/src/repos/mru_index.ts - MRU (Most Recently Used) index for recent file changes with unique-by-path semantics

@@ -34,6 +34,10 @@
       "summary": "Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing"
     },
     {
+      "path": "agent/src/commands/client_hello.ts",
+      "summary": "Handles clientHello command with watcher-safe idempotency"
+    },
+    {
       "path": "agent/src/dev/staging_probe.ts",
       "summary": "Minimal code file for staging detection tests"
     },
