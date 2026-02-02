@@ -198,10 +198,13 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
     // Validate tabTheme accent colors
     for (tab_key, theme) in &config.tab_themes {
         validate_accent_hex(&theme.accent_hex, tab_key)?;
-        validate_optional_non_empty(
-            &theme.texture_id,
-            &format!("tabTheme texture_id for {tab_key}"),
-        )?;
+        if let Some(texture_id) = &theme.texture_id {
+            if texture_id.trim().is_empty() {
+                return Err(format!(
+                    "tabTheme texture_id for {tab_key} must not be empty when provided"
+                ));
+            }
+        }
     }
 
     Ok(())
@@ -223,15 +226,6 @@ fn validate_accent_hex(value: &str, tab_key: &str) -> Result<(), String> {
         return Err(format!(
             "tabTheme accent_hex for {tab_key} must be #RRGGBB format, got: {value}"
         ));
-    }
-    Ok(())
-}
-
-fn validate_optional_non_empty(value: &Option<String>, field: &str) -> Result<(), String> {
-    if let Some(inner) = value {
-        if inner.trim().is_empty() {
-            return Err(format!("{field} must not be empty when provided"));
-        }
     }
     Ok(())
 }
