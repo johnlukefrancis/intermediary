@@ -45,6 +45,11 @@ interface ConfigContextValue {
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
   /** Add a new repo to config */
   addRepo: (repo: RepoConfig) => void;
+  /** Update an existing repo's fields (e.g., to add groupId/groupLabel) */
+  updateRepo: (
+    repoId: string,
+    updates: Partial<Omit<RepoConfig, "repoId">>
+  ) => void;
   /** Remove a repo by repoId (also cleans up bundleSelections) */
   removeRepo: (repoId: string) => void;
   /** Set custom output folder override (null to reset to default) */
@@ -255,6 +260,20 @@ export function ConfigProvider({
     [saveConfig]
   );
 
+  const updateRepo = useCallback(
+    (repoId: string, updates: Partial<Omit<RepoConfig, "repoId">>) => {
+      setConfig((prev) => {
+        const newRepos = prev.repos.map((r) =>
+          r.repoId === repoId ? { ...r, ...updates } : r
+        );
+        const next: PersistedConfig = { ...prev, repos: newRepos };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
   const removeRepo = useCallback(
     (repoId: string) => {
       setConfig((prev) => {
@@ -343,6 +362,7 @@ export function ConfigProvider({
     setBundleSelection,
     setGlobalExcludes,
     addRepo,
+    updateRepo,
     removeRepo,
     setOutputWindowsRoot,
     setTabThemeAccent,

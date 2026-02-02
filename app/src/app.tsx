@@ -32,18 +32,22 @@ function deriveTabsFromRepos(repos: RepoConfig[]): TabItem[] {
   const tabs: TabItem[] = [];
 
   for (const repo of repos) {
-    if (repo.groupId && repo.groupLabel) {
-      // Grouped repo
+    if (repo.groupId) {
+      // Grouped repo - groupLabel is optional, fallback to groupId
       let group = groupMap.get(repo.groupId);
       if (!group) {
         group = {
           type: "group",
           groupId: repo.groupId,
-          groupLabel: repo.groupLabel,
+          groupLabel: repo.groupLabel ?? repo.groupId,
           repos: [],
         };
         groupMap.set(repo.groupId, group);
         tabs.push(group);
+      }
+      // Update groupLabel if this repo has one and current label is the fallback
+      if (repo.groupLabel && group.groupLabel === group.groupId) {
+        group.groupLabel = repo.groupLabel;
       }
       group.repos.push({ repoId: repo.repoId, label: repo.label });
     } else {
