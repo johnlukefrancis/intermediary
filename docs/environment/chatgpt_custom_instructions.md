@@ -13,7 +13,7 @@ Intermediary is the bundling app for ChatGPT context sharing. It produces single
 
 **Contents:**
 - All selected files from the repo
-- `INTERMEDIARY_MANIFEST.json` with metadata: `generatedAt` (ISO UTC), `repoId`, `presetId`, `git` info, `fileCount`
+- `BUNDLE_MANIFEST.json` with metadata: `generatedAt` (ISO UTC), `repoId`, `presetId`, `git` info, `fileCount`
 
 **Retention:** One bundle per repo+preset. Building a new bundle deletes the previous one.
 
@@ -23,12 +23,12 @@ When multiple bundles exist (e.g., from different machines or manual copies):
 1. Sort by the timestamp portion of the filename (`YYYYMMDD_HHMMSS`) descending
 2. Take the first match
 
-The timestamp is UTC. If filename parsing fails, fall back to the manifest's `generatedAt` field inside `INTERMEDIARY_MANIFEST.json`.
+The timestamp is UTC. If filename parsing fails, fall back to the manifest's `generatedAt` field inside `BUNDLE_MANIFEST.json`.
 
 ### Using bundles
 
 - Each bundle is self-contained; no separate index file is needed.
-- Open `INTERMEDIARY_MANIFEST.json` first to see repo/preset metadata and file count.
+- Open `BUNDLE_MANIFEST.json` first to see repo/preset metadata and file count.
 - Use `docs/guide.md` (if present in bundle) to navigate documentation.
 - Bundles are the source of truth; cite concrete paths used (`app/src/...`, `src-tauri/src/...`, `docs/...`).
 - If the user provides a bundle, use it as the source of truth for that repo.

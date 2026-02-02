@@ -17,7 +17,7 @@ use crate::scanner::{scan_bundle, ScanEntry};
 
 const BUFFER_SIZE: usize = 256 * 1024;
 const OUTPUT_BUFFER_SIZE: usize = 256 * 1024;
-const MANIFEST_NAME: &str = "INTERMEDIARY_MANIFEST.json";
+const MANIFEST_NAME: &str = "BUNDLE_MANIFEST.json";
 const COMPRESSION_LEVEL: i64 = 6;
 
 #[derive(Debug)]

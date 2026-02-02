@@ -165,7 +165,7 @@ Per repo, user can define multiple presets:
 
 Every generated zip includes:
 
-* `INTERMEDIARY_MANIFEST.json` containing:
+* `BUNDLE_MANIFEST.json` containing:
 
   * `generatedAt` (ISO timestamp)
   * `repoId`, `repoRoot`

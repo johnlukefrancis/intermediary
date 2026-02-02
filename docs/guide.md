@@ -81,7 +81,7 @@ Intermediary produces timestamped bundles with this pattern:
 
 - Timestamp is UTC (matches manifest's `generatedAt`)
 - One bundle per repo+preset (building a new one replaces the old)
-- Each bundle contains `INTERMEDIARY_MANIFEST.json` with metadata
+- Each bundle contains `BUNDLE_MANIFEST.json` with metadata
 
 To find the latest bundle: sort by filename timestamp descending, take first match.
 

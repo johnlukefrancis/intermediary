@@ -134,7 +134,7 @@ The WSL agent writes to this path via `/mnt/c/...`, and the Tauri app reads the 
 
 ### Bundle Manifests
 
-Every generated zip includes `INTERMEDIARY_MANIFEST.json`:
+Every generated zip includes `BUNDLE_MANIFEST.json`:
 ```json
 {
   "generatedAt": "2026-01-30T10:30:00Z",
