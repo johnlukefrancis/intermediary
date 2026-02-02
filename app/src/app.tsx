@@ -19,6 +19,7 @@ export interface SingleTab {
   type: "single";
   repoId: string;
   label: string;
+  wslPath: string;
 }
 
 /** A grouped tab containing multiple repos with a dropdown */
@@ -26,7 +27,7 @@ export interface GroupTab {
   type: "group";
   groupId: string;
   groupLabel: string;
-  repos: Array<{ repoId: string; label: string }>;
+  repos: Array<{ repoId: string; label: string; wslPath: string }>;
 }
 
 export type TabItem = SingleTab | GroupTab;
@@ -54,13 +55,14 @@ function deriveTabsFromRepos(repos: RepoConfig[]): TabItem[] {
       if (repo.groupLabel && group.groupLabel === group.groupId) {
         group.groupLabel = repo.groupLabel;
       }
-      group.repos.push({ repoId: repo.repoId, label: repo.label });
+      group.repos.push({ repoId: repo.repoId, label: repo.label, wslPath: repo.wslPath });
     } else {
       // Standalone repo
       tabs.push({
         type: "single",
         repoId: repo.repoId,
         label: repo.label,
+        wslPath: repo.wslPath,
       });
     }
   }

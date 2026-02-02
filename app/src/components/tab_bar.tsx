@@ -3,12 +3,43 @@
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import { TabRemoveButton } from "./tab_remove_button.js";
 import "../styles/tab_bar.css";
 import "../styles/tab_bar_dropdown.css";
+
+/** Vintage folder icon SVG using theme CSS variables */
+function FolderIcon(): React.JSX.Element {
+  return (
+    <svg
+      className="tab-folder-icon"
+      width="18"
+      height="18"
+      viewBox="0 0 96 96"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      {/* Folder tab */}
+      <path
+        className="folder-tab"
+        d="M18 26 C18 22.7 20.7 20 24 20 H40 C42 20 43.5 20.7 44.9 22.2 L50.2 27.2 C51.1 28.1 52.2 28.6 53.5 28.6 H72 C75.3 28.6 78 31.3 78 34.6 V38 H18 Z"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      {/* Folder body */}
+      <path
+        className="folder-body"
+        d="M16 38 H80 C83 38 85.5 40.5 85.5 43.5 V70 C85.5 76.4 80.4 81.5 74 81.5 H22 C15.6 81.5 10.5 76.4 10.5 70 V43.5 C10.5 40.5 13 38 16 38 Z"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 interface TabBarProps {
   tabs: TabItem[];
@@ -106,6 +137,15 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
     [addWorktreeToSingle]
   );
 
+  const handleOpenFolder = useCallback(async (wslPath: string) => {
+    try {
+      const windowsPath = await invoke<string>("convert_wsl_to_windows", { wslPath });
+      await invoke("open_in_file_manager", { folderPath: windowsPath });
+    } catch (err) {
+      console.error("[TabBar] Failed to open folder:", err);
+    }
+  }, []);
+
   return (
     <nav className="tab-bar">
       {tabs.map((tab) => {
@@ -119,6 +159,17 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
               className="single-tab-container"
               ref={isOpen ? dropdownRef : undefined}
             >
+              {isActive && (
+                <button
+                  type="button"
+                  className="tab-folder-button"
+                  onClick={() => { void handleOpenFolder(tab.wslPath); }}
+                  title="Open folder in Explorer"
+                  aria-label="Open repository folder"
+                >
+                  <FolderIcon />
+                </button>
+              )}
               <button
                 className={`tab-button ${isActive ? "active" : ""}`}
                 onClick={() => { onRepoChange(tab.repoId); }}
@@ -172,6 +223,20 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
               className="group-tab-container"
               ref={isOpen ? dropdownRef : undefined}
             >
+              {isActive && (
+                <button
+                  type="button"
+                  className="tab-folder-button"
+                  onClick={() => {
+                    const activeRepo = tab.repos.find((r) => r.repoId === activeRepoId);
+                    if (activeRepo) void handleOpenFolder(activeRepo.wslPath);
+                  }}
+                  title="Open folder in Explorer"
+                  aria-label="Open repository folder"
+                >
+                  <FolderIcon />
+                </button>
+              )}
               <button
                 className={`tab-button ${isActive ? "active" : ""}`}
                 onClick={() => { handleGroupClick(tab); }}

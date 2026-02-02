@@ -86,6 +86,63 @@
   outline-offset: -2px;
 }
 
+/* ===== FOLDER BUTTON (Active Tab Only) ===== */
+.tab-folder-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-right: var(--space-1);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius-deck-xs);
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.tab-folder-button:hover {
+  background: var(--color-bg-hover-subtle);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 8px 0 var(--color-accent-glow);
+}
+
+.tab-folder-button:active {
+  transform: scale(0.95);
+}
+
+.tab-folder-button:focus {
+  outline: none;
+}
+
+.tab-folder-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* ===== FOLDER ICON SVG THEMING ===== */
+.tab-folder-icon .folder-tab,
+.tab-folder-icon .folder-body {
+  fill: var(--color-accent-soft);
+  stroke: var(--color-accent);
+  transition:
+    fill var(--duration-normal) var(--ease-out),
+    stroke var(--duration-normal) var(--ease-out);
+}
+
+.tab-folder-button:hover .folder-tab,
+.tab-folder-button:hover .folder-body {
+  fill: var(--color-accent);
+  stroke: var(--color-text-primary);
+}
+
 /* ===== GROUP TAB DROPDOWN ===== */
 .group-tab-container {
   position: relative;
