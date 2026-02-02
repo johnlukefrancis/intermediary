@@ -2,7 +2,7 @@
 // Description: Generic repo tab component with 3-column layout
 
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { FileListColumn } from "../components/file_list_column.js";
@@ -12,9 +12,31 @@ import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
+import { useStarredFiles } from "../hooks/use_starred_files.js";
+import type { FileEntry } from "../shared/protocol.js";
+
+type PaneView = "recent" | "starred";
 
 interface RepoTabProps {
   repoId: string;
+}
+
+/**
+ * Build FileEntry[] from starred paths, reusing recent entries where available.
+ * For paths not in the recent list, creates a placeholder with empty mtime.
+ */
+function buildStarredEntries(
+  starredPaths: readonly string[],
+  recentFiles: FileEntry[],
+  kind: "docs" | "code"
+): FileEntry[] {
+  const recentByPath = new Map(recentFiles.map((f) => [f.path, f]));
+  return starredPaths.map((path) => {
+    const existing = recentByPath.get(path);
+    if (existing) return existing;
+    // Placeholder for files not in recent list (FileRow shows "—" for empty mtime)
+    return { path, kind, changeType: "change", mtime: "" };
+  });
 }
 
 export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
@@ -32,6 +54,24 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const { dragState, handleDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
+  const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
+
+  // View state for docs and code panes
+  const [docsView, setDocsView] = useState<PaneView>("recent");
+  const [codeView, setCodeView] = useState<PaneView>("recent");
+
+  // Auto-switch back to recent when starred becomes empty
+  useEffect(() => {
+    if (docsView === "starred" && starredDocsPaths.length === 0) {
+      setDocsView("recent");
+    }
+  }, [docsView, starredDocsPaths.length]);
+
+  useEffect(() => {
+    if (codeView === "starred" && starredCodePaths.length === 0) {
+      setCodeView("recent");
+    }
+  }, [codeView, starredCodePaths.length]);
 
   const handleBundleDragStart = useCallback(
     async (windowsPath: string) => {
@@ -45,11 +85,77 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   );
 
   const isConnected = connectionState.status === "connected";
-  const emptyMessage = !isConnected
+  const recentEmptyMessage = !isConnected
     ? "Waiting for agent..."
     : isLoading
       ? "Loading..."
       : "No recent files";
+
+  // Build file lists based on view
+  const docsFiles =
+    docsView === "starred"
+      ? buildStarredEntries(starredDocsPaths, recentDocs, "docs")
+      : recentDocs;
+  const codeFiles =
+    codeView === "starred"
+      ? buildStarredEntries(starredCodePaths, recentCode, "code")
+      : recentCode;
+
+  // Empty messages per view
+  const docsEmptyMessage =
+    docsView === "starred" ? "No starred files" : recentEmptyMessage;
+  const codeEmptyMessage =
+    codeView === "starred" ? "No starred files" : recentEmptyMessage;
+
+  // Header components for docs pane
+  const docsHeaderLeft = (
+    <button
+      type="button"
+      className="panel-title-button"
+      onClick={() => { setDocsView("recent"); }}
+      title="Show recent files"
+    >
+      Docs
+    </button>
+  );
+  const docsHeaderRight = (
+    <button
+      type="button"
+      className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
+      onClick={() => { setDocsView("starred"); }}
+      disabled={starredDocsPaths.length === 0}
+      title={starredDocsPaths.length === 0 ? "No starred files" : "Show starred files"}
+      aria-label="Show starred files"
+      aria-pressed={docsView === "starred"}
+    >
+      {docsView === "starred" ? "★" : "☆"}
+    </button>
+  );
+
+  // Header components for code pane
+  const codeHeaderLeft = (
+    <button
+      type="button"
+      className="panel-title-button"
+      onClick={() => { setCodeView("recent"); }}
+      title="Show recent files"
+    >
+      Code
+    </button>
+  );
+  const codeHeaderRight = (
+    <button
+      type="button"
+      className={`panel-header-icon${codeView === "starred" ? " panel-header-icon--active" : ""}`}
+      onClick={() => { setCodeView("starred"); }}
+      disabled={starredCodePaths.length === 0}
+      title={starredCodePaths.length === 0 ? "No starred files" : "Show starred files"}
+      aria-label="Show starred files"
+      aria-pressed={codeView === "starred"}
+    >
+      {codeView === "starred" ? "★" : "☆"}
+    </button>
+  );
 
   return (
     <div className="tab repo-tab">
@@ -57,23 +163,27 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
         <DragErrorNotice message={dragState.error} onDismiss={clearError} />
       )}
       <ThreeColumn
+        docsHeaderLeft={docsHeaderLeft}
+        docsHeaderRight={docsHeaderRight}
         docsContent={
           <FileListColumn
-            files={recentDocs}
+            files={docsFiles}
             stagedByPath={stagedByPath}
             repoId={repoId}
             kind="docs"
-            emptyMessage={emptyMessage}
+            emptyMessage={docsEmptyMessage}
             onDragStart={handleDragStart}
           />
         }
+        codeHeaderLeft={codeHeaderLeft}
+        codeHeaderRight={codeHeaderRight}
         codeContent={
           <FileListColumn
-            files={recentCode}
+            files={codeFiles}
             stagedByPath={stagedByPath}
             repoId={repoId}
             kind="code"
-            emptyMessage={emptyMessage}
+            emptyMessage={codeEmptyMessage}
             onDragStart={handleDragStart}
           />
         }
