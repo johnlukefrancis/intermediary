@@ -130,6 +130,17 @@
   outline-offset: 2px;
 }
 
+/* Dimmed state when favourites view is active */
+.panel-title-button--dimmed {
+  color: var(--color-text-muted);
+}
+
+.panel-title-button--dimmed::before,
+.panel-title-button--dimmed::after {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
 /* Header icon button (star toggle) */
 .panel-header-icon {
   display: flex;

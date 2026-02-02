@@ -98,9 +98,9 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const docsHeaderLeft = (
     <button
       type="button"
-      className="panel-title-button"
+      className={`panel-title-button${docsView === "starred" ? " panel-title-button--dimmed" : ""}`}
       onClick={() => { setDocsView("recent"); }}
-      title="Show recent files"
+      title="Show recent docs"
     >
       Docs
     </button>
@@ -122,7 +122,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const codeHeaderLeft = (
     <button
       type="button"
-      className="panel-title-button"
+      className={`panel-title-button${codeView === "starred" ? " panel-title-button--dimmed" : ""}`}
       onClick={() => { setCodeView("recent"); }}
       title="Show recent files"
     >
