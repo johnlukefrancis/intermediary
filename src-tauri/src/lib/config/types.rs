@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 10;
+pub const CONFIG_VERSION: u32 = 11;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +23,9 @@ pub struct PersistedConfig {
     pub auto_stage_global: bool,
     /// Configured repositories
     pub repos: Vec<RepoConfig>,
+    /// Maximum recent files to track per repo (25-2000)
+    #[serde(default = "default_recent_files_limit")]
+    pub recent_files_limit: u32,
     /// Remembered UI state
     pub ui_state: UiState,
     /// Bundle selections per repo/preset
@@ -36,6 +39,9 @@ pub struct PersistedConfig {
     /// Per-tab accent colors, keyed by tabKey
     #[serde(default)]
     pub tab_themes: HashMap<String, TabTheme>,
+    /// Starred files per repo
+    #[serde(default)]
+    pub starred_files: HashMap<String, StarredFilesEntry>,
 }
 
 impl Default for PersistedConfig {
@@ -46,11 +52,13 @@ impl Default for PersistedConfig {
             agent_port: 3141,
             auto_stage_global: true,
             repos: default_repos(),
+            recent_files_limit: default_recent_files_limit(),
             ui_state: UiState::default(),
             bundle_selections: HashMap::new(),
             global_excludes: GlobalExcludes::default(),
             output_windows_root: None,
             tab_themes: HashMap::new(),
+            starred_files: HashMap::new(),
         }
     }
 }
@@ -106,6 +114,16 @@ pub struct TabTheme {
     /// Optional texture id (from app/assets/textures)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub texture_id: Option<String>,
+}
+
+/// Starred files for a single repo
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StarredFilesEntry {
+    #[serde(default)]
+    pub docs: Vec<String>,
+    #[serde(default)]
+    pub code: Vec<String>,
 }
 
 /// Configuration for a single repository
@@ -179,6 +197,13 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
         return Err("agent_port must be >= 1024".to_string());
     }
 
+    if config.recent_files_limit < 25 || config.recent_files_limit > 2000 {
+        return Err(format!(
+            "recent_files_limit must be 25-2000, got {}",
+            config.recent_files_limit
+        ));
+    }
+
     let mut repo_ids = HashSet::new();
     for repo in &config.repos {
         validate_non_empty(&repo.repo_id, "repo.repo_id")?;
@@ -232,4 +257,8 @@ fn validate_accent_hex(value: &str, tab_key: &str) -> Result<(), String> {
 
 fn default_repos() -> Vec<RepoConfig> {
     Vec::new()
+}
+
+fn default_recent_files_limit() -> u32 {
+    200
 }

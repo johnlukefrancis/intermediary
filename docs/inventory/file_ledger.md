@@ -57,6 +57,8 @@ app/src/components/tab_remove_button.tsx - "x" button for removing repos with co
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
+app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, starred files, and recent files limit
+app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging

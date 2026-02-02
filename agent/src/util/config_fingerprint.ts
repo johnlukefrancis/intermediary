@@ -19,6 +19,7 @@ interface RepoFingerprint {
 
 interface FingerprintData {
   stagingWslRoot: string;
+  recentFilesLimit: number;
   repos: RepoFingerprint[];
 }
 
@@ -40,6 +41,7 @@ export function computeConfigFingerprint(input: WatcherConfigInput): string {
 
   const data: FingerprintData = {
     stagingWslRoot: input.stagingWslRoot,
+    recentFilesLimit: input.config.recentFilesLimit,
     repos,
   };
 

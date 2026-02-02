@@ -16,6 +16,8 @@ export const AppConfigSchema = z.object({
   autoStageGlobal: z.boolean().default(true),
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
+  /** Maximum recent files to track per repo (25-2000) */
+  recentFilesLimit: z.number().int().min(25).max(2000).default(200),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
@@ -25,6 +27,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
   agentPort: 3141,
   autoStageGlobal: true,
   repos: [], // Empty by default - users add repos via the UI
+  recentFilesLimit: 200,
 });
 
 /**
@@ -46,11 +49,13 @@ export function extractAppConfig(persisted: {
   agentPort: number;
   autoStageGlobal: boolean;
   repos: RepoConfig[];
+  recentFilesLimit: number;
 }): AppConfig {
   return {
     agentHost: persisted.agentHost,
     agentPort: persisted.agentPort,
     autoStageGlobal: persisted.autoStageGlobal,
     repos: persisted.repos,
+    recentFilesLimit: persisted.recentFilesLimit,
   };
 }

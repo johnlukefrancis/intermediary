@@ -1,20 +1,31 @@
 // Path: app/src/hooks/use_config.tsx
 // Description: Config persistence context provider and hook
 
-import {
-  createContext,
-  useContext,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import {
   type PersistedConfig,
   type BundleSelection,
   type RepoConfig,
   type GlobalExcludes,
 } from "../shared/config.js";
-import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 import { useConfigStorage } from "./use_config_storage.js";
+import {
+  useSetAutoStageGlobal,
+  useSetLastActiveTabId,
+  useSetBundleSelection,
+  useSetGlobalExcludes,
+  useAddRepo,
+  useUpdateRepo,
+  useRemoveRepo,
+} from "./use_config_actions.js";
+import {
+  useSetOutputWindowsRoot,
+  useSetTabThemeAccent,
+  useSetTabThemeTexture,
+  useClearTabTheme,
+  useSetRecentFilesLimit,
+  useToggleStarredFile,
+} from "./use_config_actions_extended.js";
 
 interface ConfigContextValue {
   /** Current config (always available, defaults if load failed) */
@@ -42,7 +53,7 @@ interface ConfigContextValue {
     repoId: string,
     updates: Partial<Omit<RepoConfig, "repoId">>
   ) => void;
-  /** Remove a repo by repoId (also cleans up bundleSelections) */
+  /** Remove a repo by repoId (also cleans up bundleSelections, starredFiles) */
   removeRepo: (repoId: string) => void;
   /** Set custom output folder override (null to reset to default) */
   setOutputWindowsRoot: (path: string | null) => void;
@@ -52,6 +63,14 @@ interface ConfigContextValue {
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   /** Clear theme for a tab */
   clearTabTheme: (tabKey: string) => void;
+  /** Set maximum recent files to track (clamped to 25-2000) */
+  setRecentFilesLimit: (value: number) => void;
+  /** Toggle a file's starred status for a repo */
+  toggleStarredFile: (
+    repoId: string,
+    kind: "docs" | "code",
+    path: string
+  ) => void;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -63,207 +82,22 @@ interface ConfigProviderProps {
 export function ConfigProvider({
   children,
 }: ConfigProviderProps): React.JSX.Element {
-  const {
-    config,
-    setConfig,
-    isLoaded,
-    loadError,
-    saveConfig,
-    saveConfigNow,
-  } = useConfigStorage();
+  const { config, setConfig, isLoaded, loadError, saveConfig, saveConfigNow } =
+    useConfigStorage();
 
-  const setAutoStageGlobal = useCallback(
-    (value: boolean) => {
-      setConfig((prev) => {
-        const next = { ...prev, autoStageGlobal: value };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setLastActiveTabId = useCallback(
-    (repoId: string | null) => {
-      setConfig((prev) => {
-        const next = {
-          ...prev,
-          uiState: { ...prev.uiState, lastActiveTabId: repoId },
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setBundleSelection = useCallback(
-    (repoId: string, presetId: string, selection: BundleSelection) => {
-      setConfig((prev) => {
-        const repoSelections = prev.bundleSelections[repoId] ?? {};
-        const next: PersistedConfig = {
-          ...prev,
-          bundleSelections: {
-            ...prev.bundleSelections,
-            [repoId]: {
-              ...repoSelections,
-              [presetId]: selection,
-            },
-          },
-        };
-        // Persist bundle selections immediately and cancel pending saves.
-        saveConfigNow(next);
-        return next;
-      });
-    },
-    [saveConfigNow]
-  );
-
-  const setGlobalExcludes = useCallback(
-    (excludes: GlobalExcludes) => {
-      setConfig((prev) => {
-        const next: PersistedConfig = {
-          ...prev,
-          globalExcludes: excludes,
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const addRepo = useCallback(
-    (repo: RepoConfig) => {
-      setConfig((prev) => {
-        const next: PersistedConfig = {
-          ...prev,
-          repos: [...prev.repos, repo],
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const updateRepo = useCallback(
-    (repoId: string, updates: Partial<Omit<RepoConfig, "repoId">>) => {
-      setConfig((prev) => {
-        const newRepos = prev.repos.map((r) =>
-          r.repoId === repoId ? { ...r, ...updates } : r
-        );
-        const next: PersistedConfig = { ...prev, repos: newRepos };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const removeRepo = useCallback(
-    (repoId: string) => {
-      setConfig((prev) => {
-        // Remove from repos array
-        const newRepos = prev.repos.filter((r) => r.repoId !== repoId);
-
-        // Clean up bundleSelections for this repo
-        const { [repoId]: _removed, ...newBundleSelections } =
-          prev.bundleSelections;
-
-        // Clear lastActiveTabId if it was this repo
-        const newUiState =
-          prev.uiState.lastActiveTabId === repoId
-            ? { ...prev.uiState, lastActiveTabId: null }
-            : prev.uiState;
-
-        // Clean up tabThemes entry for this repoId (if present)
-        const { [repoId]: _removedTheme, ...newTabThemes } = prev.tabThemes;
-
-        const next: PersistedConfig = {
-          ...prev,
-          repos: newRepos,
-          bundleSelections: newBundleSelections,
-          uiState: newUiState,
-          tabThemes: newTabThemes,
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setOutputWindowsRoot = useCallback(
-    (path: string | null) => {
-      setConfig((prev) => {
-        const next: PersistedConfig = {
-          ...prev,
-          outputWindowsRoot: path,
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setTabThemeAccent = useCallback(
-    (tabKey: string, accentHex: string) => {
-      setConfig((prev) => {
-        const existing = prev.tabThemes[tabKey];
-        const next: PersistedConfig = {
-          ...prev,
-          tabThemes: {
-            ...prev.tabThemes,
-            [tabKey]: {
-              accentHex,
-              textureId: existing?.textureId,
-            },
-          },
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const setTabThemeTexture = useCallback(
-    (tabKey: string, textureId: string) => {
-      setConfig((prev) => {
-        const existing = prev.tabThemes[tabKey];
-        const next: PersistedConfig = {
-          ...prev,
-          tabThemes: {
-            ...prev.tabThemes,
-            [tabKey]: {
-              accentHex: existing?.accentHex ?? DEFAULT_ACCENT_HEX,
-              textureId,
-            },
-          },
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
-
-  const clearTabTheme = useCallback(
-    (tabKey: string) => {
-      setConfig((prev) => {
-        const { [tabKey]: _removed, ...remaining } = prev.tabThemes;
-        const next: PersistedConfig = {
-          ...prev,
-          tabThemes: remaining,
-        };
-        saveConfig(next);
-        return next;
-      });
-    },
-    [saveConfig]
-  );
+  const setAutoStageGlobal = useSetAutoStageGlobal(setConfig, saveConfig);
+  const setLastActiveTabId = useSetLastActiveTabId(setConfig, saveConfig);
+  const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
+  const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
+  const addRepo = useAddRepo(setConfig, saveConfig);
+  const updateRepo = useUpdateRepo(setConfig, saveConfig);
+  const removeRepo = useRemoveRepo(setConfig, saveConfig);
+  const setOutputWindowsRoot = useSetOutputWindowsRoot(setConfig, saveConfig);
+  const setTabThemeAccent = useSetTabThemeAccent(setConfig, saveConfig);
+  const setTabThemeTexture = useSetTabThemeTexture(setConfig, saveConfig);
+  const clearTabTheme = useClearTabTheme(setConfig, saveConfig);
+  const setRecentFilesLimit = useSetRecentFilesLimit(setConfig, saveConfig);
+  const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
 
   const value: ConfigContextValue = {
     config,
@@ -280,6 +114,8 @@ export function ConfigProvider({
     setTabThemeAccent,
     setTabThemeTexture,
     clearTabTheme,
+    setRecentFilesLimit,
+    toggleStarredFile,
   };
 
   return (

@@ -34,6 +34,8 @@ export {
   BundleSelectionSchema,
   BundleSelectionsSchema,
   PersistedConfigSchema,
+  StarredFilesEntrySchema,
+  StarredFilesSchema,
   TabThemeSchema,
   UiStateSchema,
   getDefaultPersistedConfig,
@@ -44,6 +46,8 @@ export type {
   BundleSelections,
   LoadConfigResult,
   PersistedConfig,
+  StarredFiles,
+  StarredFilesEntry,
   TabTheme,
   UiState,
 } from "./config/persisted_config.js";

@@ -54,6 +54,7 @@ export async function handleClientHello(
   });
   state.stagingWslRoot = command.stagingWslRoot;
   state.autoStageOnChange = autoStageResolved;
+  state.recentFilesLimit = command.config.recentFilesLimit;
 
   const stateDir = path.posix.join(command.stagingWslRoot, "state");
   state.recentFilesStore = createRecentFilesStore(stateDir);

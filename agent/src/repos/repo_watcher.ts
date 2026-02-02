@@ -22,13 +22,14 @@ const DEFAULT_IGNORE_PATTERNS = [
   "**/Thumbs.db",
 ];
 
-const MRU_CAPACITY = 200;
 const OTHER_BUFFER_CAPACITY = 200;
 
 export interface RepoWatcherConfig {
   docsGlobs: string[];
   codeGlobs: string[];
   ignoreGlobs: string[];
+  /** Maximum recent files to track in MRU */
+  mruCapacity: number;
   /** Pre-seed with persisted entries */
   initialEntries?: FileEntry[];
   /** Called when MRU changes, for persistence */
@@ -64,7 +65,7 @@ export function createRepoWatcher(
 ): RepoWatcher {
   let watcher: FSWatcher | null = null;
   const handlers: FileChangeHandler[] = [];
-  const recentChanges: MruIndex = createMruIndex(MRU_CAPACITY);
+  const recentChanges: MruIndex = createMruIndex(config.mruCapacity);
   const otherChanges = new RingBuffer<FileEntry>(OTHER_BUFFER_CAPACITY);
   const categorizerConfig: CategorizerConfig = {
     docsGlobs: config.docsGlobs,

@@ -54,6 +54,19 @@ export const TabThemeSchema = z.object({
 
 export type TabTheme = z.infer<typeof TabThemeSchema>;
 
+/** Starred files for a single repo */
+export const StarredFilesEntrySchema = z.object({
+  docs: z.array(z.string()).default([]),
+  code: z.array(z.string()).default([]),
+});
+
+export type StarredFilesEntry = z.infer<typeof StarredFilesEntrySchema>;
+
+/** Starred files map: repoId -> { docs, code } */
+export const StarredFilesSchema = z.record(z.string(), StarredFilesEntrySchema);
+
+export type StarredFiles = z.infer<typeof StarredFilesSchema>;
+
 /**
  * Full persisted configuration (saved to disk)
  */
@@ -68,6 +81,8 @@ export const PersistedConfigSchema = z.object({
   autoStageGlobal: z.boolean().default(true),
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
+  /** Maximum recent files to track per repo (25-2000) */
+  recentFilesLimit: z.number().int().min(25).max(2000).default(200),
   /** Remembered UI state */
   uiState: UiStateSchema.default({}),
   /** Bundle selections per repo/preset */
@@ -87,6 +102,8 @@ export const PersistedConfigSchema = z.object({
   outputWindowsRoot: z.string().nullable().default(null),
   /** Per-tab theme overrides, keyed by tabKey */
   tabThemes: z.record(z.string(), TabThemeSchema).default({}),
+  /** Starred files per repo */
+  starredFiles: StarredFilesSchema.default({}),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -130,5 +147,6 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     },
     outputWindowsRoot: null,
     tabThemes: {},
+    starredFiles: {},
   };
 }

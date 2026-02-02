@@ -22,6 +22,8 @@ export interface AgentRuntimeState {
   stagingWslRoot: string | null;
   autoStageOnChange: boolean;
   configFingerprint: string | null;
+  /** Maximum recent files to track per repo */
+  recentFilesLimit: number;
 }
 
 export interface AgentRuntimeDeps {
@@ -43,6 +45,7 @@ export async function startWatcher(
     docsGlobs: repoConfig.docsGlobs,
     codeGlobs: repoConfig.codeGlobs,
     ignoreGlobs: repoConfig.ignoreGlobs,
+    mruCapacity: state.recentFilesLimit,
     initialEntries,
     onPersist: (entries) => {
       state.recentFilesStore?.scheduleSave(repoId, repoRoot, entries);

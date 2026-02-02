@@ -28,6 +28,7 @@ const state: AgentRuntimeState = {
   stagingWslRoot: null,
   autoStageOnChange: true,
   configFingerprint: null,
+  recentFilesLimit: 200,
 };
 
 let router: Router;

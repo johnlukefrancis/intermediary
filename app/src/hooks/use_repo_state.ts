@@ -3,14 +3,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAgent } from "./use_agent.js";
+import { useConfig } from "./use_config.js";
 import type {
   FileEntry,
   StagedInfo,
   AgentEvent,
 } from "../shared/protocol.js";
 import { sendGetRepoTopLevel, sendRefresh } from "../lib/agent/messages.js";
-
-const MAX_RECENT_FILES = 200;
 
 export interface RepoState {
   recentDocs: FileEntry[];
@@ -28,7 +27,7 @@ function sortByMtimeDesc(a: FileEntry, b: FileEntry): number {
   return new Date(b.mtime).getTime() - new Date(a.mtime).getTime();
 }
 
-function upsertFile(files: FileEntry[], entry: FileEntry): FileEntry[] {
+function upsertFile(files: FileEntry[], entry: FileEntry, limit: number): FileEntry[] {
   const idx = files.findIndex((f) => f.path === entry.path);
   let updated: FileEntry[];
   if (idx >= 0) {
@@ -37,11 +36,13 @@ function upsertFile(files: FileEntry[], entry: FileEntry): FileEntry[] {
   } else {
     updated = [entry, ...files];
   }
-  return updated.sort(sortByMtimeDesc).slice(0, MAX_RECENT_FILES);
+  return updated.sort(sortByMtimeDesc).slice(0, limit);
 }
 
 export function useRepoState(repoId: string): RepoState {
   const { subscribe, client, connectionState, helloState } = useAgent();
+  const { config } = useConfig();
+  const recentFilesLimit = config.recentFilesLimit;
 
   const [recentDocs, setRecentDocs] = useState<FileEntry[]>([]);
   const [recentCode, setRecentCode] = useState<FileEntry[]>([]);
@@ -68,11 +69,11 @@ export function useRepoState(repoId: string): RepoState {
         const docs = event.recent
           .filter((f) => f.kind === "docs")
           .sort(sortByMtimeDesc)
-          .slice(0, MAX_RECENT_FILES);
+          .slice(0, recentFilesLimit);
         const code = event.recent
           .filter((f) => f.kind === "code")
           .sort(sortByMtimeDesc)
-          .slice(0, MAX_RECENT_FILES);
+          .slice(0, recentFilesLimit);
 
         setRecentDocs(docs);
         setRecentCode(code);
@@ -87,9 +88,9 @@ export function useRepoState(repoId: string): RepoState {
         };
 
         if (event.kind === "docs") {
-          setRecentDocs((prev) => upsertFile(prev, entry));
+          setRecentDocs((prev) => upsertFile(prev, entry, recentFilesLimit));
         } else if (event.kind === "code") {
-          setRecentCode((prev) => upsertFile(prev, entry));
+          setRecentCode((prev) => upsertFile(prev, entry, recentFilesLimit));
         }
 
         // Cached staged entries are only valid for the latest known file version.
@@ -104,7 +105,7 @@ export function useRepoState(repoId: string): RepoState {
         });
       }
     },
-    [repoId]
+    [repoId, recentFilesLimit]
   );
 
   useEffect(() => {
