@@ -116,8 +116,8 @@ export function FileRow({
         type="button"
         className={`file-star-button${isStarred ? " file-star-button--active" : ""}`}
         onClick={handleStarClick}
-        title={isStarred ? "Unstar file" : "Star file"}
-        aria-label={isStarred ? "Unstar file" : "Star file"}
+        title={isStarred ? "Unfavourite file" : "Favourite file"}
+        aria-label={isStarred ? "Unfavourite file" : "Favourite file"}
         aria-pressed={isStarred}
       >
         ★

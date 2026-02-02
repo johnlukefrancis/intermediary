@@ -110,8 +110,8 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       type="button"
       className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
       onClick={() => { setDocsView(docsView === "starred" ? "recent" : "starred"); }}
-      title={docsView === "starred" ? "Show recent files" : "Show starred files"}
-      aria-label={docsView === "starred" ? "Show recent files" : "Show starred files"}
+      title={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
+      aria-label={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
       aria-pressed={docsView === "starred"}
     >
       ★
@@ -134,8 +134,8 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       type="button"
       className={`panel-header-icon${codeView === "starred" ? " panel-header-icon--active" : ""}`}
       onClick={() => { setCodeView(codeView === "starred" ? "recent" : "starred"); }}
-      title={codeView === "starred" ? "Show recent files" : "Show starred files"}
-      aria-label={codeView === "starred" ? "Show recent files" : "Show starred files"}
+      title={codeView === "starred" ? "Show recent files" : "Show favourited files"}
+      aria-label={codeView === "starred" ? "Show recent files" : "Show favourited files"}
       aria-pressed={codeView === "starred"}
     >
       ★
