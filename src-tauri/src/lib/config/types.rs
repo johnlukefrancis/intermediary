@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 9;
+pub const CONFIG_VERSION: u32 = 10;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +103,9 @@ pub struct BundleSelection {
 pub struct TabTheme {
     /// Accent color in #RRGGBB format
     pub accent_hex: String,
+    /// Optional texture id (from app/assets/textures)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub texture_id: Option<String>,
 }
 
 /// Configuration for a single repository
@@ -195,6 +198,10 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
     // Validate tabTheme accent colors
     for (tab_key, theme) in &config.tab_themes {
         validate_accent_hex(&theme.accent_hex, tab_key)?;
+        validate_optional_non_empty(
+            &theme.texture_id,
+            &format!("tabTheme texture_id for {tab_key}"),
+        )?;
     }
 
     Ok(())
@@ -216,6 +223,15 @@ fn validate_accent_hex(value: &str, tab_key: &str) -> Result<(), String> {
         return Err(format!(
             "tabTheme accent_hex for {tab_key} must be #RRGGBB format, got: {value}"
         ));
+    }
+    Ok(())
+}
+
+fn validate_optional_non_empty(value: &Option<String>, field: &str) -> Result<(), String> {
+    if let Some(inner) = value {
+        if inner.trim().is_empty() {
+            return Err(format!("{field} must not be empty when provided"));
+        }
     }
     Ok(())
 }
