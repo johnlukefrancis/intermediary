@@ -55,6 +55,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       persistedConfig.agentPort,
       persistedConfig.autoStageGlobal,
       persistedConfig.repos,
+      persistedConfig.recentFilesLimit,
     ]
   );
 

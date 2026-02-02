@@ -108,6 +108,9 @@ export function useSetRecentFilesLimit(
 ): (value: number) => void {
   return useCallback(
     (value: number) => {
+      if (!Number.isFinite(value)) {
+        return;
+      }
       const clamped = Math.max(25, Math.min(2000, Math.round(value)));
       setConfig((prev) => {
         const next: PersistedConfig = {

@@ -117,10 +117,12 @@ export function useRepoState(repoId: string): RepoState {
     setTopLevelDirs([]);
     setTopLevelFiles([]);
     setTopLevelSubdirs({});
+  }, [repoId]);
 
+  useEffect(() => {
     const unsubscribe = subscribe(handleEvent);
     return unsubscribe;
-  }, [subscribe, handleEvent, repoId]);
+  }, [subscribe, handleEvent]);
 
   useEffect(() => {
     if (
