@@ -2,7 +2,7 @@
 // Description: Generic repo tab component with 3-column layout
 
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { FileListColumn } from "../components/file_list_column.js";
@@ -60,19 +60,6 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const [docsView, setDocsView] = useState<PaneView>("recent");
   const [codeView, setCodeView] = useState<PaneView>("recent");
 
-  // Auto-switch back to recent when starred becomes empty
-  useEffect(() => {
-    if (docsView === "starred" && starredDocsPaths.length === 0) {
-      setDocsView("recent");
-    }
-  }, [docsView, starredDocsPaths.length]);
-
-  useEffect(() => {
-    if (codeView === "starred" && starredCodePaths.length === 0) {
-      setCodeView("recent");
-    }
-  }, [codeView, starredCodePaths.length]);
-
   const handleBundleDragStart = useCallback(
     async (windowsPath: string) => {
       if (!appPaths) return;
@@ -122,10 +109,9 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { setDocsView("starred"); }}
-      disabled={starredDocsPaths.length === 0}
-      title={starredDocsPaths.length === 0 ? "No starred files" : "Show starred files"}
-      aria-label="Show starred files"
+      onClick={() => { setDocsView(docsView === "starred" ? "recent" : "starred"); }}
+      title={docsView === "starred" ? "Show recent files" : "Show starred files"}
+      aria-label={docsView === "starred" ? "Show recent files" : "Show starred files"}
       aria-pressed={docsView === "starred"}
     >
       ★
@@ -147,10 +133,9 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-header-icon${codeView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { setCodeView("starred"); }}
-      disabled={starredCodePaths.length === 0}
-      title={starredCodePaths.length === 0 ? "No starred files" : "Show starred files"}
-      aria-label="Show starred files"
+      onClick={() => { setCodeView(codeView === "starred" ? "recent" : "starred"); }}
+      title={codeView === "starred" ? "Show recent files" : "Show starred files"}
+      aria-label={codeView === "starred" ? "Show recent files" : "Show starred files"}
       aria-pressed={codeView === "starred"}
     >
       ★
