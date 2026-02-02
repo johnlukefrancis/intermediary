@@ -73,9 +73,16 @@ Runnable commands organized by area (ADR-012 compliant).
 
 ## Bundle Naming
 
-When creating bundles for ChatGPT context:
-- `Intermediary_Full_latest.zip` — Complete codebase
-- `Intermediary_Docs_latest.zip` — Documentation only
-- `Intermediary_App_latest.zip` — App code only (app/ + src-tauri/)
+Intermediary produces timestamped bundles with this pattern:
 
-Use `scripts/zip/zip_bundles.mjs` to generate bundles.
+```
+{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{shortSha}.zip
+```
+
+- Timestamp is UTC (matches manifest's `generatedAt`)
+- One bundle per repo+preset (building a new one replaces the old)
+- Each bundle contains `INTERMEDIARY_MANIFEST.json` with metadata
+
+To find the latest bundle: sort by filename timestamp descending, take first match.
+
+For legacy scripts (`scripts/zip/zip_bundles.mjs`), see [docs/commands/zip_bundles.md](commands/zip_bundles.md).

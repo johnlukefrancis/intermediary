@@ -3,17 +3,35 @@
 Owner: JL · Scope: Intermediary workflow handoff console (Tauri + Rust + TypeScript + WSL agent)
 
 ## 0. Bundles (canon)
-This project includes "motherlode" zip bundles for ChatGPT context:
-- `scripts/zip/output/Intermediary_Bundles_Index.md` — bundle contents + SHA (repo location; in bundles it appears at repo root as `Intermediary_Bundles_Index.md`)
-- `Intermediary_Full_latest.zip` — complete codebase (app/, src-tauri/, agent/, docs/, scripts/, root configs)
-- `Intermediary_App_latest.zip` — Frontend + Tauri only (app/, src-tauri/)
-- `Intermediary_Docs_latest.zip` — Documentation only (docs/)
 
-Rules (mandatory when repo-specific):
-- Read the bundle index first (`Intermediary_Bundles_Index.md` or `scripts/zip/output/Intermediary_Bundles_Index.md`).
-- If a question depends on repo specifics, do not answer from memory: open/search the relevant bundle(s).
+Intermediary is the bundling app for ChatGPT context sharing. It produces single timestamped bundles per repo+preset.
+
+**Naming pattern:**
+```
+{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{shortSha}.zip
+```
+
+**Contents:**
+- All selected files from the repo
+- `INTERMEDIARY_MANIFEST.json` with metadata: `generatedAt` (ISO UTC), `repoId`, `presetId`, `git` info, `fileCount`
+
+**Retention:** One bundle per repo+preset. Building a new bundle deletes the previous one.
+
+### Determining the latest bundle
+
+When multiple bundles exist (e.g., from different machines or manual copies):
+1. Sort by the timestamp portion of the filename (`YYYYMMDD_HHMMSS`) descending
+2. Take the first match
+
+The timestamp is UTC. If filename parsing fails, fall back to the manifest's `generatedAt` field inside `INTERMEDIARY_MANIFEST.json`.
+
+### Using bundles
+
+- Each bundle is self-contained; no separate index file is needed.
+- Open `INTERMEDIARY_MANIFEST.json` first to see repo/preset metadata and file count.
+- Use `docs/guide.md` (if present in bundle) to navigate documentation.
 - Bundles are the source of truth; cite concrete paths used (`app/src/...`, `src-tauri/src/...`, `docs/...`).
-- Use `docs/guide.md` to locate docs; use the latest attached bundle if the user says files changed.
+- If the user provides a bundle, use it as the source of truth for that repo.
 
 ## 0b. Docs guide + file ledger
 - Use `docs/guide.md` as the docs index for anything in `docs/`.
