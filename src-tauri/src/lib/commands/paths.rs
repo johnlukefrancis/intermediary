@@ -37,6 +37,6 @@ pub fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> {
     Ok(format!(
         r"\\wsl.localhost\{}\{}",
         distro,
-        wsl_path.trim_start_matches('/')
+        wsl_path.trim_start_matches('/').replace('/', "\\")
     ))
 }

@@ -24,9 +24,13 @@ pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
 
     // Use spawn_blocking for the process execution
     tauri::async_runtime::spawn_blocking(move || {
-        let path = Path::new(&folder_path);
-        if !path.is_dir() {
-            return Err(format!("Folder does not exist: {folder_path}"));
+        // Skip is_dir check for UNC paths - Rust's Path APIs don't handle them reliably
+        let is_unc = folder_path.starts_with(r"\\");
+        if !is_unc {
+            let path = Path::new(&folder_path);
+            if !path.is_dir() {
+                return Err(format!("Folder does not exist: {folder_path}"));
+            }
         }
 
         Command::new("explorer")
