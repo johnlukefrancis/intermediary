@@ -35,6 +35,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v4 -> v5: Add globalExcludes presets (deprecated in v6).
   // Migration: v5 -> v6: Drop presets in favor of explicit extension/pattern lists.
   // Migration: v6 -> v7: Add explicit dir/file exclude lists.
+  // Migration: v9 -> v10: Add per-tab texture id (optional).
 
   let next = { ...config };
 

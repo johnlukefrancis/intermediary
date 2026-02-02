@@ -10,7 +10,7 @@ import type { GlobalExcludes } from "../shared/global_excludes.js";
 import type { RepoConfig, TabTheme } from "../shared/config.js";
 import type { AppPaths } from "../types/app_paths.js";
 import { ExcludesSection } from "./options/excludes_section.js";
-import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
+import { ThemeSection } from "./options/theme_section.js";
 import "../styles/options_overlay.css";
 
 interface OptionsOverlayProps {
@@ -23,6 +23,7 @@ interface OptionsOverlayProps {
   repos: RepoConfig[];
   tabThemes: Record<string, TabTheme>;
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
+  setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
   onClose: () => void;
 }
@@ -42,6 +43,7 @@ export function OptionsOverlay({
   repos,
   tabThemes,
   setTabThemeAccent,
+  setTabThemeTexture,
   clearTabTheme,
   onClose,
 }: OptionsOverlayProps): React.JSX.Element {
@@ -174,53 +176,13 @@ export function OptionsOverlay({
           </div>
         </div>
 
-        {/* Tab Colors Section */}
-        {themeEntries.length > 0 && (
-          <div className="options-section">
-            <div className="options-section-title">Theme Colors</div>
-            <div className="options-theme-list">
-              {themeEntries.map((entry) => {
-                const currentHex =
-                  tabThemes[entry.tabKey]?.accentHex ?? DEFAULT_ACCENT_HEX;
-                const hasCustomTheme = entry.tabKey in tabThemes;
-
-                return (
-                  <div key={entry.tabKey} className="options-theme-row">
-                    <span
-                      className="options-theme-label"
-                      title={entry.label}
-                    >
-                      {entry.label}
-                    </span>
-                    <div className="options-theme-controls">
-                      <input
-                        type="color"
-                        value={currentHex}
-                        onChange={(e) => {
-                          setTabThemeAccent(entry.tabKey, e.target.value);
-                        }}
-                        className="options-color-input"
-                        title="Choose accent color"
-                      />
-                      {hasCustomTheme && (
-                        <button
-                          type="button"
-                          className="options-reset-button"
-                          onClick={() => {
-                            clearTabTheme(entry.tabKey);
-                          }}
-                          title="Reset to default"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <ThemeSection
+          entries={themeEntries}
+          tabThemes={tabThemes}
+          setTabThemeAccent={setTabThemeAccent}
+          setTabThemeTexture={setTabThemeTexture}
+          clearTabTheme={clearTabTheme}
+        />
       </div>
     </div>,
     document.body

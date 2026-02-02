@@ -166,6 +166,14 @@
       "summary": "State and handlers for the excludes section UI"
     },
     {
+      "path": "app/src/components/options/texture_picker.tsx",
+      "summary": "Small texture picker popover for tab theme selection"
+    },
+    {
+      "path": "app/src/components/options/theme_section.tsx",
+      "summary": "Options panel theme controls (texture + accent per tab)"
+    },
+    {
       "path": "app/src/components/status_bar.tsx",
       "summary": "Status bar with connection status LED, error display, and options button"
     },
@@ -220,6 +228,10 @@
     {
       "path": "app/src/lib/theme/accent_utils.ts",
       "summary": "Convert hex accent color to CSS variable values for runtime theming"
+    },
+    {
+      "path": "app/src/lib/theme/texture_catalog.ts",
+      "summary": "Build-time texture catalog for theme substrate/dither selection"
     },
     {
       "path": "app/src/main.tsx",

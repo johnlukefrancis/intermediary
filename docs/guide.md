@@ -69,6 +69,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/bundle_cli.md](commands/bundle_cli.md) | Build and verify the Rust bundle CLI |
 | [docs/commands/zip_bundles.md](commands/zip_bundles.md) | Context bundle creation for ChatGPT |
 | [docs/commands/workflow/closeout_checks.md](commands/workflow/closeout_checks.md) | Required dependency sync, ledger updates, and closeout checks |
+| [docs/commands/textures/downscale_textures.md](commands/textures/downscale_textures.md) | Downscale theme texture assets to 256x256 |
 
 ## Bundle Naming
 

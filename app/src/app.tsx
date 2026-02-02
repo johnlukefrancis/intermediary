@@ -12,6 +12,7 @@ import {
   hexToAccentCssVars,
   DEFAULT_ACCENT_HEX,
 } from "./lib/theme/accent_utils.js";
+import { resolveTextureUrl } from "./lib/theme/texture_catalog.js";
 
 /** A standalone repo tab */
 export interface SingleTab {
@@ -146,11 +147,23 @@ export function App(): React.JSX.Element {
     (): React.CSSProperties => hexToAccentCssVars(accentHex) as React.CSSProperties,
     [accentHex]
   );
+  const textureUrl = useMemo((): string | null => {
+    if (!activeThemeKey) return resolveTextureUrl(undefined);
+    return resolveTextureUrl(config.tabThemes[activeThemeKey]?.textureId);
+  }, [activeThemeKey, config.tabThemes]);
+
+  const themeStyle = useMemo<React.CSSProperties>(
+    () => ({
+      ...accentStyle,
+      "--deck-texture-url": textureUrl ? `url("${textureUrl}")` : "none",
+    }),
+    [accentStyle, textureUrl]
+  );
 
   // Empty state: no repos configured
   if (config.repos.length === 0) {
     return (
-      <div className="app" style={accentStyle}>
+      <div className="app" style={themeStyle}>
         <header className="header-stack glass-surface">
           <StatusBar />
         </header>
@@ -162,7 +175,7 @@ export function App(): React.JSX.Element {
   }
 
   return (
-    <div className="app" data-active-tab={activeRepoId} style={accentStyle}>
+    <div className="app" data-active-tab={activeRepoId} style={themeStyle}>
       <header className="header-stack glass-surface">
         <TabBar
           tabs={tabs}

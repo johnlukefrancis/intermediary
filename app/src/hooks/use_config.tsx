@@ -13,6 +13,7 @@ import {
   type RepoConfig,
   type GlobalExcludes,
 } from "../shared/config.js";
+import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 import { useConfigStorage } from "./use_config_storage.js";
 
 interface ConfigContextValue {
@@ -47,6 +48,8 @@ interface ConfigContextValue {
   setOutputWindowsRoot: (path: string | null) => void;
   /** Set accent color for a tab */
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
+  /** Set texture for a tab */
+  setTabThemeTexture: (tabKey: string, textureId: string) => void;
   /** Clear theme for a tab */
   clearTabTheme: (tabKey: string) => void;
 }
@@ -208,11 +211,36 @@ export function ConfigProvider({
   const setTabThemeAccent = useCallback(
     (tabKey: string, accentHex: string) => {
       setConfig((prev) => {
+        const existing = prev.tabThemes[tabKey];
         const next: PersistedConfig = {
           ...prev,
           tabThemes: {
             ...prev.tabThemes,
-            [tabKey]: { accentHex },
+            [tabKey]: {
+              accentHex,
+              textureId: existing?.textureId,
+            },
+          },
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [saveConfig]
+  );
+
+  const setTabThemeTexture = useCallback(
+    (tabKey: string, textureId: string) => {
+      setConfig((prev) => {
+        const existing = prev.tabThemes[tabKey];
+        const next: PersistedConfig = {
+          ...prev,
+          tabThemes: {
+            ...prev.tabThemes,
+            [tabKey]: {
+              accentHex: existing?.accentHex ?? DEFAULT_ACCENT_HEX,
+              textureId,
+            },
           },
         };
         saveConfig(next);
@@ -250,6 +278,7 @@ export function ConfigProvider({
     removeRepo,
     setOutputWindowsRoot,
     setTabThemeAccent,
+    setTabThemeTexture,
     clearTabTheme,
   };
 

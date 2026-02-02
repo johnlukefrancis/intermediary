@@ -36,6 +36,7 @@ export function StatusBar(): React.JSX.Element {
     setGlobalExcludes,
     setOutputWindowsRoot,
     setTabThemeAccent,
+    setTabThemeTexture,
     clearTabTheme,
   } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -88,6 +89,7 @@ export function StatusBar(): React.JSX.Element {
           repos={config.repos}
           tabThemes={config.tabThemes}
           setTabThemeAccent={setTabThemeAccent}
+          setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}
           onClose={() => {
             setOptionsOpen(false);

@@ -48,6 +48,8 @@ export type BundleSelections = z.infer<typeof BundleSelectionsSchema>;
 export const TabThemeSchema = z.object({
   /** Accent color in #RRGGBB format */
   accentHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Must be #RRGGBB format"),
+  /** Texture id (from app/assets/textures) */
+  textureId: z.string().min(1).optional(),
 });
 
 export type TabTheme = z.infer<typeof TabThemeSchema>;
@@ -83,7 +85,7 @@ export const PersistedConfigSchema = z.object({
   }),
   /** Custom output folder override (Windows path, null = default AppData) */
   outputWindowsRoot: z.string().nullable().default(null),
-  /** Per-tab accent colors, keyed by tabKey */
+  /** Per-tab theme overrides, keyed by tabKey */
   tabThemes: z.record(z.string(), TabThemeSchema).default({}),
 });
 

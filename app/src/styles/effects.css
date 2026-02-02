@@ -24,7 +24,7 @@
 
 /* ===== SUBSTRATE (custom texture + dot grid) ===== */
 /* Sits BEHIND content at z-index: 0 - no text fuzzing */
-/* Swap texture by replacing app/assets/noise.png */
+/* Swap texture by updating the theme texture id (app/assets/textures) */
 
 @keyframes substrate-drift {
   from { transform: translateY(0); }
@@ -45,8 +45,8 @@
 
   /* Composite layers: texture + dot grid */
   background:
-    /* Custom texture layer (swap noise.png to try different textures) */
-    url("../../assets/noise.png"),
+    /* Custom texture layer */
+    var(--deck-texture-url),
     /* Dot grid layer */
     radial-gradient(
       circle at center,

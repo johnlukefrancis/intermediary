@@ -44,6 +44,8 @@ app/src/components/options/excludes/excludes_normalizers.ts - Normalization help
 app/src/components/options/excludes/excludes_recommendations.ts - Helpers for recommended global excludes toggles
 app/src/components/options/excludes/excludes_updates.ts - Pure update helpers for global excludes toggles
 app/src/components/options/excludes/use_excludes_state.ts - State and handlers for the excludes section UI
+app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
+app/src/components/options/theme_section.tsx - Options panel theme controls (texture + accent per tab)
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -58,6 +60,7 @@ app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and messa
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
+app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - Shared config barrel exports
 app/src/shared/config/app_config.ts - AppConfig schema, types, and defaults
