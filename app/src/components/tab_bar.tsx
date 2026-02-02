@@ -127,15 +127,18 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
               >
                 <span className="tab-label">{tab.label}</span>
               </button>
-              <button
-                className="group-chevron"
-                onClick={(e) => { toggleDropdown(e, tab.repoId); }}
-                type="button"
-                aria-expanded={isOpen}
-                aria-label={`Add folder to ${tab.label}`}
-              >
-                {isOpen ? "▲" : "▼"}
-              </button>
+              {isActive && (
+                <button
+                  className="group-chevron"
+                  onClick={(e) => { toggleDropdown(e, tab.repoId); }}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-label={`Add folder to ${tab.label}`}
+                  title={`Add folder to ${tab.label}`}
+                >
+                  {isOpen ? "▲" : "▼"}
+                </button>
+              )}
               <TabRemoveButton
                 repoId={tab.repoId}
                 label={tab.label}
@@ -179,15 +182,18 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                   {tab.groupLabel}: {activeLabel}
                 </span>
               </button>
-              <button
-                className="group-chevron"
-                onClick={(e) => { toggleDropdown(e, tab.groupId); }}
-                type="button"
-                aria-expanded={isOpen}
-                aria-label={`Select ${tab.groupLabel} folder`}
-              >
-                {isOpen ? "▲" : "▼"}
-              </button>
+              {isActive && (
+                <button
+                  className="group-chevron"
+                  onClick={(e) => { toggleDropdown(e, tab.groupId); }}
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-label={`Select ${tab.groupLabel} folder`}
+                  title={`Select ${tab.groupLabel} folder`}
+                >
+                  {isOpen ? "▲" : "▼"}
+                </button>
+              )}
 
               {isOpen && (
                 <div className="group-dropdown">
