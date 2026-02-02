@@ -40,7 +40,7 @@ app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal r
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
-app/src/components/file_row.tsx - Draggable file row with state marker and timestamp
+app/src/components/file_row.tsx - Draggable file row with click-to-copy, drag handle, and star toggle
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
@@ -63,6 +63,7 @@ app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
+app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
@@ -90,7 +91,7 @@ app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel 
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
-app/src/styles/file_row.css - Hardware-style file row with left rail and state marker
+app/src/styles/file_row.css - Hardware-style file row with drag handle and star toggle
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_overlay.css - Full-screen transparent overlay with centered glass panel for app options

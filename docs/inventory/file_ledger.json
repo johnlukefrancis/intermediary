@@ -151,7 +151,7 @@
     },
     {
       "path": "app/src/components/file_row.tsx",
-      "summary": "Draggable file row with state marker and timestamp"
+      "summary": "Draggable file row with click-to-copy, drag handle, and star toggle"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
@@ -240,6 +240,10 @@
     {
       "path": "app/src/hooks/use_repo_state.ts",
       "summary": "Per-repo file state management with event subscription"
+    },
+    {
+      "path": "app/src/hooks/use_starred_files.ts",
+      "summary": "Hook exposing starred file state and actions for a repo"
     },
     {
       "path": "app/src/hooks/use_worktree_add.ts",
@@ -351,7 +355,7 @@
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "Hardware-style file row with left rail and state marker"
+      "summary": "Hardware-style file row with drag handle and star toggle"
     },
     {
       "path": "app/src/styles/main.css",

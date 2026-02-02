@@ -62,6 +62,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
             files={recentDocs}
             stagedByPath={stagedByPath}
             repoId={repoId}
+            kind="docs"
             emptyMessage={emptyMessage}
             onDragStart={handleDragStart}
           />
@@ -71,6 +72,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
             files={recentCode}
             stagedByPath={stagedByPath}
             repoId={repoId}
+            kind="code"
             emptyMessage={emptyMessage}
             onDragStart={handleDragStart}
           />

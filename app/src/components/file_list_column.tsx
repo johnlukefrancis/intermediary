@@ -4,11 +4,13 @@
 import type React from "react";
 import { FileRow } from "./file_row.js";
 import type { FileEntry, StagedInfo } from "../shared/protocol.js";
+import { useStarredFiles } from "../hooks/use_starred_files.js";
 
 interface FileListColumnProps {
   files: FileEntry[];
   stagedByPath: Map<string, StagedInfo>;
   repoId: string;
+  kind: "docs" | "code";
   emptyMessage?: string;
   onDragStart: (
     repoId: string,
@@ -21,9 +23,12 @@ export function FileListColumn({
   files,
   stagedByPath,
   repoId,
+  kind,
   emptyMessage = "No files",
   onDragStart,
 }: FileListColumnProps): React.JSX.Element {
+  const { isStarred, toggle } = useStarredFiles(repoId);
+
   if (files.length === 0) {
     const isWaiting = emptyMessage.toLowerCase().includes("waiting");
     const className = isWaiting ? "empty-state empty-state--waiting" : "empty-state";
@@ -38,7 +43,9 @@ export function FileListColumn({
           file={file}
           repoId={repoId}
           stagedInfo={stagedByPath.get(file.path)}
+          isStarred={isStarred(kind, file.path)}
           onDragStart={onDragStart}
+          onToggleStar={() => { toggle(kind, file.path); }}
         />
       ))}
     </div>
