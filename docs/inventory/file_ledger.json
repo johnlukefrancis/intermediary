@@ -214,6 +214,10 @@
       "summary": "Per-repo bundle state management with event subscription"
     },
     {
+      "path": "app/src/hooks/use_client_hello.ts",
+      "summary": "Custom hook for clientHello lifecycle with reconnect support"
+    },
+    {
       "path": "app/src/hooks/use_config_storage.ts",
       "summary": "Config persistence + loading hook for use_config"
     },
