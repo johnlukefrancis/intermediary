@@ -52,7 +52,7 @@
   /* ===== VINTAGE GLASS (More opaque to reduce blobby blur) ===== */
   --theme-glass-vintage-bg: rgba(8, 8, 14, 0.6);
   --theme-glass-vintage-header: rgba(10, 10, 18, 0.65);
-  --theme-glass-vintage-content: rgba(6, 6, 12, 0.60);
+  --theme-glass-vintage-content: rgba(6, 6, 12, 0.70);
   --theme-glass-vintage-reflection: rgba(255, 255, 255, 0.03);
   --theme-glass-vintage-edge: rgba(255, 255, 255, 0.08);
   --theme-glass-vintage-dither: 0.12;
