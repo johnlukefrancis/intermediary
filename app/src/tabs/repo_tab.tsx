@@ -128,7 +128,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       aria-label="Show starred files"
       aria-pressed={docsView === "starred"}
     >
-      {docsView === "starred" ? "★" : "☆"}
+      ★
     </button>
   );
 
@@ -153,7 +153,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       aria-label="Show starred files"
       aria-pressed={codeView === "starred"}
     >
-      {codeView === "starred" ? "★" : "☆"}
+      ★
     </button>
   );
 
