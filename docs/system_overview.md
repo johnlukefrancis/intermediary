@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-01
+Updated on: 2026-02-02
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -71,7 +71,7 @@ Intermediary uses a **two-component architecture**:
 - **Purpose:** File watching and bundle generation inside WSL
 - **Key features:**
   - inotify-based file watching via chokidar (reliable for Linux FS)
-  - Recent changes feed with 250ms debouncing
+  - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
   - Bundle building with manifest injection via Rust bundle CLI (single latest bundle per preset; older bundles deleted)
   - Atomic file staging to Windows-accessible paths
   - Auto-stage on change (configurable)
@@ -92,6 +92,7 @@ Communication via WebSocket on `127.0.0.1:<port>`, with request/response envelop
 
 **UI → Agent commands (request/response):**
 - `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } → clientHelloResult`
+- `clientHello` may be sent on initial connect and reconnect; the agent treats it as idempotent and safe to re-run.
 - `setOptions { autoStageOnChange? } → setOptionsResult`
 - `watchRepo { repoId } → watchRepoResult`
 - `refresh { repoId } → refreshResult`

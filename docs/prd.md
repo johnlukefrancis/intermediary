@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-01
+Updated on: 2026-02-02
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -131,6 +131,7 @@ Each repo has:
   * Store last N (configurable, default 200)
   * Debounce rapid consecutive writes (default 250ms)
 * Show lists filtered into Docs/Code columns by globs.
+* Persist recent-file history under `staging/state/recent_files/<repoId>.json` to survive app/agent restarts.
 
 ### 7.3 Staging system
 
@@ -185,6 +186,7 @@ Bundles should be self-identifying:
 * If WSL agent not reachable: show banner “WSL agent offline” + degrade to manual refresh/polling (if enabled).
 * If staging copy fails: show per-item error and log.
 * If bundle build fails: show build error output (truncate) and keep last good build.
+* Reconnects may re-run `clientHello`; the agent treats the handshake as idempotent and safe to call multiple times.
 
 ---
 
