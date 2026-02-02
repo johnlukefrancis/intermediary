@@ -71,6 +71,7 @@ Skills are global-only (`~/.claude/skills`). Invoke based on task surface—don'
 - If something goes sideways, STOP and re-plan immediately – don't keep pushing
 - Use plan mode for verification steps, not just building
 - Write detailed specs upfront to reduce ambiguity
+- JL likes when you ask clarifying questions about scope & design preferences at the end of plan phase. Do it often.
 
 ## Subagent Strategy
 - Use subagents liberally to keep main context window clean
