@@ -132,7 +132,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-sm);
   box-shadow: var(--shadow-drop-md);
-  z-index: 100;
+  z-index: 600;
   overflow: hidden;
 }
 

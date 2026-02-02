@@ -132,7 +132,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                 onClick={(e) => { toggleDropdown(e, tab.repoId); }}
                 type="button"
                 aria-expanded={isOpen}
-                aria-label={`Add worktree to ${tab.label}`}
+                aria-label={`Add folder to ${tab.label}`}
               >
                 {isOpen ? "▲" : "▼"}
               </button>
@@ -152,7 +152,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                     disabled={isAdding}
                     type="button"
                   >
-                    + Add worktree
+                    + Add folder
                   </button>
                 </div>
               )}
@@ -184,7 +184,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                 onClick={(e) => { toggleDropdown(e, tab.groupId); }}
                 type="button"
                 aria-expanded={isOpen}
-                aria-label={`Select ${tab.groupLabel} worktree`}
+                aria-label={`Select ${tab.groupLabel} folder`}
               >
                 {isOpen ? "▲" : "▼"}
               </button>
@@ -221,7 +221,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                     disabled={isAdding}
                     type="button"
                   >
-                    + Add worktree
+                    + Add folder
                   </button>
                 </div>
               )}
