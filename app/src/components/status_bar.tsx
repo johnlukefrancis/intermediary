@@ -53,7 +53,7 @@ export function StatusBar(): React.JSX.Element {
         <div className="status-left">
           <span className={`status-connection ${display.cssClass}${display.showPulse ? " pulsing" : ""}`}>
             <span className="led-dot" aria-hidden="true" />
-            <span className="led-label">Agent: {display.label}</span>
+            <span className="led-label">{display.label}</span>
           </span>
           {errorToShow && (
             <>
