@@ -2,13 +2,14 @@
 // Description: Full-screen transparent overlay with options panel for app settings
 
 import type React from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { GlobalExcludes } from "../shared/global_excludes.js";
 import type { RepoConfig, TabTheme } from "../shared/config.js";
 import type { AppPaths } from "../types/app_paths.js";
+import { ConfirmModal } from "./confirm_modal.js";
 import { ExcludesSection } from "./options/excludes_section.js";
 import { ThemeSection } from "./options/theme_section.js";
 import "../styles/options_overlay.css";
@@ -27,6 +28,7 @@ interface OptionsOverlayProps {
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
+  resetConfig: () => void;
   onClose: () => void;
 }
 
@@ -49,11 +51,13 @@ export function OptionsOverlay({
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
+  resetConfig,
   onClose,
 }: OptionsOverlayProps): React.JSX.Element {
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleBackdropClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -204,7 +208,44 @@ export function OptionsOverlay({
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}
         />
+
+        <div className="options-section">
+          <div className="options-section-title">Reset</div>
+          <div className="options-row stacked">
+            <span className="options-hint">
+              Resets all settings to defaults. Repos and preferences will be cleared,
+              but no files are deleted.
+            </span>
+            <div className="options-button-row">
+              <button
+                type="button"
+                className="options-button options-button--destructive"
+                onClick={() => {
+                  setShowResetConfirm(true);
+                }}
+              >
+                Reset all settings
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {showResetConfirm && (
+        <ConfirmModal
+          title="Reset All Settings"
+          message="Reset all settings to defaults? This clears repos, bundle selections, and UI preferences, but does not delete any files."
+          confirmLabel="Reset"
+          isDestructive
+          onConfirm={() => {
+            resetConfig();
+            setShowResetConfirm(false);
+          }}
+          onCancel={() => {
+            setShowResetConfirm(false);
+          }}
+        />
+      )}
     </div>,
     document.body
   );

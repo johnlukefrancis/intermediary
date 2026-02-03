@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-02
+Updated on: 2026-02-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -119,6 +119,7 @@ User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
+The Options menu includes a "Reset all settings" action that restores defaults, clears repos and preferences, and does not delete any files.
 
 ## Why This Architecture?
 

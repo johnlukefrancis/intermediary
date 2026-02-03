@@ -360,6 +360,17 @@
   color: var(--color-text-primary);
 }
 
+.options-button--destructive {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.options-button--destructive:hover:not(:disabled) {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-bg-base);
+}
+
 .options-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

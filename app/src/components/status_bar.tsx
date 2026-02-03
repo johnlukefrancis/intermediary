@@ -47,6 +47,7 @@ export function StatusBar(): React.JSX.Element {
     setRecentFilesLimit,
     loadError,
     saveError,
+    resetConfig,
   } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -117,6 +118,7 @@ export function StatusBar(): React.JSX.Element {
           setTabThemeAccent={setTabThemeAccent}
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}
+          resetConfig={resetConfig}
           onClose={() => {
             setOptionsOpen(false);
           }}

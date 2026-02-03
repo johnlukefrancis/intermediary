@@ -25,6 +25,7 @@ import {
   useClearTabTheme,
   useSetRecentFilesLimit,
   useToggleStarredFile,
+  useResetConfig,
 } from "./use_config_actions_extended.js";
 
 interface ConfigContextValue {
@@ -73,6 +74,8 @@ interface ConfigContextValue {
     kind: "docs" | "code",
     path: string
   ) => void;
+  /** Reset all settings to defaults */
+  resetConfig: () => void;
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
@@ -108,6 +111,7 @@ export function ConfigProvider({
   const clearTabTheme = useClearTabTheme(setConfig, saveConfig);
   const setRecentFilesLimit = useSetRecentFilesLimit(setConfig, saveConfig);
   const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
+  const resetConfig = useResetConfig(setConfig, saveConfigNow);
 
   const value: ConfigContextValue = {
     config,
@@ -127,6 +131,7 @@ export function ConfigProvider({
     clearTabTheme,
     setRecentFilesLimit,
     toggleStarredFile,
+    resetConfig,
   };
 
   return (
