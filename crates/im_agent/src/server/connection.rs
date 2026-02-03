@@ -13,9 +13,12 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::error::{to_response_error, AgentError};
 use crate::logging::Logger;
+use crate::bundles::{list_bundles, ListBundlesOptions};
 use crate::protocol::{
-    EnvelopeKind, RequestEnvelope, ResponseEnvelope, UiCommand, UiResponse,
+    BundleInfo, EnvelopeKind, RequestEnvelope, ResponseEnvelope, UiCommand, UiResponse,
 };
+use crate::repos::get_repo_top_level;
+use crate::staging::stage_file;
 use crate::runtime::AgentRuntime;
 
 pub struct ConnectionContext {
@@ -168,6 +171,87 @@ async fn dispatch_command(command: UiCommand, ctx: &ConnectionContext) -> Result
             let mut state = ctx.runtime.write().await;
             let result = state.apply_set_options(command);
             Ok(UiResponse::SetOptionsResult(result))
+        }
+        UiCommand::StageFile(command) => {
+            let (staging, repo_root) = {
+                let state = ctx.runtime.read().await;
+                let staging = state.staging.clone().ok_or_else(|| {
+                    AgentError::new("NOT_CONFIGURED", "Staging not configured")
+                })?;
+                let repo_root = state.repo_roots.get(&command.repo_id).cloned().ok_or_else(|| {
+                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
+                })?;
+                (staging, repo_root)
+            };
+
+            let result = stage_file(&staging, &command.repo_id, &repo_root, &command.path).await?;
+            Ok(UiResponse::StageFileResult(
+                crate::protocol::StageFileResult {
+                    repo_id: command.repo_id,
+                    path: command.path,
+                    windows_path: result.windows_path,
+                    wsl_path: result.wsl_path,
+                    bytes_copied: result.bytes_copied,
+                    mtime_ms: result.mtime_ms,
+                },
+            ))
+        }
+        UiCommand::GetRepoTopLevel(command) => {
+            let repo_root = {
+                let state = ctx.runtime.read().await;
+                state
+                    .repo_roots
+                    .get(&command.repo_id)
+                    .cloned()
+                    .ok_or_else(|| {
+                        AgentError::new(
+                            "UNKNOWN_REPO",
+                            format!("Unknown repo: {}", command.repo_id),
+                        )
+                    })?
+            };
+
+            let result = get_repo_top_level(&repo_root)
+                .await
+                .map_err(|err| AgentError::internal(format!("Failed to scan repo: {err}")))?;
+
+            Ok(UiResponse::GetRepoTopLevelResult(
+                crate::protocol::GetRepoTopLevelResult {
+                    repo_id: command.repo_id,
+                    dirs: result.dirs,
+                    files: result.files,
+                    subdirs: Some(result.subdirs),
+                },
+            ))
+        }
+        UiCommand::ListBundles(command) => {
+            let staging_root = {
+                let state = ctx.runtime.read().await;
+                state
+                    .staging
+                    .as_ref()
+                    .map(|staging| staging.staging_wsl_root.clone())
+                    .ok_or_else(|| {
+                        AgentError::new("NOT_CONFIGURED", "Staging not configured")
+                    })?
+            };
+
+            let bundles = list_bundles(ListBundlesOptions {
+                staging_wsl_root: staging_root,
+                repo_id: command.repo_id.clone(),
+                preset_id: command.preset_id.clone(),
+            })
+            .await?;
+
+            let results: Vec<BundleInfo> = bundles;
+
+            Ok(UiResponse::ListBundlesResult(
+                crate::protocol::ListBundlesResult {
+                    repo_id: command.repo_id,
+                    preset_id: command.preset_id,
+                    bundles: results,
+                },
+            ))
         }
         UiCommand::Unknown => Err(AgentError::new(
             "UNKNOWN_COMMAND",

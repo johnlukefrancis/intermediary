@@ -21,12 +21,38 @@ pub struct SetOptionsCommand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StageFileCommand {
+    pub repo_id: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetRepoTopLevelCommand {
+    pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListBundlesCommand {
+    pub repo_id: String,
+    pub preset_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum UiCommand {
     #[serde(rename = "clientHello")]
     ClientHello(ClientHelloCommand),
     #[serde(rename = "setOptions")]
     SetOptions(SetOptionsCommand),
+    #[serde(rename = "stageFile")]
+    StageFile(StageFileCommand),
+    #[serde(rename = "getRepoTopLevel")]
+    GetRepoTopLevel(GetRepoTopLevelCommand),
+    #[serde(rename = "listBundles")]
+    ListBundles(ListBundlesCommand),
     #[serde(other)]
     Unknown,
 }
@@ -36,6 +62,9 @@ impl UiCommand {
         match self {
             UiCommand::ClientHello(_) => "clientHello",
             UiCommand::SetOptions(_) => "setOptions",
+            UiCommand::StageFile(_) => "stageFile",
+            UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
+            UiCommand::ListBundles(_) => "listBundles",
             UiCommand::Unknown => "unknown",
         }
     }

@@ -119,6 +119,9 @@ app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_agent/src/bundles/bundle_lister.rs - Bundle listing and latest selection logic
+crates/im_agent/src/bundles/ignore_rules.rs - Centralized ignore patterns for bundle building and scanning
+crates/im_agent/src/bundles/mod.rs - Bundle helpers for the agent
 crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protocol error responses
 crates/im_agent/src/error/mod.rs - Error module exports for the agent runtime
 crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
@@ -130,11 +133,16 @@ crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization tests
+crates/im_agent/src/repos/mod.rs - Repository scanning module exports
+crates/im_agent/src/repos/repo_top_level.rs - Scan top-level directories and files in a repo
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
+crates/im_agent/src/staging/mod.rs - Staging module exports
+crates/im_agent/src/staging/path_bridge.rs - Staging path bridging between WSL and Windows layouts
+crates/im_agent/src/staging/stager.rs - Atomic staging of files into the Windows-accessible directory
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing

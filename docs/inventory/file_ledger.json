@@ -466,6 +466,18 @@
       "summary": "Vite client type declarations"
     },
     {
+      "path": "crates/im_agent/src/bundles/bundle_lister.rs",
+      "summary": "Bundle listing and latest selection logic"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/ignore_rules.rs",
+      "summary": "Centralized ignore patterns for bundle building and scanning"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/mod.rs",
+      "summary": "Bundle helpers for the agent"
+    },
+    {
       "path": "crates/im_agent/src/error/agent_error.rs",
       "summary": "AgentError type and mapping to protocol error responses"
     },
@@ -510,6 +522,14 @@
       "summary": "Protocol envelope serialization tests"
     },
     {
+      "path": "crates/im_agent/src/repos/mod.rs",
+      "summary": "Repository scanning module exports"
+    },
+    {
+      "path": "crates/im_agent/src/repos/repo_top_level.rs",
+      "summary": "Scan top-level directories and files in a repo"
+    },
+    {
       "path": "crates/im_agent/src/runtime/mod.rs",
       "summary": "Agent runtime exports"
     },
@@ -528,6 +548,18 @@
     {
       "path": "crates/im_agent/src/server/ws_server.rs",
       "summary": "WebSocket accept loop and connection dispatch"
+    },
+    {
+      "path": "crates/im_agent/src/staging/mod.rs",
+      "summary": "Staging module exports"
+    },
+    {
+      "path": "crates/im_agent/src/staging/path_bridge.rs",
+      "summary": "Staging path bridging between WSL and Windows layouts"
+    },
+    {
+      "path": "crates/im_agent/src/staging/stager.rs",
+      "summary": "Atomic staging of files into the Windows-accessible directory"
     },
     {
       "path": "crates/im_bundle/src/bin/im_bundle_cli.rs",
