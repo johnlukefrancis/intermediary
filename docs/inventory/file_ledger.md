@@ -119,7 +119,12 @@ app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_agent/src/bundles/bundle_builder_blocking.rs - Blocking bundle build steps and filesystem operations
+crates/im_agent/src/bundles/bundle_builder_tests.rs - Tests for bundle builder helpers
+crates/im_agent/src/bundles/bundle_builder.rs - Bundle build orchestration using the im_bundle library
 crates/im_agent/src/bundles/bundle_lister.rs - Bundle listing and latest selection logic
+crates/im_agent/src/bundles/bundle_progress.rs - Bundle progress forwarding from im_bundle to agent events
+crates/im_agent/src/bundles/git_info.rs - Best-effort git info lookup for bundle manifests
 crates/im_agent/src/bundles/ignore_rules.rs - Centralized ignore patterns for bundle building and scanning
 crates/im_agent/src/bundles/mod.rs - Bundle helpers for the agent
 crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protocol error responses
@@ -161,8 +166,10 @@ crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable 
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
+crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
+crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and progress ordering
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows

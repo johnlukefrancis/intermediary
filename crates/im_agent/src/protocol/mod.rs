@@ -7,17 +7,19 @@ mod events;
 mod responses;
 
 pub use commands::{
-    ClientHelloCommand, GetRepoTopLevelCommand, ListBundlesCommand, RefreshCommand,
-    SetOptionsCommand, StageFileCommand, UiCommand, WatchRepoCommand,
+    BuildBundleCommand, BundleSelection, ClientHelloCommand, GetRepoTopLevelCommand,
+    GlobalExcludes, ListBundlesCommand, RefreshCommand, SetOptionsCommand, StageFileCommand,
+    UiCommand, WatchRepoCommand,
 };
 pub use envelopes::{EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError};
 pub use events::{
-    AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, FileChangeType, FileChangedEvent,
-    FileEntry, FileKind, SnapshotEvent, StagedInfo,
+    AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, BundleBuildProgressEvent,
+    BundleBuiltEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, SnapshotEvent,
+    StagedInfo,
 };
 pub use responses::{
-    BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult, RefreshResult,
-    SetOptionsResult, StageFileResult, UiResponse, WatchRepoResult,
+    BuildBundleResult, BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult,
+    RefreshResult, SetOptionsResult, StageFileResult, UiResponse, WatchRepoResult,
 };
 
 #[cfg(test)]

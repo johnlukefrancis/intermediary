@@ -41,6 +41,40 @@ pub struct StageFileCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BundleSelection {
+    pub include_root: bool,
+    pub top_level_dirs: Vec<String>,
+    #[serde(default)]
+    pub excluded_subdirs: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalExcludes {
+    #[serde(default)]
+    pub dir_names: Vec<String>,
+    #[serde(default)]
+    pub dir_suffixes: Vec<String>,
+    #[serde(default)]
+    pub file_names: Vec<String>,
+    #[serde(default)]
+    pub extensions: Vec<String>,
+    #[serde(default)]
+    pub patterns: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildBundleCommand {
+    pub repo_id: String,
+    pub preset_id: String,
+    pub selection: BundleSelection,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub global_excludes: Option<GlobalExcludes>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetRepoTopLevelCommand {
     pub repo_id: String,
 }
@@ -65,6 +99,8 @@ pub enum UiCommand {
     Refresh(RefreshCommand),
     #[serde(rename = "stageFile")]
     StageFile(StageFileCommand),
+    #[serde(rename = "buildBundle")]
+    BuildBundle(BuildBundleCommand),
     #[serde(rename = "getRepoTopLevel")]
     GetRepoTopLevel(GetRepoTopLevelCommand),
     #[serde(rename = "listBundles")]
@@ -81,6 +117,7 @@ impl UiCommand {
             UiCommand::WatchRepo(_) => "watchRepo",
             UiCommand::Refresh(_) => "refresh",
             UiCommand::StageFile(_) => "stageFile",
+            UiCommand::BuildBundle(_) => "buildBundle",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
             UiCommand::ListBundles(_) => "listBundles",
             UiCommand::Unknown => "unknown",

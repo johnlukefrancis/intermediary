@@ -29,6 +29,19 @@ pub struct RepoConfig {
     pub code_globs: Vec<String>,
     #[serde(default)]
     pub ignore_globs: Vec<String>,
+    #[serde(default = "default_bundle_presets")]
+    pub bundle_presets: Vec<BundlePreset>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundlePreset {
+    pub preset_id: String,
+    pub preset_name: String,
+    #[serde(default = "default_true")]
+    pub include_root: bool,
+    #[serde(default)]
+    pub top_level_dirs: Vec<String>,
 }
 
 fn default_true() -> bool {
@@ -37,4 +50,13 @@ fn default_true() -> bool {
 
 fn default_recent_files_limit() -> usize {
     200
+}
+
+fn default_bundle_presets() -> Vec<BundlePreset> {
+    vec![BundlePreset {
+        preset_id: "context".to_string(),
+        preset_name: "Context".to_string(),
+        include_root: true,
+        top_level_dirs: Vec::new(),
+    }]
 }

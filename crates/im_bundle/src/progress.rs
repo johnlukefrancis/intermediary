@@ -1,10 +1,11 @@
 // Path: crates/im_bundle/src/progress.rs
 // Description: Throttled NDJSON progress emitter for bundle scanning and zipping
 
-use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
 use serde::Serialize;
+
+use crate::progress_sink::{ProgressSink, StdoutProgressSink};
 
 const THROTTLE_INTERVAL: Duration = Duration::from_millis(100);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_millis(250);
@@ -34,6 +35,7 @@ pub enum ProgressMessage {
 }
 
 pub struct ProgressEmitter {
+    sink: Box<dyn ProgressSink>,
     last_emit: Option<Instant>,
     last_phase: Option<&'static str>,
     last_heartbeat: Option<Instant>,
@@ -43,6 +45,17 @@ pub struct ProgressEmitter {
 impl ProgressEmitter {
     pub fn new() -> Self {
         Self {
+            sink: Box::new(StdoutProgressSink::new()),
+            last_emit: None,
+            last_phase: None,
+            last_heartbeat: None,
+            last_heartbeat_file: None,
+        }
+    }
+
+    pub fn with_sink(sink: Box<dyn ProgressSink>) -> Self {
+        Self {
+            sink,
             last_emit: None,
             last_phase: None,
             last_heartbeat: None,
@@ -140,7 +153,7 @@ impl ProgressEmitter {
                 current_bytes_total,
                 bytes_done_total_best_effort,
             };
-            emit_json(&msg);
+            self.sink.emit(msg);
             match throttle {
                 ProgressThrottle::Standard => {
                     self.last_emit = Some(now);
@@ -161,7 +174,7 @@ impl ProgressEmitter {
             scan_ms,
             zip_ms,
         };
-        emit_json(&msg);
+        self.sink.emit(msg);
         self.last_emit = None;
         self.last_phase = None;
         self.last_heartbeat = None;
@@ -172,14 +185,6 @@ impl ProgressEmitter {
 enum ProgressThrottle {
     Standard,
     Heartbeat,
-}
-
-fn emit_json<T: Serialize>(msg: &T) {
-    let stdout = io::stdout();
-    let mut handle = stdout.lock();
-    let _ = serde_json::to_writer(&mut handle, msg);
-    let _ = handle.write_all(b"\n");
-    let _ = handle.flush();
 }
 
 #[cfg(test)]

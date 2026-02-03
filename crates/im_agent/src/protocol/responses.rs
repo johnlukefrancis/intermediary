@@ -41,6 +41,19 @@ pub struct StageFileResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct BuildBundleResult {
+    pub repo_id: String,
+    pub preset_id: String,
+    pub windows_path: String,
+    pub wsl_path: String,
+    pub alias_windows_path: String,
+    pub bytes: u64,
+    pub file_count: u64,
+    pub built_at_iso: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetRepoTopLevelResult {
     pub repo_id: String,
     pub dirs: Vec<String>,
@@ -80,6 +93,8 @@ pub enum UiResponse {
     RefreshResult(RefreshResult),
     #[serde(rename = "stageFileResult")]
     StageFileResult(StageFileResult),
+    #[serde(rename = "buildBundleResult")]
+    BuildBundleResult(BuildBundleResult),
     #[serde(rename = "getRepoTopLevelResult")]
     GetRepoTopLevelResult(GetRepoTopLevelResult),
     #[serde(rename = "listBundlesResult")]

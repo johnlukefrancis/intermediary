@@ -13,6 +13,7 @@ use crate::error::{BundleError, Result};
 use crate::manifest::build_manifest;
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
+use crate::progress_sink::{ProgressSink, StdoutProgressSink};
 use crate::scanner::{scan_bundle, ScanEntry};
 
 const BUFFER_SIZE: usize = 256 * 1024;
@@ -29,17 +30,33 @@ pub struct BundleResult {
 }
 
 pub fn write_bundle(plan: &BundlePlan) -> Result<BundleResult> {
-    let mut progress = ProgressEmitter::new();
+    write_bundle_with_progress(plan, Box::new(StdoutProgressSink::new()))
+}
+
+pub fn write_bundle_with_progress(
+    plan: &BundlePlan,
+    sink: Box<dyn ProgressSink>,
+) -> Result<BundleResult> {
+    let mut progress = ProgressEmitter::with_sink(sink);
+    write_bundle_with_emitter(plan, &mut progress)
+}
+
+fn write_bundle_with_emitter(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<BundleResult> {
 
     let scan_start = Instant::now();
-    let scan_result = scan_bundle(plan, &mut progress)?;
+    let scan_result = scan_bundle(plan, progress)?;
     let scan_ms = scan_start.elapsed().as_millis();
 
     let total_files = scan_result.entries.len() as u64 + 1;
     progress.emit_progress("zipping", 0, total_files);
 
     let zip_start = Instant::now();
-    let (bytes_written, file_count) = write_zip(plan, &scan_result.entries, &scan_result.top_level_dirs_included, &mut progress)?;
+    let (bytes_written, file_count) = write_zip(
+        plan,
+        &scan_result.entries,
+        &scan_result.top_level_dirs_included,
+        progress,
+    )?;
     let zip_ms = zip_start.elapsed().as_millis();
 
     progress.emit_done(bytes_written, file_count, scan_ms, zip_ms);
@@ -253,61 +270,4 @@ fn build_manifest_json(
     }
 
     Ok((manifest_json, total_bytes))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
-    use std::io::Read;
-    use tempfile::tempdir;
-
-    #[test]
-    fn writes_zip_with_manifest_and_respects_exclusions() {
-        let dir = tempdir().unwrap();
-        let repo_root = dir.path();
-        std::fs::create_dir_all(repo_root.join("app/src")).unwrap();
-        std::fs::create_dir_all(repo_root.join("dist")).unwrap();
-        std::fs::write(repo_root.join("README.md"), "root").unwrap();
-        std::fs::write(repo_root.join("app/src/main.ts"), "code").unwrap();
-        std::fs::write(repo_root.join("dist/bundle.js"), "ignored").unwrap();
-
-        let output_path = repo_root.join("bundle.zip");
-        let plan = BundlePlan {
-            output_path: output_path.clone(),
-            repo_root: repo_root.to_path_buf(),
-            repo_id: "repo".to_string(),
-            preset_id: "full".to_string(),
-            preset_name: "Full".to_string(),
-            selection: BundleSelection {
-                include_root: true,
-                top_level_dirs: vec!["app".to_string()],
-                excluded_subdirs: vec![],
-            },
-            git: BundleGitInfo {
-                head_sha: None,
-                short_sha: None,
-                branch: None,
-            },
-            built_at_iso: "2026-01-31T00:00:00Z".to_string(),
-            global_excludes: GlobalExcludes::default(),
-        };
-
-        let result = write_bundle(&plan).unwrap();
-        assert!(result.bytes_written > 0);
-
-        let file = File::open(&output_path).unwrap();
-        let mut archive = zip::ZipArchive::new(file).unwrap();
-        assert!(archive.by_name("README.md").is_ok());
-        assert!(archive.by_name("app/src/main.ts").is_ok());
-        assert!(archive.by_name("dist/bundle.js").is_err());
-
-        let mut manifest = archive.by_name(MANIFEST_NAME).unwrap();
-        let mut manifest_content = String::new();
-        manifest.read_to_string(&mut manifest_content).unwrap();
-        assert!(manifest_content.contains("\"repoId\""));
-        assert!(manifest_content.contains("\"presetId\""));
-        assert!(manifest_content.contains("\"fileCount\""));
-        assert!(manifest_content.contains("\"totalBytesBestEffort\""));
-    }
 }

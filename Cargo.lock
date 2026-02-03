@@ -1555,6 +1555,7 @@ dependencies = [
  "chrono",
  "futures-util",
  "globset",
+ "im_bundle",
  "libc",
  "notify",
  "serde",

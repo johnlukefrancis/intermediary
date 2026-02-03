@@ -11,11 +11,12 @@ use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::bundles::{list_bundles, ListBundlesOptions};
+use crate::bundles::{build_bundle, list_bundles, BuildBundleOptions, ListBundlesOptions};
 use crate::error::{to_response_error, AgentError};
 use crate::logging::Logger;
 use crate::protocol::{
-    BundleInfo, EnvelopeKind, RequestEnvelope, ResponseEnvelope, UiCommand, UiResponse,
+    BundleBuiltEvent, BundleInfo, EnvelopeKind, RequestEnvelope, ResponseEnvelope, UiCommand,
+    UiResponse,
 };
 use crate::repos::get_repo_top_level;
 use crate::staging::stage_file;
@@ -211,6 +212,73 @@ async fn dispatch_command(command: UiCommand, ctx: &ConnectionContext) -> Result
                     wsl_path: result.wsl_path,
                     bytes_copied: result.bytes_copied,
                     mtime_ms: result.mtime_ms,
+                },
+            ))
+        }
+        UiCommand::BuildBundle(command) => {
+            let (staging, repo_config) = {
+                let state = ctx.runtime.read().await;
+                let staging = state.staging.clone().ok_or_else(|| {
+                    AgentError::new("NOT_CONFIGURED", "Staging not configured")
+                })?;
+                let repo_config = state
+                    .repo_configs
+                    .get(&command.repo_id)
+                    .cloned()
+                    .ok_or_else(|| {
+                        AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
+                    })?;
+                (staging, repo_config)
+            };
+
+            let preset = repo_config
+                .bundle_presets
+                .iter()
+                .find(|preset| preset.preset_id == command.preset_id)
+                .ok_or_else(|| {
+                    AgentError::new(
+                        "UNKNOWN_PRESET",
+                        format!("Unknown preset: {}", command.preset_id),
+                    )
+                })?
+                .clone();
+
+            let result = build_bundle(
+                BuildBundleOptions {
+                    repo_id: command.repo_id.clone(),
+                    repo_root: repo_config.wsl_path.clone(),
+                    preset_id: command.preset_id.clone(),
+                    preset_name: preset.preset_name,
+                    selection: command.selection,
+                    staging_wsl_root: staging.staging_wsl_root,
+                    global_excludes: command.global_excludes,
+                },
+                &ctx.event_bus,
+                &ctx.logger,
+            )
+            .await?;
+
+            ctx.event_bus
+                .broadcast_event(crate::protocol::AgentEvent::BundleBuilt(BundleBuiltEvent {
+                    repo_id: command.repo_id.clone(),
+                    preset_id: command.preset_id.clone(),
+                    windows_path: result.windows_path.clone(),
+                    alias_windows_path: result.alias_windows_path.clone(),
+                    bytes: result.bytes,
+                    file_count: result.file_count,
+                    built_at_iso: result.built_at_iso.clone(),
+                }));
+
+            Ok(UiResponse::BuildBundleResult(
+                crate::protocol::BuildBundleResult {
+                    repo_id: command.repo_id,
+                    preset_id: command.preset_id,
+                    windows_path: result.windows_path,
+                    wsl_path: result.wsl_path,
+                    alias_windows_path: result.alias_windows_path,
+                    bytes: result.bytes,
+                    file_count: result.file_count,
+                    built_at_iso: result.built_at_iso,
                 },
             ))
         }

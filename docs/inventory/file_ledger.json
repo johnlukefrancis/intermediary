@@ -466,8 +466,28 @@
       "summary": "Vite client type declarations"
     },
     {
+      "path": "crates/im_agent/src/bundles/bundle_builder_blocking.rs",
+      "summary": "Blocking bundle build steps and filesystem operations"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/bundle_builder_tests.rs",
+      "summary": "Tests for bundle builder helpers"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/bundle_builder.rs",
+      "summary": "Bundle build orchestration using the im_bundle library"
+    },
+    {
       "path": "crates/im_agent/src/bundles/bundle_lister.rs",
       "summary": "Bundle listing and latest selection logic"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/bundle_progress.rs",
+      "summary": "Bundle progress forwarding from im_bundle to agent events"
+    },
+    {
+      "path": "crates/im_agent/src/bundles/git_info.rs",
+      "summary": "Best-effort git info lookup for bundle manifests"
     },
     {
       "path": "crates/im_agent/src/bundles/ignore_rules.rs",
@@ -634,12 +654,20 @@
       "summary": "Bundle plan schema and loader for im_bundle_cli"
     },
     {
+      "path": "crates/im_bundle/src/progress_sink.rs",
+      "summary": "Progress sink interfaces for bundle build reporting"
+    },
+    {
       "path": "crates/im_bundle/src/progress.rs",
       "summary": "Throttled NDJSON progress emitter for bundle scanning and zipping"
     },
     {
       "path": "crates/im_bundle/src/scanner.rs",
       "summary": "Bundle scanning logic with ignore rules and exclusions"
+    },
+    {
+      "path": "crates/im_bundle/src/writer_tests.rs",
+      "summary": "Tests for bundle writer behavior and progress ordering"
     },
     {
       "path": "crates/im_bundle/src/writer.rs",
