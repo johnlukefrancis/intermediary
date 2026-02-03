@@ -130,14 +130,25 @@ crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
+crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization tests
+crates/im_agent/src/repos/categorizer.rs - File kind classification based on globs and fallback heuristics
+crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watcher
 crates/im_agent/src/repos/mod.rs - Repository scanning module exports
+crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
+crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debounced atomic writes
 crates/im_agent/src/repos/repo_top_level.rs - Scan top-level directories and files in a repo
+crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
+crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
+crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
+crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
+crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
+crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_agent/src/staging/mod.rs - Staging module exports

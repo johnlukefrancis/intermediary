@@ -510,6 +510,10 @@
       "summary": "Protocol envelope types for request/response messaging"
     },
     {
+      "path": "crates/im_agent/src/protocol/events.rs",
+      "summary": "Agent event payloads and file entry types"
+    },
+    {
       "path": "crates/im_agent/src/protocol/mod.rs",
       "summary": "WebSocket protocol types for the agent"
     },
@@ -522,12 +526,48 @@
       "summary": "Protocol envelope serialization tests"
     },
     {
+      "path": "crates/im_agent/src/repos/categorizer.rs",
+      "summary": "File kind classification based on globs and fallback heuristics"
+    },
+    {
+      "path": "crates/im_agent/src/repos/ignore_matcher.rs",
+      "summary": "Ignore glob matcher for repo watcher"
+    },
+    {
       "path": "crates/im_agent/src/repos/mod.rs",
       "summary": "Repository scanning module exports"
     },
     {
+      "path": "crates/im_agent/src/repos/mru_index.rs",
+      "summary": "MRU index for recent file changes"
+    },
+    {
+      "path": "crates/im_agent/src/repos/recent_files_store.rs",
+      "summary": "Persist recent files with debounced atomic writes"
+    },
+    {
       "path": "crates/im_agent/src/repos/repo_top_level.rs",
       "summary": "Scan top-level directories and files in a repo"
+    },
+    {
+      "path": "crates/im_agent/src/repos/repo_watcher_events.rs",
+      "summary": "Event handling for repo watcher changes and rename mapping"
+    },
+    {
+      "path": "crates/im_agent/src/repos/repo_watcher.rs",
+      "summary": "Notify-based repo watcher with MRU and event emission"
+    },
+    {
+      "path": "crates/im_agent/src/repos/watcher_error.rs",
+      "summary": "Watcher error classification and event shaping"
+    },
+    {
+      "path": "crates/im_agent/src/runtime/config_fingerprint.rs",
+      "summary": "Compute watcher-relevant config fingerprint"
+    },
+    {
+      "path": "crates/im_agent/src/runtime/config.rs",
+      "summary": "Minimal app configuration structures for the agent runtime"
     },
     {
       "path": "crates/im_agent/src/runtime/mod.rs",
@@ -540,6 +580,10 @@
     {
       "path": "crates/im_agent/src/server/connection.rs",
       "summary": "Per-connection WebSocket handling and request routing"
+    },
+    {
+      "path": "crates/im_agent/src/server/event_bus.rs",
+      "summary": "Broadcast agent events to connected WebSocket clients"
     },
     {
       "path": "crates/im_agent/src/server/mod.rs",

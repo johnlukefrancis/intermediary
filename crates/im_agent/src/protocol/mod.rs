@@ -3,16 +3,21 @@
 
 mod commands;
 mod envelopes;
+mod events;
 mod responses;
 
 pub use commands::{
-    ClientHelloCommand, GetRepoTopLevelCommand, ListBundlesCommand, SetOptionsCommand,
-    StageFileCommand, UiCommand,
+    ClientHelloCommand, GetRepoTopLevelCommand, ListBundlesCommand, RefreshCommand,
+    SetOptionsCommand, StageFileCommand, UiCommand, WatchRepoCommand,
 };
-pub use envelopes::{EnvelopeKind, RequestEnvelope, ResponseEnvelope, ResponseError};
+pub use envelopes::{EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError};
+pub use events::{
+    AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, FileChangeType, FileChangedEvent,
+    FileEntry, FileKind, SnapshotEvent, StagedInfo,
+};
 pub use responses::{
-    BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult, SetOptionsResult,
-    StageFileResult, UiResponse,
+    BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult, RefreshResult,
+    SetOptionsResult, StageFileResult, UiResponse, WatchRepoResult,
 };
 
 #[cfg(test)]

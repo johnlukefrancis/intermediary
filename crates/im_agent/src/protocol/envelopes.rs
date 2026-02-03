@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::{UiCommand, UiResponse};
+use super::AgentEvent;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -45,6 +46,15 @@ pub enum ResponseEnvelope {
         request_id: String,
         error: ResponseError,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventEnvelope {
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<String>,
+    pub payload: AgentEvent,
 }
 
 impl ResponseEnvelope {

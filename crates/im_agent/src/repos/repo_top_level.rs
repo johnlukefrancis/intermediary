@@ -64,3 +64,10 @@ pub async fn get_repo_top_level(root_path: &str) -> Result<TopLevelResult, std::
 
     Ok(TopLevelResult { dirs, files, subdirs })
 }
+
+pub async fn is_valid_repo_root(root_path: &str) -> bool {
+    match fs::metadata(root_path).await {
+        Ok(metadata) => metadata.is_dir(),
+        Err(_) => false,
+    }
+}

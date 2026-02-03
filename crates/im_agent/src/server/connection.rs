@@ -7,25 +7,26 @@ use std::sync::Arc;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tokio::net::TcpStream;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::bundles::{list_bundles, ListBundlesOptions};
 use crate::error::{to_response_error, AgentError};
 use crate::logging::Logger;
-use crate::bundles::{list_bundles, ListBundlesOptions};
 use crate::protocol::{
     BundleInfo, EnvelopeKind, RequestEnvelope, ResponseEnvelope, UiCommand, UiResponse,
 };
 use crate::repos::get_repo_top_level;
 use crate::staging::stage_file;
+use crate::server::EventBus;
 use crate::runtime::AgentRuntime;
 
 pub struct ConnectionContext {
     pub runtime: Arc<RwLock<AgentRuntime>>,
     pub logger: Logger,
     pub agent_version: String,
-    pub broadcaster: broadcast::Sender<String>,
+    pub event_bus: EventBus,
 }
 
 pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: ConnectionContext) {
@@ -61,7 +62,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     });
 
-    let mut broadcast_rx = ctx.broadcaster.subscribe();
+    let mut broadcast_rx = ctx.event_bus.subscribe();
     let broadcast_logger = ctx.logger.clone();
     let out_tx_clone = out_tx.clone();
     let broadcast_task = tokio::spawn(async move {
@@ -72,8 +73,8 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
                         break;
                     }
                 }
-                Err(broadcast::error::RecvError::Closed) => break,
-                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
                     broadcast_logger.warn(
                         "Broadcast lagged",
                         Some(json!({"skipped": skipped})),
@@ -164,7 +165,9 @@ async fn dispatch_command(command: UiCommand, ctx: &ConnectionContext) -> Result
     match command {
         UiCommand::ClientHello(command) => {
             let mut state = ctx.runtime.write().await;
-            let result = state.apply_client_hello(command, &ctx.agent_version);
+            let result = state
+                .apply_client_hello(command, &ctx.agent_version, &ctx.event_bus, &ctx.logger)
+                .await?;
             Ok(UiResponse::ClientHelloResult(result))
         }
         UiCommand::SetOptions(command) => {
@@ -172,16 +175,31 @@ async fn dispatch_command(command: UiCommand, ctx: &ConnectionContext) -> Result
             let result = state.apply_set_options(command);
             Ok(UiResponse::SetOptionsResult(result))
         }
+        UiCommand::WatchRepo(command) => {
+            let mut state = ctx.runtime.write().await;
+            let result = state
+                .watch_repo(&command.repo_id, &ctx.event_bus, &ctx.logger)
+                .await?;
+            Ok(UiResponse::WatchRepoResult(result))
+        }
+        UiCommand::Refresh(command) => {
+            let state = ctx.runtime.read().await;
+            let result = state.refresh_repo(&command.repo_id).await?;
+            Ok(UiResponse::RefreshResult(result))
+        }
         UiCommand::StageFile(command) => {
             let (staging, repo_root) = {
                 let state = ctx.runtime.read().await;
                 let staging = state.staging.clone().ok_or_else(|| {
                     AgentError::new("NOT_CONFIGURED", "Staging not configured")
                 })?;
-                let repo_root = state.repo_roots.get(&command.repo_id).cloned().ok_or_else(|| {
-                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
-                })?;
-                (staging, repo_root)
+                let repo_config = state
+                    .repo_configs
+                    .get(&command.repo_id)
+                    .ok_or_else(|| {
+                        AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
+                    })?;
+                (staging, repo_config.wsl_path.clone())
             };
 
             let result = stage_file(&staging, &command.repo_id, &repo_root, &command.path).await?;
@@ -199,16 +217,16 @@ async fn dispatch_command(command: UiCommand, ctx: &ConnectionContext) -> Result
         UiCommand::GetRepoTopLevel(command) => {
             let repo_root = {
                 let state = ctx.runtime.read().await;
-                state
-                    .repo_roots
+                let repo_config = state
+                    .repo_configs
                     .get(&command.repo_id)
-                    .cloned()
                     .ok_or_else(|| {
                         AgentError::new(
                             "UNKNOWN_REPO",
                             format!("Unknown repo: {}", command.repo_id),
                         )
-                    })?
+                    })?;
+                repo_config.wsl_path.clone()
             };
 
             let result = get_repo_top_level(&repo_root)

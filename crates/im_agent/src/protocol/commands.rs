@@ -22,6 +22,18 @@ pub struct SetOptionsCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WatchRepoCommand {
+    pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshCommand {
+    pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StageFileCommand {
     pub repo_id: String,
     pub path: String,
@@ -47,6 +59,10 @@ pub enum UiCommand {
     ClientHello(ClientHelloCommand),
     #[serde(rename = "setOptions")]
     SetOptions(SetOptionsCommand),
+    #[serde(rename = "watchRepo")]
+    WatchRepo(WatchRepoCommand),
+    #[serde(rename = "refresh")]
+    Refresh(RefreshCommand),
     #[serde(rename = "stageFile")]
     StageFile(StageFileCommand),
     #[serde(rename = "getRepoTopLevel")]
@@ -62,6 +78,8 @@ impl UiCommand {
         match self {
             UiCommand::ClientHello(_) => "clientHello",
             UiCommand::SetOptions(_) => "setOptions",
+            UiCommand::WatchRepo(_) => "watchRepo",
+            UiCommand::Refresh(_) => "refresh",
             UiCommand::StageFile(_) => "stageFile",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
             UiCommand::ListBundles(_) => "listBundles",

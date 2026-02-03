@@ -6,13 +6,14 @@ use std::sync::Arc;
 
 use serde_json::json;
 use tokio::net::TcpListener;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::RwLock;
 
 use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::runtime::AgentRuntime;
 
 use super::connection::{handle_connection, ConnectionContext};
+use super::event_bus::EventBus;
 
 const DEFAULT_PORT: u16 = 3141;
 
@@ -31,7 +32,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
         .await
         .map_err(|err| AgentError::new("BIND_FAILED", format!("Failed to bind: {err}")))?;
 
-    let (broadcaster, _) = broadcast::channel::<String>(128);
+    let event_bus = EventBus::new(128);
 
     config.logger.info(
         "WebSocket server started",
@@ -50,7 +51,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                             runtime: Arc::clone(&config.runtime),
                             logger: config.logger.clone(),
                             agent_version: config.agent_version.clone(),
-                            broadcaster: broadcaster.clone(),
+                            event_bus: event_bus.clone(),
                         };
                         tokio::spawn(handle_connection(stream, peer, ctx));
                     }

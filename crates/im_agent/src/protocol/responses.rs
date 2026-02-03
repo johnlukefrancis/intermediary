@@ -18,6 +18,18 @@ pub struct SetOptionsResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WatchRepoResult {
+    pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshResult {
+    pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StageFileResult {
     pub repo_id: String,
     pub path: String,
@@ -62,6 +74,10 @@ pub enum UiResponse {
     ClientHelloResult(ClientHelloResult),
     #[serde(rename = "setOptionsResult")]
     SetOptionsResult(SetOptionsResult),
+    #[serde(rename = "watchRepoResult")]
+    WatchRepoResult(WatchRepoResult),
+    #[serde(rename = "refreshResult")]
+    RefreshResult(RefreshResult),
     #[serde(rename = "stageFileResult")]
     StageFileResult(StageFileResult),
     #[serde(rename = "getRepoTopLevelResult")]
