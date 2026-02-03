@@ -6,6 +6,7 @@ resolver = "2"
 members = [
     "src-tauri",
     "crates/im_bundle",
+    "crates/im_agent",
 ]
 
 [workspace.package]

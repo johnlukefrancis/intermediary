@@ -119,6 +119,22 @@ app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protocol error responses
+crates/im_agent/src/error/mod.rs - Error module exports for the agent runtime
+crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
+crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_latest.log and stdout/stderr
+crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
+crates/im_agent/src/main.rs - WSL agent daemon entry point
+crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
+crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
+crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
+crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
+crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization tests
+crates/im_agent/src/runtime/mod.rs - Agent runtime exports
+crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
+crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
+crates/im_agent/src/server/mod.rs - WebSocket server module exports
+crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
@@ -137,6 +153,7 @@ scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Us
 scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw assets to display sizes. Outputs 40px (1x) and 80px (2x retina) versions.
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
+src-tauri/resources/agent_bundle/agent_main.cjs - agent main module
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/agent/install.rs - Install the bundled WSL agent runtime into app local data
 src-tauri/src/lib/agent/mod.rs - WSL agent supervisor module exports

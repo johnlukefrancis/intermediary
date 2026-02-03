@@ -1,0 +1,99 @@
+// Path: crates/im_agent/src/main.rs
+// Description: WSL agent daemon entry point
+
+use std::env;
+use std::process;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use im_agent::logging::{resolve_log_dir, LogConfig, LogLevel, Logger};
+use im_agent::runtime::AgentRuntime;
+use im_agent::server::{run_server, ServerConfig};
+
+const DEFAULT_PORT: u16 = 3141;
+
+#[tokio::main]
+async fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.iter().any(|arg| arg == "--version") {
+        println!("{}", resolve_agent_version());
+        return;
+    }
+
+    let log_dir = resolve_log_dir(env::var("INTERMEDIARY_AGENT_LOG_DIR").ok());
+    let log_level = resolve_log_level(env::var("INTERMEDIARY_AGENT_LOG_LEVEL").ok());
+
+    let logger = match Logger::init(LogConfig {
+        log_dir,
+        min_level: log_level,
+    })
+    .await
+    {
+        Ok(logger) => logger,
+        Err(err) => {
+            eprintln!(
+                "{{\"level\":\"error\",\"msg\":\"Failed to init logger\",\"error\":\"{}\"}}",
+                err
+            );
+            process::exit(1);
+        }
+    };
+
+    let port = resolve_port(env::var("INTERMEDIARY_AGENT_PORT").ok(), &logger);
+    let runtime = Arc::new(RwLock::new(AgentRuntime::new()));
+    let agent_version = resolve_agent_version();
+
+    if let Err(err) = run_server(ServerConfig {
+        port,
+        agent_version,
+        runtime,
+        logger: logger.clone(),
+    })
+    .await
+    {
+        logger.error(
+            "Agent server failed",
+            Some(serde_json::json!({"error": err.to_string()})),
+        );
+        process::exit(1);
+    }
+}
+
+fn resolve_agent_version() -> String {
+    env::var("INTERMEDIARY_AGENT_VERSION")
+        .unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string())
+}
+
+fn resolve_log_level(raw: Option<String>) -> LogLevel {
+    raw.and_then(|value| value.parse().ok())
+        .unwrap_or(LogLevel::Info)
+}
+
+fn resolve_port(raw: Option<String>, logger: &Logger) -> Option<u16> {
+    let raw = match raw {
+        Some(raw) => raw,
+        None => return Some(DEFAULT_PORT),
+    };
+
+    let parsed: u16 = match raw.parse() {
+        Ok(port) => port,
+        Err(_) => {
+            logger.warn(
+                "Invalid INTERMEDIARY_AGENT_PORT, using default",
+                Some(serde_json::json!({"raw": raw})),
+            );
+            return Some(DEFAULT_PORT);
+        }
+    };
+
+    if parsed < 1024 {
+        logger.warn(
+            "INTERMEDIARY_AGENT_PORT out of range, using default",
+            Some(serde_json::json!({"raw": raw})),
+        );
+        return Some(DEFAULT_PORT);
+    }
+
+    Some(parsed)
+}

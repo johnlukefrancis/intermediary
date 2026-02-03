@@ -466,6 +466,70 @@
       "summary": "Vite client type declarations"
     },
     {
+      "path": "crates/im_agent/src/error/agent_error.rs",
+      "summary": "AgentError type and mapping to protocol error responses"
+    },
+    {
+      "path": "crates/im_agent/src/error/mod.rs",
+      "summary": "Error module exports for the agent runtime"
+    },
+    {
+      "path": "crates/im_agent/src/lib.rs",
+      "summary": "Library root for the Intermediary WSL agent daemon"
+    },
+    {
+      "path": "crates/im_agent/src/logging/json_logger.rs",
+      "summary": "JSONL logger that writes to agent_latest.log and stdout/stderr"
+    },
+    {
+      "path": "crates/im_agent/src/logging/mod.rs",
+      "summary": "Logging exports and helpers for the agent"
+    },
+    {
+      "path": "crates/im_agent/src/main.rs",
+      "summary": "WSL agent daemon entry point"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/commands.rs",
+      "summary": "UI-to-agent command payloads for the WebSocket protocol"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/envelopes.rs",
+      "summary": "Protocol envelope types for request/response messaging"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/mod.rs",
+      "summary": "WebSocket protocol types for the agent"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/responses.rs",
+      "summary": "Agent-to-UI response payloads for the WebSocket protocol"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests.rs",
+      "summary": "Protocol envelope serialization tests"
+    },
+    {
+      "path": "crates/im_agent/src/runtime/mod.rs",
+      "summary": "Agent runtime exports"
+    },
+    {
+      "path": "crates/im_agent/src/runtime/state.rs",
+      "summary": "Agent runtime state and option handlers"
+    },
+    {
+      "path": "crates/im_agent/src/server/connection.rs",
+      "summary": "Per-connection WebSocket handling and request routing"
+    },
+    {
+      "path": "crates/im_agent/src/server/mod.rs",
+      "summary": "WebSocket server module exports"
+    },
+    {
+      "path": "crates/im_agent/src/server/ws_server.rs",
+      "summary": "WebSocket accept loop and connection dispatch"
+    },
+    {
       "path": "crates/im_bundle/src/bin/im_bundle_cli.rs",
       "summary": "CLI entry point for im_bundle - scans and writes bundle zip"
     },
@@ -536,6 +600,10 @@
     {
       "path": "src-tauri/build.rs",
       "summary": "Tauri build script"
+    },
+    {
+      "path": "src-tauri/resources/agent_bundle/agent_main.cjs",
+      "summary": "agent main module"
     },
     {
       "path": "src-tauri/src/bin/intermediary.rs",
