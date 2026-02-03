@@ -44,7 +44,23 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
     next = migrateRecommendedExtensions(next);
   }
 
+  // Migration: v11 -> v12: Normalize localhost agent host to loopback IP.
+  if (config.configVersion < 12) {
+    next = migrateLoopbackAgentHost(next);
+  }
+
   return { ...next, configVersion: CONFIG_VERSION };
+}
+
+function migrateLoopbackAgentHost(config: PersistedConfig): PersistedConfig {
+  if (config.agentHost !== "localhost") {
+    return config;
+  }
+
+  return {
+    ...config,
+    agentHost: "127.0.0.1",
+  };
 }
 
 function migrateRecommendedExtensions(config: PersistedConfig): PersistedConfig {

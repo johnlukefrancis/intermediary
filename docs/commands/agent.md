@@ -1,5 +1,5 @@
 # Agent Commands
-Updated on: 2026-01-30
+Updated on: 2026-02-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -34,7 +34,7 @@ pnpm run lint
 Connect to the running agent with wscat:
 
 ```bash
-wscat -c ws://localhost:3141
+wscat -c ws://127.0.0.1:3141
 ```
 
 Send a clientHello to configure the agent:
@@ -46,7 +46,7 @@ Send a clientHello to configure the agent:
   "payload": {
     "type": "clientHello",
     "config": {
-      "agentHost": "localhost",
+      "agentHost": "127.0.0.1",
       "agentPort": 3141,
       "autoStageGlobal": true,
       "repos": [

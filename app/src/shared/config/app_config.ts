@@ -9,7 +9,7 @@ import { RepoConfigSchema, type RepoConfig } from "./repo_config.js";
  */
 export const AppConfigSchema = z.object({
   /** Hostname for the agent WebSocket server */
-  agentHost: z.string().min(1).default("localhost"),
+  agentHost: z.string().min(1).default("127.0.0.1"),
   /** Port the agent WebSocket server listens on */
   agentPort: z.number().int().min(1024).max(65535).default(3141),
   /** Global default for auto-staging */
@@ -23,7 +23,7 @@ export const AppConfigSchema = z.object({
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
-  agentHost: "localhost",
+  agentHost: "127.0.0.1",
   agentPort: 3141,
   autoStageGlobal: true,
   repos: [], // Empty by default - users add repos via the UI

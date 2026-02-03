@@ -74,7 +74,7 @@ export const PersistedConfigSchema = z.object({
   /** Schema version for migrations */
   configVersion: z.number().int().min(1).default(CONFIG_VERSION),
   /** Agent host */
-  agentHost: z.string().min(1).default("localhost"),
+  agentHost: z.string().min(1).default("127.0.0.1"),
   /** Agent port */
   agentPort: z.number().int().min(1024).max(65535).default(3141),
   /** Global auto-stage setting */
