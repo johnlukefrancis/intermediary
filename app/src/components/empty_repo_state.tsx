@@ -14,15 +14,17 @@ export function EmptyRepoState({
 }: EmptyRepoStateProps): React.JSX.Element {
   return (
     <div className="empty-repo-state">
-      <div className="empty-repo-state__content">
-        <p className="empty-repo-state__title">No repositories configured</p>
-        <p className="empty-repo-state__subtitle">
-          Add a repository to start bundling context for your AI agents.
-        </p>
-        <AddRepoButton
-          {...(onRepoAdded ? { onRepoAdded } : {})}
-          className="empty-repo-state__button"
-        />
+      <div className="empty-repo-state__panel glass-surface">
+        <div className="empty-repo-state__content">
+          <p className="empty-repo-state__title">No repositories configured</p>
+          <p className="empty-repo-state__subtitle">
+            Add a repository to begin.
+          </p>
+          <AddRepoButton
+            {...(onRepoAdded ? { onRepoAdded } : {})}
+            className="empty-repo-state__button"
+          />
+        </div>
       </div>
     </div>
   );
