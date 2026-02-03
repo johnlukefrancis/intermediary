@@ -233,7 +233,7 @@
 /* ===== CLOSE BUTTON ===== */
 .options-close-button {
   position: absolute;
-  top: var(--space-5);
+  top: var(--space-12);
   right: var(--space-4);
   display: flex;
   align-items: center;
