@@ -218,6 +218,14 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
           const activeLabel = getActiveRepoLabel(tab, activeRepoId);
           const isOpen = openDropdownId === tab.groupId;
           const repoCount = tab.repos.length;
+          const trimmedGroupLabel = tab.groupLabel.trim();
+          const trimmedActiveLabel = activeLabel.trim();
+          const showActiveSuffix =
+            trimmedActiveLabel.length > 0 && trimmedActiveLabel !== trimmedGroupLabel;
+          const groupDisplayLabel = trimmedGroupLabel || tab.groupId;
+          const fullGroupLabel = showActiveSuffix
+            ? `${groupDisplayLabel}: ${trimmedActiveLabel}`
+            : groupDisplayLabel;
 
           return (
             <div
@@ -246,7 +254,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                 aria-current={isActive ? "page" : undefined}
               >
                 <span className="tab-label">
-                  {tab.groupLabel}: {activeLabel}
+                  {fullGroupLabel}
                 </span>
               </button>
               {isActive && (
