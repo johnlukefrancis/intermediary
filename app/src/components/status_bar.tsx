@@ -29,8 +29,14 @@ function getConnectionDisplay(status: ConnectionStatus, attempts: number): Conne
 }
 
 export function StatusBar(): React.JSX.Element {
-  const { autoStageOnChange, setAutoStageOnChange, connectionState, appPaths, helloState } =
-    useAgent();
+  const {
+    autoStageOnChange,
+    setAutoStageOnChange,
+    connectionState,
+    appPaths,
+    helloState,
+    agentError,
+  } = useAgent();
   const {
     config,
     setGlobalExcludes,
@@ -45,8 +51,15 @@ export function StatusBar(): React.JSX.Element {
   const { status, reconnectAttempts, lastError: connectionError } = connectionState;
   const display = getConnectionDisplay(status, reconnectAttempts);
 
-  // Show connection error when not connected, hello error when connected
-  const errorToShow = status === "connected" ? helloState.lastError : connectionError;
+  const agentErrorMessage = agentError
+    ? `${agentError.message}${
+        agentError.details?.docPath ? ` (See ${agentError.details.docPath})` : ""
+      }`
+    : null;
+
+  // Show connection error when not connected, agent/hello error when connected
+  const errorToShow =
+    status === "connected" ? agentErrorMessage ?? helloState.lastError : connectionError;
 
   return (
     <>

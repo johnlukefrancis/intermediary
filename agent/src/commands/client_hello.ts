@@ -76,12 +76,6 @@ export async function handleClientHello(
           repoId: repo.repoId,
           error: err instanceof Error ? err.message : String(err),
         });
-        router.broadcastEvent({
-          type: "error",
-          scope: "watcher",
-          message: `Watcher failed for ${repo.repoId}`,
-          details: err instanceof Error ? err.message : String(err),
-        });
       });
     } else {
       logger.warn("Invalid repo root, skipping", {

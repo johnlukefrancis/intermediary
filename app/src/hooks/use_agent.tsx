@@ -23,7 +23,7 @@ import {
   type ConnectionState,
   INITIAL_CONNECTION_STATE,
 } from "../lib/agent/connection_state.js";
-import type { AgentEvent } from "../shared/protocol.js";
+import type { AgentErrorEvent, AgentEvent } from "../shared/protocol.js";
 import type { AppPaths } from "../types/app_paths.js";
 import { useConfig } from "./use_config.js";
 
@@ -33,6 +33,7 @@ interface AgentContextValue {
   client: AgentClient | null;
   connectionState: ConnectionState;
   helloState: HelloState;
+  agentError: AgentErrorEvent | null;
   config: AppConfig;
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
@@ -65,6 +66,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [appPaths, setAppPaths] = useState<AppPaths | null>(null);
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
+  const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const outputWindowsRootRef = useRef(persistedConfig.outputWindowsRoot);
@@ -86,6 +88,9 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   }, []);
 
   const handleEvent = useCallback((event: AgentEvent) => {
+    if (event.type === "error") {
+      setAgentError(event);
+    }
     for (const handler of handlersRef.current) {
       handler(event);
     }
@@ -104,6 +109,12 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       });
     }
   }, [autoStageOnChange, client, config.autoStageGlobal, connectionState.status]);
+
+  useEffect(() => {
+    if (connectionState.status !== "connected" && agentError !== null) {
+      setAgentError(null);
+    }
+  }, [agentError, connectionState.status]);
 
   // Initialize on mount (after config is loaded)
   useEffect(() => {
@@ -199,6 +210,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     client,
     connectionState,
     helloState,
+    agentError,
     config,
     appPaths,
     autoStageOnChange,

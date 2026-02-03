@@ -96,12 +96,24 @@ export const BundleBuildProgressEventSchema = z.object({
 });
 export type BundleBuildProgressEvent = z.infer<typeof BundleBuildProgressEventSchema>;
 
+export const AgentErrorCodeSchema = z.enum(["watcher_inotify_limit", "watcher_fd_limit"]);
+export type AgentErrorCode = z.infer<typeof AgentErrorCodeSchema>;
+
 export const ErrorEventSchema = z.object({
   type: z.literal("error"),
   scope: z.string(),
   message: z.string(),
-  details: z.unknown().optional(),
+  details: z
+    .object({
+      code: AgentErrorCodeSchema.optional(),
+      docPath: z.string().optional(),
+      repoId: z.string().optional(),
+      rawCode: z.string().optional(),
+      rawMessage: z.string().optional(),
+    })
+    .optional(),
 });
+export type AgentErrorEvent = z.infer<typeof ErrorEventSchema>;
 
 export const AgentEventSchema = z.discriminatedUnion("type", [
   HelloEventSchema,

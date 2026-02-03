@@ -18,6 +18,7 @@ agent/src/repos/mru_index.ts - MRU (Most Recently Used) index for recent file ch
 agent/src/repos/recent_files_store.ts - Persistence layer for recent files with debounced atomic writes
 agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
+agent/src/repos/watcher_error.ts - Repo watcher error classification and user-facing event shaping
 agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
 agent/src/server/ws_server.ts - WebSocket server lifecycle on 0.0.0.0:3141
 agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files

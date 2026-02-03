@@ -8,6 +8,7 @@ import { type RecentFilesStore } from "./repos/recent_files_store.js";
 import { type Stager, type StageResult } from "./staging/stager.js";
 import { type BundleBuilder } from "./bundles/bundle_builder.js";
 import { shouldAutoStage } from "./util/categorizer.js";
+import { buildWatcherErrorEvent } from "./repos/watcher_error.js";
 import { logger } from "./util/logger.js";
 import { type Router } from "./server/router.js";
 import { type WsServer } from "./server/ws_server.js";
@@ -38,6 +39,7 @@ export async function startWatcher(
 ): Promise<void> {
   const repoId = repoConfig.repoId;
   const repoRoot = repoConfig.wslPath;
+  const errorState = { emitted: false };
 
   const initialEntries = state.recentFilesStore?.load(repoId, repoRoot) ?? [];
 
@@ -52,6 +54,10 @@ export async function startWatcher(
     },
     onBeforeStop: () => {
       return state.recentFilesStore?.flush() ?? Promise.resolve();
+    },
+    onError: (err) => {
+      errorState.emitted = true;
+      deps.router.broadcastEvent(buildWatcherErrorEvent(repoId, err));
     },
   });
 
@@ -105,6 +111,9 @@ export async function startWatcher(
       recent: watcher.getRecentChanges(),
     });
   } catch (err) {
+    if (!errorState.emitted) {
+      deps.router.broadcastEvent(buildWatcherErrorEvent(repoId, err));
+    }
     // Clean up watcher to avoid poisoned state
     state.watchers.delete(repoId);
     state.recentFilesStore?.cancelPending(repoId);

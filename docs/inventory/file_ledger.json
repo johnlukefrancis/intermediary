@@ -62,6 +62,10 @@
       "summary": "Chokidar file watcher setup with event emission and ignore patterns"
     },
     {
+      "path": "agent/src/repos/watcher_error.ts",
+      "summary": "Repo watcher error classification and user-facing event shaping"
+    },
+    {
       "path": "agent/src/server/router.ts",
       "summary": "Request dispatch and response building for WebSocket protocol"
     },

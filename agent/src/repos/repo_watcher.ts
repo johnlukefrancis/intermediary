@@ -36,6 +36,8 @@ export interface RepoWatcherConfig {
   onPersist?: (entries: FileEntry[]) => void;
   /** Called before stop() completes, for flushing state */
   onBeforeStop?: () => Promise<void>;
+  /** Called when chokidar emits an error */
+  onError?: (err: unknown, isReady: boolean) => void;
 }
 
 export interface FileChangeEvent {
@@ -142,6 +144,7 @@ export function createRepoWatcher(
   async function start(): Promise<void> {
     return new Promise((resolve, reject) => {
       logger.info("Starting repo watcher", { repoId, rootPath });
+      let isReady = false;
 
       const ignorePatterns = Array.from(
         new Set([...DEFAULT_IGNORE_PATTERNS, ...config.ignoreGlobs])
@@ -159,12 +162,17 @@ export function createRepoWatcher(
 
       watcher.on("ready", () => {
         logger.info("Repo watcher ready", { repoId });
+        isReady = true;
         resolve();
       });
 
       watcher.on("error", (err) => {
-        logger.error("Repo watcher error", { repoId, error: err.message });
-        reject(err);
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error("Repo watcher error", { repoId, error: message });
+        config.onError?.(err, isReady);
+        if (!isReady) {
+          reject(err);
+        }
       });
 
       watcher.on("add", (filePath, stats) => {
