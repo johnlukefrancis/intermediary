@@ -1,5 +1,5 @@
 // Path: agent/src/server/ws_server.ts
-// Description: WebSocket server lifecycle on 0.0.0.0:3141
+// Description: WebSocket server lifecycle on 0.0.0.0 with configurable port
 
 import { WebSocketServer, type WebSocket } from "ws";
 import { logger } from "../util/logger.js";

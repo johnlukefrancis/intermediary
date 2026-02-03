@@ -37,11 +37,14 @@ export function StatusBar(): React.JSX.Element {
     helloState,
     agentError,
     agentDiagnostics,
+    restartAgent,
   } = useAgent();
   const {
     config,
     setGlobalExcludes,
     setOutputWindowsRoot,
+    setAgentAutoStart,
+    setAgentDistro,
     setTabThemeAccent,
     setTabThemeTexture,
     clearTabTheme,
@@ -114,6 +117,11 @@ export function StatusBar(): React.JSX.Element {
         <OptionsOverlay
           autoStageOnChange={autoStageOnChange}
           setAutoStageOnChange={setAutoStageOnChange}
+          agentAutoStart={config.agentAutoStart}
+          setAgentAutoStart={setAgentAutoStart}
+          agentDistro={config.agentDistro}
+          setAgentDistro={setAgentDistro}
+          restartAgent={restartAgent}
           appPaths={appPaths}
           globalExcludes={config.globalExcludes}
           setGlobalExcludes={setGlobalExcludes}

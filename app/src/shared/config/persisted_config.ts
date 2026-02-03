@@ -77,6 +77,18 @@ export const PersistedConfigSchema = z.object({
   agentHost: z.string().min(1).default("127.0.0.1"),
   /** Agent port */
   agentPort: z.number().int().min(1024).max(65535).default(3141),
+  /** Auto-start the WSL agent when the app launches */
+  agentAutoStart: z.boolean().default(true),
+  /** Optional WSL distro override for agent launch */
+  agentDistro: z
+    .preprocess((value) => {
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        return trimmed.length > 0 ? trimmed : null;
+      }
+      return value;
+    }, z.string().min(1).nullable())
+    .default(null),
   /** Global auto-stage setting */
   autoStageGlobal: z.boolean().default(true),
   /** Configured repositories */
@@ -146,6 +158,8 @@ export function getDefaultPersistedConfig(): PersistedConfig {
       patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     },
     outputWindowsRoot: null,
+    agentAutoStart: true,
+    agentDistro: null,
     tabThemes: {},
     starredFiles: {},
   };

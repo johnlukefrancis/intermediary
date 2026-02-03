@@ -48,6 +48,10 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   if (config.configVersion < 12) {
     next = migrateLoopbackAgentHost(next);
   }
+  // Migration: v12 -> v13: Add agent auto-start + distro override fields.
+  if (config.configVersion < 13) {
+    next = migrateAgentDefaults(next);
+  }
 
   return { ...next, configVersion: CONFIG_VERSION };
 }
@@ -139,6 +143,15 @@ function migrateRecommendedExtensions(config: PersistedConfig): PersistedConfig 
       ...config.globalExcludes,
       extensions: mergedExtensions,
     },
+  };
+}
+
+function migrateAgentDefaults(config: PersistedConfig): PersistedConfig {
+  const trimmedDistro = config.agentDistro?.trim() ?? "";
+  return {
+    ...config,
+    agentAutoStart: config.agentAutoStart,
+    agentDistro: trimmedDistro.length > 0 ? trimmedDistro : null,
   };
 }
 

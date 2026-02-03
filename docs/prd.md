@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-02
+Updated on: 2026-02-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -214,6 +214,13 @@ Bundles should be self-identifying:
 * If staging copy fails: show per-item error and log.
 * If bundle build fails: show build error output (truncate) and keep last good build.
 * Reconnects may re-run `clientHello`; the agent treats the handshake as idempotent and safe to call multiple times.
+
+### 7.8 Agent lifecycle
+
+* The app auto-starts the WSL agent on launch by default.
+* Auto-start can be disabled in Options.
+* Optional WSL distro override is supported for agent launch.
+* Users can manually restart the agent from Options.
 
 ---
 

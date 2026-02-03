@@ -23,6 +23,8 @@ import {
 } from "./use_config_actions.js";
 import {
   useSetOutputWindowsRoot,
+  useSetAgentAutoStart,
+  useSetAgentDistro,
   useSetTabThemeAccent,
   useSetTabThemeTexture,
   useClearTabTheme,
@@ -68,6 +70,10 @@ interface ConfigContextValue {
   removeGroup: (groupId: string) => void;
   /** Set custom output folder override (null to reset to default) */
   setOutputWindowsRoot: (path: string | null) => void;
+  /** Toggle auto-start for the WSL agent */
+  setAgentAutoStart: (value: boolean) => void;
+  /** Set optional WSL distro override for agent launch */
+  setAgentDistro: (value: string | null) => void;
   /** Set accent color for a tab */
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   /** Set texture for a tab */
@@ -118,6 +124,8 @@ export function ConfigProvider({
   const removeRepo = useRemoveRepo(setConfig, saveConfig);
   const removeGroup = useRemoveGroup(setConfig, saveConfig);
   const setOutputWindowsRoot = useSetOutputWindowsRoot(setConfig, saveConfig);
+  const setAgentAutoStart = useSetAgentAutoStart(setConfig, saveConfig);
+  const setAgentDistro = useSetAgentDistro(setConfig, saveConfig);
   const setTabThemeAccent = useSetTabThemeAccent(setConfig, saveConfig);
   const setTabThemeTexture = useSetTabThemeTexture(setConfig, saveConfig);
   const clearTabTheme = useClearTabTheme(setConfig, saveConfig);
@@ -140,6 +148,8 @@ export function ConfigProvider({
     removeRepo,
     removeGroup,
     setOutputWindowsRoot,
+    setAgentAutoStart,
+    setAgentDistro,
     setTabThemeAccent,
     setTabThemeTexture,
     clearTabTheme,

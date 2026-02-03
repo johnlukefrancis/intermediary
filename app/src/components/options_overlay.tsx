@@ -2,21 +2,29 @@
 // Description: Full-screen transparent overlay with options panel for app settings
 
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { GlobalExcludes } from "../shared/global_excludes.js";
 import type { RepoConfig, TabTheme } from "../shared/config.js";
 import type { AppPaths } from "../types/app_paths.js";
-import { ConfirmModal } from "./confirm_modal.js";
+import { AgentSection } from "./options/agent_section.js";
 import { ExcludesSection } from "./options/excludes_section.js";
+import { GeneralSection } from "./options/general_section.js";
+import { OutputFolderSection } from "./options/output_folder_section.js";
+import { ResetSection } from "./options/reset_section.js";
 import { ThemeSection } from "./options/theme_section.js";
 import "../styles/options_overlay.css";
 
 interface OptionsOverlayProps {
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
+  agentAutoStart: boolean;
+  setAgentAutoStart: (value: boolean) => void;
+  agentDistro: string | null;
+  setAgentDistro: (value: string | null) => void;
+  restartAgent: () => void;
   appPaths: AppPaths | null;
   globalExcludes: GlobalExcludes;
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
@@ -44,6 +52,11 @@ interface ThemeEntry {
 export function OptionsOverlay({
   autoStageOnChange,
   setAutoStageOnChange,
+  agentAutoStart,
+  setAgentAutoStart,
+  agentDistro,
+  setAgentDistro,
+  restartAgent,
   appPaths,
   globalExcludes,
   setGlobalExcludes,
@@ -63,7 +76,6 @@ export function OptionsOverlay({
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleBackdropClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -150,43 +162,20 @@ export function OptionsOverlay({
           ×
         </button>
 
-        {/* General Section */}
-        <div className="options-section">
-          <div className="options-section-title">General</div>
-          <div
-            className="options-row"
-            title="When enabled, changed files are instantly copied to the staging folder so they're ready for drag-and-drop"
-          >
-            <span className="options-row-label">Auto-stage</span>
-            <label className="vintage-toggle">
-              <input
-                type="checkbox"
-                checked={autoStageOnChange}
-                onChange={(event) => {
-                  setAutoStageOnChange(event.target.checked);
-                }}
-              />
-              <span className="vintage-toggle-track" aria-hidden="true" />
-            </label>
-          </div>
-          <div className="options-row">
-            <span className="options-row-label">Recent files limit</span>
-            <input
-              type="number"
-              className="options-number-input"
-              value={recentFilesLimit}
-              min={25}
-              max={2000}
-              onChange={(event) => {
-                const parsed = parseInt(event.target.value, 10);
-                if (!Number.isNaN(parsed)) {
-                  setRecentFilesLimit(parsed);
-                }
-              }}
-            />
-          </div>
-          <span className="options-hint">Higher values may impact UI performance</span>
-        </div>
+        <GeneralSection
+          autoStageOnChange={autoStageOnChange}
+          setAutoStageOnChange={setAutoStageOnChange}
+          recentFilesLimit={recentFilesLimit}
+          setRecentFilesLimit={setRecentFilesLimit}
+        />
+
+        <AgentSection
+          agentAutoStart={agentAutoStart}
+          setAgentAutoStart={setAgentAutoStart}
+          agentDistro={agentDistro}
+          setAgentDistro={setAgentDistro}
+          restartAgent={restartAgent}
+        />
 
         {/* Excludes Section */}
         <ExcludesSection
@@ -194,36 +183,11 @@ export function OptionsOverlay({
           setGlobalExcludes={setGlobalExcludes}
         />
 
-        {/* Output Folder Section */}
-        <div className="options-section">
-          <div className="options-section-title">Output Folder</div>
-          <div className="options-row stacked">
-            <span
-              className={`options-path-display ${!appPaths ? "muted" : ""}`}
-              title={appPaths?.stagingWindowsRoot ?? "Loading..."}
-            >
-              {appPaths?.stagingWindowsRoot ?? "Loading..."}
-            </span>
-            <div className="options-button-row">
-              <button
-                type="button"
-                className="options-button"
-                onClick={() => void handleChooseOutputFolder()}
-                disabled={!appPaths}
-              >
-                Choose output folder
-              </button>
-              <button
-                type="button"
-                className="options-button"
-                onClick={() => void handleOpenOutputFolder()}
-                disabled={!appPaths}
-              >
-                Open output folder
-              </button>
-            </div>
-          </div>
-        </div>
+        <OutputFolderSection
+          appPaths={appPaths}
+          onChooseOutputFolder={() => void handleChooseOutputFolder()}
+          onOpenOutputFolder={() => void handleOpenOutputFolder()}
+        />
 
         <ThemeSection
           entries={themeEntries}
@@ -235,43 +199,8 @@ export function OptionsOverlay({
           renameGroupLabel={renameGroupLabel}
         />
 
-        <div className="options-section">
-          <div className="options-section-title">Reset</div>
-          <div className="options-row stacked">
-            <span className="options-hint">
-              Removes repos from Intermediary and clears settings, staged bundles, and
-              recent-file caches. It never deletes files inside your repositories.
-            </span>
-            <div className="options-button-row">
-              <button
-                type="button"
-                className="options-button options-button--destructive"
-                onClick={() => {
-                  setShowResetConfirm(true);
-                }}
-              >
-                Reset all settings
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResetSection resetConfig={resetConfig} />
       </div>
-
-      {showResetConfirm && (
-        <ConfirmModal
-          title="Reset All Settings"
-          message="Reset all settings? This removes repos from Intermediary and clears bundle selections, staged bundles, and recent-file caches. It never deletes files inside your repositories."
-          confirmLabel="Reset"
-          isDestructive
-          onConfirm={() => {
-            resetConfig();
-            setShowResetConfirm(false);
-          }}
-          onCancel={() => {
-            setShowResetConfirm(false);
-          }}
-        />
-      )}
     </div>,
     document.body
   );

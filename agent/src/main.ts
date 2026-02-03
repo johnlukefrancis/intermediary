@@ -16,7 +16,7 @@ import {
 } from "./agent_runtime.js";
 import { handleClientHello } from "./commands/client_hello.js";
 
-const AGENT_VERSION = "0.1.0";
+const AGENT_VERSION = process.env["INTERMEDIARY_AGENT_VERSION"] ?? "0.1.0";
 
 const state: AgentRuntimeState = {
   watchers: new Map(),
@@ -33,6 +33,21 @@ const state: AgentRuntimeState = {
 
 let router: Router;
 let server: WsServer;
+
+function resolveAgentPort(): number | undefined {
+  const raw = process.env["INTERMEDIARY_AGENT_PORT"];
+  if (!raw) return undefined;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    logger.warn("Invalid INTERMEDIARY_AGENT_PORT, using default", { raw });
+    return undefined;
+  }
+  if (parsed < 1024 || parsed > 65535) {
+    logger.warn("INTERMEDIARY_AGENT_PORT out of range, using default", { raw });
+    return undefined;
+  }
+  return parsed;
+}
 
 async function handleCommand(command: UiCommand, _ws: WebSocket): Promise<UiResponse> {
   switch (command.type) {
@@ -211,7 +226,8 @@ async function main(): Promise<void> {
   router = createRouter();
   router.setHandler(handleCommand);
 
-  server = createWsServer({ router });
+  const port = resolveAgentPort();
+  server = createWsServer({ router, ...(port ? { port } : {}) });
   router.setBroadcaster((msg) => { server.broadcast(msg); });
 
   process.on("SIGINT", () => void shutdown(state, { router, server }));

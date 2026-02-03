@@ -137,6 +137,17 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
         config.agent_host = "127.0.0.1".to_string();
     }
 
+    // Version 12 -> 13: Add agent auto-start + distro override fields.
+    if config.config_version < 13 {
+        if config.agent_distro.as_deref().unwrap_or("").trim().is_empty() {
+            config.agent_distro = None;
+        }
+        // Ensure auto-start is defaulted when missing.
+        if config.agent_auto_start == false {
+            // Keep explicit false; defaults handled by serde for missing fields.
+        }
+    }
+
     // Update version to current
     config.config_version = CONFIG_VERSION;
     config

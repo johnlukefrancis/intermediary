@@ -20,7 +20,7 @@ agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a re
 agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
 agent/src/repos/watcher_error.ts - Repo watcher error classification and user-facing event shaping
 agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
-agent/src/server/ws_server.ts - WebSocket server lifecycle on 0.0.0.0:3141
+agent/src/server/ws_server.ts - WebSocket server lifecycle on 0.0.0.0 with configurable port
 agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files
 agent/src/staging/stager.test.ts - Unit tests for staging path validation
 agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
@@ -46,17 +46,24 @@ app/src/components/file_row.tsx - Draggable file row with click-to-copy, drag ha
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
+app/src/components/options/agent_section.tsx - Options panel controls for the WSL agent lifecycle
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
 app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
 app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
 app/src/components/options/excludes/excludes_recommendations.ts - Helpers for recommended global excludes toggles
 app/src/components/options/excludes/excludes_updates.ts - Pure update helpers for global excludes toggles
 app/src/components/options/excludes/use_excludes_state.ts - State and handlers for the excludes section UI
+app/src/components/options/general_section.tsx - Options panel section for general app settings
+app/src/components/options/output_folder_section.tsx - Options panel controls for staging output folder
+app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (texture + accent per tab)
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
+app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
+app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
+app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of the WSL agent
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -109,6 +116,7 @@ app/src/styles/theme_accents.css - Default accent color variables (runtime value
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
+app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
@@ -130,6 +138,11 @@ scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw 
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
+src-tauri/src/lib/agent/install.rs - Install the bundled WSL agent runtime into app local data
+src-tauri/src/lib/agent/mod.rs - WSL agent supervisor module exports
+src-tauri/src/lib/agent/supervisor.rs - App-managed WSL agent supervisor with spawn and stop support
+src-tauri/src/lib/agent/types.rs - Types for supervising the WSL agent lifecycle
+src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage the WSL agent supervisor
 src-tauri/src/lib/commands/agent_probe.rs - Probe local agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)

@@ -40,7 +40,7 @@ pub async fn probe_agent_port(port: u16) -> Result<AgentPortProbeResult, String>
     Ok(result)
 }
 
-fn probe_port_blocking(port: u16) -> AgentPortProbeResult {
+pub(crate) fn probe_port_blocking(port: u16) -> AgentPortProbeResult {
     if port == 0 {
         return AgentPortProbeResult {
             listening: false,

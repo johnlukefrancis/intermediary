@@ -21,7 +21,7 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 let minLevel: LogLevel = "info";
-const logDir = path.join(process.cwd(), "logs");
+const logDir = process.env["INTERMEDIARY_AGENT_LOG_DIR"] ?? path.join(process.cwd(), "logs");
 const logFile = path.join(logDir, "agent_latest.log");
 let logInitPromise: Promise<void> | null = null;
 

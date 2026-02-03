@@ -30,6 +30,46 @@ export function useSetOutputWindowsRoot(
   );
 }
 
+export function useSetAgentAutoStart(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (value: boolean) => void {
+  return useCallback(
+    (value: boolean) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          agentAutoStart: value,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
+export function useSetAgentDistro(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (value: string | null) => void {
+  return useCallback(
+    (value: string | null) => {
+      const trimmed = value?.trim() ?? "";
+      const nextValue = trimmed.length > 0 ? trimmed : null;
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          agentDistro: nextValue,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useSetTabThemeAccent(
   setConfig: SetConfig,
   saveConfig: SaveConfig

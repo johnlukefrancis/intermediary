@@ -19,6 +19,9 @@ export function AgentOfflineBanner(): React.JSX.Element | null {
     lastError,
     configuredHost,
     port,
+    autoStartEnabled,
+    supervisorStatus,
+    supervisorError,
   } = agentDiagnostics;
 
   const listeningLabel =
@@ -52,6 +55,15 @@ export function AgentOfflineBanner(): React.JSX.Element | null {
         {lastError && (
           <span className="agent-offline-banner__detail">
             Last error: {lastError}
+          </span>
+        )}
+        <span className="agent-offline-banner__detail">
+          Auto-start: {autoStartEnabled ? "enabled" : "disabled"}
+          {supervisorStatus ? ` (${supervisorStatus.replace(/_/g, " ")})` : ""}
+        </span>
+        {supervisorError && (
+          <span className="agent-offline-banner__detail">
+            Supervisor error: {supervisorError}
           </span>
         )}
         {isNonLoopbackHost && (

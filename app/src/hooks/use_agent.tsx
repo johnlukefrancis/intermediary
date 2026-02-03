@@ -25,14 +25,13 @@ import {
 } from "../lib/agent/connection_state.js";
 import type { AgentErrorEvent, AgentEvent } from "../shared/protocol.js";
 import type { AppPaths } from "../types/app_paths.js";
+import type { AgentSupervisorResult } from "../types/agent_supervisor.js";
 import { useConfig } from "./use_config.js";
+import { useAgentProbe } from "./agent/use_agent_probe.js";
+import { useAgentShutdown } from "./agent/use_agent_shutdown.js";
+import { useAgentSupervisor } from "./agent/use_agent_supervisor.js";
 
 type EventHandler = (event: AgentEvent) => void;
-
-interface AgentPortProbeResult {
-  listening: boolean;
-  error?: string | null;
-}
 
 interface AgentDiagnostics {
   expectedUrl: string;
@@ -41,6 +40,9 @@ interface AgentDiagnostics {
   lastError: string | null;
   configuredHost: string;
   port: number;
+  autoStartEnabled: boolean;
+  supervisorStatus: AgentSupervisorResult["status"] | null;
+  supervisorError: string | null;
 }
 
 interface AgentContextValue {
@@ -53,6 +55,7 @@ interface AgentContextValue {
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
+  restartAgent: () => void;
   subscribe: (handler: EventHandler) => () => void;
 }
 
@@ -82,13 +85,13 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
-  const [agentProbe, setAgentProbe] = useState<AgentPortProbeResult | null>(null);
-  const lastProbeKeyRef = useRef<string | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const outputWindowsRootRef = useRef(persistedConfig.outputWindowsRoot);
   const expectedHost = "127.0.0.1";
   const expectedUrl = `ws://${expectedHost}:${config.agentPort}`;
+  const autoStartEnabled = persistedConfig.agentAutoStart;
+  const distroOverride = persistedConfig.agentDistro;
 
   // clientHello lifecycle with reconnect support
   const helloState = useClientHello({
@@ -134,44 +137,20 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       setAgentError(null);
     }
   }, [agentError, connectionState.status]);
-
-  useEffect(() => {
-    if (!configIsLoaded) return;
-
-    if (connectionState.status === "connected") {
-      setAgentProbe(null);
-      lastProbeKeyRef.current = null;
-      return;
-    }
-
-    const attempts = connectionState.reconnectAttempts;
-    const shouldProbe = attempts >= 1 && (attempts === 1 || attempts % 3 === 0);
-    if (!shouldProbe) return;
-
-    const key = `${attempts}:${config.agentPort}:${connectionState.lastError ?? ""}`;
-    if (key === lastProbeKeyRef.current) return;
-    lastProbeKeyRef.current = key;
-
-    invoke<AgentPortProbeResult>("probe_agent_port", {
-      port: config.agentPort,
-    })
-      .then((result) => {
-        setAgentProbe({
-          listening: result.listening,
-          error: result.error ?? null,
-        });
-      })
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : "Probe failed";
-        setAgentProbe({ listening: false, error: message });
-      });
-  }, [
-    config.agentPort,
+  const agentProbe = useAgentProbe({
     configIsLoaded,
-    connectionState.lastError,
-    connectionState.reconnectAttempts,
-    connectionState.status,
-  ]);
+    port: config.agentPort,
+    connectionState,
+  });
+  const { supervisorResult, supervisorError, restartAgent } = useAgentSupervisor({
+    configIsLoaded,
+    agentHost: config.agentHost,
+    agentPort: config.agentPort,
+    autoStartEnabled,
+    distroOverride,
+    connectionState,
+  });
+  useAgentShutdown();
 
   // Initialize on mount (after config is loaded)
   useEffect(() => {
@@ -270,7 +249,9 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     agentError,
     agentDiagnostics:
       connectionState.status !== "connected" &&
-      (connectionState.reconnectAttempts > 0 || connectionState.lastError)
+      (connectionState.reconnectAttempts > 0 ||
+        connectionState.lastError ||
+        supervisorError)
         ? {
             expectedUrl,
             probeListening: agentProbe?.listening ?? null,
@@ -278,12 +259,16 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
             lastError: connectionState.lastError,
             configuredHost: config.agentHost,
             port: config.agentPort,
+            autoStartEnabled,
+            supervisorStatus: supervisorResult?.status ?? null,
+            supervisorError: supervisorError,
           }
         : null,
     config,
     appPaths,
     autoStageOnChange,
     setAutoStageOnChange,
+    restartAgent,
     subscribe,
   };
 

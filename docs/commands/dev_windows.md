@@ -9,6 +9,9 @@ Commands for running Intermediary in Windows with WSL source files.
 
 The project includes VS Code tasks that handle sync and build automatically.
 
+Note: Installed builds auto-start the WSL agent. During development these tasks still launch the
+agent from source, and the app will skip auto-start if a local agent is already listening.
+
 ### Tauri: dev (Windows)
 
 Syncs from WSL, installs dependencies if needed, then starts Tauri dev server.

@@ -66,6 +66,16 @@ Intermediary uses a **two-component architecture**:
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
   - Tabs are driven by configured repos (repoId + label), no project-specific UI
 
+### Agent Supervisor (Windows)
+
+- **Stack:** Tauri (Rust)
+- **Purpose:** Ensure the WSL agent is installed and running when the app is open
+- **Key features:**
+  - Installs bundled agent runtime + `im_bundle_cli` into `%LOCALAPPDATA%\Intermediary\agent`
+  - Launches the agent via `wsl.exe` with explicit env configuration
+  - Auto-start toggle with optional distro override
+  - Restart command and diagnostics surfaced in the UI
+
 ### WSL Agent
 
 - **Stack:** Node.js/TypeScript with chokidar for file watching; Rust bundle CLI (`crates/im_bundle`)

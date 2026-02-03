@@ -71,7 +71,7 @@
     },
     {
       "path": "agent/src/server/ws_server.ts",
-      "summary": "WebSocket server lifecycle on 0.0.0.0:3141"
+      "summary": "WebSocket server lifecycle on 0.0.0.0 with configurable port"
     },
     {
       "path": "agent/src/staging/path_bridge.ts",
@@ -174,6 +174,10 @@
       "summary": "Full-screen transparent overlay with options panel for app settings"
     },
     {
+      "path": "app/src/components/options/agent_section.tsx",
+      "summary": "Options panel controls for the WSL agent lifecycle"
+    },
+    {
       "path": "app/src/components/options/excludes_section.tsx",
       "summary": "Excludes configuration section for the options panel"
     },
@@ -198,6 +202,18 @@
       "summary": "State and handlers for the excludes section UI"
     },
     {
+      "path": "app/src/components/options/general_section.tsx",
+      "summary": "Options panel section for general app settings"
+    },
+    {
+      "path": "app/src/components/options/output_folder_section.tsx",
+      "summary": "Options panel controls for staging output folder"
+    },
+    {
+      "path": "app/src/components/options/reset_section.tsx",
+      "summary": "Options panel reset settings section with confirmation modal"
+    },
+    {
       "path": "app/src/components/options/texture_picker.tsx",
       "summary": "Small texture picker popover for tab theme selection"
     },
@@ -216,6 +232,18 @@
     {
       "path": "app/src/components/tab_remove_button.tsx",
       "summary": "\"x\" button for removing repos with confirmation"
+    },
+    {
+      "path": "app/src/hooks/agent/use_agent_probe.ts",
+      "summary": "Probe the agent port when disconnected for diagnostics"
+    },
+    {
+      "path": "app/src/hooks/agent/use_agent_shutdown.ts",
+      "summary": "Stop the WSL agent when the app window is closing"
+    },
+    {
+      "path": "app/src/hooks/agent/use_agent_supervisor.ts",
+      "summary": "Manage auto-start and restart of the WSL agent"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -426,6 +454,10 @@
       "summary": "Generic repo tab component with 3-column layout"
     },
     {
+      "path": "app/src/types/agent_supervisor.ts",
+      "summary": "Types for Tauri WSL agent supervisor responses"
+    },
+    {
       "path": "app/src/types/app_paths.ts",
       "summary": "TypeScript interface matching Rust AppPaths struct"
     },
@@ -508,6 +540,26 @@
     {
       "path": "src-tauri/src/bin/intermediary.rs",
       "summary": "Binary entry point for Tauri app"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/install.rs",
+      "summary": "Install the bundled WSL agent runtime into app local data"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/mod.rs",
+      "summary": "WSL agent supervisor module exports"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor.rs",
+      "summary": "App-managed WSL agent supervisor with spawn and stop support"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/types.rs",
+      "summary": "Types for supervising the WSL agent lifecycle"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/agent_control.rs",
+      "summary": "Tauri commands to manage the WSL agent supervisor"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_probe.rs",
