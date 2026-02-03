@@ -132,7 +132,10 @@ export function OptionsOverlay({
         {/* General Section */}
         <div className="options-section">
           <div className="options-section-title">General</div>
-          <div className="options-row">
+          <div
+            className="options-row"
+            title="When enabled, changed files are instantly copied to the staging folder so they're ready for drag-and-drop"
+          >
             <span className="options-row-label">Auto-stage</span>
             <label className="vintage-toggle">
               <input
