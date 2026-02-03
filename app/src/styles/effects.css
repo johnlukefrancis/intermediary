@@ -8,16 +8,16 @@
   /* Base gradient + edge glows (gradients have no harsh edge) */
   background:
     /* Left edge glow - fades to transparent */
-    linear-gradient(to right, var(--color-accent-glow) 0%, transparent 18px),
+    linear-gradient(to right, var(--color-accent-glow) 0%, transparent 5px),
     /* Right edge glow */
-    linear-gradient(to left, var(--color-accent-glow) 0%, transparent 18px),
+    linear-gradient(to left, var(--color-accent-glow) 0%, transparent 5px),
     /* Bottom edge glow */
-    linear-gradient(to top, var(--color-accent-glow) 0%, transparent 18px),
+    linear-gradient(to top, var(--color-accent-glow) 0%, transparent 5px),
     /* Original gradients */
     radial-gradient(
       ellipse 80% 60% at 50% 0%,
       var(--color-gradient-top) 0%,
-      transparent 60%
+      transparent 90%
     ),
     linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-gradient-bottom) 100%);
 }
