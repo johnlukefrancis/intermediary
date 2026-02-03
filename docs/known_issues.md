@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-01-31
+Updated on: 2026-02-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -41,4 +41,4 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
-*None yet*
+- 2026-02-03: Production CSP blocked WebSocket agent connections. CSP allowed `ws://localhost:3141` but frontend dialed `ws://127.0.0.1:3141`. Fixed by aligning CSP with actual loopback URL and removing WSL IP resolution path.

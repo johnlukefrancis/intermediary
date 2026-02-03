@@ -124,20 +124,8 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         if (!mounted) return;
         setAppPaths(paths);
 
-        let agentHost = config.agentHost;
-        if (agentHost === "localhost") {
-          try {
-            const resolved = await invoke<string | null>("resolve_wsl_host");
-            if (resolved) {
-              agentHost = resolved;
-            }
-          } catch (err) {
-            console.warn("[AgentProvider] resolve_wsl_host failed:", err);
-          }
-        }
-
         agentClient = createAgentClient({
-          host: agentHost,
+          host: config.agentHost,
           port: config.agentPort,
           onConnectionChange: (state) => {
             if (mounted) setConnectionState(state);

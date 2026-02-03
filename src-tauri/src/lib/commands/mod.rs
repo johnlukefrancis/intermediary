@@ -4,4 +4,3 @@
 pub mod config;
 pub mod file_manager;
 pub mod paths;
-pub mod wsl;

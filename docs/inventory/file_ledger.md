@@ -130,7 +130,6 @@ src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
-src-tauri/src/lib/commands/wsl.rs - WSL host resolution for Windows->WSL agent connections
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary

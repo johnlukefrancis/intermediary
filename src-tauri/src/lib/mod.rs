@@ -9,7 +9,6 @@ pub mod paths;
 use commands::config::{load_config, save_config};
 use commands::file_manager::open_in_file_manager;
 use commands::paths::{convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths};
-use commands::wsl::resolve_wsl_host;
 use obs::logging;
 
 /// Run the Tauri application
@@ -29,7 +28,6 @@ pub fn run() {
             get_app_paths,
             load_config,
             save_config,
-            resolve_wsl_host,
             convert_windows_to_wsl,
             convert_wsl_to_windows,
             open_in_file_manager

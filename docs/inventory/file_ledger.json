@@ -510,10 +510,6 @@
       "summary": "get_app_paths command implementation and path conversion utilities"
     },
     {
-      "path": "src-tauri/src/lib/commands/wsl.rs",
-      "summary": "WSL host resolution for Windows->WSL agent connections"
-    },
-    {
       "path": "src-tauri/src/lib/config/io.rs",
       "summary": "Config file I/O with atomic writes and error handling"
     },

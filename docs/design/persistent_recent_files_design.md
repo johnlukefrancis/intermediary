@@ -175,11 +175,7 @@ You already fixed the big “WSL reality” issues (Node/pnpm in WSL, binding to
 
    * If watcher startup throws after being inserted into the map, subsequent commands may think the repo is “watched,” but it’s not actually running. That blocks recovery until another full reset.
 
-4. **WSL host resolution is brittle**
-
-   * `resolve_wsl_host` grabs the first IP from `hostname -I`. That can be fine, but if WSL networking changes, the UI might be stuck pointing at a dead IP unless you re-resolve on repeated failures.
-
-5. **Security footgun: binding to 0.0.0.0**
+4. **Security footgun: binding to 0.0.0.0**
 
    * It’s probably still only reachable locally due to WSL NAT, but at minimum you should log the remote address and consider an allowlist for “local-ish” clients if this ever leaves dev-land.
 
