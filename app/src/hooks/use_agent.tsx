@@ -29,11 +29,26 @@ import { useConfig } from "./use_config.js";
 
 type EventHandler = (event: AgentEvent) => void;
 
+interface AgentPortProbeResult {
+  listening: boolean;
+  error?: string | null;
+}
+
+interface AgentDiagnostics {
+  expectedUrl: string;
+  probeListening: boolean | null;
+  probeError: string | null;
+  lastError: string | null;
+  configuredHost: string;
+  port: number;
+}
+
 interface AgentContextValue {
   client: AgentClient | null;
   connectionState: ConnectionState;
   helloState: HelloState;
   agentError: AgentErrorEvent | null;
+  agentDiagnostics: AgentDiagnostics | null;
   config: AppConfig;
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
@@ -67,9 +82,13 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
+  const [agentProbe, setAgentProbe] = useState<AgentPortProbeResult | null>(null);
+  const lastProbeKeyRef = useRef<string | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const outputWindowsRootRef = useRef(persistedConfig.outputWindowsRoot);
+  const expectedHost = "127.0.0.1";
+  const expectedUrl = `ws://${expectedHost}:${config.agentPort}`;
 
   // clientHello lifecycle with reconnect support
   const helloState = useClientHello({
@@ -115,6 +134,44 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       setAgentError(null);
     }
   }, [agentError, connectionState.status]);
+
+  useEffect(() => {
+    if (!configIsLoaded) return;
+
+    if (connectionState.status === "connected") {
+      setAgentProbe(null);
+      lastProbeKeyRef.current = null;
+      return;
+    }
+
+    const attempts = connectionState.reconnectAttempts;
+    const shouldProbe = attempts >= 1 && (attempts === 1 || attempts % 3 === 0);
+    if (!shouldProbe) return;
+
+    const key = `${attempts}:${config.agentPort}:${connectionState.lastError ?? ""}`;
+    if (key === lastProbeKeyRef.current) return;
+    lastProbeKeyRef.current = key;
+
+    invoke<AgentPortProbeResult>("probe_agent_port", {
+      port: config.agentPort,
+    })
+      .then((result) => {
+        setAgentProbe({
+          listening: result.listening,
+          error: result.error ?? null,
+        });
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "Probe failed";
+        setAgentProbe({ listening: false, error: message });
+      });
+  }, [
+    config.agentPort,
+    configIsLoaded,
+    connectionState.lastError,
+    connectionState.reconnectAttempts,
+    connectionState.status,
+  ]);
 
   // Initialize on mount (after config is loaded)
   useEffect(() => {
@@ -211,6 +268,18 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     connectionState,
     helloState,
     agentError,
+    agentDiagnostics:
+      connectionState.status !== "connected" &&
+      (connectionState.reconnectAttempts > 0 || connectionState.lastError)
+        ? {
+            expectedUrl,
+            probeListening: agentProbe?.listening ?? null,
+            probeError: agentProbe?.error ?? null,
+            lastError: connectionState.lastError,
+            configuredHost: config.agentHost,
+            port: config.agentPort,
+          }
+        : null,
     config,
     appPaths,
     autoStageOnChange,

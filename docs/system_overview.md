@@ -63,6 +63,7 @@ Intermediary uses a **two-component architecture**:
   - Three-column layout per repo: Docs, Code, Zip Bundles
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
+  - “WSL agent offline” banner with port diagnostics when the agent is unreachable
   - Tabs are driven by configured repos (repoId + label), no project-specific UI
 
 ### WSL Agent

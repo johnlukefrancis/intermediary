@@ -32,6 +32,7 @@ agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes 
 app/index.html - index module
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
+app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the WSL agent is offline
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
@@ -86,6 +87,7 @@ app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
+app/src/styles/agent_offline_banner.css - Banner styling for offline WSL agent diagnostics
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
 app/src/styles/bundle_column.css - Hardware-style bundle column with segmented controls and command buttons
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
@@ -128,6 +130,7 @@ scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw 
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
+src-tauri/src/lib/commands/agent_probe.rs - Probe local agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)
 src-tauri/src/lib/commands/mod.rs - Tauri command exports

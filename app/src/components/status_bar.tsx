@@ -36,6 +36,7 @@ export function StatusBar(): React.JSX.Element {
     appPaths,
     helloState,
     agentError,
+    agentDiagnostics,
   } = useAgent();
   const {
     config,
@@ -62,7 +63,11 @@ export function StatusBar(): React.JSX.Element {
 
   // Show connection error when not connected, agent/hello error when connected
   const errorToShow =
-    status === "connected" ? agentErrorMessage ?? helloState.lastError : connectionError;
+    agentDiagnostics
+      ? null
+      : status === "connected"
+        ? agentErrorMessage ?? helloState.lastError
+        : connectionError;
   const configErrorMessage = loadError
     ? `Config load failed: ${loadError}`
     : saveError

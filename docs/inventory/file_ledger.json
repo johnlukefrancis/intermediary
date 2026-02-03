@@ -118,6 +118,10 @@
       "summary": "\"+\" button for adding new repositories via directory picker"
     },
     {
+      "path": "app/src/components/agent_offline_banner.tsx",
+      "summary": "Banner with diagnostics when the WSL agent is offline"
+    },
+    {
       "path": "app/src/components/bundles/bundle_column.tsx",
       "summary": "Main bundles column component"
     },
@@ -334,6 +338,10 @@
       "summary": "Accessibility utilities - focus rings, disabled states, screen reader helpers"
     },
     {
+      "path": "app/src/styles/agent_offline_banner.css",
+      "summary": "Banner styling for offline WSL agent diagnostics"
+    },
+    {
       "path": "app/src/styles/badges.css",
       "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]"
     },
@@ -500,6 +508,10 @@
     {
       "path": "src-tauri/src/bin/intermediary.rs",
       "summary": "Binary entry point for Tauri app"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/agent_probe.rs",
+      "summary": "Probe local agent port availability for diagnostics"
     },
     {
       "path": "src-tauri/src/lib/commands/config.rs",

@@ -4,6 +4,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { StatusBar } from "./components/status_bar.js";
+import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
@@ -169,6 +170,7 @@ export function App(): React.JSX.Element {
     return (
       <div className="app" data-motion={motionPaused ? "paused" : undefined} style={themeStyle}>
         <header className="header-stack glass-surface">
+          <AgentOfflineBanner />
           <StatusBar />
         </header>
         <main className="tab-content">
@@ -192,6 +194,7 @@ export function App(): React.JSX.Element {
           onRepoChange={setActiveRepoId}
           onRepoAdded={handleRepoAdded}
         />
+        <AgentOfflineBanner />
         <StatusBar />
       </header>
       <main className="tab-content">

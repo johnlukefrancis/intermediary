@@ -6,6 +6,7 @@ pub mod config;
 pub mod obs;
 pub mod paths;
 
+use commands::agent_probe::probe_agent_port;
 use commands::config::{load_config, save_config};
 use commands::file_manager::open_in_file_manager;
 use commands::paths::{convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths};
@@ -29,6 +30,7 @@ pub fn run() {
             get_app_paths,
             load_config,
             save_config,
+            probe_agent_port,
             reset_app_state,
             convert_windows_to_wsl,
             convert_wsl_to_windows,
