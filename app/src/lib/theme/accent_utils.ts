@@ -16,6 +16,17 @@ export interface AccentCssVars {
 /** Default accent color (dusty rose) */
 export const DEFAULT_ACCENT_HEX = "#c4688a";
 
+/** Accent palette for auto-assigned tab themes */
+export const ACCENT_PALETTE = [
+  "#6fbf9e",
+  "#7aa2f7",
+  "#d1a04f",
+  "#c4688a",
+  "#a98bdc",
+  "#d0776b",
+  "#5fb3b3",
+];
+
 interface RgbColor {
   r: number;
   g: number;

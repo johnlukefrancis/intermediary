@@ -8,9 +8,26 @@ import {
   type RepoConfig,
   type GlobalExcludes,
 } from "../shared/config.js";
+import { ACCENT_PALETTE, DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 
 type SetConfig = Dispatch<SetStateAction<PersistedConfig>>;
 type SaveConfig = (config: PersistedConfig) => void;
+
+function pickNextAccentHex(tabThemes: PersistedConfig["tabThemes"]): string {
+  const used = new Set(
+    Object.values(tabThemes).map((theme) => theme.accentHex.toLowerCase())
+  );
+  for (const color of ACCENT_PALETTE) {
+    if (!used.has(color.toLowerCase())) {
+      return color;
+    }
+  }
+  if (ACCENT_PALETTE.length > 0) {
+    const index = Object.keys(tabThemes).length % ACCENT_PALETTE.length;
+    return ACCENT_PALETTE[index] ?? DEFAULT_ACCENT_HEX;
+  }
+  return DEFAULT_ACCENT_HEX;
+}
 
 export function useSetAutoStageGlobal(
   setConfig: SetConfig,
@@ -99,9 +116,20 @@ export function useAddRepo(
   return useCallback(
     (repo: RepoConfig) => {
       setConfig((prev) => {
+        const themeKey = repo.groupId ?? repo.repoId;
+        let nextTabThemes = prev.tabThemes;
+        if (!(themeKey in prev.tabThemes)) {
+          nextTabThemes = {
+            ...prev.tabThemes,
+            [themeKey]: {
+              accentHex: pickNextAccentHex(prev.tabThemes),
+            },
+          };
+        }
         const next: PersistedConfig = {
           ...prev,
           repos: [...prev.repos, repo],
+          tabThemes: nextTabThemes,
         };
         saveConfig(next);
         return next;
