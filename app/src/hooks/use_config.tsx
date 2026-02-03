@@ -16,6 +16,8 @@ import {
   useSetGlobalExcludes,
   useAddRepo,
   useUpdateRepo,
+  useRenameRepoLabel,
+  useRenameGroupLabel,
   useRemoveRepo,
   useRemoveGroup,
 } from "./use_config_actions.js";
@@ -56,6 +58,10 @@ interface ConfigContextValue {
     repoId: string,
     updates: Partial<Omit<RepoConfig, "repoId">>
   ) => void;
+  /** Rename a repo label */
+  renameRepoLabel: (repoId: string, label: string) => void;
+  /** Rename a group label */
+  renameGroupLabel: (groupId: string, label: string) => void;
   /** Remove a repo by repoId (also cleans up bundleSelections, starredFiles) */
   removeRepo: (repoId: string) => void;
   /** Remove all repos in a group (also cleans up themes and starredFiles) */
@@ -107,6 +113,8 @@ export function ConfigProvider({
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
   const addRepo = useAddRepo(setConfig, saveConfig);
   const updateRepo = useUpdateRepo(setConfig, saveConfig);
+  const renameRepoLabel = useRenameRepoLabel(setConfig, saveConfig);
+  const renameGroupLabel = useRenameGroupLabel(setConfig, saveConfig);
   const removeRepo = useRemoveRepo(setConfig, saveConfig);
   const removeGroup = useRemoveGroup(setConfig, saveConfig);
   const setOutputWindowsRoot = useSetOutputWindowsRoot(setConfig, saveConfig);
@@ -127,6 +135,8 @@ export function ConfigProvider({
     setGlobalExcludes,
     addRepo,
     updateRepo,
+    renameRepoLabel,
+    renameGroupLabel,
     removeRepo,
     removeGroup,
     setOutputWindowsRoot,

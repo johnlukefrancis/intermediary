@@ -130,6 +130,56 @@ export function useUpdateRepo(
   );
 }
 
+export function useRenameRepoLabel(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (repoId: string, label: string) => void {
+  return useCallback(
+    (repoId: string, label: string) => {
+      const trimmed = label.trim();
+      if (trimmed.length === 0) return;
+      setConfig((prev) => {
+        const changed = prev.repos.some(
+          (repo) => repo.repoId === repoId && repo.label !== trimmed
+        );
+        if (!changed) return prev;
+        const updatedRepos = prev.repos.map((repo) =>
+          repo.repoId === repoId ? { ...repo, label: trimmed } : repo
+        );
+        const next: PersistedConfig = { ...prev, repos: updatedRepos };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
+export function useRenameGroupLabel(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (groupId: string, label: string) => void {
+  return useCallback(
+    (groupId: string, label: string) => {
+      const trimmed = label.trim();
+      if (trimmed.length === 0) return;
+      setConfig((prev) => {
+        const changed = prev.repos.some(
+          (repo) => repo.groupId === groupId && repo.groupLabel !== trimmed
+        );
+        if (!changed) return prev;
+        const updatedRepos = prev.repos.map((repo) =>
+          repo.groupId === groupId ? { ...repo, groupLabel: trimmed } : repo
+        );
+        const next: PersistedConfig = { ...prev, repos: updatedRepos };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useRemoveRepo(
   setConfig: SetConfig,
   saveConfig: SaveConfig

@@ -2,7 +2,7 @@
 // Description: Options panel theme controls (texture + accent per tab)
 
 import type React from "react";
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import type { TabTheme } from "../../shared/config.js";
 import { DEFAULT_ACCENT_HEX } from "../../lib/theme/accent_utils.js";
 import {
@@ -13,7 +13,9 @@ import { TexturePicker } from "./texture_picker.js";
 
 interface ThemeEntry {
   tabKey: string;
+  id: string;
   label: string;
+  kind: "repo" | "group";
 }
 
 interface ThemeSectionProps {
@@ -22,6 +24,8 @@ interface ThemeSectionProps {
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
+  renameRepoLabel: (repoId: string, label: string) => void;
+  renameGroupLabel: (groupId: string, label: string) => void;
 }
 
 export function ThemeSection({
@@ -30,8 +34,42 @@ export function ThemeSection({
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
+  renameRepoLabel,
+  renameGroupLabel,
 }: ThemeSectionProps): React.JSX.Element | null {
   const textureOptions = useMemo(() => getTextureOptions(), []);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [draftLabel, setDraftLabel] = useState("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const cancelCommitRef = useRef(false);
+
+  useEffect(() => {
+    if (editingKey && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingKey]);
+
+  function commitRename(entry: ThemeEntry): void {
+    if (cancelCommitRef.current) {
+      cancelCommitRef.current = false;
+      setEditingKey(null);
+      return;
+    }
+    const trimmed = draftLabel.trim();
+    if (!trimmed) {
+      setEditingKey(null);
+      return;
+    }
+    if (trimmed !== entry.label) {
+      if (entry.kind === "group") {
+        renameGroupLabel(entry.id, trimmed);
+      } else {
+        renameRepoLabel(entry.id, trimmed);
+      }
+    }
+    setEditingKey(null);
+  }
 
   if (entries.length === 0) {
     return null;
@@ -51,12 +89,76 @@ export function ThemeSection({
             textureOptions[0];
           const selectedTextureId = resolvedTexture?.id ?? DEFAULT_TEXTURE_ID;
           const hasCustomTheme = entry.tabKey in tabThemes;
+          const isEditing = editingKey === entry.tabKey;
 
           return (
             <div key={entry.tabKey} className="options-theme-row">
-              <span className="options-theme-label" title={entry.label}>
-                {entry.label}
-              </span>
+              <div className="options-theme-label-row">
+                {isEditing ? (
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={draftLabel}
+                    onChange={(event) => {
+                      setDraftLabel(event.target.value);
+                    }}
+                    onBlur={() => {
+                      commitRename(entry);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitRename(entry);
+                      }
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelCommitRef.current = true;
+                        setEditingKey(null);
+                        setDraftLabel("");
+                      }
+                    }}
+                    className="options-theme-input"
+                    aria-label={`Rename ${entry.label}`}
+                  />
+                ) : (
+                  <span className="options-theme-label" title={entry.label}>
+                    {entry.label}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="options-theme-rename"
+                  onClick={() => {
+                    setEditingKey(entry.tabKey);
+                    setDraftLabel(entry.label);
+                  }}
+                  aria-label={`Rename ${entry.label}`}
+                  title={`Rename ${entry.label}`}
+                >
+                  <svg
+                    className="options-theme-rename-icon"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M4 20h4l10-10-4-4L4 16v4Z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="m14 6 4 4"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
               <div className="options-theme-controls">
                 <TexturePicker
                   options={textureOptions}

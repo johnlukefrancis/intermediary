@@ -49,6 +49,8 @@ export function StatusBar(): React.JSX.Element {
     loadError,
     saveError,
     resetConfig,
+    renameRepoLabel,
+    renameGroupLabel,
   } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -123,6 +125,8 @@ export function StatusBar(): React.JSX.Element {
           setTabThemeAccent={setTabThemeAccent}
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}
+          renameRepoLabel={renameRepoLabel}
+          renameGroupLabel={renameGroupLabel}
           resetConfig={resetConfig}
           onClose={() => {
             setOptionsOpen(false);

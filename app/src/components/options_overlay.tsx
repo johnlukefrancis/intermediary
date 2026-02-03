@@ -28,13 +28,17 @@ interface OptionsOverlayProps {
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
+  renameRepoLabel: (repoId: string, label: string) => void;
+  renameGroupLabel: (groupId: string, label: string) => void;
   resetConfig: () => void;
   onClose: () => void;
 }
 
 interface ThemeEntry {
   tabKey: string;
+  id: string;
   label: string;
+  kind: "repo" | "group";
 }
 
 export function OptionsOverlay({
@@ -51,6 +55,8 @@ export function OptionsOverlay({
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
+  renameRepoLabel,
+  renameGroupLabel,
   resetConfig,
   onClose,
 }: OptionsOverlayProps): React.JSX.Element {
@@ -93,6 +99,7 @@ export function OptionsOverlay({
   // Derive theme entries from repos (grouped: one per groupId, ungrouped: one per repoId)
   const themeEntries = useMemo((): ThemeEntry[] => {
     const seenGroups = new Set<string>();
+    const groupIndex = new Map<string, number>();
     const entries: ThemeEntry[] = [];
 
     for (const repo of repos) {
@@ -100,16 +107,30 @@ export function OptionsOverlay({
         // Grouped repo: one entry per groupId
         if (!seenGroups.has(repo.groupId)) {
           seenGroups.add(repo.groupId);
+          const nextIndex = entries.length;
           entries.push({
             tabKey: repo.groupId,
+            id: repo.groupId,
             label: repo.groupLabel ?? repo.groupId,
+            kind: "group",
           });
+          groupIndex.set(repo.groupId, nextIndex);
+        } else if (repo.groupLabel) {
+          const index = groupIndex.get(repo.groupId);
+          if (index !== undefined && entries[index]?.label === repo.groupId) {
+            entries[index] = {
+              ...entries[index],
+              label: repo.groupLabel,
+            };
+          }
         }
       } else {
         // Ungrouped repo: one entry per repoId
         entries.push({
           tabKey: repo.repoId,
+          id: repo.repoId,
           label: repo.label,
+          kind: "repo",
         });
       }
     }
@@ -210,6 +231,8 @@ export function OptionsOverlay({
           setTabThemeAccent={setTabThemeAccent}
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}
+          renameRepoLabel={renameRepoLabel}
+          renameGroupLabel={renameGroupLabel}
         />
 
         <div className="options-section">
