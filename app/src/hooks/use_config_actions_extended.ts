@@ -5,7 +5,6 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import {
   type PersistedConfig,
   type StarredFilesEntry,
-  getDefaultPersistedConfig,
 } from "../shared/config.js";
 import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 
@@ -176,15 +175,4 @@ export function useToggleStarredFile(
     },
     [setConfig, saveConfig]
   );
-}
-
-export function useResetConfig(
-  setConfig: SetConfig,
-  saveConfigNow: SaveConfig
-): () => void {
-  return useCallback(() => {
-    const defaults = getDefaultPersistedConfig();
-    setConfig(defaults);
-    saveConfigNow(defaults);
-  }, [setConfig, saveConfigNow]);
 }

@@ -361,14 +361,13 @@
 }
 
 .options-button--destructive {
-  border-color: var(--color-error);
-  color: var(--color-error);
-}
-
-.options-button--destructive:hover:not(:disabled) {
   background: var(--color-error);
   border-color: var(--color-error);
   color: var(--color-bg-base);
+}
+
+.options-button--destructive:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
 .options-button:disabled {

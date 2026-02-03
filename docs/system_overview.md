@@ -119,7 +119,7 @@ User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
-The Options menu includes a "Reset all settings" action that restores defaults, clears repos and preferences, and does not delete any files.
+The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles plus recent-file caches without deleting repository files.
 
 ## Why This Architecture?
 

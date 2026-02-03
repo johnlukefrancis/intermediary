@@ -20,6 +20,7 @@ interface ConfigStorageState {
   saveError: string | null;
   saveConfig: (newConfig: PersistedConfig) => void;
   saveConfigNow: (newConfig: PersistedConfig) => void;
+  resetConfig: () => void;
 }
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -90,6 +91,18 @@ export function useConfigStorage(): ConfigStorageState {
     saveConfigNow(configRef.current);
   }, [saveConfigNow]);
 
+  const resetConfig = useCallback(() => {
+    const outputWindowsRoot = configRef.current.outputWindowsRoot;
+    const defaults = getDefaultPersistedConfig();
+    setConfig(defaults);
+    saveConfigNow(defaults);
+    invoke("reset_app_state", { outputWindowsRoot }).catch((err: unknown) => {
+      const message = getErrorMessage(err, "Reset failed");
+      console.error("[ConfigProvider] Reset failed:", err);
+      setSaveError(`Reset failed: ${message}`);
+    });
+  }, [saveConfigNow]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -153,5 +166,6 @@ export function useConfigStorage(): ConfigStorageState {
     saveError,
     saveConfig,
     saveConfigNow,
+    resetConfig,
   };
 }

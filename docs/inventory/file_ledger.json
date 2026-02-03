@@ -514,6 +514,10 @@
       "summary": "get_app_paths command implementation and path conversion utilities"
     },
     {
+      "path": "src-tauri/src/lib/commands/reset.rs",
+      "summary": "Tauri command to clear staging artifacts and caches"
+    },
+    {
       "path": "src-tauri/src/lib/config/io.rs",
       "summary": "Config file I/O with atomic writes and error handling"
     },

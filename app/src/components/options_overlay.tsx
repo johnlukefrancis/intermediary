@@ -216,8 +216,8 @@ export function OptionsOverlay({
           <div className="options-section-title">Reset</div>
           <div className="options-row stacked">
             <span className="options-hint">
-              Resets all settings to defaults. Repos and preferences will be cleared,
-              but no files are deleted.
+              Removes repos from Intermediary and clears settings, staged bundles, and
+              recent-file caches. It never deletes files inside your repositories.
             </span>
             <div className="options-button-row">
               <button
@@ -237,7 +237,7 @@ export function OptionsOverlay({
       {showResetConfirm && (
         <ConfirmModal
           title="Reset All Settings"
-          message="Reset all settings to defaults? This clears repos, bundle selections, and UI preferences, but does not delete any files."
+          message="Reset all settings? This removes repos from Intermediary and clears bundle selections, staged bundles, and recent-file caches. It never deletes files inside your repositories."
           confirmLabel="Reset"
           isDestructive
           onConfirm={() => {
