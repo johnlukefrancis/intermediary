@@ -45,6 +45,8 @@ export function StatusBar(): React.JSX.Element {
     setTabThemeTexture,
     clearTabTheme,
     setRecentFilesLimit,
+    loadError,
+    saveError,
   } = useConfig();
   const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -60,6 +62,14 @@ export function StatusBar(): React.JSX.Element {
   // Show connection error when not connected, agent/hello error when connected
   const errorToShow =
     status === "connected" ? agentErrorMessage ?? helloState.lastError : connectionError;
+  const configErrorMessage = loadError
+    ? `Config load failed: ${loadError}`
+    : saveError
+      ? `Config save failed: ${saveError}`
+      : null;
+  const errorItems = [errorToShow, configErrorMessage].filter(
+    (item): item is string => Boolean(item)
+  );
 
   return (
     <>
@@ -69,14 +79,14 @@ export function StatusBar(): React.JSX.Element {
             <span className="led-dot" aria-hidden="true" />
             <span className="led-label">{display.label}</span>
           </span>
-          {errorToShow && (
-            <>
+          {errorItems.map((item, index) => (
+            <span key={`${index}-${item}`}>
               <span className="chrome-sep" aria-hidden="true">·</span>
-              <span className="status-error" title={errorToShow}>
-                {errorToShow.length > 50 ? `${errorToShow.slice(0, 50)}...` : errorToShow}
+              <span className="status-error" title={item}>
+                {item.length > 50 ? `${item.slice(0, 50)}...` : item}
               </span>
-            </>
-          )}
+            </span>
+          ))}
         </div>
 
         <div className="status-right">

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 11;
+pub const CONFIG_VERSION: u32 = 12;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,7 +48,7 @@ impl Default for PersistedConfig {
     fn default() -> Self {
         Self {
             config_version: CONFIG_VERSION,
-            agent_host: "localhost".to_string(),
+            agent_host: "127.0.0.1".to_string(),
             agent_port: 3141,
             auto_stage_global: true,
             repos: default_repos(),
@@ -261,4 +261,29 @@ fn default_repos() -> Vec<RepoConfig> {
 
 fn default_recent_files_limit() -> u32 {
     200
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CONFIG_VERSION;
+    use regex::Regex;
+
+    #[test]
+    fn ts_config_version_matches_rust() {
+        let contents = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../app/src/shared/config/version.ts"
+        ));
+        let regex = Regex::new(r"CONFIG_VERSION\\s*=\\s*(\\d+)").expect("valid regex");
+        let caps = regex
+            .captures(contents)
+            .expect("CONFIG_VERSION not found in version.ts");
+        let ts_version: u32 = caps[1]
+            .parse()
+            .expect("CONFIG_VERSION in version.ts must be a number");
+        assert_eq!(
+            ts_version, CONFIG_VERSION,
+            "TS CONFIG_VERSION {ts_version} must match Rust CONFIG_VERSION {CONFIG_VERSION}"
+        );
+    }
 }

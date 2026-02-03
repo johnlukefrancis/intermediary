@@ -2,6 +2,7 @@
 // Description: Tauri commands for config persistence
 
 use crate::config::{io, types::LoadConfigResult, validate_config, PersistedConfig};
+use crate::obs::logging;
 use tauri::{AppHandle, Manager};
 
 /// Load configuration from disk
@@ -10,12 +11,23 @@ use tauri::{AppHandle, Manager};
 /// freshly created or migrated. Falls back to defaults on missing file.
 #[tauri::command]
 pub async fn load_config(app: AppHandle) -> Result<LoadConfigResult, String> {
-    let config_path = resolve_config_path(&app)?;
+    let config_path = resolve_config_path(&app).map_err(|err| {
+        logging::log("error", "config", "load_failed", &err);
+        err
+    })?;
 
     let result = tauri::async_runtime::spawn_blocking(move || io::load_from_disk(&config_path))
         .await
-        .map_err(|e| format!("Config load task failed: {e}"))?
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let message = format!("Config load task failed: {e}");
+            logging::log("error", "config", "load_failed", &message);
+            message
+        })?
+        .map_err(|e| {
+            let message = format!("Config load failed: {e}");
+            logging::log("error", "config", "load_failed", &message);
+            message
+        })?;
 
     Ok(LoadConfigResult {
         config: result.config,
@@ -30,14 +42,29 @@ pub async fn load_config(app: AppHandle) -> Result<LoadConfigResult, String> {
 /// Returns error if validation fails or write fails.
 #[tauri::command]
 pub async fn save_config(app: AppHandle, config: PersistedConfig) -> Result<(), String> {
-    let config_path = resolve_config_path(&app)?;
+    let config_path = resolve_config_path(&app).map_err(|err| {
+        logging::log("error", "config", "save_failed", &err);
+        err
+    })?;
 
-    validate_config(&config)?;
+    validate_config(&config).map_err(|err| {
+        let message = format!("Config validation failed: {err}");
+        logging::log("error", "config", "save_failed", &message);
+        message
+    })?;
 
     tauri::async_runtime::spawn_blocking(move || io::save_to_disk(&config_path, &config))
         .await
-        .map_err(|e| format!("Config save task failed: {e}"))?
-        .map_err(|e| e.to_string())
+        .map_err(|e| {
+            let message = format!("Config save task failed: {e}");
+            logging::log("error", "config", "save_failed", &message);
+            message
+        })?
+        .map_err(|e| {
+            let message = format!("Config save failed: {e}");
+            logging::log("error", "config", "save_failed", &message);
+            message
+        })
 }
 
 fn resolve_config_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {

@@ -17,8 +17,15 @@ interface ConfigStorageState {
   setConfig: Dispatch<SetStateAction<PersistedConfig>>;
   isLoaded: boolean;
   loadError: string | null;
+  saveError: string | null;
   saveConfig: (newConfig: PersistedConfig) => void;
   saveConfigNow: (newConfig: PersistedConfig) => void;
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return fallback;
 }
 
 export function useConfigStorage(): ConfigStorageState {
@@ -27,6 +34,7 @@ export function useConfigStorage(): ConfigStorageState {
   );
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<number | null>(null);
   const configRef = useRef(config);
@@ -47,9 +55,15 @@ export function useConfigStorage(): ConfigStorageState {
       saveTimeoutRef.current = null;
       isDirtyRef.current = false;
 
-      invoke("save_config", { config: newConfig }).catch((err: unknown) => {
-        console.error("[ConfigProvider] Failed to save config:", err);
-      });
+      invoke("save_config", { config: newConfig })
+        .then(() => {
+          setSaveError(null);
+        })
+        .catch((err: unknown) => {
+          const message = getErrorMessage(err, "Failed to save config");
+          console.error("[ConfigProvider] Failed to save config:", err);
+          setSaveError(message);
+        });
     }, SAVE_DEBOUNCE_MS);
   }, []);
 
@@ -60,9 +74,15 @@ export function useConfigStorage(): ConfigStorageState {
     }
     isDirtyRef.current = false;
     configRef.current = newConfig;
-    invoke("save_config", { config: newConfig }).catch((err: unknown) => {
-      console.error("[ConfigProvider] Failed to save config:", err);
-    });
+    invoke("save_config", { config: newConfig })
+      .then(() => {
+        setSaveError(null);
+      })
+      .catch((err: unknown) => {
+        const message = getErrorMessage(err, "Failed to save config");
+        console.error("[ConfigProvider] Failed to save config:", err);
+        setSaveError(message);
+      });
   }, []);
 
   const saveConfigImmediate = useCallback(() => {
@@ -92,8 +112,7 @@ export function useConfigStorage(): ConfigStorageState {
       } catch (err: unknown) {
         if (!mounted) return;
 
-        const message =
-          err instanceof Error ? err.message : "Failed to load config";
+        const message = getErrorMessage(err, "Failed to load config");
         console.error("[ConfigProvider] Load failed:", err);
         setLoadError(message);
         setIsLoaded(true);
@@ -131,6 +150,7 @@ export function useConfigStorage(): ConfigStorageState {
     setConfig,
     isLoaded,
     loadError,
+    saveError,
     saveConfig,
     saveConfigNow,
   };

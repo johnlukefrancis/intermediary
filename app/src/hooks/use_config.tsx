@@ -34,6 +34,8 @@ interface ConfigContextValue {
   isLoaded: boolean;
   /** Error message if load failed */
   loadError: string | null;
+  /** Error message if save failed */
+  saveError: string | null;
   /** Update auto-stage global setting */
   setAutoStageGlobal: (value: boolean) => void;
   /** Update last active tab (by repoId) */
@@ -82,7 +84,15 @@ interface ConfigProviderProps {
 export function ConfigProvider({
   children,
 }: ConfigProviderProps): React.JSX.Element {
-  const { config, setConfig, isLoaded, loadError, saveConfig, saveConfigNow } =
+  const {
+    config,
+    setConfig,
+    isLoaded,
+    loadError,
+    saveError,
+    saveConfig,
+    saveConfigNow,
+  } =
     useConfigStorage();
 
   const setAutoStageGlobal = useSetAutoStageGlobal(setConfig, saveConfig);
@@ -103,6 +113,7 @@ export function ConfigProvider({
     config,
     isLoaded,
     loadError,
+    saveError,
     setAutoStageGlobal,
     setLastActiveTabId,
     setBundleSelection,

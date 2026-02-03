@@ -132,6 +132,11 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // These fields are simply ignored during deserialization (serde ignores unknown fields).
     // Old lastActiveTabId values may not match repoIds; app.tsx handles fallback.
 
+    // Version 11 -> 12: Normalize localhost agent host to loopback IP.
+    if config.config_version < 12 && config.agent_host == "localhost" {
+        config.agent_host = "127.0.0.1".to_string();
+    }
+
     // Update version to current
     config.config_version = CONFIG_VERSION;
     config
