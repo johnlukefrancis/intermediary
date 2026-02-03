@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-01-30
+Updated on: 2026-02-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -76,8 +76,10 @@ The VS Code tasks set these automatically:
 |----------|-------------|---------|
 | `INTERMEDIARY_WIN_PATH` | Windows mirror directory | `D:\code\intermediary` |
 | `INTERMEDIARY_WSL_PATH` | WSL source directory | `/home/johnf/code/intermediary` |
-| `INTERMEDIARY_WSL_DISTRO` | WSL distribution name | `Ubuntu` |
+| `INTERMEDIARY_WSL_DISTRO` | WSL distro for VS Code tasks (sync scripts) | `Ubuntu` |
 | `INTERMEDIARY_LOG_DIR` | Log output directory (WSL UNC path) | `\\wsl$\Ubuntu\home\johnf\code\intermediary\logs` |
+
+**Note:** Native WSL paths (e.g., `/home/...`) are converted to Windows paths automatically via `wslpath` at runtime. No environment variable configuration is needed for most setups; if your repos live in a non-default distro, set `INTERMEDIARY_WSL_DISTRO` so `wslpath` targets that distro.
 
 ## Watch Sync
 

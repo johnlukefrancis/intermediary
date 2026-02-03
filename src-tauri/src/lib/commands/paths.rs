@@ -2,7 +2,7 @@
 // Description: get_app_paths command implementation and path conversion utilities
 
 use crate::paths::app_paths::AppPaths;
-use crate::paths::wsl_convert::{windows_to_wsl_path, wsl_to_windows_path};
+use crate::paths::wsl_convert::{run_wslpath, windows_to_wsl_path, wsl_to_windows_path};
 use tauri::AppHandle;
 
 /// Returns resolved application paths for staging, logging, etc.
@@ -24,19 +24,18 @@ pub fn convert_windows_to_wsl(windows_path: String) -> Result<String, String> {
 }
 
 /// Convert a WSL path to Windows path format.
-/// Handles both /mnt/X/... paths and native WSL paths.
+/// Handles both /mnt/X/... paths (fast pure conversion) and native WSL paths (via wslpath).
 #[tauri::command]
-pub fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> {
-    // Try standard /mnt/X/... conversion first
+pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> {
+    // Fast path: /mnt/X/... uses pure Rust conversion
     if let Some(win_path) = wsl_to_windows_path(&wsl_path) {
         return Ok(win_path);
     }
 
-    // Native WSL path - use UNC path with distro name
-    let distro = std::env::var("INTERMEDIARY_WSL_DISTRO").unwrap_or_else(|_| "Ubuntu".to_string());
-    Ok(format!(
-        r"\\wsl.localhost\{}\{}",
-        distro,
-        wsl_path.trim_start_matches('/').replace('/', "\\")
-    ))
+    // Native Linux path: call wslpath via subprocess
+    tauri::async_runtime::spawn_blocking(move || {
+        run_wslpath(&wsl_path).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }

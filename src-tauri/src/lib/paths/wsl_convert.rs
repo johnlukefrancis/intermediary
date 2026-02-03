@@ -1,6 +1,8 @@
 // Path: src-tauri/src/lib/paths/wsl_convert.rs
 // Description: Windows <-> WSL path conversion utilities
 
+use std::process::Command;
+
 /// Convert a Windows path to its WSL equivalent
 ///
 /// Example: `C:\Users\john\AppData` -> `/mnt/c/Users/john/AppData`
@@ -74,6 +76,75 @@ pub fn wsl_to_windows_path(wsl_path: &str) -> Option<String> {
     Some(format!("{drive_letter}:\\{windows_rest}"))
 }
 
+/// Errors that can occur when running wslpath via subprocess.
+#[derive(Debug)]
+pub enum WslConvertError {
+    /// wsl.exe not found or failed to execute
+    WslNotFound(std::io::Error),
+    /// wslpath returned a nonzero exit code
+    WslpathFailed {
+        exit_code: Option<i32>,
+        stderr: String,
+    },
+    /// wslpath returned empty or invalid output
+    InvalidOutput(String),
+}
+
+impl std::fmt::Display for WslConvertError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WslNotFound(e) => write!(f, "WSL not found or failed to execute: {e}"),
+            Self::WslpathFailed { exit_code, stderr } => {
+                let code_str = exit_code
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| "unknown".to_string());
+                write!(f, "wslpath failed (exit code {code_str}): {stderr}")
+            }
+            Self::InvalidOutput(msg) => write!(f, "wslpath returned invalid output: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for WslConvertError {}
+
+/// Convert a native WSL path to Windows format by calling `wsl.exe wslpath -w`.
+///
+/// This is a blocking function; call from `spawn_blocking` in async contexts.
+///
+/// Example: `/home/john/code` -> `\\wsl.localhost\<distro>\home\john\code`
+pub fn run_wslpath(wsl_path: &str) -> Result<String, WslConvertError> {
+    let mut command = Command::new("wsl.exe");
+    if let Ok(distro) = std::env::var("INTERMEDIARY_WSL_DISTRO") {
+        let trimmed = distro.trim();
+        if !trimmed.is_empty() {
+            command.arg("-d").arg(trimmed);
+        }
+    }
+
+    let output = command
+        .args(["wslpath", "-w", wsl_path])
+        .output()
+        .map_err(WslConvertError::WslNotFound)?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(WslConvertError::WslpathFailed {
+            exit_code: output.status.code(),
+            stderr,
+        });
+    }
+
+    let windows_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    if windows_path.is_empty() {
+        return Err(WslConvertError::InvalidOutput(
+            "wslpath returned empty output".to_string(),
+        ));
+    }
+
+    Ok(windows_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -131,6 +202,33 @@ mod tests {
         assert_eq!(
             windows_to_wsl_path(r"\\wsl.localhost\Ubuntu\home\john"),
             Some("/home/john".to_string())
+        );
+    }
+
+    #[test]
+    fn test_wsl_convert_error_display() {
+        let err = WslConvertError::WslpathFailed {
+            exit_code: Some(1),
+            stderr: "path not found".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "wslpath failed (exit code 1): path not found"
+        );
+
+        let err = WslConvertError::WslpathFailed {
+            exit_code: None,
+            stderr: "unknown error".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "wslpath failed (exit code unknown): unknown error"
+        );
+
+        let err = WslConvertError::InvalidOutput("empty".to_string());
+        assert_eq!(
+            err.to_string(),
+            "wslpath returned invalid output: empty"
         );
     }
 }
