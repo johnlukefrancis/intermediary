@@ -158,6 +158,10 @@
       "summary": "Draggable file row with click-to-copy, drag handle, and star toggle"
     },
     {
+      "path": "app/src/components/group_remove_button.tsx",
+      "summary": "Remove button for grouped repos with confirmation"
+    },
+    {
       "path": "app/src/components/layout/three_column.tsx",
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },

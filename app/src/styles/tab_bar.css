@@ -340,10 +340,5 @@
 
 .group-dropdown-remove {
   margin-right: var(--space-2);
-  opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-out);
-}
-
-.group-dropdown-row:hover .group-dropdown-remove {
   opacity: 1;
 }

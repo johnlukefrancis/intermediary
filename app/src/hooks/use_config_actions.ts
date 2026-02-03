@@ -163,3 +163,58 @@ export function useRemoveRepo(
     [setConfig, saveConfig]
   );
 }
+
+export function useRemoveGroup(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (groupId: string) => void {
+  return useCallback(
+    (groupId: string) => {
+      setConfig((prev) => {
+        const reposToRemove = prev.repos.filter((r) => r.groupId === groupId);
+        if (reposToRemove.length === 0) {
+          return prev;
+        }
+
+        const repoIdsToRemove = new Set(reposToRemove.map((r) => r.repoId));
+        const remainingRepos = prev.repos.filter((r) => r.groupId !== groupId);
+
+        const updatedTabThemes = Object.fromEntries(
+          Object.entries(prev.tabThemes).filter(
+            ([key]) => key !== groupId && !repoIdsToRemove.has(key)
+          )
+        );
+
+        const updatedBundleSelections = Object.fromEntries(
+          Object.entries(prev.bundleSelections).filter(
+            ([key]) => !repoIdsToRemove.has(key)
+          )
+        );
+
+        const updatedStarredFiles = Object.fromEntries(
+          Object.entries(prev.starredFiles).filter(
+            ([key]) => !repoIdsToRemove.has(key)
+          )
+        );
+
+        const newUiState =
+          prev.uiState.lastActiveTabId &&
+          repoIdsToRemove.has(prev.uiState.lastActiveTabId)
+            ? { ...prev.uiState, lastActiveTabId: null }
+            : prev.uiState;
+
+        const next: PersistedConfig = {
+          ...prev,
+          repos: remainingRepos,
+          bundleSelections: updatedBundleSelections,
+          uiState: newUiState,
+          tabThemes: updatedTabThemes,
+          starredFiles: updatedStarredFiles,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}

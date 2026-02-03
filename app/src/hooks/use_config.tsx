@@ -17,6 +17,7 @@ import {
   useAddRepo,
   useUpdateRepo,
   useRemoveRepo,
+  useRemoveGroup,
 } from "./use_config_actions.js";
 import {
   useSetOutputWindowsRoot,
@@ -57,6 +58,8 @@ interface ConfigContextValue {
   ) => void;
   /** Remove a repo by repoId (also cleans up bundleSelections, starredFiles) */
   removeRepo: (repoId: string) => void;
+  /** Remove all repos in a group (also cleans up themes and starredFiles) */
+  removeGroup: (groupId: string) => void;
   /** Set custom output folder override (null to reset to default) */
   setOutputWindowsRoot: (path: string | null) => void;
   /** Set accent color for a tab */
@@ -105,6 +108,7 @@ export function ConfigProvider({
   const addRepo = useAddRepo(setConfig, saveConfig);
   const updateRepo = useUpdateRepo(setConfig, saveConfig);
   const removeRepo = useRemoveRepo(setConfig, saveConfig);
+  const removeGroup = useRemoveGroup(setConfig, saveConfig);
   const setOutputWindowsRoot = useSetOutputWindowsRoot(setConfig, saveConfig);
   const setTabThemeAccent = useSetTabThemeAccent(setConfig, saveConfig);
   const setTabThemeTexture = useSetTabThemeTexture(setConfig, saveConfig);
@@ -124,6 +128,7 @@ export function ConfigProvider({
     addRepo,
     updateRepo,
     removeRepo,
+    removeGroup,
     setOutputWindowsRoot,
     setTabThemeAccent,
     setTabThemeTexture,

@@ -48,6 +48,38 @@
   cursor: not-allowed;
 }
 
+/* ===== REMOVE GROUP BUTTON ===== */
+.group-dropdown-remove-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+.group-dropdown-remove-group:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-error);
+}
+
+.group-dropdown-remove-group:focus {
+  outline: none;
+}
+
+.group-dropdown-remove-group:focus-visible {
+  background: var(--color-bg-hover);
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
 /* ===== DROPDOWN ERROR ===== */
 .group-dropdown-error {
   padding: var(--space-2) var(--space-3);

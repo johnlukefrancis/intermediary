@@ -8,6 +8,7 @@ import type { TabItem, SingleTab, GroupTab } from "../app.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import { TabRemoveButton } from "./tab_remove_button.js";
+import { GroupRemoveButton } from "./group_remove_button.js";
 import "../styles/tab_bar.css";
 import "../styles/tab_bar_dropdown.css";
 
@@ -216,6 +217,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
           const isActive = isGroupActive(tab, activeRepoId);
           const activeLabel = getActiveRepoLabel(tab, activeRepoId);
           const isOpen = openDropdownId === tab.groupId;
+          const repoCount = tab.repos.length;
 
           return (
             <div
@@ -259,6 +261,12 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                   {isOpen ? "▲" : "▼"}
                 </button>
               )}
+              <GroupRemoveButton
+                groupId={tab.groupId}
+                groupLabel={tab.groupLabel}
+                repoCount={repoCount}
+                variant="icon"
+              />
 
               {isOpen && (
                 <div className="group-dropdown">
@@ -294,6 +302,15 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
                   >
                     + Add subfolder
                   </button>
+                  <GroupRemoveButton
+                    groupId={tab.groupId}
+                    groupLabel={tab.groupLabel}
+                    repoCount={repoCount}
+                    variant="dropdown"
+                    onRemoved={() => {
+                      setOpenDropdownId(null);
+                    }}
+                  />
                 </div>
               )}
             </div>
