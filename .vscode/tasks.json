@@ -109,7 +109,7 @@
         "--",
         "bash",
         "-lc",
-        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; set -e; if [ -s \"/home/johnf/.cargo/env\" ]; then . \"/home/johnf/.cargo/env\"; else echo \"cargo env not found at /home/johnf/.cargo/env\" >&2; exit 1; fi; cd /home/johnf/code/intermediary; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; cargo run -p im_agent --bin im_agent"
+        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; set -e; if [ -s \"/home/johnf/.cargo/env\" ]; then . \"/home/johnf/.cargo/env\"; else echo \"cargo env not found at /home/johnf/.cargo/env\" >&2; exit 1; fi; cd /home/johnf/code/intermediary; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; bash ./scripts/dev/run_wsl_agent_dev.sh"
       ],
       "isBackground": true,
       "problemMatcher": [
