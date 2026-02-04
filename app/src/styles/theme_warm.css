@@ -79,3 +79,29 @@
   --text-secondary: var(--theme-text-secondary);
   --border: var(--theme-border);
 }
+
+/* ===== WARM MODE COMPONENT OVERRIDES ===== */
+/* Improve contrast for accent-colored text on warm backgrounds */
+
+[data-theme-mode="warm"] .build-button {
+  /* Use primary text color instead of accent for better contrast */
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+[data-theme-mode="warm"] .build-button:hover:not(:disabled) {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+[data-theme-mode="warm"] .build-button:active:not(:disabled) {
+  /* On active (accent bg), ensure text pops */
+  color: #1a1510;
+  text-shadow: none;
+}
+
+[data-theme-mode="warm"] .preset-tab.active {
+  /* Active preset tab - use primary text with accent glow */
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
