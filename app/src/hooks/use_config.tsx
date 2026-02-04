@@ -13,6 +13,7 @@ import { useConfigStorage } from "./use_config_storage.js";
 import {
   useSetAutoStageGlobal,
   useSetLastActiveTabId,
+  useSetLastActiveGroupRepoId,
   useSetBundleSelection,
   useSetGlobalExcludes,
   useAddRepo,
@@ -47,6 +48,8 @@ interface ConfigContextValue {
   setAutoStageGlobal: (value: boolean) => void;
   /** Update last active tab (by repoId) */
   setLastActiveTabId: (repoId: string | null) => void;
+  /** Update last active repo per group */
+  setLastActiveGroupRepoId: (groupId: string, repoId: string | null) => void;
   /** Update bundle selection for a repo/preset */
   setBundleSelection: (
     repoId: string,
@@ -119,6 +122,10 @@ export function ConfigProvider({
 
   const setAutoStageGlobal = useSetAutoStageGlobal(setConfig, saveConfig);
   const setLastActiveTabId = useSetLastActiveTabId(setConfig, saveConfig);
+  const setLastActiveGroupRepoId = useSetLastActiveGroupRepoId(
+    setConfig,
+    saveConfig
+  );
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
   const addRepo = useAddRepo(setConfig, saveConfig);
@@ -144,6 +151,7 @@ export function ConfigProvider({
     saveError,
     setAutoStageGlobal,
     setLastActiveTabId,
+    setLastActiveGroupRepoId,
     setBundleSelection,
     setGlobalExcludes,
     addRepo,

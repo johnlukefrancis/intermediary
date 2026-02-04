@@ -298,9 +298,10 @@
   position: absolute;
   left: 0;
   bottom: 0;
-  height: 3px;
+  height: 4px;
   width: 0%;
-  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-soft));
+  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-glow));
+  box-shadow: 0 0 6px var(--color-accent-glow), 0 0 12px var(--color-accent-glow);
   transition: width 160ms var(--ease-out);
   pointer-events: none;
 }

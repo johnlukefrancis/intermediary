@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 14;
+pub const CONFIG_VERSION: u32 = 15;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,6 +81,9 @@ impl Default for PersistedConfig {
 pub struct UiState {
     /// Last active repo (by repoId)
     pub last_active_tab_id: Option<String>,
+    /// Last active repo per group (groupId -> repoId)
+    #[serde(default)]
+    pub last_active_group_repo_ids: HashMap<String, String>,
 }
 
 /// Global excludes for bundle building (not per-repo, not per-preset)

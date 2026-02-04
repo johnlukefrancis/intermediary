@@ -64,6 +64,38 @@ export function useSetLastActiveTabId(
   );
 }
 
+export function useSetLastActiveGroupRepoId(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (groupId: string, repoId: string | null) => void {
+  return useCallback(
+    (groupId: string, repoId: string | null) => {
+      setConfig((prev) => {
+        const nextGroupMap = repoId
+          ? {
+              ...prev.uiState.lastActiveGroupRepoIds,
+              [groupId]: repoId,
+            }
+          : Object.fromEntries(
+              Object.entries(prev.uiState.lastActiveGroupRepoIds).filter(
+                ([key]) => key !== groupId
+              )
+            );
+        const next = {
+          ...prev,
+          uiState: {
+            ...prev.uiState,
+            lastActiveGroupRepoIds: nextGroupMap,
+          },
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useSetBundleSelection(
   setConfig: SetConfig,
   saveConfigNow: SaveConfig
@@ -218,10 +250,32 @@ export function useRemoveRepo(
         const newRepos = prev.repos.filter((r) => r.repoId !== repoId);
         const { [repoId]: _removed, ...newBundleSelections } =
           prev.bundleSelections;
-        const newUiState =
-          prev.uiState.lastActiveTabId === repoId
-            ? { ...prev.uiState, lastActiveTabId: null }
-            : prev.uiState;
+        const removedRepo = prev.repos.find((r) => r.repoId === repoId);
+        let nextGroupRepoIds = Object.fromEntries(
+          Object.entries(prev.uiState.lastActiveGroupRepoIds).filter(
+            ([, value]) => value !== repoId
+          )
+        );
+        if (removedRepo?.groupId) {
+          const fallback = prev.repos.find(
+            (repo) => repo.groupId === removedRepo.groupId && repo.repoId !== repoId
+          );
+          if (fallback) {
+            nextGroupRepoIds = {
+              ...nextGroupRepoIds,
+              [removedRepo.groupId]: fallback.repoId,
+            };
+          } else {
+            const { [removedRepo.groupId]: _removed, ...rest } = nextGroupRepoIds;
+            nextGroupRepoIds = rest;
+          }
+        }
+        const newUiState = {
+          ...prev.uiState,
+          lastActiveTabId:
+            prev.uiState.lastActiveTabId === repoId ? null : prev.uiState.lastActiveTabId,
+          lastActiveGroupRepoIds: nextGroupRepoIds,
+        };
         const { [repoId]: _removedTheme, ...newTabThemes } = prev.tabThemes;
         const { [repoId]: _removedStarred, ...newStarredFiles } =
           prev.starredFiles;
@@ -275,11 +329,20 @@ export function useRemoveGroup(
           )
         );
 
-        const newUiState =
-          prev.uiState.lastActiveTabId &&
-          repoIdsToRemove.has(prev.uiState.lastActiveTabId)
-            ? { ...prev.uiState, lastActiveTabId: null }
-            : prev.uiState;
+        const updatedGroupRepoIds = Object.fromEntries(
+          Object.entries(prev.uiState.lastActiveGroupRepoIds).filter(
+            ([key, value]) => key !== groupId && !repoIdsToRemove.has(value)
+          )
+        );
+        const newUiState = {
+          ...prev.uiState,
+          lastActiveTabId:
+            prev.uiState.lastActiveTabId &&
+            repoIdsToRemove.has(prev.uiState.lastActiveTabId)
+              ? null
+              : prev.uiState.lastActiveTabId,
+          lastActiveGroupRepoIds: updatedGroupRepoIds,
+        };
 
         const next: PersistedConfig = {
           ...prev,

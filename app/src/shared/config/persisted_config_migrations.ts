@@ -52,6 +52,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   if (config.configVersion < 13) {
     next = migrateAgentDefaults(next);
   }
+  // Migration: v14 -> v15: Add uiState.lastActiveGroupRepoIds.
 
   return { ...next, configVersion: CONFIG_VERSION };
 }

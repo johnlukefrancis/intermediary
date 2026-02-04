@@ -23,6 +23,8 @@ import {
 export const UiStateSchema = z.object({
   /** Last active repo (by repoId) */
   lastActiveTabId: z.string().nullable().default(null),
+  /** Last active repo per group (groupId -> repoId) */
+  lastActiveGroupRepoIds: z.record(z.string(), z.string()).default({}),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -152,6 +154,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     ...DEFAULT_APP_CONFIG,
     uiState: {
       lastActiveTabId: null,
+      lastActiveGroupRepoIds: {},
     },
     bundleSelections: {},
     globalExcludes: {

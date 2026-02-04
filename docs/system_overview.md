@@ -127,7 +127,7 @@ Layout under the staging root:
 
 User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
-- **UI state:** Last active repo (by repoId)
+- **UI state:** Last active repo (by repoId) + last active worktree per group
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.

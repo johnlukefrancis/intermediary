@@ -73,7 +73,12 @@ function deriveTabsFromRepos(repos: RepoConfig[]): TabItem[] {
 }
 
 export function App(): React.JSX.Element {
-  const { config, isLoaded, setLastActiveTabId } = useConfig();
+  const {
+    config,
+    isLoaded,
+    setLastActiveTabId,
+    setLastActiveGroupRepoId,
+  } = useConfig();
   const { motionPaused } = useMotionGovernor();
 
   useEffect(() => {
@@ -119,18 +124,34 @@ export function App(): React.JSX.Element {
         setActiveRepoIdState(validRepoId);
         if (validRepoId) {
           setLastActiveTabId(validRepoId);
+          const repo = config.repos.find((entry) => entry.repoId === validRepoId);
+          if (repo?.groupId) {
+            setLastActiveGroupRepoId(repo.groupId, validRepoId);
+          }
         }
       }
     }
-  }, [isLoaded, config.repos, activeRepoId, config.uiState.lastActiveTabId, validateRepoId, setLastActiveTabId]);
+  }, [
+    isLoaded,
+    config.repos,
+    activeRepoId,
+    config.uiState.lastActiveTabId,
+    validateRepoId,
+    setLastActiveTabId,
+    setLastActiveGroupRepoId,
+  ]);
 
   // Wrap setter to also persist
   const setActiveRepoId = useCallback(
     (repoId: string) => {
       setActiveRepoIdState(repoId);
       setLastActiveTabId(repoId);
+      const repo = config.repos.find((entry) => entry.repoId === repoId);
+      if (repo?.groupId) {
+        setLastActiveGroupRepoId(repo.groupId, repoId);
+      }
     },
-    [setLastActiveTabId]
+    [setLastActiveTabId, setLastActiveGroupRepoId, config.repos]
   );
 
   // Handle new repo added - auto-select it
@@ -205,6 +226,8 @@ export function App(): React.JSX.Element {
         <TabBar
           tabs={tabs}
           activeRepoId={activeRepoId}
+          tabThemes={config.tabThemes}
+          lastActiveGroupRepoIds={config.uiState.lastActiveGroupRepoIds}
           onRepoChange={setActiveRepoId}
           onRepoAdded={handleRepoAdded}
         />

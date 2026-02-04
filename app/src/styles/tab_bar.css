@@ -15,7 +15,7 @@
   padding: var(--space-2) var(--space-3);
   border: none;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -27,6 +27,24 @@
   -webkit-user-select: none;
   transition: color var(--duration-normal) var(--ease-out),
     background var(--duration-normal) var(--ease-out);
+}
+
+.tab-button::after {
+  content: "";
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: 3px;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.25;
+  transform: scaleX(0.9);
+  transform-origin: center;
+  transition:
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out),
+    height var(--duration-normal) var(--ease-out);
 }
 
 .tab-label {
@@ -62,13 +80,26 @@
 }
 
 .tab-button:hover {
-  color: var(--color-text-secondary);
+  color: var(--color-accent);
   background: var(--color-bg-hover-subtle);
+}
+
+.tab-button:hover::after {
+  opacity: 0.45;
+  transform: scaleX(1);
 }
 
 /* Active state: latched with brackets, no background box */
 .tab-button.active {
   color: var(--color-accent);
+  text-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+.tab-button.active::after {
+  opacity: 0.8;
+  height: 2px;
+  transform: scaleX(1);
+  box-shadow: 0 0 10px var(--color-accent-glow);
 }
 
 .tab-button.active .tab-label::before,

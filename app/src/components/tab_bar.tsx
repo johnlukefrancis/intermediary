@@ -2,13 +2,15 @@
 // Description: Tab navigation with grouped repo dropdown support
 
 import type React from "react";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
+import type { TabTheme } from "../shared/config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import { TabRemoveButton } from "./tab_remove_button.js";
 import { GroupRemoveButton } from "./group_remove_button.js";
+import { DEFAULT_ACCENT_HEX, hexToAccentCssVars } from "../lib/theme/accent_utils.js";
 import "../styles/tab_bar.css";
 import "../styles/tab_bar_dropdown.css";
 
@@ -45,6 +47,8 @@ function FolderIcon(): React.JSX.Element {
 interface TabBarProps {
   tabs: TabItem[];
   activeRepoId: string | null;
+  tabThemes: Record<string, TabTheme>;
+  lastActiveGroupRepoIds: Record<string, string>;
   onRepoChange: (repoId: string) => void;
   onRepoAdded?: (repoId: string) => void;
 }
@@ -55,12 +59,30 @@ function isGroupActive(group: GroupTab, activeRepoId: string | null): boolean {
 }
 
 /** Get the active repo's label within a group */
-function getActiveRepoLabel(group: GroupTab, activeRepoId: string | null): string {
-  const repo = group.repos.find((r) => r.repoId === activeRepoId);
-  return repo?.label ?? group.repos[0]?.label ?? "";
+function getActiveRepoLabel(
+  group: GroupTab,
+  activeRepoId: string | null,
+  lastActiveGroupRepoIds: Record<string, string>
+): string {
+  const activeRepo = group.repos.find((r) => r.repoId === activeRepoId);
+  if (activeRepo) return activeRepo.label;
+  const lastActiveId = lastActiveGroupRepoIds[group.groupId];
+  const lastActiveRepo = group.repos.find((r) => r.repoId === lastActiveId);
+  return lastActiveRepo?.label ?? group.repos[0]?.label ?? "";
 }
 
-export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBarProps): React.JSX.Element {
+function getThemeKey(tab: TabItem): string {
+  return tab.type === "group" ? tab.groupId : tab.repoId;
+}
+
+export function TabBar({
+  tabs,
+  activeRepoId,
+  tabThemes,
+  lastActiveGroupRepoIds,
+  onRepoChange,
+  onRepoAdded,
+}: TabBarProps): React.JSX.Element {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const {
@@ -71,6 +93,19 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
   } = useWorktreeAdd(
     onRepoAdded ? { onRepoChange, onRepoAdded } : { onRepoChange }
   );
+  const defaultAccentStyle = useMemo(
+    () => hexToAccentCssVars(DEFAULT_ACCENT_HEX) as React.CSSProperties,
+    []
+  );
+  const tabAccentStyles = useMemo(() => {
+    const styles = new Map<string, React.CSSProperties>();
+    for (const tab of tabs) {
+      const key = getThemeKey(tab);
+      const accentHex = tabThemes[key]?.accentHex ?? DEFAULT_ACCENT_HEX;
+      styles.set(key, hexToAccentCssVars(accentHex) as React.CSSProperties);
+    }
+    return styles;
+  }, [tabs, tabThemes]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -93,13 +128,16 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
       // If clicking the group tab, select first repo in group (or current if already in group)
       const isActive = isGroupActive(group, activeRepoId);
       if (!isActive) {
-        const firstRepo = group.repos[0];
-        if (firstRepo) {
-          onRepoChange(firstRepo.repoId);
+        const lastActiveId = lastActiveGroupRepoIds[group.groupId];
+        const targetRepo =
+          group.repos.find((repo) => repo.repoId === lastActiveId) ??
+          group.repos[0];
+        if (targetRepo) {
+          onRepoChange(targetRepo.repoId);
         }
       }
     },
-    [activeRepoId, onRepoChange]
+    [activeRepoId, lastActiveGroupRepoIds, onRepoChange]
   );
 
   const toggleDropdown = useCallback(
@@ -153,11 +191,14 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
         if (tab.type === "single") {
           const isActive = activeRepoId === tab.repoId;
           const isOpen = openDropdownId === tab.repoId;
+          const themeKey = tab.repoId;
+          const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
 
           return (
             <div
               key={tab.repoId}
               className="single-tab-container"
+              style={accentStyle}
               ref={isOpen ? dropdownRef : undefined}
             >
               {isActive && (
@@ -215,8 +256,14 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
           );
         } else {
           const isActive = isGroupActive(tab, activeRepoId);
-          const activeLabel = getActiveRepoLabel(tab, activeRepoId);
+          const activeLabel = getActiveRepoLabel(
+            tab,
+            activeRepoId,
+            lastActiveGroupRepoIds
+          );
           const isOpen = openDropdownId === tab.groupId;
+          const themeKey = tab.groupId;
+          const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
           const repoCount = tab.repos.length;
           const trimmedGroupLabel = tab.groupLabel.trim();
           const trimmedActiveLabel = activeLabel.trim();
@@ -231,6 +278,7 @@ export function TabBar({ tabs, activeRepoId, onRepoChange, onRepoAdded }: TabBar
             <div
               key={tab.groupId}
               className="group-tab-container"
+              style={accentStyle}
               ref={isOpen ? dropdownRef : undefined}
             >
               {isActive && (
