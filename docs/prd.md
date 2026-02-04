@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-03
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -260,7 +260,7 @@ So:
 
 Responsibilities:
 
-* Watch repos (chokidar/inotify)
+* Watch repos (notify/inotify)
 * Provide “recent changes” feed
 * Build zip bundles to staging (via `/mnt/c/...`)
 * Stage individual files on request

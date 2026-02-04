@@ -39,8 +39,8 @@ A single-window "handoff console" that:
 ┌─────────────────────────────────────────────────────────────┐
 │                       WSL (Agent)                           │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  Node/TS Agent                                        │  │
-│  │  - chokidar file watchers (inotify on Linux)          │  │
+│  │  Rust Agent                                           │  │
+│  │  - notify file watchers (inotify on Linux)            │  │
 │  │  - Emits fileChanged/snapshot events                  │  │
 │  │  - Stages files + builds bundles                      │  │
 │  │  - Atomic writes (temp + rename)                      │  │
@@ -55,9 +55,9 @@ A single-window "handoff console" that:
 | Windows UI | Tauri v2 |
 | Frontend | React + TypeScript |
 | Backend | Rust |
-| WSL Agent | Node.js + TypeScript |
-| File Watching | chokidar (inotify on Linux) |
-| Bundling | Rust `im_bundle_cli` (crates/im_bundle) |
+| WSL Agent | Rust (`crates/im_agent`) |
+| File Watching | notify (inotify on Linux) |
+| Bundling | Rust `im_bundle` library (crates/im_bundle) |
 | IPC | WebSocket (JSON request/response + events) |
 | Drag-out | `tauri-plugin-drag` |
 
@@ -88,16 +88,8 @@ intermediary/
 │   └── tauri.conf.json
 │
 ├── crates/                 # Rust workspace crates
-│   ├── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
-│   └── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
-│
-├── agent/                  # WSL agent daemon
-│   ├── src/
-│   │   ├── bundles/        # Bundle building + manifest
-│   │   ├── repos/          # File watching
-│   │   ├── server/         # WebSocket server + router
-│   │   ├── staging/        # Path bridge + file staging
-│   │   └── util/           # Logger + helpers
+│   ├── im_agent/           # WSL agent daemon (Rust)
+│   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
 │
 ├── docs/                   # Documentation
 │   ├── compliance/         # ADRs (architectural decisions)

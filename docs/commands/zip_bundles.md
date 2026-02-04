@@ -1,5 +1,5 @@
 # Zip Bundles Commands
-Updated on: 2026-01-30
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -67,7 +67,6 @@ Each bundle includes:
 
 - `app/` - Frontend source
 - `src-tauri/` - Tauri backend
-- `agent/` - WSL agent
 - `crates/` - Rust crates
 - `docs/` - Documentation
 - `scripts/` - Build scripts
@@ -97,8 +96,6 @@ Each bundle includes:
 - `assets/`
 - `src-tauri/icons/`
 - `docs/reports/bundles/`
-- `agent/.venv/`
-- `agent/__pycache__/`
 - `*.log`, `*.pyc`
 
 ## Typical Usage

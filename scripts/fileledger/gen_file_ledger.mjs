@@ -14,7 +14,6 @@ const defaultRootNames = [
     'src-tauri',
     'crates',
     'app',
-    'agent',
     'scripts'
 ];
 const args = process.argv.slice(2);

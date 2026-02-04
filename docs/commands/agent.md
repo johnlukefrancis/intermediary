@@ -1,5 +1,5 @@
 # Agent Commands
-Updated on: 2026-02-03
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -7,18 +7,18 @@ Commands for running and developing the WSL agent.
 
 ## Development
 
-Start the agent in watch mode (auto-restarts on file changes):
+Start the agent in dev mode:
 
 ```bash
-pnpm run agent:dev
+cargo run -p im_agent --bin im_agent
 ```
 
 ## Type Check
 
-Run TypeScript type checking on agent code:
+Run Rust checks for the agent:
 
 ```bash
-pnpm run agent:typecheck
+cargo check -p im_agent
 ```
 
 ## Lint
@@ -31,7 +31,7 @@ pnpm run lint
 
 ## Manual Testing
 
-Connect to the running agent with wscat:
+Connect to the running agent with wscat (optional):
 
 ```bash
 wscat -c ws://127.0.0.1:3141

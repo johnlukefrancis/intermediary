@@ -1,5 +1,5 @@
 # WSL Agent Development Commands
-Updated on: 2026-01-30
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -7,15 +7,14 @@ Commands for running the WSL agent during daily development.
 
 ## Requirements
 
-The agent runs inside WSL and requires Node.js + pnpm installed in WSL.
-Use `docs/commands/setup_wsl_node.md` if Node or pnpm are missing.
+The agent runs inside WSL and requires the Rust toolchain available in WSL.
 
-## Start the Agent (Watch Mode)
+## Start the Agent
 
 Run from the repo root in WSL:
 
 ```bash
-pnpm run agent:dev
+cargo run -p im_agent --bin im_agent
 ```
 
 ## Log Output

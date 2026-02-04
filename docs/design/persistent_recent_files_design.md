@@ -1,3 +1,10 @@
+# Persistent Recent Files Design
+Updated on: 2026-02-04
+Owners: JL · Agents
+Depends on: ADR-000, ADR-007
+
+---
+
 ## 1. Design proposal: persistent recent files (across app + agent restarts)
 
 ### Goal in user-visible terms
@@ -10,7 +17,7 @@
   * UI reload
   * Agent restart
   * Disconnect/reconnect
-* History should not depend on chokidar’s `ignoreInitial` behavior (which is correct for avoiding floods, but terrible UX on cold start).
+* History should not depend on notify’s initial-scan behavior (which is correct for avoiding floods, but terrible UX on cold start).
 
 **Out of scope**
 
@@ -98,7 +105,7 @@ This yields snapshots that match how the UI already treats incremental updates (
 2. For each repo watcher:
 
    * Load `<repoId>.json` synchronously (small file) into MRU store
-   * Start chokidar with `ignoreInitial: true` (keep the flood protection)
+   * Start notify without emitting initial events (keep the flood protection)
 3. On file change event:
 
    * classify docs/code/other
@@ -215,10 +222,10 @@ Optional but good:
 ```text
 Task: Persist per-repo “recent files” history across agent restarts and use it to seed snapshot results.
 Context: Recent changes are currently in-memory only; PRD requires a per-repo recent changes feed and staging lives under %LOCALAPPDATA%\Intermediary\staging. Implement agent-owned persistence under staging/state so UI shows recents after restart without scanning repos.
-Refs: { @docs/prd.md, @docs/system_overview.md, @docs/compliance/adr_000_modular_file_discipline.md, @agent/src/repos/repo_watcher.ts, @agent/src/main.ts, @app/src/shared/protocol.ts }
+Refs: { @docs/prd.md, @docs/system_overview.md, @docs/compliance/adr_000_modular_file_discipline.md, @crates/im_agent/src/repos/repo_watcher.rs, @crates/im_agent/src/main.rs, @app/src/shared/protocol.ts }
 Deliver: 
 - New small module implementing an MRU recent-files index (unique-by-path, bounded size) with atomic JSON persistence per repo at staging/state/recent_files/<repoId>.json.
-- Load persisted entries when creating a watcher so refresh/snapshot can return history even before chokidar emits anything.
+- Load persisted entries when creating a watcher so refresh/snapshot can return history even before notify emits anything.
 - Update RepoWatcher to use the MRU store for getRecentChanges(), and flush pending writes on stop().
 - Handle corrupt/missing JSON gracefully (log + start empty).
 - Summarize edits.
@@ -234,7 +241,7 @@ Constraints: Respect ADR-000 (target 250 LOC, cap 300); no band-aids per ADR-007
 ```text
 Task: Make clientHello safe to call on every reconnect and prevent poisoned watcher state when watcher startup fails.
 Context: UI reconnects should re-run clientHello; today clientHello resets watchers unconditionally, and a failed watcher start can leave a repo stuck in a broken “watched” state. We need idempotency and cleanup.
-Refs: { @docs/compliance/adr_007_architecture_first_execution.md, @docs/compliance/adr_000_modular_file_discipline.md, @agent/src/main.ts, @agent/src/repos/repo_watcher.ts, @agent/src/server/router.ts }
+Refs: { @docs/compliance/adr_007_architecture_first_execution.md, @docs/compliance/adr_000_modular_file_discipline.md, @crates/im_agent/src/main.rs, @crates/im_agent/src/repos/repo_watcher.rs, @crates/im_agent/src/server/connection.rs }
 Deliver:
 - Add a “watcher-relevant config fingerprint” in the agent state; on clientHello, skip resetWatchers() if the fingerprint is unchanged.
 - If fingerprint changed, keep current behavior (reset + restart) but ensure persisted recent history still seeds snapshots (from prior prompt).

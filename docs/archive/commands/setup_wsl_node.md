@@ -1,9 +1,9 @@
 # WSL Node.js + pnpm Setup
-Updated on: 2026-01-30
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
-Install Node.js and pnpm inside WSL so the agent can run there (not via Windows binaries).
+Archived: the shipped WSL agent no longer requires Node.js in WSL. This doc is retained for legacy reference only.
 
 ## Option A (recommended): nvm + Node 20 + corepack
 

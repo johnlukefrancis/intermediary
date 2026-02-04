@@ -16,7 +16,6 @@ export const DEFAULT_DOCS_GLOBS = [
 export const DEFAULT_CODE_GLOBS = [
   "src/**",
   "app/**",
-  "agent/**",
   "crates/**",
   "src-tauri/**",
   "**/*.ts",

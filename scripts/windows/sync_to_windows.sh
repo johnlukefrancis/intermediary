@@ -25,8 +25,6 @@ rsync -a --delete \
   --exclude "dist-ssr" \
   --exclude "logs" \
   --exclude "src-tauri/target" \
-  --exclude "agent/.venv" \
-  --exclude "agent/__pycache__" \
   "$SOURCE_DIR/" "$DEST_DIR/"
 
 echo "Synced to $DEST_DIR"

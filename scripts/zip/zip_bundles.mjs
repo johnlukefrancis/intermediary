@@ -109,8 +109,6 @@ function shouldSkipPath(relativePath) {
     // Test report images (binary outputs)
     'docs/reports/bundles/',
     // WSL agent virtual environment (future)
-    'agent/.venv/',
-    'agent/__pycache__/',
     // File extensions
     '*.log',
     '*.pyc',

@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-03
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -159,7 +159,6 @@ intermediary/
 ├── crates/                 # Rust workspace crates
 │   ├── im_agent/           # WSL agent (Rust)
 │   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
-├── agent/                  # Legacy WSL agent (Node.js/TS)
 │   └── src/
 │       ├── bundles/        # Bundle building
 │       ├── repos/          # File watching

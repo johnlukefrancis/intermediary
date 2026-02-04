@@ -1,34 +1,8 @@
 # File Ledger
 
-Scope: src-tauri, crates, app, agent, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
+Scope: src-tauri, crates, app, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
-agent/src/agent_runtime.ts - Watcher lifecycle helpers and shutdown logic for the agent runtime
-agent/src/bundles/bundle_builder.ts - Orchestrates bundle building process (single timestamped file, no accumulation)
-agent/src/bundles/bundle_lister.ts - Find the single bundle file for a preset
-agent/src/bundles/bundle_types.ts - Type definitions for bundle building
-agent/src/bundles/git_info.ts - Best-effort git info extraction for bundle manifests
-agent/src/bundles/ignore_rules.test.ts - Unit tests for bundle ignore rules
-agent/src/bundles/ignore_rules.ts - Centralized ignore patterns for bundle building
-agent/src/bundles/rust_bundle_cli.ts - Run the Rust im_bundle_cli to scan and build bundle zips with progress parsing
-agent/src/commands/client_hello.ts - Handles clientHello command with watcher-safe idempotency
-agent/src/dev/staging_probe.ts - Minimal code file for staging detection tests
-agent/src/main.ts - Agent entry point - bootstraps WebSocket server and watchers
-agent/src/repos/mru_index.ts - MRU (Most Recently Used) index for recent file changes with unique-by-path semantics
-agent/src/repos/recent_files_store.ts - Persistence layer for recent files with debounced atomic writes
-agent/src/repos/repo_top_level.ts - Scan top-level directories and files in a repo
-agent/src/repos/repo_watcher.ts - Chokidar file watcher setup with event emission and ignore patterns
-agent/src/repos/watcher_error.ts - Repo watcher error classification and user-facing event shaping
-agent/src/server/router.ts - Request dispatch and response building for WebSocket protocol
-agent/src/server/ws_server.ts - WebSocket server lifecycle on 0.0.0.0 with configurable port
-agent/src/staging/path_bridge.ts - WSL to Windows path conversion for staging files
-agent/src/staging/stager.test.ts - Unit tests for staging path validation
-agent/src/staging/stager.ts - Atomic file copy with debounced auto-staging
-agent/src/util/categorizer.ts - File kind classification (docs/code/other) based on path patterns
-agent/src/util/config_fingerprint.ts - Computes stable fingerprints for watcher-relevant config to detect changes
-agent/src/util/errors.ts - Error types and helpers for the agent
-agent/src/util/logger.ts - Structured logging to console with ISO timestamps
-agent/src/util/ring_buffer.ts - Generic circular buffer for recent file changes per repo
 app/index.html - index module
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker

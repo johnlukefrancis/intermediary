@@ -1,3 +1,10 @@
+# Starred Files Design
+Updated on: 2026-02-04
+Owners: JL · Agents
+Depends on: ADR-000, ADR-007
+
+---
+
 ## Goal in visible behavior terms
 
 * **Star/unstar** any Docs/Code file, per repo, persisted.
@@ -11,7 +18,7 @@
 
 Also: you *already* have a cap today. It’s just hardcoded twice:
 
-* Agent MRU capacity is hardcoded to **200** in `agent/src/repos/repo_watcher.ts`
+* Agent MRU capacity is hardcoded to **200** in `crates/im_agent/src/repos/repo_watcher.rs`
 * UI slices to **200** in `app/src/hooks/use_repo_state.ts`
 
 So the “2000 files lag” nightmare is currently prevented… accidentally. We’ll make it intentional and configurable.
@@ -110,10 +117,9 @@ Refs
 - @app/src/hooks/use_agent.tsx
 - @app/src/hooks/use_repo_state.ts
 - @app/src/hooks/use_config.tsx
-- @agent/src/util/config_fingerprint.ts
-- @agent/src/commands/client_hello.ts
-- @agent/src/agent_runtime.ts
-- @agent/src/repos/repo_watcher.ts
+- @crates/im_agent/src/runtime/config_fingerprint.rs
+- @crates/im_agent/src/runtime/state.rs
+- @crates/im_agent/src/repos/repo_watcher.rs
 - @src-tauri/src/lib/config/types.rs
 - @src-tauri/src/lib/config/io.rs
 - @src-tauri/src/lib/commands/config.rs

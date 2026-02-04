@@ -1,4 +1,9 @@
 # Intermediary Documentation Guide
+Updated on: 2026-02-04
+Owners: JL · Agents
+Depends on: ADR-000, ADR-006
+
+---
 
 This is the documentation index for Intermediary. Start here to find relevant docs.
 
@@ -63,8 +68,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | Document | Purpose |
 |----------|---------|
 | [docs/commands/dev_windows.md](commands/dev_windows.md) | Windows development workflow with WSL sync |
-| [docs/commands/dev_wsl_agent.md](commands/dev_wsl_agent.md) | Start the WSL agent for local development |
-| [docs/commands/setup_wsl_node.md](commands/setup_wsl_node.md) | Install Node.js + pnpm in WSL for agent runs |
+| [docs/commands/dev_wsl_agent.md](commands/dev_wsl_agent.md) | Start the Rust WSL agent for local development |
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/bundle_cli.md](commands/bundle_cli.md) | Build and verify the Rust bundle CLI |
