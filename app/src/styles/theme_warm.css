@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/theme_warm.css
- * Description: Warm theme overrides - macchiato brown tones (dark sepia + splash of light)
+ * Description: Warm theme overrides - saturated caramel/toffee brown tones
  */
 
 /* Activated via [data-theme-mode="warm"] on document root */
@@ -8,67 +8,67 @@
   color-scheme: dark;
 
   /* ===== BACKGROUND PALETTE ===== */
-  /* Macchiato browns - espresso with a splash of milk */
-  --theme-bg-base: #241d17;
-  --theme-bg-surface: #2e2620;
-  --theme-bg-elevated: #3a312a;
-  --theme-bg-hover: #483d34;
-  --theme-bg-active: #564a40;
+  /* Saturated caramel/toffee browns - rich and warm */
+  --theme-bg-base: #2a2016;
+  --theme-bg-surface: #382a1c;
+  --theme-bg-elevated: #483620;
+  --theme-bg-hover: #5a4428;
+  --theme-bg-active: #6c5232;
 
   /* ===== TEXT PALETTE ===== */
   /* Warm cream/ivory for contrast */
-  --theme-text-primary: #ebe5d8;
-  --theme-text-secondary: #bfb098;
-  --theme-text-muted: #968878;
+  --theme-text-primary: #f0e8d8;
+  --theme-text-secondary: #c8b898;
+  --theme-text-muted: #a08868;
 
   /* ===== BORDER PALETTE ===== */
-  --theme-border: #483d34;
-  --theme-border-subtle: #352c24;
-  --theme-border-highlight: rgba(235, 220, 190, 0.10);
+  --theme-border: #5a4428;
+  --theme-border-subtle: #44341c;
+  --theme-border-highlight: rgba(240, 220, 180, 0.14);
 
   /* ===== SEMANTIC STATES ===== */
   /* Warm-shifted for sepia context */
-  --theme-success: #6abe70;
-  --theme-success-soft: #243828;
-  --theme-success-muted: #4a7a50;
+  --theme-success: #70c878;
+  --theme-success-soft: #2a3c28;
+  --theme-success-muted: #589060;
 
-  --theme-error: #e07060;
-  --theme-error-soft: #382220;
-  --theme-error-muted: #9a5048;
+  --theme-error: #e86860;
+  --theme-error-soft: #422824;
+  --theme-error-muted: #b05850;
 
-  --theme-warning: #daa520;
-  --theme-warning-soft: #383020;
-  --theme-warning-muted: #9a7a38;
+  --theme-warning: #e8a820;
+  --theme-warning-soft: #443820;
+  --theme-warning-muted: #b08838;
 
-  --theme-info: #8ab4d8;
-  --theme-info-soft: #203038;
-  --theme-info-muted: #4a6a80;
+  --theme-info: #88b8e0;
+  --theme-info-soft: #283848;
+  --theme-info-muted: #608098;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(46, 38, 32, 0.88);
-  --theme-glass-border: rgba(235, 220, 190, 0.08);
+  --theme-glass-bg: rgba(56, 42, 28, 0.90);
+  --theme-glass-border: rgba(240, 220, 180, 0.12);
 
   /* ===== VINTAGE GLASS ===== */
-  --theme-glass-vintage-bg: rgba(40, 33, 26, 0.65);
-  --theme-glass-vintage-header: rgba(46, 38, 32, 0.70);
-  --theme-glass-vintage-content: rgba(36, 29, 23, 0.75);
-  --theme-glass-vintage-reflection: rgba(235, 220, 190, 0.04);
-  --theme-glass-vintage-edge: rgba(235, 220, 190, 0.10);
-  --theme-glass-vintage-dither: 0.10;
+  --theme-glass-vintage-bg: rgba(48, 36, 24, 0.68);
+  --theme-glass-vintage-header: rgba(56, 42, 28, 0.72);
+  --theme-glass-vintage-content: rgba(42, 32, 22, 0.78);
+  --theme-glass-vintage-reflection: rgba(240, 220, 180, 0.06);
+  --theme-glass-vintage-edge: rgba(240, 220, 180, 0.14);
+  --theme-glass-vintage-dither: 0.08;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(58, 49, 42, 0.5);
-  --theme-gradient-bottom: #1a1410;
-  --theme-bg-hover-subtle: rgba(235, 220, 190, 0.04);
+  --theme-gradient-top: rgba(72, 54, 32, 0.5);
+  --theme-gradient-bottom: #1c1610;
+  --theme-bg-hover-subtle: rgba(240, 220, 180, 0.06);
   --theme-scanline: rgba(0, 0, 0, 0.03);
 
   /* ===== DECK FRAME ===== */
-  --theme-deck-frame-outer: #483d34;
-  --theme-deck-frame-inner: rgba(235, 220, 190, 0.06);
+  --theme-deck-frame-outer: #5a4428;
+  --theme-deck-frame-inner: rgba(240, 220, 180, 0.10);
 
   /* ===== DECK SUBSTRATE ===== */
-  --theme-deck-grid-dot: rgba(235, 220, 190, 0.04);
-  --theme-deck-vignette-tint: rgba(26, 20, 16, 0.40);
+  --theme-deck-grid-dot: rgba(240, 220, 180, 0.06);
+  --theme-deck-vignette-tint: rgba(28, 22, 16, 0.35);
 
   /* ===== LEGACY BRIDGE ===== */
   --bg-primary: var(--theme-bg-base);
