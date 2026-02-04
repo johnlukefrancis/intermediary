@@ -9,6 +9,8 @@
   flex-direction: column;
   gap: var(--space-3);
   height: 100%;
+  /* Padding allows fresh bundle glow to show without clipping */
+  padding: var(--space-2);
   overflow: hidden;
 }
 
@@ -431,7 +433,7 @@
   min-height: 80px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* overflow: visible to allow fresh bundle glow to show */
 }
 
 .bundle-list.empty {
@@ -517,39 +519,66 @@
 }
 
 /* ===== FRESH BUNDLE PULSE ===== */
-/* 5-second glow animation when a bundle is freshly built */
+/* 5-second breathing glow with fade-out when a bundle is freshly built */
 .bundle-row.bundle-row--fresh {
-  animation: bundle-ready-pulse 5s var(--ease-out) forwards;
+  animation: bundle-ready-pulse 5s var(--ease-in-out) forwards;
 }
 
 .bundle-row.bundle-row--fresh::before {
   background: var(--color-accent);
-  animation: bundle-ready-rail-pulse 5s var(--ease-out) forwards;
+  animation: bundle-ready-rail-pulse 5s var(--ease-in-out) forwards;
 }
 
+/* Sine wave: 0 → peak → trough → peak → trough → peak → 0 */
 @keyframes bundle-ready-pulse {
+  /* Start at zero */
   0% {
+    box-shadow: none;
+  }
+  /* Peak 1 */
+  17% {
     box-shadow:
       0 0 0 2px var(--color-accent-glow),
-      0 0 12px 2px var(--color-accent-glow);
+      0 0 16px 4px var(--color-accent-glow);
   }
+  /* Trough */
+  33% {
+    box-shadow:
+      0 0 0 1px var(--color-accent-soft),
+      0 0 8px 2px var(--color-accent-glow);
+  }
+  /* Peak 2 */
   50% {
     box-shadow:
-      0 0 0 1px var(--color-accent-glow),
-      0 0 8px 1px var(--color-accent-glow);
+      0 0 0 2px var(--color-accent-glow),
+      0 0 16px 4px var(--color-accent-glow);
   }
+  /* Trough */
+  67% {
+    box-shadow:
+      0 0 0 1px var(--color-accent-soft),
+      0 0 8px 2px var(--color-accent-glow);
+  }
+  /* Peak 3 */
+  83% {
+    box-shadow:
+      0 0 0 2px var(--color-accent-glow),
+      0 0 16px 4px var(--color-accent-glow);
+  }
+  /* End at zero */
   100% {
     box-shadow: none;
   }
 }
 
 @keyframes bundle-ready-rail-pulse {
-  0% {
-    box-shadow: 0 0 8px 1px var(--color-accent-glow);
-  }
-  100% {
-    box-shadow: none;
-  }
+  0% { box-shadow: none; }
+  17% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  33% { box-shadow: 0 0 6px 1px var(--color-accent-glow); }
+  50% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  67% { box-shadow: 0 0 6px 1px var(--color-accent-glow); }
+  83% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  100% { box-shadow: none; }
 }
 
 /* ===== BUNDLE STATE MARKER ===== */
