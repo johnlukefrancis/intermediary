@@ -134,7 +134,7 @@ impl AgentSupervisor {
 
         let bundle_for_spawn = bundle.clone();
         let config_for_spawn = config.clone();
-        let child = tauri::async_runtime::spawn_blocking(move || {
+        let child = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
             let mut child = spawn_agent_process(&bundle_for_spawn, &config_for_spawn)?;
             wait_for_agent_ready(&mut child, config_for_spawn.port)?;
             Ok(child)
