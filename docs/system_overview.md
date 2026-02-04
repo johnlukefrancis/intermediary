@@ -71,19 +71,19 @@ Intermediary uses a **two-component architecture**:
 - **Stack:** Tauri (Rust)
 - **Purpose:** Ensure the WSL agent is installed and running when the app is open
 - **Key features:**
-  - Installs bundled agent runtime + `im_bundle_cli` into `%LOCALAPPDATA%\Intermediary\agent`
+  - Installs bundled Rust agent binary (`im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
   - Launches the agent via `wsl.exe` with explicit env configuration
   - Auto-start toggle with optional distro override
   - Restart command and diagnostics surfaced in the UI
 
 ### WSL Agent
 
-- **Stack:** Node.js/TypeScript with chokidar for file watching; Rust bundle CLI (`crates/im_bundle`)
+- **Stack:** Rust (Tokio + notify) with the `im_bundle` library for bundle creation
 - **Purpose:** File watching and bundle generation inside WSL
 - **Key features:**
-  - inotify-based file watching via chokidar (reliable for Linux FS)
+  - inotify-based file watching via notify (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
-  - Bundle building with manifest injection via Rust bundle CLI (single latest bundle per preset; older bundles deleted)
+  - Bundle building with manifest injection via `im_bundle` (single latest bundle per preset; older bundles deleted)
   - Atomic file staging to Windows-accessible paths
   - Auto-stage on change (configurable)
 
@@ -157,8 +157,9 @@ intermediary/
 │       ├── obs/            # Observability (logging)
 │       └── paths/          # Path resolution, WSL conversion
 ├── crates/                 # Rust workspace crates
-│   └── im_bundle/           # Rust bundle CLI (scan + zip + manifest)
-├── agent/                  # WSL agent (Node.js/TS)
+│   ├── im_agent/           # WSL agent (Rust)
+│   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
+├── agent/                  # Legacy WSL agent (Node.js/TS)
 │   └── src/
 │       ├── bundles/        # Bundle building
 │       ├── repos/          # File watching

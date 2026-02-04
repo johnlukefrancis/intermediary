@@ -265,7 +265,7 @@ Responsibilities:
 * Build zip bundles to staging (via `/mnt/c/...`)
 * Stage individual files on request
 
-Implementation: Node.js + TypeScript using chokidar for watch and Rust `im_bundle_cli` for bundle creation.
+Implementation: Rust WSL agent using notify for watch and the `im_bundle` library for bundle creation.
 
 #### C) IPC between UI and agent
 

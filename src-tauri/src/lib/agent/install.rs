@@ -8,15 +8,14 @@ use std::path::{Path, PathBuf};
 
 const AGENT_BUNDLE_DIR: &str = "agent_bundle";
 const AGENT_INSTALL_DIR: &str = "agent";
-const AGENT_ENTRY_FILE: &str = "agent_main.cjs";
-const AGENT_CLI_FILE: &str = "im_bundle_cli";
+const AGENT_BINARY_FILE: &str = "im_agent";
 const AGENT_VERSION_FILE: &str = "version.json";
 
 #[derive(Debug, Clone)]
 pub struct AgentBundlePaths {
     pub agent_dir_windows: PathBuf,
-    pub agent_entry_wsl: String,
-    pub cli_wsl: String,
+    pub agent_dir_wsl: String,
+    pub agent_binary_wsl: String,
     pub log_dir_windows: PathBuf,
     pub log_dir_wsl: String,
     pub version: String,
@@ -41,8 +40,7 @@ pub fn ensure_agent_bundle(
     let installed_version = read_installed_version(&installed_version_path);
 
     let should_install = installed_version.as_deref() != Some(version.as_str())
-        || !agent_dir_windows.join(AGENT_ENTRY_FILE).is_file()
-        || !agent_dir_windows.join(AGENT_CLI_FILE).is_file();
+        || !agent_dir_windows.join(AGENT_BINARY_FILE).is_file();
 
     if should_install {
         install_bundle(&bundle_dir, &agent_dir_windows)?;
@@ -58,13 +56,12 @@ pub fn ensure_agent_bundle(
     let log_dir_wsl = windows_to_wsl_path(&path_to_string(&log_dir_windows)?)
         .ok_or_else(|| "Failed to convert log directory to WSL path".to_string())?;
 
-    let agent_entry_wsl = format!("{agent_dir_wsl}/{AGENT_ENTRY_FILE}");
-    let cli_wsl = format!("{agent_dir_wsl}/{AGENT_CLI_FILE}");
+    let agent_binary_wsl = format!("{agent_dir_wsl}/{AGENT_BINARY_FILE}");
 
     Ok(AgentBundlePaths {
         agent_dir_windows,
-        agent_entry_wsl,
-        cli_wsl,
+        agent_dir_wsl,
+        agent_binary_wsl,
         log_dir_windows,
         log_dir_wsl,
         version,
@@ -99,8 +96,7 @@ fn install_bundle(bundle_dir: &Path, agent_dir_windows: &Path) -> Result<(), Str
     fs::create_dir_all(&temp_dir)
         .map_err(|err| format!("Failed to create agent bundle temp dir: {err}"))?;
 
-    copy_required(bundle_dir, &temp_dir, AGENT_ENTRY_FILE)?;
-    copy_required(bundle_dir, &temp_dir, AGENT_CLI_FILE)?;
+    copy_required(bundle_dir, &temp_dir, AGENT_BINARY_FILE)?;
     copy_required(bundle_dir, &temp_dir, AGENT_VERSION_FILE)?;
 
     if agent_dir_windows.exists() {

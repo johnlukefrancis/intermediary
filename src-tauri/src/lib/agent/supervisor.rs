@@ -11,6 +11,8 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
 const SPAWN_BACKOFF: Duration = Duration::from_millis(1500);
+const READY_TIMEOUT: Duration = Duration::from_secs(30);
+const READY_POLL: Duration = Duration::from_millis(250);
 
 #[derive(Debug, Default)]
 struct AgentSupervisorState {
@@ -130,18 +132,23 @@ impl AgentSupervisor {
         .await
         .map_err(|err| format!("Agent bundle install task failed: {err}"))??;
 
-        let distro_for_probe = config.distro.clone();
-        tauri::async_runtime::spawn_blocking(move || verify_node_available(distro_for_probe))
-            .await
-            .map_err(|err| format!("Agent node probe task failed: {err}"))??;
-
         let bundle_for_spawn = bundle.clone();
         let config_for_spawn = config.clone();
         let child = tauri::async_runtime::spawn_blocking(move || {
-            spawn_agent_process(&bundle_for_spawn, &config_for_spawn)
+            let mut child = spawn_agent_process(&bundle_for_spawn, &config_for_spawn)?;
+            wait_for_agent_ready(&mut child, config_for_spawn.port)?;
+            Ok(child)
         })
         .await
-        .map_err(|err| format!("Agent spawn task failed: {err}"))??;
+        .map_err(|err| format!("Agent spawn task failed: {err}"))?;
+
+        let child = match child {
+            Ok(child) => child,
+            Err(err) => {
+                self.set_last_error(Some(err.clone()))?;
+                return Err(err);
+            }
+        };
 
         self.store_child(child)?;
         self.update_last_spawn()?;
@@ -212,28 +219,6 @@ fn resolve_expected_dirs(app: &AppHandle) -> Result<(String, String), String> {
     Ok((agent_dir.display().to_string(), log_dir.display().to_string()))
 }
 
-fn verify_node_available(distro: Option<String>) -> Result<(), String> {
-    let mut command = Command::new("wsl.exe");
-    if let Some(name) = distro.as_deref() {
-        if !name.trim().is_empty() {
-            command.args(["-d", name.trim()]);
-        }
-    }
-    let output = command
-        .args(["--", "bash", "-lc", "command -v node"])
-        .output()
-        .map_err(|err| format!("Failed to launch wsl.exe: {err}"))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        return Err(format!(
-            "Node.js not available in WSL. Ensure node is installed. {stderr}"
-        ));
-    }
-
-    Ok(())
-}
-
 fn spawn_agent_process(
     bundle: &AgentBundlePaths,
     config: &AgentSupervisorConfig,
@@ -247,18 +232,49 @@ fn spawn_agent_process(
 
     let env_port = config.port.to_string();
     let env_version = quote_bash(&bundle.version);
-    let env_cli = quote_bash(&bundle.cli_wsl);
     let env_log = quote_bash(&bundle.log_dir_wsl);
-    let entry = quote_bash(&bundle.agent_entry_wsl);
-
+    let agent_dir = quote_bash(&bundle.agent_dir_wsl);
     let command_line = format!(
-        "INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_AGENT_VERSION={env_version} IM_BUNDLE_CLI_PATH={env_cli} INTERMEDIARY_AGENT_LOG_DIR={env_log} node {entry}"
+        "cd {agent_dir} && chmod +x ./im_agent && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} ./im_agent"
     );
 
     command
         .args(["--", "bash", "-lc", &command_line])
         .spawn()
         .map_err(|err| format!("Failed to spawn WSL agent: {err}"))
+}
+
+fn wait_for_agent_ready(child: &mut Child, port: u16) -> Result<(), String> {
+    let start = Instant::now();
+    let mut last_error: Option<String> = None;
+
+    while start.elapsed() < READY_TIMEOUT {
+        if let Some(status) = child
+            .try_wait()
+            .map_err(|err| format!("Failed to poll agent process: {err}"))?
+        {
+            return Err(format!("WSL agent exited early: {status}"));
+        }
+
+        let probe = probe_port_blocking(port);
+        if probe.listening {
+            return Ok(());
+        }
+
+        last_error = probe.error;
+        std::thread::sleep(READY_POLL);
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
+
+    let detail = last_error
+        .map(|err| format!(" ({err})"))
+        .unwrap_or_default();
+    Err(format!(
+        "WSL agent did not become ready on port {port} within {}ms{detail}",
+        READY_TIMEOUT.as_millis()
+    ))
 }
 
 fn quote_bash(value: &str) -> String {

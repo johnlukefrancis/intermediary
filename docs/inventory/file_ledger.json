@@ -706,10 +706,6 @@
       "summary": "Tauri build script"
     },
     {
-      "path": "src-tauri/resources/agent_bundle/agent_main.cjs",
-      "summary": "agent main module"
-    },
-    {
       "path": "src-tauri/src/bin/intermediary.rs",
       "summary": "Binary entry point for Tauri app"
     },

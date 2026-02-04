@@ -1,32 +1,37 @@
 // Path: scripts/build/build_agent_bundle.mjs
-// Description: Build the bundled WSL agent runtime and copy im_bundle_cli into Tauri resources
+// Description: Build the bundled WSL agent binary and sync it into Tauri resources.
 
-import { build } from "esbuild";
-import { mkdir, readFile, writeFile, copyFile, stat } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import path from "node:path";
+import process from "node:process";
 
 const repoRoot = process.cwd();
 const outputDir = path.join(repoRoot, "src-tauri", "resources", "agent_bundle");
-const entryPoint = path.join(repoRoot, "agent", "src", "main.ts");
-const outputFile = path.join(outputDir, "agent_main.cjs");
+const tempDir = `${outputDir}.tmp`;
+const binaryName = "im_agent";
+const binaryPath = path.join(repoRoot, "target", "release", binaryName);
 
-const cliCandidates = [
-  path.join(repoRoot, "target", "release", "im_bundle_cli"),
-  path.join(repoRoot, "target", "debug", "im_bundle_cli"),
-];
-
-async function resolveCliPath() {
-  for (const candidate of cliCandidates) {
-    try {
-      const info = await stat(candidate);
-      if (info.isFile()) {
-        return candidate;
-      }
-    } catch {
-      // Try next candidate.
-    }
+function ensureLinux() {
+  if (process.platform !== "linux") {
+    throw new Error(
+      "build_agent_bundle.mjs must run in WSL/Linux so the Linux agent binary can be produced."
+    );
   }
-  return null;
+}
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { stdio: "inherit", ...options });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+      reject(new Error(`${command} ${args.join(" ")} failed with exit code ${code}`));
+    });
+  });
 }
 
 async function loadVersion() {
@@ -39,34 +44,41 @@ async function loadVersion() {
   return version;
 }
 
-async function main() {
-  await mkdir(outputDir, { recursive: true });
-
-  await build({
-    entryPoints: [entryPoint],
-    outfile: outputFile,
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    target: "node18",
-    sourcemap: false,
+async function buildAgentBinary() {
+  await runCommand("cargo", ["build", "-p", "im_agent", "--bin", "im_agent", "--release"], {
+    cwd: repoRoot,
   });
 
-  const cliPath = await resolveCliPath();
-  if (!cliPath) {
-    throw new Error(
-      "im_bundle_cli not found. Build the Rust CLI before bundling the agent."
-    );
+  const info = await stat(binaryPath).catch(() => null);
+  if (!info?.isFile()) {
+    throw new Error("im_agent binary not found after build");
   }
+}
 
-  await copyFile(cliPath, path.join(outputDir, "im_bundle_cli"));
+async function writeBundle(version) {
+  await rm(tempDir, { recursive: true, force: true });
+  await mkdir(tempDir, { recursive: true });
 
-  const version = await loadVersion();
+  const binaryDest = path.join(tempDir, binaryName);
+  await copyFile(binaryPath, binaryDest);
+  await chmod(binaryDest, 0o755);
+
   await writeFile(
-    path.join(outputDir, "version.json"),
+    path.join(tempDir, "version.json"),
     JSON.stringify({ version }, null, 2) + "\n",
     "utf8"
   );
+
+  await rm(outputDir, { recursive: true, force: true });
+  await rename(tempDir, outputDir);
+}
+
+async function main() {
+  ensureLinux();
+
+  const version = await loadVersion();
+  await buildAgentBinary();
+  await writeBundle(version);
 }
 
 main().catch((err) => {

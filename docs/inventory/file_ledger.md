@@ -179,7 +179,6 @@ scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Us
 scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw assets to display sizes. Outputs 40px (1x) and 80px (2x retina) versions.
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
-src-tauri/resources/agent_bundle/agent_main.cjs - agent main module
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/agent/install.rs - Install the bundled WSL agent runtime into app local data
 src-tauri/src/lib/agent/mod.rs - WSL agent supervisor module exports
