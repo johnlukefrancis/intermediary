@@ -1,53 +1,74 @@
 /*
  * Path: app/src/styles/theme_warm.css
- * Description: Warm theme overrides - blue-light filter mode with amber/sepia undertones
+ * Description: Warm theme overrides - macchiato brown tones (dark sepia + splash of light)
  */
 
-/* Activated via [data-theme-mode="warm"] on .app element */
+/* Activated via [data-theme-mode="warm"] on document root */
 [data-theme-mode="warm"] {
+  color-scheme: dark;
+
   /* ===== BACKGROUND PALETTE ===== */
-  /* Shift from blue undertones to amber/sepia */
-  --theme-bg-base: #080705;
-  --theme-bg-surface: #100e0a;
-  --theme-bg-elevated: #18140f;
-  --theme-bg-hover: #201a15;
-  --theme-bg-active: #28221a;
+  /* Macchiato browns - espresso with a splash of milk */
+  --theme-bg-base: #241d17;
+  --theme-bg-surface: #2e2620;
+  --theme-bg-elevated: #3a312a;
+  --theme-bg-hover: #483d34;
+  --theme-bg-active: #564a40;
 
   /* ===== TEXT PALETTE ===== */
-  /* Warmer cream tones instead of blue-white */
-  --theme-text-primary: #ece8e0;
-  --theme-text-secondary: #a89888;
-  --theme-text-muted: #706050;
+  /* Warm cream/ivory for contrast */
+  --theme-text-primary: #ebe5d8;
+  --theme-text-secondary: #bfb098;
+  --theme-text-muted: #968878;
 
   /* ===== BORDER PALETTE ===== */
-  --theme-border: #28221a;
-  --theme-border-subtle: #1a1410;
-  --theme-border-highlight: rgba(255, 248, 230, 0.06);
+  --theme-border: #483d34;
+  --theme-border-subtle: #352c24;
+  --theme-border-highlight: rgba(235, 220, 190, 0.10);
+
+  /* ===== SEMANTIC STATES ===== */
+  /* Warm-shifted for sepia context */
+  --theme-success: #6abe70;
+  --theme-success-soft: #243828;
+  --theme-success-muted: #4a7a50;
+
+  --theme-error: #e07060;
+  --theme-error-soft: #382220;
+  --theme-error-muted: #9a5048;
+
+  --theme-warning: #daa520;
+  --theme-warning-soft: #383020;
+  --theme-warning-muted: #9a7a38;
+
+  --theme-info: #8ab4d8;
+  --theme-info-soft: #203038;
+  --theme-info-muted: #4a6a80;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(16, 14, 10, 0.85);
-  --theme-glass-border: rgba(255, 248, 230, 0.05);
+  --theme-glass-bg: rgba(46, 38, 32, 0.88);
+  --theme-glass-border: rgba(235, 220, 190, 0.08);
 
   /* ===== VINTAGE GLASS ===== */
-  --theme-glass-vintage-bg: rgba(14, 12, 8, 0.6);
-  --theme-glass-vintage-header: rgba(18, 14, 10, 0.65);
-  --theme-glass-vintage-content: rgba(12, 10, 6, 0.70);
-  --theme-glass-vintage-reflection: rgba(255, 248, 230, 0.03);
-  --theme-glass-vintage-edge: rgba(255, 248, 230, 0.08);
+  --theme-glass-vintage-bg: rgba(40, 33, 26, 0.65);
+  --theme-glass-vintage-header: rgba(46, 38, 32, 0.70);
+  --theme-glass-vintage-content: rgba(36, 29, 23, 0.75);
+  --theme-glass-vintage-reflection: rgba(235, 220, 190, 0.04);
+  --theme-glass-vintage-edge: rgba(235, 220, 190, 0.10);
+  --theme-glass-vintage-dither: 0.10;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(35, 28, 20, 0.5);
-  --theme-gradient-bottom: #050403;
-  --theme-bg-hover-subtle: rgba(255, 248, 230, 0.02);
+  --theme-gradient-top: rgba(58, 49, 42, 0.5);
+  --theme-gradient-bottom: #1a1410;
+  --theme-bg-hover-subtle: rgba(235, 220, 190, 0.04);
   --theme-scanline: rgba(0, 0, 0, 0.03);
 
   /* ===== DECK FRAME ===== */
-  --theme-deck-frame-outer: #241a14;
-  --theme-deck-frame-inner: rgba(255, 248, 230, 0.04);
+  --theme-deck-frame-outer: #483d34;
+  --theme-deck-frame-inner: rgba(235, 220, 190, 0.06);
 
   /* ===== DECK SUBSTRATE ===== */
-  --theme-deck-grid-dot: rgba(255, 248, 230, 0.02);
-  --theme-deck-vignette-tint: rgba(10, 5, 0, 0.4);
+  --theme-deck-grid-dot: rgba(235, 220, 190, 0.04);
+  --theme-deck-vignette-tint: rgba(26, 20, 16, 0.40);
 
   /* ===== LEGACY BRIDGE ===== */
   --bg-primary: var(--theme-bg-base);

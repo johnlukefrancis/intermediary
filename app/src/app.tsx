@@ -76,6 +76,14 @@ export function App(): React.JSX.Element {
   const { config, isLoaded, setLastActiveTabId } = useConfig();
   const { motionPaused } = useMotionGovernor();
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.themeMode = config.themeMode;
+    return () => {
+      delete root.dataset.themeMode;
+    };
+  }, [config.themeMode]);
+
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);
 

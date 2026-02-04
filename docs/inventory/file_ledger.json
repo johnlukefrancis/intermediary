@@ -343,7 +343,7 @@
     },
     {
       "path": "app/src/styles/theme_warm.css",
-      "summary": "Warm theme overrides - blue-light filter mode with amber/sepia undertones"
+      "summary": "Warm theme overrides - vintage sepia/parchment light mode"
     },
     {
       "path": "app/src/styles/tokens.css",

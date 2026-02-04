@@ -88,7 +88,7 @@ app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar workt
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
-app/src/styles/theme_warm.css - Warm theme overrides - blue-light filter mode with amber/sepia undertones
+app/src/styles/theme_warm.css - Warm theme overrides - vintage sepia/parchment light mode
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
