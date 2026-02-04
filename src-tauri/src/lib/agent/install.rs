@@ -15,7 +15,6 @@ const AGENT_VERSION_FILE: &str = "version.json";
 pub struct AgentBundlePaths {
     pub agent_dir_windows: PathBuf,
     pub agent_dir_wsl: String,
-    pub agent_binary_wsl: String,
     pub log_dir_windows: PathBuf,
     pub log_dir_wsl: String,
     pub version: String,
@@ -56,12 +55,9 @@ pub fn ensure_agent_bundle(
     let log_dir_wsl = windows_to_wsl_path(&path_to_string(&log_dir_windows)?)
         .ok_or_else(|| "Failed to convert log directory to WSL path".to_string())?;
 
-    let agent_binary_wsl = format!("{agent_dir_wsl}/{AGENT_BINARY_FILE}");
-
     Ok(AgentBundlePaths {
         agent_dir_windows,
         agent_dir_wsl,
-        agent_binary_wsl,
         log_dir_windows,
         log_dir_wsl,
         version,
