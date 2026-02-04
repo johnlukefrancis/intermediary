@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-02-03
+Updated on: 2026-02-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -31,6 +31,8 @@ Task name: `Tauri: dev (Windows, watch + sync)`
 ### Tauri: build installer (Windows)
 
 Syncs from WSL and builds the production installer.
+Runs the WSL agent bundle script (`scripts/build/build_agent_bundle.sh`) before syncing so
+the packaged resources include the latest Rust agent binary without requiring Node in WSL.
 
 Task name: `Tauri: build installer (Windows)`
 
