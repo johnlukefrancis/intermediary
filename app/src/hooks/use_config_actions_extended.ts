@@ -5,11 +5,31 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import {
   type PersistedConfig,
   type StarredFilesEntry,
+  type ThemeMode,
 } from "../shared/config.js";
 import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 
 type SetConfig = Dispatch<SetStateAction<PersistedConfig>>;
 type SaveConfig = (config: PersistedConfig) => void;
+
+export function useSetThemeMode(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (mode: ThemeMode) => void {
+  return useCallback(
+    (mode: ThemeMode) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          themeMode: mode,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
 
 export function useSetOutputWindowsRoot(
   setConfig: SetConfig,

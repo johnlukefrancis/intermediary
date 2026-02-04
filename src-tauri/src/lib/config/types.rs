@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 13;
+pub const CONFIG_VERSION: u32 = 14;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +48,9 @@ pub struct PersistedConfig {
     /// Starred files per repo
     #[serde(default)]
     pub starred_files: HashMap<String, StarredFilesEntry>,
+    /// Global theme mode (dark/warm)
+    #[serde(default)]
+    pub theme_mode: ThemeMode,
 }
 
 impl Default for PersistedConfig {
@@ -67,6 +70,7 @@ impl Default for PersistedConfig {
             output_windows_root: None,
             tab_themes: HashMap::new(),
             starred_files: HashMap::new(),
+            theme_mode: ThemeMode::default(),
         }
     }
 }
@@ -122,6 +126,17 @@ pub struct TabTheme {
     /// Optional texture id (from app/assets/textures)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub texture_id: Option<String>,
+}
+
+/// Global theme mode (color temperature)
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ThemeMode {
+    /// Standard dark mode with blue undertones
+    #[default]
+    Dark,
+    /// Blue-light filter mode with amber/sepia undertones
+    Warm,
 }
 
 /// Starred files for a single repo

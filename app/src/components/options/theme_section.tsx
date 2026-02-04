@@ -1,9 +1,9 @@
 // Path: app/src/components/options/theme_section.tsx
-// Description: Options panel theme controls (texture + accent per tab)
+// Description: Options panel theme controls (warm mode toggle + texture/accent per tab)
 
 import type React from "react";
 import { useMemo, useState, useRef, useEffect } from "react";
-import type { TabTheme } from "../../shared/config.js";
+import type { TabTheme, ThemeMode } from "../../shared/config.js";
 import { DEFAULT_ACCENT_HEX } from "../../lib/theme/accent_utils.js";
 import {
   DEFAULT_TEXTURE_ID,
@@ -21,6 +21,8 @@ interface ThemeEntry {
 interface ThemeSectionProps {
   entries: ThemeEntry[];
   tabThemes: Record<string, TabTheme>;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
@@ -31,12 +33,14 @@ interface ThemeSectionProps {
 export function ThemeSection({
   entries,
   tabThemes,
+  themeMode,
+  setThemeMode,
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
   renameRepoLabel,
   renameGroupLabel,
-}: ThemeSectionProps): React.JSX.Element | null {
+}: ThemeSectionProps): React.JSX.Element {
   const textureOptions = useMemo(() => getTextureOptions(), []);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
@@ -71,14 +75,27 @@ export function ThemeSection({
     setEditingKey(null);
   }
 
-  if (entries.length === 0) {
-    return null;
-  }
-
   return (
     <div className="options-section">
       <div className="options-section-title">Theme</div>
-      <div className="options-theme-list">
+      <div
+        className="options-row"
+        title="Blue-light filter with amber/sepia tones"
+      >
+        <span className="options-row-label">Warm mode</span>
+        <label className="vintage-toggle">
+          <input
+            type="checkbox"
+            checked={themeMode === "warm"}
+            onChange={(event) => {
+              setThemeMode(event.target.checked ? "warm" : "dark");
+            }}
+          />
+          <span className="vintage-toggle-track" aria-hidden="true" />
+        </label>
+      </div>
+      {entries.length === 0 ? null : (
+        <div className="options-theme-list">
         {entries.map((entry) => {
           const theme = tabThemes[entry.tabKey];
           const currentHex = theme?.accentHex ?? DEFAULT_ACCENT_HEX;
@@ -192,7 +209,8 @@ export function ThemeSection({
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

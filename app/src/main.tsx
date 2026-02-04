@@ -9,6 +9,7 @@ import { AgentProvider } from "./hooks/use_agent.js";
 // CSS imports - ORDER MATTERS (tokens -> theme -> accents -> effects -> layout -> panels -> chrome -> components)
 import "./styles/tokens.css";
 import "./styles/theme_dark.css";
+import "./styles/theme_warm.css";
 import "./styles/theme_accents.css";
 import "./styles/effects.css";
 import "./styles/motion.css";

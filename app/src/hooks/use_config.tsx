@@ -7,6 +7,7 @@ import {
   type BundleSelection,
   type RepoConfig,
   type GlobalExcludes,
+  type ThemeMode,
 } from "../shared/config.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
@@ -22,6 +23,7 @@ import {
   useRemoveGroup,
 } from "./use_config_actions.js";
 import {
+  useSetThemeMode,
   useSetOutputWindowsRoot,
   useSetAgentAutoStart,
   useSetAgentDistro,
@@ -88,6 +90,8 @@ interface ConfigContextValue {
     kind: "docs" | "code",
     path: string
   ) => void;
+  /** Set global theme mode (dark/warm) */
+  setThemeMode: (mode: ThemeMode) => void;
   /** Reset all settings to defaults */
   resetConfig: () => void;
 }
@@ -131,6 +135,7 @@ export function ConfigProvider({
   const clearTabTheme = useClearTabTheme(setConfig, saveConfig);
   const setRecentFilesLimit = useSetRecentFilesLimit(setConfig, saveConfig);
   const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
+  const setThemeMode = useSetThemeMode(setConfig, saveConfig);
 
   const value: ConfigContextValue = {
     config,
@@ -155,6 +160,7 @@ export function ConfigProvider({
     clearTabTheme,
     setRecentFilesLimit,
     toggleStarredFile,
+    setThemeMode,
     resetConfig,
   };
 

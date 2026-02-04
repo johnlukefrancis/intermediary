@@ -168,7 +168,12 @@ export function App(): React.JSX.Element {
   // Empty state: no repos configured
   if (config.repos.length === 0) {
     return (
-      <div className="app" data-motion={motionPaused ? "paused" : undefined} style={themeStyle}>
+      <div
+        className="app"
+        data-motion={motionPaused ? "paused" : undefined}
+        data-theme-mode={config.themeMode}
+        style={themeStyle}
+      >
         <header className="header-stack glass-surface">
           <AgentOfflineBanner />
           <StatusBar />
@@ -185,6 +190,7 @@ export function App(): React.JSX.Element {
       className="app"
       data-active-tab={activeRepoId}
       data-motion={motionPaused ? "paused" : undefined}
+      data-theme-mode={config.themeMode}
       style={themeStyle}
     >
       <header className="header-stack glass-surface">

@@ -49,6 +49,7 @@ export function StatusBar(): React.JSX.Element {
     setTabThemeTexture,
     clearTabTheme,
     setRecentFilesLimit,
+    setThemeMode,
     loadError,
     saveError,
     resetConfig,
@@ -130,6 +131,8 @@ export function StatusBar(): React.JSX.Element {
           setRecentFilesLimit={setRecentFilesLimit}
           repos={config.repos}
           tabThemes={config.tabThemes}
+          themeMode={config.themeMode}
+          setThemeMode={setThemeMode}
           setTabThemeAccent={setTabThemeAccent}
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}

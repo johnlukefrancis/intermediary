@@ -54,6 +54,11 @@ export const TabThemeSchema = z.object({
 
 export type TabTheme = z.infer<typeof TabThemeSchema>;
 
+/** Theme mode for global color temperature */
+export const ThemeModeSchema = z.enum(["dark", "warm"]);
+
+export type ThemeMode = z.infer<typeof ThemeModeSchema>;
+
 /** Starred files for a single repo */
 export const StarredFilesEntrySchema = z.object({
   docs: z.array(z.string()).default([]),
@@ -116,6 +121,8 @@ export const PersistedConfigSchema = z.object({
   tabThemes: z.record(z.string(), TabThemeSchema).default({}),
   /** Starred files per repo */
   starredFiles: StarredFilesSchema.default({}),
+  /** Global theme mode (dark/warm) */
+  themeMode: ThemeModeSchema.default("dark"),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -162,5 +169,6 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     agentDistro: null,
     tabThemes: {},
     starredFiles: {},
+    themeMode: "dark",
   };
 }

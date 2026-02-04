@@ -115,7 +115,7 @@
     },
     {
       "path": "app/src/components/options/theme_section.tsx",
-      "summary": "Options panel theme controls (texture + accent per tab)"
+      "summary": "Options panel theme controls (warm mode toggle + texture/accent per tab)"
     },
     {
       "path": "app/src/components/status_bar.tsx",
@@ -340,6 +340,10 @@
     {
       "path": "app/src/styles/theme_dark.css",
       "summary": "Dark glass vintage theme - fills semantic token slots"
+    },
+    {
+      "path": "app/src/styles/theme_warm.css",
+      "summary": "Warm theme overrides - blue-light filter mode with amber/sepia undertones"
     },
     {
       "path": "app/src/styles/tokens.css",

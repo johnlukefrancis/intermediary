@@ -31,7 +31,7 @@ app/src/components/options/general_section.tsx - Options panel section for gener
 app/src/components/options/output_folder_section.tsx - Options panel controls for staging output folder
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
-app/src/components/options/theme_section.tsx - Options panel theme controls (texture + accent per tab)
+app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -88,6 +88,7 @@ app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar workt
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
+app/src/styles/theme_warm.css - Warm theme overrides - blue-light filter mode with amber/sepia undertones
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
 app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
