@@ -27,6 +27,7 @@ dirs = "5.0"
 chrono = "0.4"
 once_cell = "1.19"
 regex = "1.10"
+im_bundle = { path = "../crates/im_bundle" }
 
 [dev-dependencies]
 tempfile = "3.10"

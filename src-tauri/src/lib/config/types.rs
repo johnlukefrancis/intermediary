@@ -87,7 +87,7 @@ pub struct UiState {
 }
 
 /// Global excludes for bundle building (not per-repo, not per-preset)
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GlobalExcludes {
     /// Directory names to exclude (exact match)
@@ -105,6 +105,19 @@ pub struct GlobalExcludes {
     /// Path patterns to exclude (e.g. "models/", "checkpoints/")
     #[serde(default)]
     pub patterns: Vec<String>,
+}
+
+impl Default for GlobalExcludes {
+    fn default() -> Self {
+        let recommended = im_bundle::global_excludes::recommended_global_excludes();
+        Self {
+            dir_names: recommended.dir_names,
+            dir_suffixes: recommended.dir_suffixes,
+            file_names: recommended.file_names,
+            extensions: recommended.extensions,
+            patterns: recommended.patterns,
+        }
+    }
 }
 
 /// Bundle selection state for a preset
