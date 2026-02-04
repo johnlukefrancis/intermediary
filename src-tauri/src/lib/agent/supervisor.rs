@@ -10,6 +10,9 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
 const SPAWN_BACKOFF: Duration = Duration::from_millis(1500);
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const READY_POLL: Duration = Duration::from_millis(250);
@@ -224,6 +227,11 @@ fn spawn_agent_process(
     config: &AgentSupervisorConfig,
 ) -> Result<Child, String> {
     let mut command = Command::new("wsl.exe");
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
     if let Some(name) = &config.distro {
         if !name.trim().is_empty() {
             command.args(["-d", name.trim()]);

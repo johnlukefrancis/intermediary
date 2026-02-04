@@ -75,6 +75,7 @@ Intermediary uses a **two-component architecture**:
   - Launches the agent via `wsl.exe` with explicit env configuration
   - Auto-start toggle with optional distro override
   - Restart command and diagnostics surfaced in the UI
+  - Stops the agent on app exit to avoid orphaned WSL processes
 
 ### WSL Agent
 

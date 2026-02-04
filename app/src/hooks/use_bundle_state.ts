@@ -32,6 +32,8 @@ export interface BundlePresetState {
   buildProgress: BundleBuildProgress | null;
   bundles: BundleInfo[];
   lastBuildError: string | null;
+  /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
+  freshlyBuiltAt: number | null;
 }
 
 export interface BundleState {
@@ -100,6 +102,7 @@ function createPresetState(
       buildProgress: null,
       bundles: [],
       lastBuildError: null,
+      freshlyBuiltAt: null,
     };
   }
 
@@ -118,6 +121,7 @@ function createPresetState(
       buildProgress: null,
       bundles: [],
       lastBuildError: null,
+      freshlyBuiltAt: null,
     };
   }
 
@@ -135,6 +139,7 @@ function createPresetState(
     buildProgress: null,
     bundles: [],
     lastBuildError: null,
+    freshlyBuiltAt: null,
   };
 }
 
@@ -301,6 +306,7 @@ export function useBundleState(
               ...preset,
               isBuilding: false,
               buildProgress: null,
+              freshlyBuiltAt: Date.now(),
             });
           }
           return next;

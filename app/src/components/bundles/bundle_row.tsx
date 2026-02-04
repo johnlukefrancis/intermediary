@@ -2,12 +2,17 @@
 // Description: Individual bundle row with drag support
 
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { BundleInfo } from "../../shared/protocol.js";
+
+/** Duration (ms) for the "freshly built" pulse animation */
+const FRESH_DURATION_MS = 5000;
 
 interface BundleRowProps {
   bundle: BundleInfo;
   onDragStart: (windowsPath: string) => Promise<void>;
+  /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
+  freshlyBuiltAt?: number | null | undefined;
 }
 
 function formatBytes(bytes: number): string {
@@ -30,8 +35,29 @@ function formatRelativeTime(mtimeMs: number): string {
   return `${diffDay}d ago`;
 }
 
-export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.Element {
+export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProps): React.JSX.Element {
   const [isDragging, setIsDragging] = useState(false);
+  const [isFresh, setIsFresh] = useState(false);
+
+  // Handle fresh bundle pulse animation
+  useEffect(() => {
+    if (freshlyBuiltAt == null) {
+      setIsFresh(false);
+      return;
+    }
+
+    const elapsed = Date.now() - freshlyBuiltAt;
+    if (elapsed >= FRESH_DURATION_MS) {
+      setIsFresh(false);
+      return;
+    }
+
+    // Still within fresh window - show animation
+    setIsFresh(true);
+    const remaining = FRESH_DURATION_MS - elapsed;
+    const timer = setTimeout(() => { setIsFresh(false); }, remaining);
+    return () => { clearTimeout(timer); };
+  }, [freshlyBuiltAt]);
 
   const handleMouseDown = useCallback(
     async (e: React.MouseEvent) => {
@@ -51,9 +77,15 @@ export function BundleRow({ bundle, onDragStart }: BundleRowProps): React.JSX.El
     [bundle.windowsPath, bundle.fileName, onDragStart]
   );
 
+  const className = [
+    "bundle-row",
+    isDragging && "dragging",
+    isFresh && "bundle-row--fresh",
+  ].filter(Boolean).join(" ");
+
   return (
     <div
-      className={`bundle-row ${isDragging ? "dragging" : ""}`}
+      className={className}
       onMouseDown={(e) => void handleMouseDown(e)}
       title="Drag to share (filename copied to clipboard)"
     >

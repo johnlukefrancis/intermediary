@@ -53,6 +53,7 @@ export function BundleColumn({
         bundles={activePreset.bundles}
         onDragStart={onDragStart}
         emptyMessage={emptyMessage}
+        freshlyBuiltAt={activePreset.freshlyBuiltAt}
       />
     </div>
   );

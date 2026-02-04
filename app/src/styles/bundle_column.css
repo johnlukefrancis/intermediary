@@ -516,6 +516,42 @@
   box-shadow: 0 0 6px 0 var(--color-accent-glow);
 }
 
+/* ===== FRESH BUNDLE PULSE ===== */
+/* 5-second glow animation when a bundle is freshly built */
+.bundle-row.bundle-row--fresh {
+  animation: bundle-ready-pulse 5s var(--ease-out) forwards;
+}
+
+.bundle-row.bundle-row--fresh::before {
+  background: var(--color-accent);
+  animation: bundle-ready-rail-pulse 5s var(--ease-out) forwards;
+}
+
+@keyframes bundle-ready-pulse {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--color-accent-glow),
+      0 0 12px 2px var(--color-accent-glow);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px var(--color-accent-glow),
+      0 0 8px 1px var(--color-accent-glow);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes bundle-ready-rail-pulse {
+  0% {
+    box-shadow: 0 0 8px 1px var(--color-accent-glow);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
 /* ===== BUNDLE STATE MARKER ===== */
 .bundle-state-marker {
   width: 6px;

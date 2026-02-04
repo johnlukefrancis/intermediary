@@ -15,11 +15,11 @@ use commands::file_manager::open_in_file_manager;
 use commands::paths::{convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths};
 use commands::reset::reset_app_state;
 use obs::logging;
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 
 /// Run the Tauri application
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -44,6 +44,20 @@ pub fn run() {
             convert_wsl_to_windows,
             open_in_file_manager
         ])
-        .run(tauri::generate_context!())
-        .expect("error running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error building tauri application");
+
+    let mut stopped = false;
+    app.run(move |app_handle, event| {
+        if stopped {
+            return;
+        }
+        if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
+            let supervisor = app_handle.state::<AgentSupervisor>();
+            if let Err(err) = tauri::async_runtime::block_on(supervisor.stop()) {
+                logging::log("error", "agent", "stop_on_exit_failed", &err);
+            }
+            stopped = true;
+        }
+    });
 }

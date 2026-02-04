@@ -9,12 +9,15 @@ interface BundleListProps {
   bundles: BundleInfo[];
   onDragStart: (windowsPath: string) => Promise<void>;
   emptyMessage?: string;
+  /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
+  freshlyBuiltAt?: number | null;
 }
 
 export function BundleList({
   bundles,
   onDragStart,
   emptyMessage = "No bundles yet",
+  freshlyBuiltAt,
 }: BundleListProps): React.JSX.Element {
   // Only show LATEST bundle (first one if exists)
   const latestBundle = bundles[0];
@@ -31,7 +34,7 @@ export function BundleList({
 
   return (
     <div className="bundle-list">
-      <BundleRow bundle={latestBundle} onDragStart={onDragStart} />
+      <BundleRow bundle={latestBundle} onDragStart={onDragStart} freshlyBuiltAt={freshlyBuiltAt} />
     </div>
   );
 }
