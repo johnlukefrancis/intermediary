@@ -6,20 +6,13 @@ use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use crate::error::AgentError;
 use crate::protocol::FileKind;
 
-const DOC_EXTENSIONS: &[&str] = &[
-    ".md",
-    ".txt",
-    ".rst",
-    ".adoc",
-    ".asciidoc",
-    ".wiki",
-];
+const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
 
 const DOC_DIRS: &[&str] = &["docs", "doc", "documentation", "wiki"];
 
 const CODE_EXTENSIONS: &[&str] = &[
-    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".rs", ".toml", ".css",
-    ".scss", ".html", ".svelte", ".vue", ".py", ".go", ".yaml", ".yml",
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".rs", ".toml", ".css", ".scss",
+    ".html", ".svelte", ".vue", ".py", ".go", ".yaml", ".yml",
 ];
 
 #[derive(Debug, Clone)]

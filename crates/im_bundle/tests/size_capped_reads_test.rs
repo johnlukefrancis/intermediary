@@ -6,9 +6,9 @@ use std::io::{Read, Write};
 use std::thread;
 use std::time::Duration;
 
+use im_bundle::plan::BundlePlan;
 use im_bundle::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
 use im_bundle::writer::write_bundle;
-use im_bundle::plan::BundlePlan;
 use tempfile::tempdir;
 
 #[test]

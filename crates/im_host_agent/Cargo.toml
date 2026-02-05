@@ -1,0 +1,23 @@
+# Path: crates/im_host_agent/Cargo.toml
+# Description: Rust host agent crate that routes repo operations across Windows and WSL backends
+
+[package]
+name = "im_host_agent"
+version = "0.1.0"
+edition = "2021"
+
+description = "Host agent daemon for Intermediary"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "im_host_agent"
+path = "src/main.rs"
+
+[dependencies]
+futures-util = "0.3"
+im_agent = { path = "../im_agent" }
+serde_json = "1.0"
+tokio = { version = "1.37", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-tungstenite = "0.23"

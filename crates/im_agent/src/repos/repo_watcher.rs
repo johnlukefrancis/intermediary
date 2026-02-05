@@ -1,10 +1,10 @@
 // Path: crates/im_agent/src/repos/repo_watcher.rs
 // Description: Notify-based repo watcher with MRU and event emission
 
-use std::path::{Path, PathBuf};
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, RwLock, watch};
+use tokio::sync::{mpsc, watch, Mutex, RwLock};
 
 use crate::error::AgentError;
 use crate::logging::Logger;
@@ -13,8 +13,8 @@ use crate::repos::categorizer::Categorizer;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
-use crate::repos::watcher_error::build_watcher_error_event;
 use crate::repos::repo_watcher_events::{handle_event, raw_os_code};
+use crate::repos::watcher_error::build_watcher_error_event;
 use crate::server::EventBus;
 
 pub struct RepoWatcherConfig {
@@ -44,8 +44,8 @@ pub struct RepoWatcher {
 
 impl RepoWatcher {
     pub async fn start(config: RepoWatcherConfig) -> Result<Self, AgentError> {
-        let mut mru = MruIndex::new(config.mru_capacity)
-            .map_err(|err| AgentError::internal(err))?;
+        let mut mru =
+            MruIndex::new(config.mru_capacity).map_err(|err| AgentError::internal(err))?;
         if !config.initial_entries.is_empty() {
             mru.load_from(config.initial_entries);
         }

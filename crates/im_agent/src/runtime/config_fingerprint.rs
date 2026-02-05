@@ -20,18 +20,18 @@ struct RepoFingerprint {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FingerprintData {
-    staging_wsl_root: String,
+    staging_root: String,
     recent_files_limit: usize,
     repos: Vec<RepoFingerprint>,
 }
 
-pub fn compute_config_fingerprint(config: &AppConfig, staging_wsl_root: &str) -> String {
+pub fn compute_config_fingerprint(config: &AppConfig, staging_root: &str) -> String {
     let mut repos: Vec<RepoFingerprint> = config.repos.iter().map(|repo| map_repo(repo)).collect();
 
     repos.sort_by(|a, b| a.repo_id.cmp(&b.repo_id));
 
     let data = FingerprintData {
-        staging_wsl_root: staging_wsl_root.to_string(),
+        staging_root: staging_root.to_string(),
         recent_files_limit: config.recent_files_limit,
         repos,
     };

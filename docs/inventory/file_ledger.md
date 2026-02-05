@@ -130,6 +130,7 @@ crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and ev
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
 crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
+crates/im_agent/src/runtime/state_watchers.rs - Watcher lifecycle helpers for agent runtime state
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
@@ -153,6 +154,23 @@ crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and prog
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
+crates/im_host_agent/src/config.rs - Host agent environment configuration parsing
+crates/im_host_agent/src/error_codes.rs - Shared host-agent error code constants for routing and WSL backend failures
+crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent daemon
+crates/im_host_agent/src/main.rs - Host agent daemon entry point
+crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
+crates/im_host_agent/src/runtime/host_runtime.rs - Host runtime that routes protocol commands to Windows-local or WSL backend
+crates/im_host_agent/src/runtime/local_windows_backend.rs - Windows-native local backend for repo watch, staging, and bundle operations
+crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local Windows handling
+crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
+crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection
+crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSocket handling and response serialization
+crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
+crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
+crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch
+crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
+crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
+crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.
 scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as...

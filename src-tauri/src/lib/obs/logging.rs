@@ -21,10 +21,7 @@ pub fn resolve_log_dir(app: &AppHandle) -> Option<PathBuf> {
     }
 
     // Fall back to app local data logs directory
-    app.path()
-        .app_local_data_dir()
-        .ok()
-        .map(|p| p.join("logs"))
+    app.path().app_local_data_dir().ok().map(|p| p.join("logs"))
 }
 
 /// Initialize the logger with the given log directory

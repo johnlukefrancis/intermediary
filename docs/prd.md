@@ -41,7 +41,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Repo roots are persisted path-native as `{ kind: "wsl" | "windows", path }`; the current WSL agent watches only `wsl` roots.
+* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Repo roots are persisted path-native as `{ kind: "wsl" | "windows", path }`, and backend routing follows root kind (Windows local backend, WSL backend agent).
 * Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
@@ -210,7 +210,7 @@ Bundles should be self-identifying:
 
 ### 7.7 Error handling
 
-* If WSL agent not reachable: show banner “WSL agent offline” + degrade to manual refresh/polling (if enabled).
+* If WSL backend is not reachable: show banner/error event for WSL operations, while Windows-root repos continue to function.
 * If staging copy fails: show per-item error and log.
 * If bundle build fails: show build error output (truncate) and keep last good build.
 * Reconnects may re-run `clientHello`; the agent treats the handshake as idempotent and safe to call multiple times.
@@ -235,13 +235,15 @@ Bundles should be self-identifying:
 
 ## 9. Technical architecture
 
-### 9.1 Why a WSL agent exists
+### 9.1 Why backend split exists
 
 Windows-side filesystem watchers (like `ReadDirectoryChangesW`) are not reliable/available for WSL UNC paths `\\wsl$...`. ([GitHub][1])
+WSL-side inotify is also not the correct watcher surface for Windows drive mounts (`/mnt/c/...`) in this product shape.
 So:
 
-* Watch inside WSL using inotify (reliable for Linux FS).
-* Communicate changes to the Windows UI.
+* Route Windows roots to a Windows-native backend.
+* Route WSL roots to a WSL backend agent using inotify.
+* Keep a single host-agent endpoint for UI stability.
 
 ### 9.2 Components
 
@@ -256,34 +258,47 @@ So:
 > Note: Tauri core historically didn’t prioritize drag-out natively. ([GitHub][4])
 > This is why you validate early.
 
-#### B) WSL agent (daemon)
+#### B) Host agent (daemon)
+
+Responsibilities:
+
+* Expose one WebSocket endpoint to the UI
+* Route per-repo operations by root kind (`windows` vs `wsl`)
+* Execute Windows-root operations locally (watch/refresh/stage/build/list/top-level)
+* Forward WSL-root operations to the WSL backend agent
+* Merge forwarded events into the UI event stream
+
+Implementation: Rust host agent using Tokio WebSocket server/client, local backend ops, and routing map.
+
+#### C) WSL backend agent (daemon)
 
 Responsibilities:
 
 * Watch WSL-root repos (notify/inotify)
-* Provide “recent changes” feed
-* Build zip bundles to staging (via `/mnt/c/...`)
-* Stage individual files on request
+* Provide WSL recent changes feed
+* Build/stage/list/top-level for WSL roots
+* Stream events and responses back to host agent
 
-Implementation: Rust WSL agent using notify for watch and the `im_bundle` library for bundle creation.
+Implementation: Rust WSL backend agent using notify for watch and the `im_bundle` library for bundle creation.
 
-#### C) IPC between UI and agent
+#### D) IPC between UI and host/backend
 
-* Local WebSocket (`127.0.0.1:<port>`) or named pipe.
-* JSON messages.
+* UI ↔ Host: local WebSocket (`127.0.0.1:<hostPort>`)
+* Host ↔ WSL backend: internal local WebSocket (`127.0.0.1:<hostPort+1>` configurable)
+* JSON messages using existing request/response/event envelopes.
 
 ### 9.3 Message protocol (current)
 
 Requests use `{ kind: "request", requestId, payload }` and responses use `{ kind: "response", requestId, status, payload|error }`.
 
-Agent → UI events:
+Host agent → UI events:
 
 * `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 * `snapshot { repoId, recent: FileEntry[] }`
 * `bundleBuilt { repoId, presetId, windowsPath, aliasWindowsPath, bytes, fileCount, builtAtIso }`
 * `error { scope, message, details? }`
 
-UI → Agent commands:
+UI → Host agent commands:
 
 * `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } -> clientHelloResult`
 * `setOptions { autoStageOnChange? } -> setOptionsResult`

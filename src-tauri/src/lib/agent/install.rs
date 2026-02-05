@@ -112,8 +112,7 @@ fn copy_required(bundle_dir: &Path, target_dir: &Path, file_name: &str) -> Resul
         return Err(format!("Agent bundle missing required file: {file_name}"));
     }
     let dest = target_dir.join(file_name);
-    fs::copy(&source, &dest)
-        .map_err(|err| format!("Failed to copy {file_name}: {err}"))?;
+    fs::copy(&source, &dest).map_err(|err| format!("Failed to copy {file_name}: {err}"))?;
     Ok(())
 }
 

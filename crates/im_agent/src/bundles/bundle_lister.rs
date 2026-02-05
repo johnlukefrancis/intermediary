@@ -9,18 +9,23 @@ use tokio::fs;
 
 use crate::error::AgentError;
 use crate::protocol::BundleInfo;
-use crate::staging::wsl_to_windows;
+use crate::staging::{wsl_to_windows, PathBridgeConfig, StagingRootKind};
 
 const MANIFEST_NAME: &str = "BUNDLE_MANIFEST.json";
 
 pub struct ListBundlesOptions {
-    pub staging_wsl_root: String,
+    pub staging: PathBridgeConfig,
+    pub staging_kind: StagingRootKind,
     pub repo_id: String,
     pub preset_id: String,
 }
 
 pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>, AgentError> {
-    let target_dir = Path::new(&options.staging_wsl_root)
+    let staging_root = match options.staging_kind {
+        StagingRootKind::Wsl => &options.staging.staging_wsl_root,
+        StagingRootKind::Windows => &options.staging.staging_win_root,
+    };
+    let target_dir = Path::new(staging_root)
         .join("bundles")
         .join(&options.repo_id)
         .join(&options.preset_id);
@@ -101,7 +106,11 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
     let mut results = Vec::with_capacity(candidates.len());
     for (index, candidate) in candidates.into_iter().enumerate() {
-        let windows_path = wsl_to_windows(candidate.wsl_path.to_string_lossy().as_ref())?;
+        let local_path = candidate.wsl_path.to_string_lossy().to_string();
+        let windows_path = match options.staging_kind {
+            StagingRootKind::Wsl => wsl_to_windows(&local_path)?,
+            StagingRootKind::Windows => local_path,
+        };
         results.push(BundleInfo {
             windows_path,
             file_name: candidate.file_name,
@@ -186,11 +195,7 @@ mod tests {
         let root = TempDir::new_in(base).expect("tempdir");
         let repo_id = "repo";
         let preset_id = "preset";
-        let dir = root
-            .path()
-            .join("bundles")
-            .join(repo_id)
-            .join(preset_id);
+        let dir = root.path().join("bundles").join(repo_id).join(preset_id);
         fs::create_dir_all(&dir).await.expect("mkdir");
 
         let names = vec![
@@ -206,7 +211,11 @@ mod tests {
         }
 
         let results = list_bundles(ListBundlesOptions {
-            staging_wsl_root: root.path().to_string_lossy().to_string(),
+            staging: PathBridgeConfig {
+                staging_wsl_root: root.path().to_string_lossy().to_string(),
+                staging_win_root: "C:\\bundles".to_string(),
+            },
+            staging_kind: StagingRootKind::Wsl,
             repo_id: repo_id.to_string(),
             preset_id: preset_id.to_string(),
         })

@@ -11,7 +11,9 @@ pub use commands::{
     GlobalExcludes, ListBundlesCommand, RefreshCommand, SetOptionsCommand, StageFileCommand,
     UiCommand, WatchRepoCommand,
 };
-pub use envelopes::{EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError};
+pub use envelopes::{
+    EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
+};
 pub use events::{
     AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, BundleBuildProgressEvent,
     BundleBuiltEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, SnapshotEvent,

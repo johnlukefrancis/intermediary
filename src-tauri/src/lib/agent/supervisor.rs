@@ -219,7 +219,10 @@ fn resolve_expected_dirs(app: &AppHandle) -> Result<(String, String), String> {
         .map_err(|_| "Failed to resolve app local data directory".to_string())?;
     let agent_dir = app_local_data.join("agent");
     let log_dir = app_local_data.join("logs");
-    Ok((agent_dir.display().to_string(), log_dir.display().to_string()))
+    Ok((
+        agent_dir.display().to_string(),
+        log_dir.display().to_string(),
+    ))
 }
 
 fn spawn_agent_process(

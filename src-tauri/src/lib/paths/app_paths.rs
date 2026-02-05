@@ -50,8 +50,8 @@ impl AppPaths {
         ensure_dir(&staging_windows, "staging directory")?;
         let staging_windows_str = path_to_string(&staging_windows)?;
 
-        let staging_wsl_root = windows_to_wsl_path(&staging_windows_str)
-            .ok_or(AppPathsError::WslConversionFailed)?;
+        let staging_wsl_root =
+            windows_to_wsl_path(&staging_windows_str).ok_or(AppPathsError::WslConversionFailed)?;
 
         let log_dir = resolve_log_dir(&app_local_data)?;
         let log_dir_str = path_to_string(&log_dir)?;
@@ -127,8 +127,10 @@ fn write_drag_icon_if_missing(path: &Path) -> Result<(), AppPathsError> {
     }
 
     const DRAG_ICON_BYTES: &[u8] = include_bytes!("../../../icons/32x32.png");
-    fs::write(path, DRAG_ICON_BYTES)
-        .map_err(|source| AppPathsError::Io { context: "drag icon", source })
+    fs::write(path, DRAG_ICON_BYTES).map_err(|source| AppPathsError::Io {
+        context: "drag icon",
+        source,
+    })
 }
 
 /// Validate that path is a Windows drive path (not UNC/wsl$).

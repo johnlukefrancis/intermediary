@@ -41,8 +41,10 @@ pub fn write_bundle_with_progress(
     write_bundle_with_emitter(plan, &mut progress)
 }
 
-fn write_bundle_with_emitter(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<BundleResult> {
-
+fn write_bundle_with_emitter(
+    plan: &BundlePlan,
+    progress: &mut ProgressEmitter,
+) -> Result<BundleResult> {
     let scan_start = Instant::now();
     let scan_result = scan_bundle(plan, progress)?;
     let scan_ms = scan_start.elapsed().as_millis();
@@ -75,12 +77,11 @@ fn write_zip(
     top_level_dirs_included: &[String],
     progress: &mut ProgressEmitter,
 ) -> Result<(u64, u64)> {
-    let output_file = File::create(&plan.output_path).map_err(|source| {
-        BundleError::OutputCreateFailed {
+    let output_file =
+        File::create(&plan.output_path).map_err(|source| BundleError::OutputCreateFailed {
             path: plan.output_path.clone(),
             source,
-        }
-    })?;
+        })?;
 
     let writer = BufWriter::with_capacity(OUTPUT_BUFFER_SIZE, output_file);
     let mut zip = zip::ZipWriter::new(writer);
@@ -117,11 +118,14 @@ fn write_zip(
 
     zip.start_file(MANIFEST_NAME, manifest_options)
         .map_err(|source| BundleError::ArchiveWriteFailed {
-        archive_path: MANIFEST_NAME.to_string(),
-        source,
+            archive_path: MANIFEST_NAME.to_string(),
+            source,
+        })?;
+    zip.write_all(manifest_json.as_bytes()).map_err(|e| {
+        BundleError::FinalizeFailed(format!(
+            "failed to write manifest entry {MANIFEST_NAME}: {e}"
+        ))
     })?;
-    zip.write_all(manifest_json.as_bytes())
-        .map_err(|e| BundleError::FinalizeFailed(format!("failed to write manifest entry {MANIFEST_NAME}: {e}")))?;
     files_done += 1;
     progress.emit_progress("zipping", files_done, files_total);
 
@@ -153,11 +157,12 @@ fn write_entry(
     files_total: u64,
     bytes_done_total: u64,
 ) -> Result<u64> {
-    let source_file = File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
-        path: entry.source_path.clone(),
-        archive_path: entry.archive_path.clone(),
-        source,
-    })?;
+    let source_file =
+        File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
+            path: entry.source_path.clone(),
+            archive_path: entry.archive_path.clone(),
+            source,
+        })?;
     let current_bytes_total = source_file
         .metadata()
         .map(|metadata| metadata.len())
@@ -172,9 +177,9 @@ fn write_entry(
 
     zip.start_file(&entry.archive_path, entry_options)
         .map_err(|source| BundleError::ArchiveWriteFailed {
-        archive_path: entry.archive_path.clone(),
-        source,
-    })?;
+            archive_path: entry.archive_path.clone(),
+            source,
+        })?;
 
     let mut total = 0u64;
     progress.emit_file_progress(
@@ -188,11 +193,13 @@ fn write_entry(
         true,
     );
     loop {
-        let bytes_read = reader.read(buffer).map_err(|source| BundleError::FileReadFailed {
-            path: entry.source_path.clone(),
-            archive_path: entry.archive_path.clone(),
-            source,
-        })?;
+        let bytes_read = reader
+            .read(buffer)
+            .map_err(|source| BundleError::FileReadFailed {
+                path: entry.source_path.clone(),
+                archive_path: entry.archive_path.clone(),
+                source,
+            })?;
         if bytes_read == 0 {
             break;
         }

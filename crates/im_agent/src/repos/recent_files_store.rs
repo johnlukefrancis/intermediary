@@ -141,7 +141,10 @@ impl RecentFilesStore {
     pub async fn flush_all(&self) {
         let entries = {
             let mut pending = self.pending.lock().await;
-            pending.drain().map(|(key, value)| (key, value)).collect::<Vec<_>>()
+            pending
+                .drain()
+                .map(|(key, value)| (key, value))
+                .collect::<Vec<_>>()
         };
 
         for (repo_id, entry) in entries {
@@ -149,7 +152,8 @@ impl RecentFilesStore {
             if let Some(handle) = entry.handle.take() {
                 handle.abort();
             }
-            self.write_now(repo_id, entry.repo_root, entry.entries).await;
+            self.write_now(repo_id, entry.repo_root, entry.entries)
+                .await;
         }
     }
 
@@ -218,6 +222,8 @@ impl RecentFilesStore {
     }
 
     fn file_path(&self, repo_id: &str) -> PathBuf {
-        self.state_dir.join("recent_files").join(format!("{repo_id}.json"))
+        self.state_dir
+            .join("recent_files")
+            .join(format!("{repo_id}.json"))
     }
 }

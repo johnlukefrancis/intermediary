@@ -62,7 +62,11 @@ pub async fn get_repo_top_level(root_path: &str) -> Result<TopLevelResult, std::
         subdirs.insert(dir.clone(), names);
     }
 
-    Ok(TopLevelResult { dirs, files, subdirs })
+    Ok(TopLevelResult {
+        dirs,
+        files,
+        subdirs,
+    })
 }
 
 pub async fn is_valid_repo_root(root_path: &str) -> bool {

@@ -61,8 +61,7 @@ async fn main() {
 }
 
 fn resolve_agent_version() -> String {
-    env::var("INTERMEDIARY_AGENT_VERSION")
-        .unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string())
+    env::var("INTERMEDIARY_AGENT_VERSION").unwrap_or_else(|_| env!("CARGO_PKG_VERSION").to_string())
 }
 
 fn resolve_log_level(raw: Option<String>) -> LogLevel {

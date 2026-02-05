@@ -83,7 +83,10 @@ fn reject_invalid_top_level_dir() {
 
     let mut progress = ProgressEmitter::new();
     let result = scan_bundle(&plan, &mut progress);
-    assert!(matches!(result, Err(im_bundle::error::BundleError::InvalidPlan(_))));
+    assert!(matches!(
+        result,
+        Err(im_bundle::error::BundleError::InvalidPlan(_))
+    ));
 }
 
 #[test]

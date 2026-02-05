@@ -12,7 +12,10 @@ pub(crate) fn start_progress_forwarder(
     event_bus: &EventBus,
     repo_id: String,
     preset_id: String,
-) -> (mpsc::UnboundedSender<ProgressMessage>, tokio::task::JoinHandle<()>) {
+) -> (
+    mpsc::UnboundedSender<ProgressMessage>,
+    tokio::task::JoinHandle<()>,
+) {
     let (progress_tx, mut progress_rx) = mpsc::unbounded_channel::<ProgressMessage>();
     let progress_bus = event_bus.clone();
 

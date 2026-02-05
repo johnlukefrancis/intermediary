@@ -1579,6 +1579,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "im_host_agent"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "im_agent",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

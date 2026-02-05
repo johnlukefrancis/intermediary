@@ -7,6 +7,7 @@ use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::protocol::{AgentEvent, BundleBuildProgressEvent, BundleSelection, GlobalExcludes};
 use crate::server::EventBus;
+use crate::staging::{PathBridgeConfig, StagingRootKind};
 
 use super::bundle_builder_blocking::{
     build_bundle_blocking, format_timestamp, BuildBundleBlockingOptions,
@@ -20,7 +21,8 @@ pub struct BuildBundleOptions {
     pub preset_id: String,
     pub preset_name: String,
     pub selection: BundleSelection,
-    pub staging_wsl_root: String,
+    pub staging: PathBridgeConfig,
+    pub staging_kind: StagingRootKind,
     pub global_excludes: Option<GlobalExcludes>,
 }
 
@@ -41,7 +43,8 @@ impl From<BuildBundleOptions> for BuildBundleBlockingOptions {
             preset_id: options.preset_id,
             preset_name: options.preset_name,
             selection: options.selection,
-            staging_wsl_root: options.staging_wsl_root,
+            staging: options.staging,
+            staging_kind: options.staging_kind,
             global_excludes: options.global_excludes,
         }
     }
@@ -65,7 +68,13 @@ pub async fn build_bundle(
 
     let blocking_options = BuildBundleBlockingOptions::from(options);
     let build_result = tokio::task::spawn_blocking(move || {
-        build_bundle_blocking(blocking_options, built_at_iso, timestamp, git_info, progress_tx)
+        build_bundle_blocking(
+            blocking_options,
+            built_at_iso,
+            timestamp,
+            git_info,
+            progress_tx,
+        )
     })
     .await;
 

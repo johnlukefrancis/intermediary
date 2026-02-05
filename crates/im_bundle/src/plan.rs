@@ -68,12 +68,11 @@ pub struct BundlePlan {
 
 impl BundlePlan {
     pub fn load(path: &Path) -> Result<Self> {
-        let content = std::fs::read_to_string(path).map_err(|source| {
-            BundleError::PlanReadFailed {
+        let content =
+            std::fs::read_to_string(path).map_err(|source| BundleError::PlanReadFailed {
                 path: path.to_path_buf(),
                 source,
-            }
-        })?;
+            })?;
         let plan: BundlePlan = serde_json::from_str(&content)?;
         plan.validate()?;
         Ok(plan)
@@ -87,7 +86,9 @@ impl BundlePlan {
             return Err(BundleError::InvalidPlan("presetId is required".to_string()));
         }
         if self.preset_name.trim().is_empty() {
-            return Err(BundleError::InvalidPlan("presetName is required".to_string()));
+            return Err(BundleError::InvalidPlan(
+                "presetName is required".to_string(),
+            ));
         }
         for dir in &self.selection.top_level_dirs {
             let trimmed = dir.trim();

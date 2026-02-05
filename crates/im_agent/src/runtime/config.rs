@@ -1,9 +1,24 @@
 // Path: crates/im_agent/src/runtime/config.rs
 // Description: Minimal app configuration structures for the agent runtime
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepoRootKind {
+    Wsl,
+    Windows,
+}
+
+impl RepoRootKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Wsl => "wsl",
+            Self::Windows => "windows",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub agent_host: Option<String>,
@@ -16,7 +31,7 @@ pub struct AppConfig {
     pub repos: Vec<RepoConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RepoConfig {
     pub repo_id: String,
@@ -34,12 +49,27 @@ pub struct RepoConfig {
 }
 
 impl RepoConfig {
+    pub fn root_kind(&self) -> RepoRootKind {
+        match self.root {
+            RepoRoot::Wsl { .. } => RepoRootKind::Wsl,
+            RepoRoot::Windows { .. } => RepoRootKind::Windows,
+        }
+    }
+
     pub fn wsl_root_path(&self) -> Option<&str> {
         self.root.wsl_path()
     }
+
+    pub fn windows_root_path(&self) -> Option<&str> {
+        self.root.windows_path()
+    }
+
+    pub fn root_path_for_kind(&self, kind: RepoRootKind) -> Option<&str> {
+        self.root.path_for_kind(kind)
+    }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum RepoRoot {
     Wsl { path: String },
@@ -66,9 +96,23 @@ impl RepoRoot {
             Self::Windows { .. } => None,
         }
     }
+
+    pub fn windows_path(&self) -> Option<&str> {
+        match self {
+            Self::Wsl { .. } => None,
+            Self::Windows { path } => Some(path),
+        }
+    }
+
+    pub fn path_for_kind(&self, kind: RepoRootKind) -> Option<&str> {
+        match kind {
+            RepoRootKind::Wsl => self.wsl_path(),
+            RepoRootKind::Windows => self.windows_path(),
+        }
+    }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BundlePreset {
     pub preset_id: String,

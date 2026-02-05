@@ -10,7 +10,7 @@ Reduce friction when sharing files and context bundles between local repos (ofte
 
 ## Architecture
 
-Intermediary uses a **two-component architecture**:
+Intermediary uses a **host-routed architecture**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -28,8 +28,11 @@ Intermediary uses a **two-component architecture**:
 │  └─────────────────────┬───────────────────────────────┘    │
 │                        │ WebSocket IPC                      │
 │  ┌─────────────────────┴───────────────────────────────┐    │
-│  │              Staging Directory                      │    │
-│  │     %LOCALAPPDATA%\Intermediary\staging\            │    │
+│  │                Host Agent (Rust)                    │    │
+│  │  • Single endpoint UI connects to                  │    │
+│  │  • Routes per-repo commands by root kind           │    │
+│  │  • Handles Windows repos locally                   │    │
+│  │  • Forwards WSL repos to internal WSL backend      │    │
 │  └─────────────────────────────────────────────────────┘    │
 └────────────────────────┬────────────────────────────────────┘
                          │
@@ -38,12 +41,11 @@ Intermediary uses a **two-component architecture**:
 ┌────────────────────────┴────────────────────────────────────┐
 │                      WSL (Linux)                            │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │                  WSL Agent (Daemon)                 │    │
+│  │               WSL Backend Agent (Daemon)            │    │
 │  │                                                     │    │
-│  │  • Watches repos via inotify                        │    │
-│  │  • Provides "recent changes" feed                   │    │
-│  │  • Builds zip bundles to staging                    │    │
-│  │  • Stages individual files on request               │    │
+│  │  • Watches WSL repos via inotify                    │    │
+│  │  • Handles WSL repo stage/build/top-level/list      │    │
+│  │  • Streams repo events back to host agent           │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐    │
@@ -69,28 +71,40 @@ Intermediary uses a **two-component architecture**:
 ### Agent Supervisor (Windows)
 
 - **Stack:** Tauri (Rust)
-- **Purpose:** Ensure the WSL agent is installed and running when the app is open
+- **Purpose:** Ensure agent processes are installed and running when the app is open
 - **Key features:**
-  - Installs bundled Rust agent binary (`im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
-  - Launches the agent via `wsl.exe` with explicit env configuration
+  - Installs bundled Rust WSL agent binary (`im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
+  - Launches the WSL backend agent via `wsl.exe` with explicit env configuration
+  - Host agent binary (`im_host_agent`) is now available in the Rust workspace for supervisor wiring
   - Auto-start toggle with optional distro override
   - Restart command and diagnostics surfaced in the UI
-  - Stops the agent on app exit to avoid orphaned WSL processes
+  - Stops agent processes on app exit to avoid orphans
 
-### WSL Agent
+### Host Agent
+
+- **Stack:** Rust (Tokio + WebSocket)
+- **Purpose:** Single UI-facing endpoint and per-repo backend router
+- **Key features:**
+  - Maintains repo backend map from path-native roots (`wsl` vs `windows`)
+  - Handles Windows roots locally for watch/refresh/stage/build/list/top-level
+  - Maintains internal WebSocket client to WSL backend agent
+  - Forwards WSL-targeted requests and relays backend events to the UI
+  - Emits explicit backend-availability errors without taking down Windows repos
+
+### WSL Backend Agent
 
 - **Stack:** Rust (Tokio + notify) with the `im_bundle` library for bundle creation
-- **Purpose:** File watching and bundle generation inside WSL
+- **Purpose:** File watching and bundle generation for WSL roots
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
   - Bundle building with manifest injection via `im_bundle` (single latest bundle per preset; older bundles deleted)
-  - Atomic file staging to Windows-accessible paths
+  - Atomic file staging for WSL repo operations
   - Auto-stage on change (configurable)
 
 ### IPC Protocol
 
-Communication via WebSocket on `127.0.0.1:<port>`, with request/response envelopes and event envelopes:
+UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, with request/response envelopes and event envelopes:
 - Request: `{ kind: "request", requestId, payload }`
 - Response: `{ kind: "response", requestId, status, payload|error }`
 - Event: `{ kind: "event", eventId, payload }`
@@ -135,9 +149,9 @@ The Options menu includes a "Reset all settings" action that restores defaults, 
 
 ## Why This Architecture?
 
-Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
+Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`), while WSL inotify is not a safe watcher surface for Windows drive mounts (`/mnt/c/...`) at scale. Host routing keeps each repo on its native backend.
 
-**v0 constraint:** Repos are persisted as path-native roots (`{ kind: "wsl" | "windows", path }`). The current WSL agent watches only `wsl` roots; `windows` roots stay Windows-native and are reserved for the upcoming Windows watcher backend.
+Repos are persisted as path-native roots (`{ kind: "wsl" | "windows", path }`). The host agent enforces this split at runtime so no Windows repo is watched from WSL.
 
 ## Directory Structure
 
@@ -159,6 +173,7 @@ intermediary/
 │       └── paths/          # Path resolution, WSL conversion
 ├── crates/                 # Rust workspace crates
 │   ├── im_agent/           # WSL agent (Rust)
+│   ├── im_host_agent/      # Host routing agent (Rust)
 │   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
 │   └── src/
 │       ├── bundles/        # Bundle building
@@ -176,9 +191,9 @@ intermediary/
 
 ## Key Workflows
 
-1. **File Change → UI Update:** Repo file changes → inotify → WSL agent → WebSocket → UI updates recent list
-2. **Drag-out:** User drags row → UI requests staging → Agent copies to staging → UI initiates OS drag with Windows path
-3. **Bundle Build:** User clicks Build → UI requests bundle → Agent deletes prior bundle for preset → Agent zips + writes manifest → Agent stages to Windows → UI shows the latest bundle
+1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list
+2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
+3. **Bundle Build:** User clicks Build → host agent routes by repo kind → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 
 ## Related docs
 

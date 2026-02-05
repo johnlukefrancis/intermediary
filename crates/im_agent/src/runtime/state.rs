@@ -12,13 +12,14 @@ use crate::protocol::{
     ClientHelloCommand, ClientHelloResult, RefreshResult, SetOptionsCommand, SetOptionsResult,
     WatchRepoResult,
 };
-use crate::repos::{is_valid_repo_root, RecentFilesStore, RepoWatcher, RepoWatcherConfig};
+use crate::repos::{is_valid_repo_root, RecentFilesStore, RepoWatcher};
 use crate::server::EventBus;
 use crate::staging::PathBridgeConfig;
 
-use super::{compute_config_fingerprint, AppConfig, RepoConfig};
+use super::{compute_config_fingerprint, AppConfig, RepoConfig, RepoRootKind};
 
 pub struct AgentRuntime {
+    pub supported_root_kind: RepoRootKind,
     pub config: Option<AppConfig>,
     pub config_fingerprint: Option<String>,
     pub staging: Option<PathBridgeConfig>,
@@ -31,7 +32,12 @@ pub struct AgentRuntime {
 
 impl AgentRuntime {
     pub fn new() -> Self {
+        Self::new_for_root_kind(RepoRootKind::Wsl)
+    }
+
+    pub fn new_for_root_kind(supported_root_kind: RepoRootKind) -> Self {
         Self {
+            supported_root_kind,
             config: None,
             config_fingerprint: None,
             staging: None,
@@ -53,7 +59,8 @@ impl AgentRuntime {
         let resolved_auto_stage = resolve_auto_stage(&command, self.auto_stage_on_change);
 
         let parsed_config = parse_app_config(&command.config)?;
-        let fingerprint = compute_config_fingerprint(&parsed_config, &command.staging_wsl_root);
+        let staging_root_for_runtime = self.staging_root_for_runtime(&command).to_string();
+        let fingerprint = compute_config_fingerprint(&parsed_config, &staging_root_for_runtime);
         let needs_reset = self
             .config_fingerprint
             .as_ref()
@@ -81,8 +88,7 @@ impl AgentRuntime {
             .collect();
 
         if needs_reset || self.recent_files_store.is_none() {
-            let state_dir =
-                PathBuf::from(&self.staging.as_ref().unwrap().staging_wsl_root).join("state");
+            let state_dir = PathBuf::from(&staging_root_for_runtime).join("state");
             self.recent_files_store = Some(RecentFilesStore::new(state_dir, logger.clone()));
         }
 
@@ -90,11 +96,12 @@ impl AgentRuntime {
             if self.watchers.contains_key(&repo.repo_id) {
                 continue;
             }
-            let Some(repo_root) = repo.root.wsl_path() else {
+            let Some(repo_root) = repo.root.path_for_kind(self.supported_root_kind) else {
                 logger.info(
-                    "Skipping non-WSL repo root",
+                    "Skipping unsupported repo root for runtime",
                     Some(serde_json::json!({
                         "repoId": repo.repo_id,
+                        "supportedRootKind": self.supported_root_kind.as_str(),
                         "rootKind": repo.root.kind(),
                         "rootPath": repo.root.path()
                     })),
@@ -149,15 +156,18 @@ impl AgentRuntime {
                 AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}"))
             })?;
 
-        let repo_root = repo_config.wsl_root_path().ok_or_else(|| {
-            AgentError::new(
-                "UNSUPPORTED_REPO_ROOT",
-                format!(
-                    "Repo {repo_id} uses unsupported root kind: {}",
-                    repo_config.root.kind()
-                ),
-            )
-        })?;
+        let repo_root = repo_config
+            .root_path_for_kind(self.supported_root_kind)
+            .ok_or_else(|| {
+                AgentError::new(
+                    "UNSUPPORTED_REPO_ROOT",
+                    format!(
+                        "Repo {repo_id} root kind {} is unsupported by {} runtime",
+                        repo_config.root.kind(),
+                        self.supported_root_kind.as_str()
+                    ),
+                )
+            })?;
 
         if !is_valid_repo_root(repo_root).await {
             return Err(AgentError::new(
@@ -184,60 +194,11 @@ impl AgentRuntime {
         })
     }
 
-    pub async fn reset_watchers(&mut self) {
-        for watcher in self.watchers.values() {
-            watcher.stop().await;
+    fn staging_root_for_runtime<'a>(&self, command: &'a ClientHelloCommand) -> &'a str {
+        match self.supported_root_kind {
+            RepoRootKind::Wsl => &command.staging_wsl_root,
+            RepoRootKind::Windows => &command.staging_win_root,
         }
-        self.watchers.clear();
-
-        if let Some(store) = &self.recent_files_store {
-            store.flush_all().await;
-        }
-    }
-
-    fn watched_repo_ids(&self) -> Vec<String> {
-        self.watchers.keys().cloned().collect()
-    }
-
-    async fn start_repo_watcher(
-        &mut self,
-        repo: &RepoConfig,
-        event_bus: &EventBus,
-        logger: &Logger,
-    ) -> Result<(), AgentError> {
-        let store = self.recent_files_store.as_ref().ok_or_else(|| {
-            AgentError::new("NOT_CONFIGURED", "Recent files store not configured")
-        })?;
-
-        let repo_root = repo.wsl_root_path().ok_or_else(|| {
-            AgentError::new(
-                "UNSUPPORTED_REPO_ROOT",
-                format!(
-                    "Repo {} uses unsupported root kind: {}",
-                    repo.repo_id,
-                    repo.root.kind()
-                ),
-            )
-        })?;
-
-        let initial_entries = store.load(&repo.repo_id, repo_root).await;
-
-        let watcher = RepoWatcher::start(RepoWatcherConfig {
-            repo_id: repo.repo_id.clone(),
-            root_path: repo_root.to_string(),
-            docs_globs: repo.docs_globs.clone(),
-            code_globs: repo.code_globs.clone(),
-            ignore_globs: repo.ignore_globs.clone(),
-            mru_capacity: self.recent_files_limit.max(1),
-            initial_entries,
-            recent_store: store.clone(),
-            logger: logger.clone(),
-            event_bus: event_bus.clone(),
-        })
-        .await?;
-
-        self.watchers.insert(repo.repo_id.clone(), watcher);
-        Ok(())
     }
 }
 

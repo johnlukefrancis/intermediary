@@ -41,7 +41,10 @@ impl MruIndex {
     pub fn load_from(&mut self, persisted: Vec<FileEntry>) {
         let mut entries = Vec::new();
         for entry in persisted {
-            if entries.iter().any(|item: &FileEntry| item.path == entry.path) {
+            if entries
+                .iter()
+                .any(|item: &FileEntry| item.path == entry.path)
+            {
                 continue;
             }
             entries.push(entry);

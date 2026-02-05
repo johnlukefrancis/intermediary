@@ -34,10 +34,9 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
 
     let event_bus = EventBus::new(128);
 
-    config.logger.info(
-        "WebSocket server started",
-        Some(json!({"port": port})),
-    );
+    config
+        .logger
+        .info("WebSocket server started", Some(json!({"port": port})));
 
     let shutdown = tokio::signal::ctrl_c();
     tokio::pin!(shutdown);

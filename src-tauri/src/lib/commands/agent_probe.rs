@@ -65,7 +65,9 @@ pub(crate) fn probe_port_blocking(port: u16) -> AgentPortProbeResult {
 
 fn describe_probe_error(port: u16, err: &std::io::Error) -> String {
     let detail = match err.kind() {
-        std::io::ErrorKind::ConnectionRefused => "Connection refused (nothing listening)".to_string(),
+        std::io::ErrorKind::ConnectionRefused => {
+            "Connection refused (nothing listening)".to_string()
+        }
         std::io::ErrorKind::TimedOut => "Timed out".to_string(),
         std::io::ErrorKind::AddrNotAvailable => "Address not available".to_string(),
         std::io::ErrorKind::NetworkUnreachable => "Network unreachable".to_string(),

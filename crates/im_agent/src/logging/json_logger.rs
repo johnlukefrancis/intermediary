@@ -97,7 +97,9 @@ impl Logger {
     }
 
     pub fn set_level(&self, level: LogLevel) {
-        self.inner.min_level.store(level.priority(), Ordering::Relaxed);
+        self.inner
+            .min_level
+            .store(level.priority(), Ordering::Relaxed);
     }
 
     pub fn debug(&self, msg: impl Into<String>, data: Option<Value>) {
@@ -129,15 +131,17 @@ impl Logger {
         };
 
         if self.inner.sender.send(entry).is_err() {
-            let fallback = format!(
-                "{{\"level\":\"error\",\"msg\":\"Log channel closed\"}}"
-            );
+            let fallback = format!("{{\"level\":\"error\",\"msg\":\"Log channel closed\"}}");
             eprintln!("{fallback}");
         }
     }
 }
 
-async fn run_writer(log_dir: PathBuf, log_file: PathBuf, mut receiver: UnboundedReceiver<LogEntry>) {
+async fn run_writer(
+    log_dir: PathBuf,
+    log_file: PathBuf,
+    mut receiver: UnboundedReceiver<LogEntry>,
+) {
     if let Err(err) = fs::create_dir_all(&log_dir).await {
         let fallback = format!(
             "{{\"level\":\"error\",\"msg\":\"Failed to create log dir\",\"error\":\"{}\"}}",
@@ -147,7 +151,12 @@ async fn run_writer(log_dir: PathBuf, log_file: PathBuf, mut receiver: Unbounded
         return;
     }
 
-    let mut file = match OpenOptions::new().create(true).append(true).open(&log_file).await {
+    let mut file = match OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file)
+        .await
+    {
         Ok(file) => file,
         Err(err) => {
             let fallback = format!(

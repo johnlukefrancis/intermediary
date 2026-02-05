@@ -510,6 +510,10 @@
       "summary": "Agent runtime exports"
     },
     {
+      "path": "crates/im_agent/src/runtime/state_watchers.rs",
+      "summary": "Watcher lifecycle helpers for agent runtime state"
+    },
+    {
       "path": "crates/im_agent/src/runtime/state.rs",
       "summary": "Agent runtime state and option handlers"
     },
@@ -600,6 +604,74 @@
     {
       "path": "crates/im_bundle/tests/size_capped_reads_test.rs",
       "summary": "Ensures bundle writes only the bytes present at file-open time even if file grows"
+    },
+    {
+      "path": "crates/im_host_agent/src/config.rs",
+      "summary": "Host agent environment configuration parsing"
+    },
+    {
+      "path": "crates/im_host_agent/src/error_codes.rs",
+      "summary": "Shared host-agent error code constants for routing and WSL backend failures"
+    },
+    {
+      "path": "crates/im_host_agent/src/lib.rs",
+      "summary": "Library root for the Intermediary host agent daemon"
+    },
+    {
+      "path": "crates/im_host_agent/src/main.rs",
+      "summary": "Host agent daemon entry point"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime_helpers.rs",
+      "summary": "Host-runtime helper functions for config parsing and repo-command metadata"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime.rs",
+      "summary": "Host runtime that routes protocol commands to Windows-local or WSL backend"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/local_windows_backend.rs",
+      "summary": "Windows-native local backend for repo watch, staging, and bundle operations"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/mod.rs",
+      "summary": "Host runtime exports for backend routing and local Windows handling"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/repo_backend.rs",
+      "summary": "Repo backend kind mapping for host-agent routing"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/router.rs",
+      "summary": "Repo-id command routing for host-agent backend selection"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/connection.rs",
+      "summary": "Host-agent per-connection WebSocket handling and response serialization"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/dispatch.rs",
+      "summary": "Host-agent command dispatch over routed runtime backends"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/mod.rs",
+      "summary": "Host-agent WebSocket server module exports"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/ws_server.rs",
+      "summary": "Host-agent WebSocket accept loop and connection dispatch"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/mod.rs",
+      "summary": "WSL backend client module exports"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client.rs",
+      "summary": "Persistent WebSocket client for forwarding commands/events to the WSL backend agent"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_messages.rs",
+      "summary": "WSL-backend message parsing and pending-response helpers"
     },
     {
       "path": "scripts/fileledger/add_file_headers.mjs",

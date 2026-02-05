@@ -207,17 +207,26 @@ fn matches_suffix(name: &str, suffixes: &[String]) -> bool {
 
 pub fn recommended_global_excludes() -> GlobalExcludes {
     GlobalExcludes {
-        dir_names: RECOMMENDED_DIR_NAMES.iter().map(|value| value.to_string()).collect(),
+        dir_names: RECOMMENDED_DIR_NAMES
+            .iter()
+            .map(|value| value.to_string())
+            .collect(),
         dir_suffixes: RECOMMENDED_DIR_SUFFIXES
             .iter()
             .map(|value| value.to_string())
             .collect(),
-        file_names: RECOMMENDED_FILE_NAMES.iter().map(|value| value.to_string()).collect(),
+        file_names: RECOMMENDED_FILE_NAMES
+            .iter()
+            .map(|value| value.to_string())
+            .collect(),
         extensions: RECOMMENDED_FILE_SUFFIXES
             .iter()
             .map(|value| value.to_string())
             .collect(),
-        patterns: RECOMMENDED_PATH_SEGMENTS.iter().map(|value| value.to_string()).collect(),
+        patterns: RECOMMENDED_PATH_SEGMENTS
+            .iter()
+            .map(|value| value.to_string())
+            .collect(),
     }
 }
 
@@ -225,8 +234,8 @@ pub fn recommended_global_excludes() -> GlobalExcludes {
 mod tests {
     use super::*;
     use crate::plan::{BundleGitInfo, BundlePlan, BundleSelection, GlobalExcludes};
-    use crate::scanner::scan_bundle;
     use crate::progress::ProgressEmitter;
+    use crate::scanner::scan_bundle;
     use tempfile::tempdir;
 
     #[test]
@@ -281,7 +290,11 @@ mod tests {
                 dir_names: vec![],
                 dir_suffixes: vec![],
                 file_names: vec![],
-                extensions: vec![".safetensors".to_string(), ".ckpt".to_string(), ".bin".to_string()],
+                extensions: vec![
+                    ".safetensors".to_string(),
+                    ".ckpt".to_string(),
+                    ".bin".to_string(),
+                ],
                 patterns: vec!["models".to_string()],
             },
         };

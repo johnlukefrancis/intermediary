@@ -4,7 +4,8 @@
 mod config;
 mod config_fingerprint;
 mod state;
+mod state_watchers;
 
-pub use config::{AppConfig, RepoConfig};
+pub use config::{AppConfig, RepoConfig, RepoRootKind};
 pub use config_fingerprint::compute_config_fingerprint;
 pub use state::AgentRuntime;

@@ -5,7 +5,7 @@ use crate::bundles::{build_bundle, list_bundles, BuildBundleOptions, ListBundles
 use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
 use crate::repos::get_repo_top_level;
-use crate::staging::stage_file;
+use crate::staging::{stage_file, StagingRootKind};
 
 use super::ConnectionContext;
 
@@ -48,7 +48,10 @@ pub async fn dispatch_command(
                 let repo_config = state.repo_configs.get(&command.repo_id).ok_or_else(|| {
                     AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
                 })?;
-                (staging, resolve_wsl_repo_root(&command.repo_id, repo_config)?)
+                (
+                    staging,
+                    resolve_wsl_repo_root(&command.repo_id, repo_config)?,
+                )
             };
 
             let result = stage_file(&staging, &command.repo_id, &repo_root, &command.path).await?;
@@ -103,7 +106,8 @@ pub async fn dispatch_command(
                     preset_id: command.preset_id.clone(),
                     preset_name: preset.preset_name,
                     selection: command.selection,
-                    staging_wsl_root: staging.staging_wsl_root,
+                    staging,
+                    staging_kind: StagingRootKind::Wsl,
                     global_excludes: command.global_excludes,
                 },
                 &ctx.event_bus,
@@ -158,17 +162,17 @@ pub async fn dispatch_command(
             ))
         }
         UiCommand::ListBundles(command) => {
-            let staging_root = {
-                let state = ctx.runtime.read().await;
-                state
-                    .staging
-                    .as_ref()
-                    .map(|staging| staging.staging_wsl_root.clone())
-                    .ok_or_else(|| AgentError::new("NOT_CONFIGURED", "Staging not configured"))?
-            };
+            let staging =
+                {
+                    let state = ctx.runtime.read().await;
+                    state.staging.as_ref().cloned().ok_or_else(|| {
+                        AgentError::new("NOT_CONFIGURED", "Staging not configured")
+                    })?
+                };
 
             let bundles = list_bundles(ListBundlesOptions {
-                staging_wsl_root: staging_root,
+                staging,
+                staging_kind: StagingRootKind::Wsl,
                 repo_id: command.repo_id.clone(),
                 preset_id: command.preset_id.clone(),
             })

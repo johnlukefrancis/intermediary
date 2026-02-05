@@ -6,11 +6,8 @@ use std::path::{Path, PathBuf};
 
 use crate::error::{BundleError, Result};
 use crate::global_excludes::{
-    is_globally_excluded_dir_name,
-    is_globally_excluded_file_name,
-    is_globally_excluded_path,
-    normalize_global_excludes,
-    NormalizedGlobalExcludes,
+    is_globally_excluded_dir_name, is_globally_excluded_file_name, is_globally_excluded_path,
+    normalize_global_excludes, NormalizedGlobalExcludes,
 };
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
@@ -43,12 +40,11 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
     let mut files_scanned = 0u64;
 
     if plan.selection.include_root {
-        let root_entries = std::fs::read_dir(repo_root).map_err(|source| {
-            BundleError::DirReadFailed {
+        let root_entries =
+            std::fs::read_dir(repo_root).map_err(|source| BundleError::DirReadFailed {
                 path: repo_root.clone(),
                 source,
-            }
-        })?;
+            })?;
         for entry in root_entries {
             let entry = entry.map_err(|source| BundleError::DirReadFailed {
                 path: repo_root.clone(),
@@ -56,10 +52,12 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
             })?;
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
-            let file_type = entry.file_type().map_err(|source| BundleError::MetadataFailed {
-                path: entry.path(),
-                source,
-            })?;
+            let file_type = entry
+                .file_type()
+                .map_err(|source| BundleError::MetadataFailed {
+                    path: entry.path(),
+                    source,
+                })?;
             if file_type.is_symlink() {
                 continue;
             }
@@ -177,10 +175,12 @@ fn collect_dir_entries(
         })?;
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
-        let file_type = entry.file_type().map_err(|source| BundleError::MetadataFailed {
-            path: entry.path(),
-            source,
-        })?;
+        let file_type = entry
+            .file_type()
+            .map_err(|source| BundleError::MetadataFailed {
+                path: entry.path(),
+                source,
+            })?;
 
         if file_type.is_symlink() {
             continue;

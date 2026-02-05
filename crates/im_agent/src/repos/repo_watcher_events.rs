@@ -1,10 +1,6 @@
 // Path: crates/im_agent/src/repos/repo_watcher_events.rs
 // Description: Event handling for repo watcher changes and rename mapping
 
-use std::path::{Path, PathBuf};
-use notify::event::{ModifyKind, RenameMode};
-use notify::{Event, EventKind};
-use tokio::sync::RwLock;
 use crate::logging::Logger;
 use crate::protocol::{AgentEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind};
 use crate::repos::categorizer::Categorizer;
@@ -12,6 +8,10 @@ use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
 use crate::server::EventBus;
+use notify::event::{ModifyKind, RenameMode};
+use notify::{Event, EventKind};
+use std::path::{Path, PathBuf};
+use tokio::sync::RwLock;
 
 struct EventContext<'a> {
     repo_id: &'a str,
@@ -101,7 +101,8 @@ impl<'a> EventContext<'a> {
             change_type,
             mtime.to_rfc3339(),
         );
-        self.event_bus.broadcast_event(AgentEvent::FileChanged(event_payload));
+        self.event_bus
+            .broadcast_event(AgentEvent::FileChanged(event_payload));
     }
 }
 
@@ -158,15 +159,13 @@ fn map_event_kind(kind: &EventKind) -> Option<FileChangeType> {
     }
 }
 
-async fn handle_rename_event(
-    context: &EventContext<'_>,
-    mode: RenameMode,
-    paths: &[PathBuf],
-) {
+async fn handle_rename_event(context: &EventContext<'_>, mode: RenameMode, paths: &[PathBuf]) {
     match mode {
         RenameMode::Both => {
             if let Some(from_path) = paths.get(0) {
-                context.apply_change(from_path, FileChangeType::Unlink).await;
+                context
+                    .apply_change(from_path, FileChangeType::Unlink)
+                    .await;
             }
             if let Some(to_path) = paths.get(1) {
                 context.apply_change(to_path, FileChangeType::Add).await;
@@ -174,7 +173,9 @@ async fn handle_rename_event(
         }
         RenameMode::From => {
             if let Some(from_path) = paths.get(0) {
-                context.apply_change(from_path, FileChangeType::Unlink).await;
+                context
+                    .apply_change(from_path, FileChangeType::Unlink)
+                    .await;
             }
         }
         RenameMode::To => {
@@ -185,7 +186,9 @@ async fn handle_rename_event(
         RenameMode::Any | RenameMode::Other => {
             if paths.len() >= 2 {
                 if let Some(from_path) = paths.get(0) {
-                    context.apply_change(from_path, FileChangeType::Unlink).await;
+                    context
+                        .apply_change(from_path, FileChangeType::Unlink)
+                        .await;
                 }
                 if let Some(to_path) = paths.get(1) {
                     context.apply_change(to_path, FileChangeType::Add).await;

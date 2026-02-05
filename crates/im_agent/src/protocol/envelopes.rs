@@ -4,8 +4,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{UiCommand, UiResponse};
 use super::AgentEvent;
+use super::{UiCommand, UiResponse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

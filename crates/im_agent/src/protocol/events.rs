@@ -155,15 +155,16 @@ impl FileChangedEvent {
 
 impl SnapshotEvent {
     pub fn new(repo_id: String, recent: Vec<FileEntry>) -> Self {
-        Self {
-            repo_id,
-            recent,
-        }
+        Self { repo_id, recent }
     }
 }
 
 impl AgentErrorEvent {
-    pub fn new(scope: impl Into<String>, message: impl Into<String>, details: Option<AgentErrorDetails>) -> Self {
+    pub fn new(
+        scope: impl Into<String>,
+        message: impl Into<String>,
+        details: Option<AgentErrorDetails>,
+    ) -> Self {
         Self {
             scope: scope.into(),
             message: message.into(),

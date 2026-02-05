@@ -14,7 +14,7 @@ use im_bundle::BundlePlan;
 
 use crate::error::AgentError;
 use crate::protocol::{BundleSelection, GlobalExcludes};
-use crate::staging::wsl_to_windows;
+use crate::staging::{windows_to_wsl, wsl_to_windows, PathBridgeConfig, StagingRootKind};
 
 use super::git_info::GitInfo;
 
@@ -24,7 +24,8 @@ pub(crate) struct BuildBundleBlockingOptions {
     pub(crate) preset_id: String,
     pub(crate) preset_name: String,
     pub(crate) selection: BundleSelection,
-    pub(crate) staging_wsl_root: String,
+    pub(crate) staging: PathBridgeConfig,
+    pub(crate) staging_kind: StagingRootKind,
     pub(crate) global_excludes: Option<GlobalExcludes>,
 }
 
@@ -45,13 +46,13 @@ pub(crate) fn build_bundle_blocking(
     git_info: GitInfo,
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
 ) -> Result<BlockingBundleResult, AgentError> {
-    let output_dir = Path::new(&options.staging_wsl_root)
+    let staging_root = staging_root_path(&options.staging, options.staging_kind);
+    let output_dir = Path::new(staging_root)
         .join("bundles")
         .join(&options.repo_id)
         .join(&options.preset_id);
-    std::fs::create_dir_all(&output_dir).map_err(|err| {
-        AgentError::internal(format!("Failed to create bundle directory: {err}"))
-    })?;
+    std::fs::create_dir_all(&output_dir)
+        .map_err(|err| AgentError::internal(format!("Failed to create bundle directory: {err}")))?;
 
     cleanup_existing_bundles(&output_dir, &options.repo_id, &options.preset_id);
 
@@ -87,8 +88,8 @@ pub(crate) fn build_bundle_blocking(
         )));
     }
 
-    let wsl_path = final_path.to_string_lossy().to_string();
-    let windows_path = wsl_to_windows(&wsl_path)?;
+    let local_bundle_path = final_path.to_string_lossy().to_string();
+    let (wsl_path, windows_path) = build_bundle_paths(&local_bundle_path, options.staging_kind)?;
 
     Ok(BlockingBundleResult {
         repo_id: options.repo_id,
@@ -174,6 +175,31 @@ fn temp_path_for(path: &Path) -> PathBuf {
     path.with_file_name(temp_name)
 }
 
+fn staging_root_path<'a>(staging: &'a PathBridgeConfig, kind: StagingRootKind) -> &'a str {
+    match kind {
+        StagingRootKind::Wsl => &staging.staging_wsl_root,
+        StagingRootKind::Windows => &staging.staging_win_root,
+    }
+}
+
+fn build_bundle_paths(
+    local_path: &str,
+    staging_kind: StagingRootKind,
+) -> Result<(String, String), AgentError> {
+    match staging_kind {
+        StagingRootKind::Wsl => Ok((local_path.to_string(), wsl_to_windows(local_path)?)),
+        StagingRootKind::Windows => {
+            let wsl_path = windows_to_wsl(local_path).ok_or_else(|| {
+                AgentError::new(
+                    "INVALID_PATH",
+                    format!("Cannot convert Windows bundle path to WSL: {local_path}"),
+                )
+            })?;
+            Ok((wsl_path, local_path.to_string()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,10 +207,7 @@ mod tests {
     #[test]
     fn defaults_global_excludes_when_missing() {
         let excludes = map_global_excludes(None);
-        assert!(excludes
-            .dir_names
-            .iter()
-            .any(|name| name == "node_modules"));
+        assert!(excludes.dir_names.iter().any(|name| name == "node_modules"));
         assert!(excludes.dir_names.iter().any(|name| name == "target"));
     }
 }

@@ -7,7 +7,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::fs;
 
 use crate::error::AgentError;
-use crate::staging::path_bridge::{build_staged_paths, ensure_path_dir, PathBridgeConfig};
+use crate::staging::path_bridge::{
+    build_staged_paths, build_staged_paths_for_kind, ensure_path_dir, staging_local_path,
+    PathBridgeConfig, StagingRootKind,
+};
 
 #[derive(Debug, Clone)]
 pub struct StageResult {
@@ -23,36 +26,56 @@ pub async fn stage_file(
     repo_root: &str,
     relative_path: &str,
 ) -> Result<StageResult, AgentError> {
+    stage_file_for_kind(
+        config,
+        repo_id,
+        repo_root,
+        relative_path,
+        StagingRootKind::Wsl,
+    )
+    .await
+}
+
+pub async fn stage_file_for_kind(
+    config: &PathBridgeConfig,
+    repo_id: &str,
+    repo_root: &str,
+    relative_path: &str,
+    staging_kind: StagingRootKind,
+) -> Result<StageResult, AgentError> {
     validate_relative_path(relative_path)?;
 
     let source_path = Path::new(repo_root).join(relative_path);
-    let staged_paths = build_staged_paths(config, repo_id, relative_path)?;
+    let staged_paths = if staging_kind == StagingRootKind::Wsl {
+        build_staged_paths(config, repo_id, relative_path)?
+    } else {
+        build_staged_paths_for_kind(config, repo_id, relative_path, staging_kind)?
+    };
+    let local_dest_path = staging_local_path(&staged_paths, staging_kind);
 
-    let dest_dir = ensure_path_dir(&staged_paths.wsl_path);
+    let dest_dir = ensure_path_dir(local_dest_path);
     fs::create_dir_all(&dest_dir)
         .await
         .map_err(|err| AgentError::internal(format!("Failed to create staging dir: {err}")))?;
 
-    let temp_path = temp_path_for(Path::new(&staged_paths.wsl_path));
+    let temp_path = temp_path_for(Path::new(local_dest_path));
 
     let bytes_copied = match fs::copy(&source_path, &temp_path).await {
         Ok(bytes) => bytes,
         Err(err) => {
             let _ = fs::remove_file(&temp_path).await;
-            return Err(AgentError::internal(format!(
-                "Failed to stage file: {err}"
-            )));
+            return Err(AgentError::internal(format!("Failed to stage file: {err}")));
         }
     };
 
-    if let Err(err) = fs::rename(&temp_path, &staged_paths.wsl_path).await {
+    if let Err(err) = fs::rename(&temp_path, local_dest_path).await {
         let _ = fs::remove_file(&temp_path).await;
         return Err(AgentError::internal(format!(
             "Failed to finalize staged file: {err}"
         )));
     }
 
-    let metadata = fs::metadata(&staged_paths.wsl_path)
+    let metadata = fs::metadata(local_dest_path)
         .await
         .map_err(|err| AgentError::internal(format!("Failed to stat staged file: {err}")))?;
 
@@ -181,13 +204,7 @@ mod tests {
         ];
 
         for path in invalid_paths {
-            let result = stage_file(
-                &config,
-                "repo",
-                &repo_root_str,
-                path,
-            )
-            .await;
+            let result = stage_file(&config, "repo", &repo_root_str, path).await;
             let err = result.expect_err("expected invalid path error");
             assert_eq!(err.code(), "INVALID_PATH", "path: {path}");
         }
