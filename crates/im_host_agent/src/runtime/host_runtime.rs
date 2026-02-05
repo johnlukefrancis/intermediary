@@ -14,6 +14,7 @@ use im_agent::server::EventBus;
 use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
 use crate::runtime::host_runtime_helpers::{
     build_repo_backend_map, build_wsl_client_hello, parse_app_config, repo_id_from_command,
+    should_forward_wsl_hello,
 };
 use crate::runtime::local_windows_backend::LocalWindowsBackend;
 use crate::runtime::router::resolve_repo_backend;
@@ -73,7 +74,9 @@ impl HostRuntime {
         event_bus: &EventBus,
     ) -> Result<ClientHelloResult, AgentError> {
         let parsed_config = parse_app_config(&command.config)?;
+        let had_wsl_repos_before = self.has_wsl_repos();
         self.repo_backends = build_repo_backend_map(&parsed_config);
+        let has_wsl_repos_now = self.has_wsl_repos();
 
         let local_result = self
             .local_backend
@@ -82,7 +85,7 @@ impl HostRuntime {
 
         let mut watched_ids: HashSet<String> = local_result.watched_repo_ids.into_iter().collect();
 
-        if self.has_wsl_repos() {
+        if should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now) {
             let wsl_hello = build_wsl_client_hello(&parsed_config, &command)?;
             if let Some(wsl_result) = self.try_forward_client_hello(wsl_hello, event_bus).await {
                 watched_ids.extend(wsl_result.watched_repo_ids);

@@ -53,3 +53,28 @@ pub(super) fn repo_id_from_command(command: &UiCommand) -> Option<&str> {
         UiCommand::ClientHello(_) | UiCommand::SetOptions(_) | UiCommand::Unknown => None,
     }
 }
+
+pub(super) fn should_forward_wsl_hello(had_wsl_before: bool, has_wsl_now: bool) -> bool {
+    has_wsl_now || had_wsl_before
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_forward_wsl_hello;
+
+    #[test]
+    fn forwards_when_config_still_has_wsl_repos() {
+        assert!(should_forward_wsl_hello(true, true));
+        assert!(should_forward_wsl_hello(false, true));
+    }
+
+    #[test]
+    fn forwards_empty_hello_when_wsl_repos_removed() {
+        assert!(should_forward_wsl_hello(true, false));
+    }
+
+    #[test]
+    fn skips_wsl_hello_when_no_wsl_repos_ever_configured() {
+        assert!(!should_forward_wsl_hello(false, false));
+    }
+}
