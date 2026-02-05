@@ -1,0 +1,119 @@
+// Path: src-tauri/src/lib/config/io/tests.rs
+// Description: Unit tests for config I/O and migration behavior
+
+use super::*;
+use crate::config::types::RepoRoot;
+use std::io::Write;
+use tempfile::tempdir;
+
+#[test]
+fn test_load_missing_returns_default() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.was_created);
+    assert!(!result.migration_applied);
+    assert_eq!(result.config.agent_port, 3141);
+}
+
+#[test]
+fn test_save_and_load_roundtrip() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config = PersistedConfig::default();
+    config.agent_port = 9999;
+
+    save_to_disk(&path, &config).unwrap();
+    let result = load_from_disk(&path).unwrap();
+
+    assert!(!result.was_created);
+    assert_eq!(result.config.agent_port, 9999);
+}
+
+#[test]
+fn test_atomic_write_creates_no_temp_on_success() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+    let temp_path = path.with_extension("json.tmp");
+
+    save_to_disk(&path, &PersistedConfig::default()).unwrap();
+
+    assert!(path.exists());
+    assert!(!temp_path.exists());
+}
+
+#[test]
+fn test_future_version_rejected() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config = PersistedConfig::default();
+    config.config_version = CONFIG_VERSION + 1;
+
+    let mut file = fs::File::create(&path).unwrap();
+    let payload = serde_json::to_string(&config).unwrap();
+    writeln!(file, "{payload}").unwrap();
+
+    let result = load_from_disk(&path);
+    assert!(matches!(result, Err(ConfigError::FutureVersion { .. })));
+}
+
+#[test]
+fn test_migrates_legacy_wsl_path_to_windows_root() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let legacy = json!({
+        "configVersion": 15,
+        "agentHost": "127.0.0.1",
+        "agentPort": 3141,
+        "agentAutoStart": true,
+        "agentDistro": null,
+        "autoStageGlobal": true,
+        "repos": [{
+            "repoId": "repo",
+            "label": "repo",
+            "wslPath": "/mnt/c/code/repo",
+            "autoStage": true,
+            "docsGlobs": [],
+            "codeGlobs": [],
+            "ignoreGlobs": [],
+            "bundlePresets": [{
+                "presetId": "context",
+                "presetName": "Context",
+                "includeRoot": true,
+                "topLevelDirs": []
+            }]
+        }],
+        "recentFilesLimit": 200,
+        "uiState": {
+            "lastActiveTabId": null,
+            "lastActiveGroupRepoIds": {}
+        },
+        "bundleSelections": {},
+        "globalExcludes": {
+            "dirNames": [],
+            "dirSuffixes": [],
+            "fileNames": [],
+            "extensions": [],
+            "patterns": []
+        },
+        "outputWindowsRoot": null,
+        "tabThemes": {},
+        "starredFiles": {},
+        "themeMode": "dark"
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{legacy}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert!(matches!(
+        &result.config.repos[0].root,
+        RepoRoot::Windows { path } if path == r"C:\code\repo"
+    ));
+}

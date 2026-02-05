@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-04
+Updated on: 2026-02-05
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -41,7 +41,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Windows/UNC paths are converted to WSL `/mnt/<drive>/...` paths for the agent.
+* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Repo roots are persisted path-native as `{ kind: "wsl" | "windows", path }`; the current WSL agent watches only `wsl` roots.
 * Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
@@ -130,14 +130,14 @@ If starred count becomes zero, pane auto-switches back to Recent.
 
 Users add and remove repositories via the UI:
 
-* **Add repository**: Click the "+" button in the tab bar to open a directory picker. The selected Windows/UNC path is converted to a WSL path for the agent.
+* **Add repository**: Click the "+" button in the tab bar to open a directory picker. The selected path is resolved into a path-native `root` (`wsl` or `windows`) and stored without cross-conversion.
 * **Remove repository**: Click the "×" button on a tab (or in a group dropdown), confirm via modal. Removes the repo and its bundle selections.
 * **Empty state**: When no repos are configured, a centered prompt with "Add Repository" button is shown.
 
 Each repo has:
 
 * `repoId`, `label` (auto-generated from folder name, editable)
-* `wslPath`: WSL paths (Windows/UNC selections are converted to WSL `/mnt/<drive>/...` for the agent)
+* `root`: `{ kind: "wsl" | "windows", path }` (WSL paths stay WSL, Windows paths stay Windows)
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
@@ -260,7 +260,7 @@ So:
 
 Responsibilities:
 
-* Watch repos (notify/inotify)
+* Watch WSL-root repos (notify/inotify)
 * Provide “recent changes” feed
 * Build zip bundles to staging (via `/mnt/c/...`)
 * Stage individual files on request

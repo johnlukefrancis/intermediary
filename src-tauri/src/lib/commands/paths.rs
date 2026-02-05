@@ -1,7 +1,9 @@
 // Path: src-tauri/src/lib/commands/paths.rs
 // Description: get_app_paths command implementation and path conversion utilities
 
+use crate::config::types::RepoRoot;
 use crate::paths::app_paths::AppPaths;
+use crate::paths::repo_root_resolver::{resolve_repo_root_from_input, RepoRootKind};
 use crate::paths::wsl_convert::{run_wslpath, windows_to_wsl_path, wsl_to_windows_path};
 use tauri::AppHandle;
 
@@ -23,6 +25,23 @@ pub fn convert_windows_to_wsl(windows_path: String) -> Result<String, String> {
         .ok_or_else(|| format!("Invalid Windows path format: {}", windows_path))
 }
 
+/// Resolve a user-selected path into a path-native repo root.
+/// Critical case: \\wsl$\...\mnt\<drive>\... resolves to a Windows root.
+#[tauri::command]
+pub fn resolve_repo_root(input_path: String) -> Result<RepoRoot, String> {
+    let resolved = resolve_repo_root_from_input(&input_path)
+        .ok_or_else(|| format!("Invalid repo root path: {input_path}"))?;
+
+    match resolved.kind {
+        RepoRootKind::Wsl => Ok(RepoRoot::Wsl {
+            path: resolved.path,
+        }),
+        RepoRootKind::Windows => Ok(RepoRoot::Windows {
+            path: resolved.path,
+        }),
+    }
+}
+
 /// Convert a WSL path to Windows path format.
 /// Handles both /mnt/X/... paths (fast pure conversion) and native WSL paths (via wslpath).
 #[tauri::command]
@@ -33,9 +52,7 @@ pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> 
     }
 
     // Native Linux path: call wslpath via subprocess
-    tauri::async_runtime::spawn_blocking(move || {
-        run_wslpath(&wsl_path).map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|e| format!("Task join error: {e}"))?
+    tauri::async_runtime::spawn_blocking(move || run_wslpath(&wsl_path).map_err(|e| e.to_string()))
+        .await
+        .map_err(|e| format!("Task join error: {e}"))?
 }

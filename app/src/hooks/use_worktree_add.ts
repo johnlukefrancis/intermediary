@@ -12,10 +12,12 @@ import {
 } from "../shared/repo_utils.js";
 import {
   type RepoConfig,
+  type RepoRoot,
   DEFAULT_DOCS_GLOBS,
   DEFAULT_CODE_GLOBS,
   DEFAULT_IGNORE_GLOBS,
   DEFAULT_BUNDLE_PRESET,
+  repoRootKey,
 } from "../shared/config.js";
 
 const ADD_ERROR_TIMEOUT_MS = 3000;
@@ -43,14 +45,14 @@ function resolveSingleSelection(selection: OpenSelection): string | null {
 function buildRepoConfig(
   repoId: string,
   label: string,
-  wslPath: string,
+  root: RepoRoot,
   groupId?: string,
   groupLabel?: string
 ): RepoConfig {
   return {
     repoId,
     label,
-    wslPath,
+    root,
     groupId,
     groupLabel,
     autoStage: true,
@@ -79,20 +81,20 @@ export function useWorktreeAdd({
     };
   }, [addError]);
 
-  const resolveWslPath = useCallback(async (): Promise<string | null> => {
+  const resolveRepoRoot = useCallback(async (): Promise<RepoRoot | null> => {
     const selection = await open({ directory: true, multiple: false });
-    const windowsPath = resolveSingleSelection(selection);
-    if (!windowsPath) return null;
+    const inputPath = resolveSingleSelection(selection);
+    if (!inputPath) return null;
 
-    return invoke<string>("convert_windows_to_wsl", {
-      windowsPath,
+    return invoke<RepoRoot>("resolve_repo_root", {
+      inputPath,
     });
   }, []);
 
   const ensureUniquePath = useCallback(
-    (wslPath: string): boolean => {
-      const existingPaths = new Set(config.repos.map((r) => r.wslPath));
-      if (existingPaths.has(wslPath)) {
+    (root: RepoRoot): boolean => {
+      const existingPaths = new Set(config.repos.map((r) => repoRootKey(r.root)));
+      if (existingPaths.has(repoRootKey(root))) {
         setAddError("This folder is already added");
         return false;
       }
@@ -116,16 +118,16 @@ export function useWorktreeAdd({
       setAddError(null);
 
       try {
-        const wslPath = await resolveWslPath();
-        if (!wslPath) return false;
-        if (!ensureUniquePath(wslPath)) return false;
+        const root = await resolveRepoRoot();
+        if (!root) return false;
+        if (!ensureUniquePath(root)) return false;
 
-        const folderName = extractFolderName(wslPath);
+        const folderName = extractFolderName(root.path);
         const repoId = createUniqueRepoId(folderName);
         const newRepo = buildRepoConfig(
           repoId,
           folderName,
-          wslPath,
+          root,
           groupId,
           groupLabel
         );
@@ -144,7 +146,7 @@ export function useWorktreeAdd({
     },
     [
       isAdding,
-      resolveWslPath,
+      resolveRepoRoot,
       ensureUniquePath,
       createUniqueRepoId,
       addRepo,
@@ -160,20 +162,20 @@ export function useWorktreeAdd({
       setAddError(null);
 
       try {
-        const wslPath = await resolveWslPath();
-        if (!wslPath) return false;
-        if (!ensureUniquePath(wslPath)) return false;
+        const root = await resolveRepoRoot();
+        if (!root) return false;
+        if (!ensureUniquePath(root)) return false;
 
         const groupId = tab.repoId;
         const groupLabel = tab.label;
         updateRepo(tab.repoId, { groupId, groupLabel });
 
-        const folderName = extractFolderName(wslPath);
+        const folderName = extractFolderName(root.path);
         const repoId = createUniqueRepoId(folderName);
         const newRepo = buildRepoConfig(
           repoId,
           folderName,
-          wslPath,
+          root,
           groupId,
           groupLabel
         );
@@ -192,7 +194,7 @@ export function useWorktreeAdd({
     },
     [
       isAdding,
-      resolveWslPath,
+      resolveRepoRoot,
       ensureUniquePath,
       createUniqueRepoId,
       addRepo,

@@ -12,10 +12,12 @@ import {
 } from "../shared/repo_utils.js";
 import {
   type RepoConfig,
+  type RepoRoot,
   DEFAULT_DOCS_GLOBS,
   DEFAULT_CODE_GLOBS,
   DEFAULT_IGNORE_GLOBS,
   DEFAULT_BUNDLE_PRESET,
+  repoRootKey,
 } from "../shared/config.js";
 
 interface AddRepoButtonProps {
@@ -40,27 +42,26 @@ export function AddRepoButton({
         return;
       }
 
-      // Convert Windows path to WSL path
-      const wslPath = await invoke<string>("convert_windows_to_wsl", {
-        windowsPath: selected,
+      const root = await invoke<RepoRoot>("resolve_repo_root", {
+        inputPath: selected,
       });
 
       // Check for duplicates
-      const existingPaths = new Set(config.repos.map((r) => r.wslPath));
-      if (existingPaths.has(wslPath)) {
-        console.warn("[AddRepoButton] Repository already exists:", wslPath);
+      const existingPaths = new Set(config.repos.map((r) => repoRootKey(r.root)));
+      if (existingPaths.has(repoRootKey(root))) {
+        console.warn("[AddRepoButton] Repository already exists:", root);
         return;
       }
 
       // Generate unique repoId
-      const folderName = extractFolderName(wslPath);
+      const folderName = extractFolderName(root.path);
       const existingIds = new Set(config.repos.map((r) => r.repoId));
       const repoId = generateUniqueRepoId(folderName, existingIds);
 
       const newRepo: RepoConfig = {
         repoId,
         label: folderName,
-        wslPath,
+        root,
         autoStage: true,
         docsGlobs: DEFAULT_DOCS_GLOBS,
         codeGlobs: DEFAULT_CODE_GLOBS,

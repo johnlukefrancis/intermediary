@@ -126,6 +126,10 @@
       "summary": "Tab navigation with grouped repo dropdown support"
     },
     {
+      "path": "app/src/components/tab_bar/tab_bar_items.tsx",
+      "summary": "Focused tab item renderers for single and grouped repository tabs"
+    },
+    {
       "path": "app/src/components/tab_remove_button.tsx",
       "summary": "\"x\" button for removing repos with confirmation"
     },
@@ -230,8 +234,16 @@
       "summary": "Default glob patterns for docs, code, and ignores"
     },
     {
+      "path": "app/src/shared/config/persisted_config_global_excludes_migration.ts",
+      "summary": "Global excludes migrations and legacy preset normalization"
+    },
+    {
       "path": "app/src/shared/config/persisted_config_migrations.ts",
       "summary": "Persisted config migrations and legacy normalization"
+    },
+    {
+      "path": "app/src/shared/config/persisted_config_repo_roots_migration.ts",
+      "summary": "Repo root migration helpers for persisted config normalization"
     },
     {
       "path": "app/src/shared/config/persisted_config.ts",
@@ -240,6 +252,10 @@
     {
       "path": "app/src/shared/config/repo_config.ts",
       "summary": "RepoConfig schema and type"
+    },
+    {
+      "path": "app/src/shared/config/repo_root.ts",
+      "summary": "Repo root discriminated union schema and path normalization helpers"
     },
     {
       "path": "app/src/shared/config/version.ts",
@@ -502,6 +518,10 @@
       "summary": "Per-connection WebSocket handling and request routing"
     },
     {
+      "path": "crates/im_agent/src/server/connection/dispatch.rs",
+      "summary": "Command dispatch for WebSocket request handling"
+    },
+    {
       "path": "crates/im_agent/src/server/event_bus.rs",
       "summary": "Broadcast agent events to connected WebSocket clients"
     },
@@ -658,12 +678,20 @@
       "summary": "Config file I/O with atomic writes and error handling"
     },
     {
+      "path": "src-tauri/src/lib/config/io/tests.rs",
+      "summary": "Unit tests for config I/O and migration behavior"
+    },
+    {
       "path": "src-tauri/src/lib/config/mod.rs",
       "summary": "Configuration persistence module"
     },
     {
       "path": "src-tauri/src/lib/config/types.rs",
       "summary": "Persisted configuration types for Intermediary"
+    },
+    {
+      "path": "src-tauri/src/lib/config/types/validation.rs",
+      "summary": "Persisted configuration validation rules and invariants"
     },
     {
       "path": "src-tauri/src/lib/mod.rs",
@@ -684,6 +712,10 @@
     {
       "path": "src-tauri/src/lib/paths/mod.rs",
       "summary": "Path resolution module exports"
+    },
+    {
+      "path": "src-tauri/src/lib/paths/repo_root_resolver.rs",
+      "summary": "Path-native repo root resolver for user-selected repo paths"
     },
     {
       "path": "src-tauri/src/lib/paths/wsl_convert.rs",

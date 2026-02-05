@@ -16,6 +16,14 @@ export {
   DEFAULT_IGNORE_GLOBS,
 } from "./config/glob_defaults.js";
 
+export {
+  RepoRootSchema,
+  isWslRepoRoot,
+  repoRootFromInputPath,
+  repoRootKey,
+} from "./config/repo_root.js";
+export type { RepoRoot } from "./config/repo_root.js";
+
 export { RepoConfigSchema } from "./config/repo_config.js";
 export type { RepoConfig } from "./config/repo_config.js";
 

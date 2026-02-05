@@ -163,18 +163,9 @@ mod tests {
             windows_to_wsl_path("C:/Users/john/AppData"),
             Some("/mnt/c/Users/john/AppData".to_string())
         );
-        assert_eq!(
-            windows_to_wsl_path("C:"),
-            Some("/mnt/c".to_string())
-        );
-        assert_eq!(
-            windows_to_wsl_path(r"C:\"),
-            Some("/mnt/c".to_string())
-        );
-        assert_eq!(
-            windows_to_wsl_path("C:/"),
-            Some("/mnt/c".to_string())
-        );
+        assert_eq!(windows_to_wsl_path("C:"), Some("/mnt/c".to_string()));
+        assert_eq!(windows_to_wsl_path(r"C:\"), Some("/mnt/c".to_string()));
+        assert_eq!(windows_to_wsl_path("C:/"), Some("/mnt/c".to_string()));
         assert_eq!(
             windows_to_wsl_path("/home/john/code/project"),
             Some("/home/john/code/project".to_string())
@@ -226,9 +217,6 @@ mod tests {
         );
 
         let err = WslConvertError::InvalidOutput("empty".to_string());
-        assert_eq!(
-            err.to_string(),
-            "wslpath returned invalid output: empty"
-        );
+        assert_eq!(err.to_string(), "wslpath returned invalid output: empty");
     }
 }

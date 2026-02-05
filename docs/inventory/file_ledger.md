@@ -34,6 +34,7 @@ app/src/components/options/texture_picker.tsx - Small texture picker popover for
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support
+app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
 app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
@@ -60,9 +61,12 @@ app/src/shared/config.ts - Shared config barrel exports
 app/src/shared/config/app_config.ts - AppConfig schema, types, and defaults
 app/src/shared/config/bundle_presets.ts - Bundle preset schema, type, and defaults
 app/src/shared/config/glob_defaults.ts - Default glob patterns for docs, code, and ignores
+app/src/shared/config/persisted_config_global_excludes_migration.ts - Global excludes migrations and legacy preset normalization
 app/src/shared/config/persisted_config_migrations.ts - Persisted config migrations and legacy normalization
+app/src/shared/config/persisted_config_repo_roots_migration.ts - Repo root migration helpers for persisted config normalization
 app/src/shared/config/persisted_config.ts - Persisted config schema, types, and defaults
 app/src/shared/config/repo_config.ts - RepoConfig schema and type
+app/src/shared/config/repo_root.ts - Repo root discriminated union schema and path normalization helpers
 app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
@@ -128,6 +132,7 @@ crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
+crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
@@ -167,12 +172,15 @@ src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
+src-tauri/src/lib/config/io/tests.rs - Unit tests for config I/O and migration behavior
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
+src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt
 src-tauri/src/lib/obs/mod.rs - Observability module exports
 src-tauri/src/lib/paths/app_paths.rs - Application path resolution logic
 src-tauri/src/lib/paths/mod.rs - Path resolution module exports
+src-tauri/src/lib/paths/repo_root_resolver.rs - Path-native repo root resolver for user-selected repo paths
 src-tauri/src/lib/paths/wsl_convert.rs - Windows <-> WSL path conversion utilities
 ```

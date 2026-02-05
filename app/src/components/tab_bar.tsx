@@ -5,44 +5,20 @@ import type React from "react";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
-import type { TabTheme } from "../shared/config.js";
+import type { RepoRoot, TabTheme } from "../shared/config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { AddRepoButton } from "./add_repo_button.js";
-import { TabRemoveButton } from "./tab_remove_button.js";
-import { GroupRemoveButton } from "./group_remove_button.js";
-import { DEFAULT_ACCENT_HEX, hexToAccentCssVars } from "../lib/theme/accent_utils.js";
+import {
+  GroupTabItem,
+  SingleTabItem,
+  isGroupActive,
+} from "./tab_bar/tab_bar_items.js";
+import {
+  DEFAULT_ACCENT_HEX,
+  hexToAccentCssVars,
+} from "../lib/theme/accent_utils.js";
 import "../styles/tab_bar.css";
 import "../styles/tab_bar_dropdown.css";
-
-/** Vintage folder icon SVG using theme CSS variables */
-function FolderIcon(): React.JSX.Element {
-  return (
-    <svg
-      className="tab-folder-icon"
-      width="18"
-      height="18"
-      viewBox="0 0 96 96"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* Folder tab */}
-      <path
-        className="folder-tab"
-        d="M18 26 C18 22.7 20.7 20 24 20 H40 C42 20 43.5 20.7 44.9 22.2 L50.2 27.2 C51.1 28.1 52.2 28.6 53.5 28.6 H72 C75.3 28.6 78 31.3 78 34.6 V38 H18 Z"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      {/* Folder body */}
-      <path
-        className="folder-body"
-        d="M16 38 H80 C83 38 85.5 40.5 85.5 43.5 V70 C85.5 76.4 80.4 81.5 74 81.5 H22 C15.6 81.5 10.5 76.4 10.5 70 V43.5 C10.5 40.5 13 38 16 38 Z"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 interface TabBarProps {
   tabs: TabItem[];
@@ -51,24 +27,6 @@ interface TabBarProps {
   lastActiveGroupRepoIds: Record<string, string>;
   onRepoChange: (repoId: string) => void;
   onRepoAdded?: (repoId: string) => void;
-}
-
-/** Check if the active repo belongs to this group */
-function isGroupActive(group: GroupTab, activeRepoId: string | null): boolean {
-  return group.repos.some((r) => r.repoId === activeRepoId);
-}
-
-/** Get the active repo's label within a group */
-function getActiveRepoLabel(
-  group: GroupTab,
-  activeRepoId: string | null,
-  lastActiveGroupRepoIds: Record<string, string>
-): string {
-  const activeRepo = group.repos.find((r) => r.repoId === activeRepoId);
-  if (activeRepo) return activeRepo.label;
-  const lastActiveId = lastActiveGroupRepoIds[group.groupId];
-  const lastActiveRepo = group.repos.find((r) => r.repoId === lastActiveId);
-  return lastActiveRepo?.label ?? group.repos[0]?.label ?? "";
 }
 
 function getThemeKey(tab: TabItem): string {
@@ -107,7 +65,6 @@ export function TabBar({
     return styles;
   }, [tabs, tabThemes]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!openDropdownId) return;
 
@@ -125,16 +82,12 @@ export function TabBar({
 
   const handleGroupClick = useCallback(
     (group: GroupTab) => {
-      // If clicking the group tab, select first repo in group (or current if already in group)
-      const isActive = isGroupActive(group, activeRepoId);
-      if (!isActive) {
-        const lastActiveId = lastActiveGroupRepoIds[group.groupId];
-        const targetRepo =
-          group.repos.find((repo) => repo.repoId === lastActiveId) ??
-          group.repos[0];
-        if (targetRepo) {
-          onRepoChange(targetRepo.repoId);
-        }
+      if (isGroupActive(group, activeRepoId)) return;
+      const lastActiveId = lastActiveGroupRepoIds[group.groupId];
+      const targetRepo =
+        group.repos.find((repo) => repo.repoId === lastActiveId) ?? group.repos[0];
+      if (targetRepo) {
+        onRepoChange(targetRepo.repoId);
       }
     },
     [activeRepoId, lastActiveGroupRepoIds, onRepoChange]
@@ -176,9 +129,12 @@ export function TabBar({
     [addWorktreeToSingle]
   );
 
-  const handleOpenFolder = useCallback(async (wslPath: string) => {
+  const handleOpenFolder = useCallback(async (root: RepoRoot) => {
     try {
-      const windowsPath = await invoke<string>("convert_wsl_to_windows", { wslPath });
+      const windowsPath =
+        root.kind === "windows"
+          ? root.path
+          : await invoke<string>("convert_wsl_to_windows", { wslPath: root.path });
       await invoke("open_in_file_manager", { folderPath: windowsPath });
     } catch (err) {
       console.error("[TabBar] Failed to open folder:", err);
@@ -188,190 +144,58 @@ export function TabBar({
   return (
     <nav className="tab-bar">
       {tabs.map((tab) => {
+        const isOpen = openDropdownId === (tab.type === "group" ? tab.groupId : tab.repoId);
+        const themeKey = getThemeKey(tab);
+        const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
+
         if (tab.type === "single") {
-          const isActive = activeRepoId === tab.repoId;
-          const isOpen = openDropdownId === tab.repoId;
-          const themeKey = tab.repoId;
-          const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
-
           return (
-            <div
+            <SingleTabItem
               key={tab.repoId}
-              className="single-tab-container"
-              style={accentStyle}
-              ref={isOpen ? dropdownRef : undefined}
-            >
-              {isActive && (
-                <button
-                  type="button"
-                  className="tab-folder-button"
-                  onClick={() => { void handleOpenFolder(tab.wslPath); }}
-                  title="Open folder in Explorer"
-                  aria-label="Open repository folder"
-                >
-                  <FolderIcon />
-                </button>
-              )}
-              <button
-                className={`tab-button ${isActive ? "active" : ""}`}
-                onClick={() => { onRepoChange(tab.repoId); }}
-                type="button"
-                aria-current={isActive ? "page" : undefined}
-              >
-                <span className="tab-label">{tab.label}</span>
-              </button>
-              {isActive && (
-                <button
-                  className="group-chevron"
-                  onClick={(e) => { toggleDropdown(e, tab.repoId); }}
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-label={`Add subfolder to ${tab.label}`}
-                  title={`Add subfolder to ${tab.label}`}
-                >
-                  {isOpen ? "▲" : "▼"}
-                </button>
-              )}
-              <TabRemoveButton
-                repoId={tab.repoId}
-                label={tab.label}
-              />
-
-              {isOpen && (
-                <div className="group-dropdown">
-                  {addError && (
-                    <div className="group-dropdown-error">{addError}</div>
-                  )}
-                  <button
-                    className="group-dropdown-add"
-                    onClick={() => { void handleAddWorktreeToSingle(tab); }}
-                    disabled={isAdding}
-                    type="button"
-                  >
-                    + Add subfolder
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        } else {
-          const isActive = isGroupActive(tab, activeRepoId);
-          const activeLabel = getActiveRepoLabel(
-            tab,
-            activeRepoId,
-            lastActiveGroupRepoIds
-          );
-          const isOpen = openDropdownId === tab.groupId;
-          const themeKey = tab.groupId;
-          const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
-          const repoCount = tab.repos.length;
-          const trimmedGroupLabel = tab.groupLabel.trim();
-          const trimmedActiveLabel = activeLabel.trim();
-          const showActiveSuffix =
-            trimmedActiveLabel.length > 0 && trimmedActiveLabel !== trimmedGroupLabel;
-          const groupDisplayLabel = trimmedGroupLabel || tab.groupId;
-          const fullGroupLabel = showActiveSuffix
-            ? `${groupDisplayLabel}: ${trimmedActiveLabel}`
-            : groupDisplayLabel;
-
-          return (
-            <div
-              key={tab.groupId}
-              className="group-tab-container"
-              style={accentStyle}
-              ref={isOpen ? dropdownRef : undefined}
-            >
-              {isActive && (
-                <button
-                  type="button"
-                  className="tab-folder-button"
-                  onClick={() => {
-                    const activeRepo = tab.repos.find((r) => r.repoId === activeRepoId);
-                    if (activeRepo) void handleOpenFolder(activeRepo.wslPath);
-                  }}
-                  title="Open folder in Explorer"
-                  aria-label="Open repository folder"
-                >
-                  <FolderIcon />
-                </button>
-              )}
-              <button
-                className={`tab-button ${isActive ? "active" : ""}`}
-                onClick={() => { handleGroupClick(tab); }}
-                type="button"
-                aria-current={isActive ? "page" : undefined}
-              >
-                <span className="tab-label">
-                  {fullGroupLabel}
-                </span>
-              </button>
-              {isActive && (
-                <button
-                  className="group-chevron"
-                  onClick={(e) => { toggleDropdown(e, tab.groupId); }}
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-label={`Add subfolder to ${tab.groupLabel}`}
-                  title={`Add subfolder to ${tab.groupLabel}`}
-                >
-                  {isOpen ? "▲" : "▼"}
-                </button>
-              )}
-              <GroupRemoveButton
-                groupId={tab.groupId}
-                groupLabel={tab.groupLabel}
-                repoCount={repoCount}
-                variant="icon"
-              />
-
-              {isOpen && (
-                <div className="group-dropdown">
-                  {tab.repos.map((repo) => {
-                    const isSelected = activeRepoId === repo.repoId;
-                    return (
-                      <div key={repo.repoId} className="group-dropdown-row">
-                        <button
-                          className={`group-dropdown-item ${isSelected ? "selected" : ""}`}
-                          onClick={() => { handleRepoSelect(repo.repoId); }}
-                          type="button"
-                        >
-                          <span className="group-radio">{isSelected ? "●" : "○"}</span>
-                          {repo.label}
-                        </button>
-                        <TabRemoveButton
-                          repoId={repo.repoId}
-                          label={repo.label}
-                          className="group-dropdown-remove"
-                        />
-                      </div>
-                    );
-                  })}
-                  <div className="group-dropdown-divider" />
-                  {addError && (
-                    <div className="group-dropdown-error">{addError}</div>
-                  )}
-                  <button
-                    className="group-dropdown-add"
-                    onClick={() => { void handleAddWorktreeToGroup(tab.groupId, tab.groupLabel); }}
-                    disabled={isAdding}
-                    type="button"
-                  >
-                    + Add subfolder
-                  </button>
-                  <GroupRemoveButton
-                    groupId={tab.groupId}
-                    groupLabel={tab.groupLabel}
-                    repoCount={repoCount}
-                    variant="dropdown"
-                    onRemoved={() => {
-                      setOpenDropdownId(null);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
+              tab={tab}
+              isActive={activeRepoId === tab.repoId}
+              isOpen={isOpen}
+              isAdding={isAdding}
+              addError={addError}
+              accentStyle={accentStyle}
+              dropdownRef={dropdownRef}
+              onRepoChange={onRepoChange}
+              onOpenFolder={(root) => {
+                void handleOpenFolder(root);
+              }}
+              onToggleDropdown={toggleDropdown}
+              onAddWorktree={(singleTab) => {
+                void handleAddWorktreeToSingle(singleTab);
+              }}
+            />
           );
         }
+
+        return (
+          <GroupTabItem
+            key={tab.groupId}
+            tab={tab}
+            activeRepoId={activeRepoId}
+            isOpen={isOpen}
+            isAdding={isAdding}
+            addError={addError}
+            accentStyle={accentStyle}
+            dropdownRef={dropdownRef}
+            lastActiveGroupRepoIds={lastActiveGroupRepoIds}
+            onGroupClick={handleGroupClick}
+            onRepoSelect={handleRepoSelect}
+            onOpenFolder={(root) => {
+              void handleOpenFolder(root);
+            }}
+            onToggleDropdown={toggleDropdown}
+            onAddWorktreeToGroup={(groupId, groupLabel) => {
+              void handleAddWorktreeToGroup(groupId, groupLabel);
+            }}
+            onCloseDropdown={() => {
+              setOpenDropdownId(null);
+            }}
+          />
+        );
       })}
       <AddRepoButton {...(onRepoAdded ? { onRepoAdded } : {})} />
     </nav>

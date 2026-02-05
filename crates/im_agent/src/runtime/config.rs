@@ -20,7 +20,7 @@ pub struct AppConfig {
 #[serde(rename_all = "camelCase")]
 pub struct RepoConfig {
     pub repo_id: String,
-    pub wsl_path: String,
+    pub root: RepoRoot,
     #[serde(default = "default_true")]
     pub auto_stage: bool,
     #[serde(default)]
@@ -31,6 +31,41 @@ pub struct RepoConfig {
     pub ignore_globs: Vec<String>,
     #[serde(default = "default_bundle_presets")]
     pub bundle_presets: Vec<BundlePreset>,
+}
+
+impl RepoConfig {
+    pub fn wsl_root_path(&self) -> Option<&str> {
+        self.root.wsl_path()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum RepoRoot {
+    Wsl { path: String },
+    Windows { path: String },
+}
+
+impl RepoRoot {
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Self::Wsl { .. } => "wsl",
+            Self::Windows { .. } => "windows",
+        }
+    }
+
+    pub fn path(&self) -> &str {
+        match self {
+            Self::Wsl { path } | Self::Windows { path } => path,
+        }
+    }
+
+    pub fn wsl_path(&self) -> Option<&str> {
+        match self {
+            Self::Wsl { path } => Some(path),
+            Self::Windows { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

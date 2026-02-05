@@ -17,6 +17,7 @@ import { CONFIG_VERSION } from "./version.js";
 import {
   migrateConfig,
   normalizeLegacyGlobalExcludes,
+  normalizeLegacyRepoRoots,
 } from "./persisted_config_migrations.js";
 
 /** Remembered UI state */
@@ -140,7 +141,8 @@ export interface LoadConfigResult {
  * Parse persisted config, applying migrations if needed
  */
 export function parsePersistedConfig(input: unknown): PersistedConfig {
-  const normalized = normalizeLegacyGlobalExcludes(input);
+  const normalizedRoots = normalizeLegacyRepoRoots(input);
+  const normalized = normalizeLegacyGlobalExcludes(normalizedRoots);
   const parsed = PersistedConfigSchema.parse(normalized);
   return migrateConfig(parsed);
 }

@@ -6,6 +6,7 @@ import {
   BundlePresetSchema,
   DEFAULT_BUNDLE_PRESET,
 } from "./bundle_presets.js";
+import { RepoRootSchema } from "./repo_root.js";
 import {
   DEFAULT_CODE_GLOBS,
   DEFAULT_DOCS_GLOBS,
@@ -20,8 +21,8 @@ export const RepoConfigSchema = z.object({
   repoId: z.string(),
   /** Display name in the UI (shown in dropdown for grouped repos) */
   label: z.string(),
-  /** Absolute WSL path to the repo root */
-  wslPath: z.string(),
+  /** Path-native repo root (WSL paths stay WSL, Windows paths stay Windows) */
+  root: RepoRootSchema,
   /** Optional group ID - repos with same groupId share a tab with dropdown */
   groupId: z.string().optional(),
   /** Group display name (shown as tab label for grouped repos) */

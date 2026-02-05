@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-04
+Updated on: 2026-02-05
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -137,7 +137,7 @@ The Options menu includes a "Reset all settings" action that restores defaults, 
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`). The WSL agent uses native Linux inotify for reliable file watching, then communicates changes to the Windows UI.
 
-**v0 constraint:** Repos may be in WSL Linux FS or on Windows drives (users add via the "+" button in the tab bar), and Windows/UNC paths are converted to WSL `/mnt/<drive>/...` paths for the agent. The WSL agent is required for v0.
+**v0 constraint:** Repos are persisted as path-native roots (`{ kind: "wsl" | "windows", path }`). The current WSL agent watches only `wsl` roots; `windows` roots stay Windows-native and are reserved for the upcoming Windows watcher backend.
 
 ## Directory Structure
 

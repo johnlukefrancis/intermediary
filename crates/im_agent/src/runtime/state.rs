@@ -81,8 +81,8 @@ impl AgentRuntime {
             .collect();
 
         if needs_reset || self.recent_files_store.is_none() {
-            let state_dir = PathBuf::from(&self.staging.as_ref().unwrap().staging_wsl_root)
-                .join("state");
+            let state_dir =
+                PathBuf::from(&self.staging.as_ref().unwrap().staging_wsl_root).join("state");
             self.recent_files_store = Some(RecentFilesStore::new(state_dir, logger.clone()));
         }
 
@@ -90,17 +90,25 @@ impl AgentRuntime {
             if self.watchers.contains_key(&repo.repo_id) {
                 continue;
             }
-            if !is_valid_repo_root(&repo.wsl_path).await {
+            let Some(repo_root) = repo.root.wsl_path() else {
+                logger.info(
+                    "Skipping non-WSL repo root",
+                    Some(serde_json::json!({
+                        "repoId": repo.repo_id,
+                        "rootKind": repo.root.kind(),
+                        "rootPath": repo.root.path()
+                    })),
+                );
+                continue;
+            };
+            if !is_valid_repo_root(repo_root).await {
                 logger.warn(
                     "Invalid repo root, skipping watcher",
-                    Some(serde_json::json!({"repoId": repo.repo_id, "rootPath": repo.wsl_path})),
+                    Some(serde_json::json!({"repoId": repo.repo_id, "rootPath": repo_root})),
                 );
                 continue;
             }
-            if let Err(err) = self
-                .start_repo_watcher(repo, event_bus, logger)
-                .await
-            {
+            if let Err(err) = self.start_repo_watcher(repo, event_bus, logger).await {
                 logger.error(
                     "Failed to start repo watcher",
                     Some(serde_json::json!({"repoId": repo.repo_id, "error": err.message()})),
@@ -136,16 +144,25 @@ impl AgentRuntime {
             });
         }
 
-        let repo_config = self
-            .repo_configs
-            .get(repo_id)
-            .cloned()
-            .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))?;
+        let repo_config =
+            self.repo_configs.get(repo_id).cloned().ok_or_else(|| {
+                AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}"))
+            })?;
 
-        if !is_valid_repo_root(&repo_config.wsl_path).await {
+        let repo_root = repo_config.wsl_root_path().ok_or_else(|| {
+            AgentError::new(
+                "UNSUPPORTED_REPO_ROOT",
+                format!(
+                    "Repo {repo_id} uses unsupported root kind: {}",
+                    repo_config.root.kind()
+                ),
+            )
+        })?;
+
+        if !is_valid_repo_root(repo_root).await {
             return Err(AgentError::new(
                 "INVALID_REPO",
-                format!("Invalid repo root: {}", repo_config.wsl_path),
+                format!("Invalid repo root: {repo_root}"),
             ));
         }
 
@@ -188,18 +205,26 @@ impl AgentRuntime {
         event_bus: &EventBus,
         logger: &Logger,
     ) -> Result<(), AgentError> {
-        let store = self
-            .recent_files_store
-            .as_ref()
-            .ok_or_else(|| AgentError::new("NOT_CONFIGURED", "Recent files store not configured"))?;
+        let store = self.recent_files_store.as_ref().ok_or_else(|| {
+            AgentError::new("NOT_CONFIGURED", "Recent files store not configured")
+        })?;
 
-        let initial_entries = store
-            .load(&repo.repo_id, &repo.wsl_path)
-            .await;
+        let repo_root = repo.wsl_root_path().ok_or_else(|| {
+            AgentError::new(
+                "UNSUPPORTED_REPO_ROOT",
+                format!(
+                    "Repo {} uses unsupported root kind: {}",
+                    repo.repo_id,
+                    repo.root.kind()
+                ),
+            )
+        })?;
+
+        let initial_entries = store.load(&repo.repo_id, repo_root).await;
 
         let watcher = RepoWatcher::start(RepoWatcherConfig {
             repo_id: repo.repo_id.clone(),
-            root_path: repo.wsl_path.clone(),
+            root_path: repo_root.to_string(),
             docs_globs: repo.docs_globs.clone(),
             code_globs: repo.code_globs.clone(),
             ignore_globs: repo.ignore_globs.clone(),

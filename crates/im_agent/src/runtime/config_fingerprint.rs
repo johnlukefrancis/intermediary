@@ -9,7 +9,8 @@ use super::config::{AppConfig, RepoConfig};
 #[serde(rename_all = "camelCase")]
 struct RepoFingerprint {
     repo_id: String,
-    wsl_path: String,
+    root_kind: String,
+    root_path: String,
     docs_globs: Vec<String>,
     code_globs: Vec<String>,
     ignore_globs: Vec<String>,
@@ -25,11 +26,7 @@ struct FingerprintData {
 }
 
 pub fn compute_config_fingerprint(config: &AppConfig, staging_wsl_root: &str) -> String {
-    let mut repos: Vec<RepoFingerprint> = config
-        .repos
-        .iter()
-        .map(|repo| map_repo(repo))
-        .collect();
+    let mut repos: Vec<RepoFingerprint> = config.repos.iter().map(|repo| map_repo(repo)).collect();
 
     repos.sort_by(|a, b| a.repo_id.cmp(&b.repo_id));
 
@@ -52,7 +49,8 @@ fn map_repo(repo: &RepoConfig) -> RepoFingerprint {
 
     RepoFingerprint {
         repo_id: repo.repo_id.clone(),
-        wsl_path: repo.wsl_path.clone(),
+        root_kind: repo.root.kind().to_string(),
+        root_path: repo.root.path().to_string(),
         docs_globs,
         code_globs,
         ignore_globs,
