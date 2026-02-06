@@ -40,15 +40,76 @@ pub fn ensure_agent_bundle(
     let installed_version_path = agent_dir_windows.join(AGENT_VERSION_FILE);
     let installed_version = read_installed_version(&installed_version_path);
 
-    let should_install = installed_version.as_deref() != Some(version.as_str())
-        || !agent_dir_windows.join(WSL_AGENT_BINARY_FILE).is_file()
-        || !agent_dir_windows.join(HOST_AGENT_BINARY_FILE).is_file();
+    let should_install = if installed_version.as_deref() != Some(version.as_str()) {
+        true
+    } else {
+        !installed_bundle_matches(&bundle_dir, &agent_dir_windows)?
+    };
 
     if should_install {
         install_bundle(&bundle_dir, &agent_dir_windows)?;
     }
 
     build_bundle_paths(agent_dir_windows, app_local_data.join("logs"), version)
+}
+
+fn installed_bundle_matches(bundle_dir: &Path, installed_dir: &Path) -> Result<bool, String> {
+    if !installed_dir.is_dir() {
+        return Ok(false);
+    }
+
+    let bundle_wsl = bundle_dir.join(WSL_AGENT_BINARY_FILE);
+    let bundle_version = bundle_dir.join(AGENT_VERSION_FILE);
+    if !bundle_wsl.is_file() {
+        return Err(format!(
+            "Agent bundle missing required file: {WSL_AGENT_BINARY_FILE}"
+        ));
+    }
+    if !bundle_version.is_file() {
+        return Err(format!(
+            "Agent bundle missing required file: {AGENT_VERSION_FILE}"
+        ));
+    }
+
+    let installed_wsl = installed_dir.join(WSL_AGENT_BINARY_FILE);
+    let installed_version = installed_dir.join(AGENT_VERSION_FILE);
+    if !installed_wsl.is_file() || !installed_version.is_file() {
+        return Ok(false);
+    }
+
+    if !files_equal(&bundle_wsl, &installed_wsl)? || !files_equal(&bundle_version, &installed_version)?
+    {
+        return Ok(false);
+    }
+
+    let (host_source, _) = resolve_host_binary_source(bundle_dir, installed_dir);
+    let Some(host_source) = host_source else {
+        return Ok(installed_dir.join(HOST_AGENT_BINARY_FILE).is_file());
+    };
+    let installed_host = installed_dir.join(HOST_AGENT_BINARY_FILE);
+    if !installed_host.is_file() {
+        return Ok(false);
+    }
+
+    files_equal(&host_source, &installed_host)
+}
+
+fn files_equal(left: &Path, right: &Path) -> Result<bool, String> {
+    let left_meta =
+        fs::metadata(left).map_err(|err| format!("Failed to stat {}: {err}", left.display()))?;
+    let right_meta =
+        fs::metadata(right).map_err(|err| format!("Failed to stat {}: {err}", right.display()))?;
+
+    if left_meta.len() != right_meta.len() {
+        return Ok(false);
+    }
+
+    let left_bytes =
+        fs::read(left).map_err(|err| format!("Failed to read {}: {err}", left.display()))?;
+    let right_bytes =
+        fs::read(right).map_err(|err| format!("Failed to read {}: {err}", right.display()))?;
+
+    Ok(left_bytes == right_bytes)
 }
 
 pub fn resolve_installed_agent_bundle(app_local_data: &Path) -> Result<AgentBundlePaths, String> {
