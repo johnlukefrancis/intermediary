@@ -16,6 +16,7 @@ import { RepoConfigSchema } from "./repo_config.js";
 import { CONFIG_VERSION } from "./version.js";
 import {
   migrateConfig,
+  normalizeLegacyCodeGlobs,
   normalizeLegacyGlobalExcludes,
   normalizeLegacyRepoRoots,
 } from "./persisted_config_migrations.js";
@@ -116,6 +117,17 @@ export const PersistedConfigSchema = z.object({
       ...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
       ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
     ],
+      patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
+    }),
+  /** Global classification excludes (used by Docs/Code panes only) */
+  classificationExcludes: GlobalExcludesSchema.default({
+    dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
+    dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
+    fileNames: [...GLOBAL_EXCLUDE_RECOMMENDED_FILES],
+    extensions: [
+      ...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+      ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+    ],
     patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
   }),
   /** Custom output folder override (Windows path, null = default AppData) */
@@ -142,7 +154,8 @@ export interface LoadConfigResult {
  */
 export function parsePersistedConfig(input: unknown): PersistedConfig {
   const normalizedRoots = normalizeLegacyRepoRoots(input);
-  const normalized = normalizeLegacyGlobalExcludes(normalizedRoots);
+  const normalizedCodeGlobs = normalizeLegacyCodeGlobs(normalizedRoots);
+  const normalized = normalizeLegacyGlobalExcludes(normalizedCodeGlobs);
   const parsed = PersistedConfigSchema.parse(normalized);
   return migrateConfig(parsed);
 }
@@ -160,6 +173,16 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     },
     bundleSelections: {},
     globalExcludes: {
+      dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
+      dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
+      fileNames: [...GLOBAL_EXCLUDE_RECOMMENDED_FILES],
+      extensions: [
+        ...GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS,
+        ...GLOBAL_EXCLUDE_RECOMMENDED_FILE_SUFFIXES,
+      ],
+      patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
+    },
+    classificationExcludes: {
       dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
       dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
       fileNames: [...GLOBAL_EXCLUDE_RECOMMENDED_FILES],

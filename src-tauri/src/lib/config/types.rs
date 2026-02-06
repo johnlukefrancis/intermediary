@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 16;
+pub const CONFIG_VERSION: u32 = 17;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +40,9 @@ pub struct PersistedConfig {
     /// Global bundle excludes (extensions and patterns)
     #[serde(default)]
     pub global_excludes: GlobalExcludes,
+    /// Global classification excludes (used by Docs/Code panes only)
+    #[serde(default)]
+    pub classification_excludes: GlobalExcludes,
     /// Custom output folder override (Windows path)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_windows_root: Option<String>,
@@ -68,6 +71,7 @@ impl Default for PersistedConfig {
             ui_state: UiState::default(),
             bundle_selections: HashMap::new(),
             global_excludes: GlobalExcludes::default(),
+            classification_excludes: GlobalExcludes::default(),
             output_windows_root: None,
             tab_themes: HashMap::new(),
             starred_files: HashMap::new(),

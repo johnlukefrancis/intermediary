@@ -47,6 +47,7 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 - Status bar with staging path and error display
 - VS Code tasks for Windows development workflow
 - UI-based repo management (add via "+" button, remove via "×" with confirmation)
+- Broad language-aware file classification with generated extension baseline + classifier excludes
 
 ---
 

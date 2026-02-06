@@ -76,13 +76,13 @@ const OPTIONS_SECTIONS = [
 ] as const;
 
 interface UseExcludesStateArgs {
-  globalExcludes: GlobalExcludes;
-  setGlobalExcludes: (excludes: GlobalExcludes) => void;
+  excludes: GlobalExcludes;
+  setExcludes: (excludes: GlobalExcludes) => void;
 }
 
 export function useExcludesState({
-  globalExcludes,
-  setGlobalExcludes,
+  excludes,
+  setExcludes,
 }: UseExcludesStateArgs) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [advancedSectionsOpen, setAdvancedSectionsOpen] = useState({
@@ -106,24 +106,24 @@ export function useExcludesState({
   );
 
   const normalizedExtensions = useMemo(
-    () => globalExcludes.extensions.map(normalizeExtension).filter((value) => value.length > 0),
-    [globalExcludes.extensions]
+    () => excludes.extensions.map(normalizeExtension).filter((value) => value.length > 0),
+    [excludes.extensions]
   );
   const normalizedPatterns = useMemo(
-    () => globalExcludes.patterns.map(normalizePattern).filter((value) => value.length > 0),
-    [globalExcludes.patterns]
+    () => excludes.patterns.map(normalizePattern).filter((value) => value.length > 0),
+    [excludes.patterns]
   );
   const normalizedDirNames = useMemo(
-    () => globalExcludes.dirNames.map(normalizePattern).filter((value) => value.length > 0),
-    [globalExcludes.dirNames]
+    () => excludes.dirNames.map(normalizePattern).filter((value) => value.length > 0),
+    [excludes.dirNames]
   );
   const normalizedDirSuffixes = useMemo(
-    () => globalExcludes.dirSuffixes.map(normalizeExtension).filter((value) => value.length > 0),
-    [globalExcludes.dirSuffixes]
+    () => excludes.dirSuffixes.map(normalizeExtension).filter((value) => value.length > 0),
+    [excludes.dirSuffixes]
   );
   const normalizedFileNames = useMemo(
-    () => globalExcludes.fileNames.map(normalizeName).filter((value) => value.length > 0),
-    [globalExcludes.fileNames]
+    () => excludes.fileNames.map(normalizeName).filter((value) => value.length > 0),
+    [excludes.fileNames]
   );
 
   const normalizedValues: NormalizedValues = useMemo(
@@ -162,68 +162,68 @@ export function useExcludesState({
   const handleRecommendedToggle = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const enabled = event.target.checked;
-      setGlobalExcludes(buildRecommendedExcludes(enabled));
+      setExcludes(buildRecommendedExcludes(enabled));
     },
-    [setGlobalExcludes]
+    [setExcludes]
   );
 
   const handleExtensionToggle = useCallback(
     (value: string, enabled: boolean) => {
-      setGlobalExcludes(
+      setExcludes(
         updateExtensions(normalizedValues, value, enabled)
       );
     },
     [
       normalizedValues,
-      setGlobalExcludes,
+      setExcludes,
     ]
   );
 
   const handlePatternToggle = useCallback(
     (value: string, enabled: boolean) => {
-      setGlobalExcludes(
+      setExcludes(
         updatePatterns(normalizedValues, value, enabled)
       );
     },
     [
       normalizedValues,
-      setGlobalExcludes,
+      setExcludes,
     ]
   );
 
   const handleDirToggle = useCallback(
     (value: string, enabled: boolean) => {
-      setGlobalExcludes(
+      setExcludes(
         updateDirNames(normalizedValues, value, enabled)
       );
     },
     [
       normalizedValues,
-      setGlobalExcludes,
+      setExcludes,
     ]
   );
 
   const handleDirSuffixToggle = useCallback(
     (value: string, enabled: boolean) => {
-      setGlobalExcludes(
+      setExcludes(
         updateDirSuffixes(normalizedValues, value, enabled)
       );
     },
     [
       normalizedValues,
-      setGlobalExcludes,
+      setExcludes,
     ]
   );
 
   const handleFileNameToggle = useCallback(
     (value: string, enabled: boolean) => {
-      setGlobalExcludes(
+      setExcludes(
         updateFileNames(normalizedValues, value, enabled)
       );
     },
     [
       normalizedValues,
-      setGlobalExcludes,
+      setExcludes,
     ]
   );
 

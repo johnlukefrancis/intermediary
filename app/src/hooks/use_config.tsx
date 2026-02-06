@@ -16,6 +16,7 @@ import {
   useSetLastActiveGroupRepoId,
   useSetBundleSelection,
   useSetGlobalExcludes,
+  useSetClassificationExcludes,
   useAddRepo,
   useUpdateRepo,
   useRenameRepoLabel,
@@ -58,6 +59,8 @@ interface ConfigContextValue {
   ) => void;
   /** Update global excludes (extensions and patterns) */
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
+  /** Update classification excludes used by Docs/Code panes */
+  setClassificationExcludes: (excludes: GlobalExcludes) => void;
   /** Add a new repo to config */
   addRepo: (repo: RepoConfig) => void;
   /** Update an existing repo's fields (e.g., to add groupId/groupLabel) */
@@ -128,6 +131,10 @@ export function ConfigProvider({
   );
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
+  const setClassificationExcludes = useSetClassificationExcludes(
+    setConfig,
+    saveConfig
+  );
   const addRepo = useAddRepo(setConfig, saveConfig);
   const updateRepo = useUpdateRepo(setConfig, saveConfig);
   const renameRepoLabel = useRenameRepoLabel(setConfig, saveConfig);
@@ -154,6 +161,7 @@ export function ConfigProvider({
     setLastActiveGroupRepoId,
     setBundleSelection,
     setGlobalExcludes,
+    setClassificationExcludes,
     addRepo,
     updateRepo,
     renameRepoLabel,

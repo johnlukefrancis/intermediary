@@ -117,3 +117,136 @@ fn test_migrates_legacy_wsl_path_to_windows_root() {
         RepoRoot::Windows { path } if path == r"C:\code\repo"
     ));
 }
+
+#[test]
+fn test_migrates_legacy_default_code_globs_to_expanded_defaults() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let legacy = json!({
+        "configVersion": 16,
+        "agentHost": "127.0.0.1",
+        "agentPort": 3141,
+        "agentAutoStart": true,
+        "agentDistro": null,
+        "autoStageGlobal": true,
+        "repos": [{
+            "repoId": "repo",
+            "label": "repo",
+            "root": { "kind": "wsl", "path": "/home/john/repo" },
+            "autoStage": true,
+            "docsGlobs": [],
+            "codeGlobs": [
+                "src/**",
+                "app/**",
+                "crates/**",
+                "src-tauri/**",
+                "**/*.ts",
+                "**/*.tsx",
+                "**/*.js",
+                "**/*.jsx",
+                "**/*.mjs",
+                "**/*.cjs",
+                "**/*.rs",
+                "**/*.toml",
+                "**/*.json",
+                "**/*.yaml",
+                "**/*.yml",
+                "**/*.py",
+                "**/*.go"
+            ],
+            "ignoreGlobs": [],
+            "bundlePresets": [{
+                "presetId": "context",
+                "presetName": "Context",
+                "includeRoot": true,
+                "topLevelDirs": []
+            }]
+        }],
+        "recentFilesLimit": 200,
+        "uiState": {
+            "lastActiveTabId": null,
+            "lastActiveGroupRepoIds": {}
+        },
+        "bundleSelections": {},
+        "globalExcludes": {
+            "dirNames": [],
+            "dirSuffixes": [],
+            "fileNames": [],
+            "extensions": [],
+            "patterns": []
+        },
+        "outputWindowsRoot": null,
+        "tabThemes": {},
+        "starredFiles": {},
+        "themeMode": "dark"
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{legacy}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    let code_globs = &result.config.repos[0].code_globs;
+    assert!(code_globs.iter().any(|glob| glob == "**/*.cpp"));
+    assert!(code_globs.iter().any(|glob| glob == "**/*.proto"));
+}
+
+#[test]
+fn test_migrates_expanded_legacy_code_globs_without_inl() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let expanded_without_inl = default_code_globs_without_inl();
+    let legacy = json!({
+        "configVersion": 16,
+        "agentHost": "127.0.0.1",
+        "agentPort": 3141,
+        "agentAutoStart": true,
+        "agentDistro": null,
+        "autoStageGlobal": true,
+        "repos": [{
+            "repoId": "repo",
+            "label": "repo",
+            "root": { "kind": "wsl", "path": "/home/john/repo" },
+            "autoStage": true,
+            "docsGlobs": [],
+            "codeGlobs": expanded_without_inl,
+            "ignoreGlobs": [],
+            "bundlePresets": [{
+                "presetId": "context",
+                "presetName": "Context",
+                "includeRoot": true,
+                "topLevelDirs": []
+            }]
+        }],
+        "recentFilesLimit": 200,
+        "uiState": {
+            "lastActiveTabId": null,
+            "lastActiveGroupRepoIds": {}
+        },
+        "bundleSelections": {},
+        "globalExcludes": {
+            "dirNames": [],
+            "dirSuffixes": [],
+            "fileNames": [],
+            "extensions": [],
+            "patterns": []
+        },
+        "outputWindowsRoot": null,
+        "tabThemes": {},
+        "starredFiles": {},
+        "themeMode": "dark"
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{legacy}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    let code_globs = &result.config.repos[0].code_globs;
+    assert!(code_globs.iter().any(|glob| glob == "**/*.inl"));
+
+    let migrated = build_normalized_set(code_globs.iter().map(|glob| glob.as_str()));
+    let expected_globs = default_code_globs();
+    let expected = build_normalized_set(expected_globs.iter().map(|glob| glob.as_str()));
+    assert_eq!(migrated, expected);
+}

@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/config/mod.rs
 // Description: Configuration persistence module
 
+pub(crate) mod generated_code_globs;
 pub mod io;
 pub mod types;
 

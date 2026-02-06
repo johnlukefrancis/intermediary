@@ -28,6 +28,8 @@ interface OptionsOverlayProps {
   appPaths: AppPaths | null;
   globalExcludes: GlobalExcludes;
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
+  classificationExcludes: GlobalExcludes;
+  setClassificationExcludes: (excludes: GlobalExcludes) => void;
   setOutputWindowsRoot: (path: string | null) => void;
   recentFilesLimit: number;
   setRecentFilesLimit: (value: number) => void;
@@ -62,6 +64,8 @@ export function OptionsOverlay({
   appPaths,
   globalExcludes,
   setGlobalExcludes,
+  classificationExcludes,
+  setClassificationExcludes,
   setOutputWindowsRoot,
   recentFilesLimit,
   setRecentFilesLimit,
@@ -181,10 +185,20 @@ export function OptionsOverlay({
           restartAgent={restartAgent}
         />
 
-        {/* Excludes Section */}
+        {/* Bundle Excludes */}
         <ExcludesSection
-          globalExcludes={globalExcludes}
-          setGlobalExcludes={setGlobalExcludes}
+          title="Bundle Excludes"
+          recommendedLabel="Recommended bundle excludes"
+          excludes={globalExcludes}
+          setExcludes={setGlobalExcludes}
+        />
+
+        {/* Classification Excludes */}
+        <ExcludesSection
+          title="Classification Excludes"
+          recommendedLabel="Recommended classification excludes"
+          excludes={classificationExcludes}
+          setExcludes={setClassificationExcludes}
         />
 
         <OutputFolderSection

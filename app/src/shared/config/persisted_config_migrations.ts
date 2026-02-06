@@ -9,6 +9,10 @@ import {
   migrateRepoRoots,
   normalizeLegacyRepoRoots,
 } from "./persisted_config_repo_roots_migration.js";
+import {
+  migrateDefaultCodeGlobs,
+  normalizeLegacyCodeGlobs,
+} from "./persisted_config_code_globs_migration.js";
 import { CONFIG_VERSION } from "./version.js";
 import type { PersistedConfig } from "./persisted_config.js";
 
@@ -51,6 +55,10 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   if (config.configVersion < 16) {
     next = migrateRepoRoots(next);
   }
+  // Migration: v16 -> v17: Expand default codeGlobs coverage to broad language support.
+  if (config.configVersion < 17) {
+    next = migrateDefaultCodeGlobs(next);
+  }
 
   return { ...next, configVersion: CONFIG_VERSION };
 }
@@ -75,4 +83,8 @@ function migrateAgentDefaults(config: PersistedConfig): PersistedConfig {
   };
 }
 
-export { normalizeLegacyGlobalExcludes, normalizeLegacyRepoRoots };
+export {
+  normalizeLegacyCodeGlobs,
+  normalizeLegacyGlobalExcludes,
+  normalizeLegacyRepoRoots,
+};

@@ -141,7 +141,7 @@ Each repo has:
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
-  * `codeGlobs` (e.g. `src/**`, `packages/**`)
+* `codeGlobs` (generated broad-language defaults + optional per-repo customization)
   * `ignoreGlobs` (e.g. `**/node_modules/**`, `**/.git/**`, `**/dist/**`, `**/target/**`)
 
 ### 7.2 File change tracking
@@ -150,8 +150,9 @@ Each repo has:
 
   * Store last N (configurable via Options, default 200, range 25-2000)
   * Debounce rapid consecutive writes (default 250ms)
-* Show lists filtered into Docs/Code columns by globs.
+* Show lists filtered into Docs/Code columns by globs + fallback extension classifier.
 * Persist recent-file history under `staging/state/recent_files/<repoId>.json` to survive app/agent restarts.
+* Global **classification excludes** (Options) suppress noisy/generated files from Docs/Code panes without affecting bundle contents.
 
 ### 7.2.1 Starred files
 

@@ -7,13 +7,17 @@ import { AdvancedGroup } from "./excludes/advanced_group.js";
 import { useExcludesState } from "./excludes/use_excludes_state.js";
 
 interface ExcludesSectionProps {
-  globalExcludes: GlobalExcludes;
-  setGlobalExcludes: (excludes: GlobalExcludes) => void;
+  title?: string;
+  recommendedLabel?: string;
+  excludes: GlobalExcludes;
+  setExcludes: (excludes: GlobalExcludes) => void;
 }
 
 export function ExcludesSection({
-  globalExcludes,
-  setGlobalExcludes,
+  title = "Excludes",
+  recommendedLabel = "Recommended excludes",
+  excludes,
+  setExcludes,
 }: ExcludesSectionProps): React.JSX.Element {
   const {
     advancedOpen,
@@ -25,18 +29,18 @@ export function ExcludesSection({
     normalizedValues,
     toggleHandlers,
     optionsSections,
-  } = useExcludesState({ globalExcludes, setGlobalExcludes });
+  } = useExcludesState({ excludes, setExcludes });
 
   return (
     <div className="options-section">
-      <div className="options-section-title">Excludes</div>
+      <div className="options-section-title">{title}</div>
       <label className="options-checkbox-row">
         <input
           type="checkbox"
           checked={recommendedEnabled}
           onChange={handleRecommendedToggle}
         />
-        <span>Recommended excludes</span>
+        <span>{recommendedLabel}</span>
       </label>
 
       <button
@@ -45,7 +49,7 @@ export function ExcludesSection({
         onClick={toggleAdvanced}
         aria-expanded={advancedOpen}
       >
-        <span className="options-section-title">Exclude Presets</span>
+        <span className="options-section-title">Advanced Excludes</span>
         <span className={`options-chevron ${advancedOpen ? "open" : ""}`}>
           ▸
         </span>

@@ -2,8 +2,10 @@
 // Description: Config file I/O with atomic writes and error handling
 
 use crate::config::types::{PersistedConfig, CONFIG_VERSION};
+use crate::config::generated_code_globs::GENERATED_CODE_EXTENSION_GLOBS;
 use crate::paths::repo_root_resolver::{resolve_repo_root_from_input, RepoRootKind};
 use serde_json::{json, Value};
+use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -82,7 +84,6 @@ pub fn load_from_disk(path: &Path) -> Result<LoadResult, ConfigError> {
         migration_applied,
     })
 }
-
 /// Save config to disk atomically (write temp, then rename)
 pub fn save_to_disk(path: &Path, config: &PersistedConfig) -> Result<(), ConfigError> {
     if let Some(parent) = path.parent() {
@@ -104,7 +105,6 @@ pub fn save_to_disk(path: &Path, config: &PersistedConfig) -> Result<(), ConfigE
     fs::rename(&temp_path, path).map_err(|e| ConfigError::RenameFailed { source: e })?;
     Ok(())
 }
-
 /// Apply migrations from older config versions
 fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 1 -> 2: Add excludedSubdirs to bundle selections.
@@ -140,9 +140,83 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
 
     // Version 15 -> 16: Replace repo.wslPath with path-native repo.root.
     // Structural conversion is handled in migrate_legacy_repo_roots().
+    // Version 16 -> 17: Expand default codeGlobs coverage.
+    if config.config_version < 17 {
+        migrate_default_code_globs(&mut config);
+    }
 
     config.config_version = CONFIG_VERSION;
     config
+}
+
+const CODE_ROOT_GLOBS: &[&str] = &["src/**", "app/**", "crates/**", "src-tauri/**"];
+const INL_CODE_GLOB: &str = "**/*.inl";
+const LEGACY_DEFAULT_CODE_GLOBS: &[&str] = &[
+    "src/**",
+    "app/**",
+    "crates/**",
+    "src-tauri/**",
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.mjs",
+    "**/*.cjs",
+    "**/*.rs",
+    "**/*.toml",
+    "**/*.json",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.py",
+    "**/*.go",
+];
+
+fn migrate_default_code_globs(config: &mut PersistedConfig) {
+    for repo in config.repos.iter_mut() {
+        if is_legacy_default_code_globs(&repo.code_globs) {
+            repo.code_globs = default_code_globs();
+        }
+    }
+}
+
+fn is_legacy_default_code_globs(globs: &[String]) -> bool {
+    let current = build_normalized_set(globs.iter().map(|value| value.as_str()));
+    let legacy_minimal = build_normalized_set(LEGACY_DEFAULT_CODE_GLOBS.iter().copied());
+    if current == legacy_minimal {
+        return true;
+    }
+
+    let expanded = default_code_globs();
+    let expanded_set = build_normalized_set(expanded.iter().map(|value| value.as_str()));
+    if current == expanded_set {
+        return true;
+    }
+
+    let expanded_without_inl = default_code_globs_without_inl();
+    let expanded_without_inl_set =
+        build_normalized_set(expanded_without_inl.iter().map(|value| value.as_str()));
+    current == expanded_without_inl_set
+}
+
+fn default_code_globs() -> Vec<String> {
+    let mut globs = Vec::with_capacity(CODE_ROOT_GLOBS.len() + GENERATED_CODE_EXTENSION_GLOBS.len());
+    globs.extend(CODE_ROOT_GLOBS.iter().map(|value| value.to_string()));
+    globs.extend(GENERATED_CODE_EXTENSION_GLOBS.iter().map(|value| value.to_string()));
+    globs
+}
+
+fn default_code_globs_without_inl() -> Vec<String> {
+    default_code_globs()
+        .into_iter()
+        .filter(|glob| !glob.eq_ignore_ascii_case(INL_CODE_GLOB))
+        .collect()
+}
+
+fn build_normalized_set<'a>(values: impl Iterator<Item = &'a str>) -> HashSet<String> {
+    values
+        .map(|value| value.trim().to_lowercase())
+        .filter(|value| !value.is_empty())
+        .collect()
 }
 
 fn migrate_legacy_repo_roots(raw: &mut Value) -> bool {
@@ -184,12 +258,8 @@ fn migrate_legacy_repo_roots(raw: &mut Value) -> bool {
                         || current_path != Some(resolved_root.path.as_str())
                     {
                         Some(match resolved_root.kind {
-                            RepoRootKind::Wsl => {
-                                json!({ "kind": "wsl", "path": resolved_root.path })
-                            }
-                            RepoRootKind::Windows => {
-                                json!({ "kind": "windows", "path": resolved_root.path })
-                            }
+                            RepoRootKind::Wsl => json!({ "kind": "wsl", "path": resolved_root.path }),
+                            RepoRootKind::Windows => json!({ "kind": "windows", "path": resolved_root.path }),
                         })
                     } else {
                         None

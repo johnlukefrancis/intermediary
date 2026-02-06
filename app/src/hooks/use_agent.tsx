@@ -75,6 +75,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
       persistedConfig.autoStageGlobal,
       persistedConfig.repos,
       persistedConfig.recentFilesLimit,
+      persistedConfig.classificationExcludes,
     ]
   );
 

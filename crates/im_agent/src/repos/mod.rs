@@ -2,6 +2,7 @@
 // Description: Repository scanning module exports
 
 mod categorizer;
+mod generated_code_extensions;
 mod ignore_matcher;
 mod mru_index;
 mod recent_files_store;

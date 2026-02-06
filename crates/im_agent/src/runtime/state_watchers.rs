@@ -50,6 +50,11 @@ impl AgentRuntime {
             })?;
 
         let initial_entries = store.load(&repo.repo_id, repo_root).await;
+        let classification_ignore_globs = self
+            .config
+            .as_ref()
+            .map(|config| config.classification_excludes.to_ignore_globs())
+            .unwrap_or_default();
 
         let watcher = RepoWatcher::start(RepoWatcherConfig {
             repo_id: repo.repo_id.clone(),
@@ -57,6 +62,7 @@ impl AgentRuntime {
             docs_globs: repo.docs_globs.clone(),
             code_globs: repo.code_globs.clone(),
             ignore_globs: repo.ignore_globs.clone(),
+            classification_ignore_globs,
             mru_capacity: self.recent_files_limit.max(1),
             initial_entries,
             recent_store: store.clone(),

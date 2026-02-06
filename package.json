@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit",
     "agent:dev": "INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent",
     "agent:bundle": "node scripts/build/build_agent_bundle.mjs",
+    "gen:classification": "node scripts/classification/generate_code_classification_artifacts.mjs",
     "headers:list": "node scripts/fileledger/add_file_headers.mjs --list",
     "headers:write": "node scripts/fileledger/add_file_headers.mjs --write",
     "gen:ledger": "node scripts/fileledger/gen_file_ledger.mjs"

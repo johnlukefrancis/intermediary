@@ -141,6 +141,25 @@ export function useSetGlobalExcludes(
   );
 }
 
+export function useSetClassificationExcludes(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (excludes: GlobalExcludes) => void {
+  return useCallback(
+    (excludes: GlobalExcludes) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          classificationExcludes: excludes,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useAddRepo(
   setConfig: SetConfig,
   saveConfig: SaveConfig

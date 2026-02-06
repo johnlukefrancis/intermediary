@@ -5,16 +5,19 @@ use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
 use crate::error::AgentError;
 use crate::protocol::FileKind;
+use super::generated_code_extensions::GENERATED_CODE_EXTENSIONS;
 
 const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
 
 const DOC_DIRS: &[&str] = &["docs", "doc", "documentation", "wiki"];
 
-const CODE_EXTENSIONS: &[&str] = &[
-    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".rs", ".toml", ".css", ".scss",
-    ".html", ".svelte", ".vue", ".py", ".go", ".yaml", ".yml", ".c", ".h", ".hpp", ".hh",
-    ".hxx", ".cc", ".cpp", ".cxx", ".ipp", ".inl", ".cs", ".java", ".kt", ".kts", ".swift",
-    ".m", ".mm",
+const CODE_FILE_NAMES: &[&str] = &[
+    "makefile",
+    "dockerfile",
+    "containerfile",
+    "cmakelists.txt",
+    "meson.build",
+    "meson_options.txt",
 ];
 
 #[derive(Debug, Clone)]
@@ -88,9 +91,13 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
         if DOC_EXTENSIONS.contains(&ext.as_str()) {
             return FileKind::Docs;
         }
-        if CODE_EXTENSIONS.contains(&ext.as_str()) {
+        if GENERATED_CODE_EXTENSIONS.contains(&ext.as_str()) {
             return FileKind::Code;
         }
+    }
+
+    if CODE_FILE_NAMES.contains(&file_name) {
+        return FileKind::Code;
     }
 
     if file_name == "readme" || file_name.starts_with("readme.") {

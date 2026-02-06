@@ -22,7 +22,18 @@ struct RepoFingerprint {
 struct FingerprintData {
     staging_root: String,
     recent_files_limit: usize,
+    classification_excludes: ClassificationExcludesFingerprint,
     repos: Vec<RepoFingerprint>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ClassificationExcludesFingerprint {
+    dir_names: Vec<String>,
+    dir_suffixes: Vec<String>,
+    file_names: Vec<String>,
+    extensions: Vec<String>,
+    patterns: Vec<String>,
 }
 
 pub fn compute_config_fingerprint(config: &AppConfig, staging_root: &str) -> String {
@@ -33,10 +44,32 @@ pub fn compute_config_fingerprint(config: &AppConfig, staging_root: &str) -> Str
     let data = FingerprintData {
         staging_root: staging_root.to_string(),
         recent_files_limit: config.recent_files_limit,
+        classification_excludes: map_classification_excludes(config),
         repos,
     };
 
     serde_json::to_string(&data).unwrap_or_default()
+}
+
+fn map_classification_excludes(config: &AppConfig) -> ClassificationExcludesFingerprint {
+    let mut dir_names = config.classification_excludes.dir_names.clone();
+    dir_names.sort();
+    let mut dir_suffixes = config.classification_excludes.dir_suffixes.clone();
+    dir_suffixes.sort();
+    let mut file_names = config.classification_excludes.file_names.clone();
+    file_names.sort();
+    let mut extensions = config.classification_excludes.extensions.clone();
+    extensions.sort();
+    let mut patterns = config.classification_excludes.patterns.clone();
+    patterns.sort();
+
+    ClassificationExcludesFingerprint {
+        dir_names,
+        dir_suffixes,
+        file_names,
+        extensions,
+        patterns,
+    }
 }
 
 fn map_repo(repo: &RepoConfig) -> RepoFingerprint {

@@ -1,6 +1,8 @@
 // Path: app/src/shared/config/glob_defaults.ts
 // Description: Default glob patterns for docs, code, and ignores
 
+import { GENERATED_CODE_EXTENSION_GLOBS } from "./generated_code_globs.js";
+
 export const DEFAULT_DOCS_GLOBS = [
   "docs/**",
   "**/*.md",
@@ -13,11 +15,15 @@ export const DEFAULT_DOCS_GLOBS = [
   "**/README*",
 ];
 
-export const DEFAULT_CODE_GLOBS = [
+const CODE_ROOT_GLOBS = [
   "src/**",
   "app/**",
   "crates/**",
   "src-tauri/**",
+];
+
+export const LEGACY_DEFAULT_CODE_GLOBS = [
+  ...CODE_ROOT_GLOBS,
   "**/*.ts",
   "**/*.tsx",
   "**/*.js",
@@ -31,16 +37,11 @@ export const DEFAULT_CODE_GLOBS = [
   "**/*.yml",
   "**/*.py",
   "**/*.go",
-  "**/*.c",
-  "**/*.h",
-  "**/*.hpp",
-  "**/*.cc",
-  "**/*.cpp",
-  "**/*.cxx",
-  "**/*.cs",
-  "**/*.java",
-  "**/*.kt",
-  "**/*.swift",
+];
+
+export const DEFAULT_CODE_GLOBS = [
+  ...CODE_ROOT_GLOBS,
+  ...GENERATED_CODE_EXTENSION_GLOBS,
 ];
 
 export const DEFAULT_IGNORE_GLOBS = [

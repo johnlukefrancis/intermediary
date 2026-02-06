@@ -23,6 +23,7 @@ pub struct RepoWatcherConfig {
     pub docs_globs: Vec<String>,
     pub code_globs: Vec<String>,
     pub ignore_globs: Vec<String>,
+    pub classification_ignore_globs: Vec<String>,
     pub mru_capacity: usize,
     pub initial_entries: Vec<FileEntry>,
     pub recent_store: RecentFilesStore,
@@ -44,10 +45,16 @@ pub struct RepoWatcher {
 
 impl RepoWatcher {
     pub async fn start(config: RepoWatcherConfig) -> Result<Self, AgentError> {
+        let categorizer = Categorizer::new(&config.docs_globs, &config.code_globs)?;
+        let mut combined_ignore_globs = config.ignore_globs.clone();
+        combined_ignore_globs.extend(config.classification_ignore_globs.clone());
+        let ignore_matcher = IgnoreMatcher::new(&combined_ignore_globs)?;
+
         let mut mru =
             MruIndex::new(config.mru_capacity).map_err(|err| AgentError::internal(err))?;
-        if !config.initial_entries.is_empty() {
-            mru.load_from(config.initial_entries);
+        let initial_entries = filter_initial_entries(config.initial_entries, &ignore_matcher);
+        if !initial_entries.is_empty() {
+            mru.load_from(initial_entries);
         }
 
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Result<Event, notify::Error>>();
@@ -69,8 +76,6 @@ impl RepoWatcher {
         let event_bus = config.event_bus.clone();
         let recent_store = config.recent_store.clone();
 
-        let categorizer = Categorizer::new(&config.docs_globs, &config.code_globs)?;
-        let ignore_matcher = IgnoreMatcher::new(&config.ignore_globs)?;
         let mru_lock = Arc::new(RwLock::new(mru));
         let mru_clone = Arc::clone(&mru_lock);
         let task = tokio::spawn(async move {
@@ -147,5 +152,47 @@ impl RepoWatcher {
             let snapshot = SnapshotEvent::new(repo_id, entries);
             event_bus.broadcast_event(AgentEvent::Snapshot(snapshot));
         });
+    }
+}
+
+fn filter_initial_entries(entries: Vec<FileEntry>, ignore_matcher: &IgnoreMatcher) -> Vec<FileEntry> {
+    entries
+        .into_iter()
+        .filter(|entry| {
+            let normalized_path = entry.path.replace('\\', "/");
+            !ignore_matcher.should_ignore(&normalized_path)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::filter_initial_entries;
+    use crate::protocol::{FileChangeType, FileEntry, FileKind};
+    use crate::repos::ignore_matcher::IgnoreMatcher;
+
+    #[test]
+    fn test_filter_initial_entries_applies_ignore_globs() {
+        let matcher = IgnoreMatcher::new(&["**/*.cpp".to_string()]).expect("valid ignore glob");
+        let entries = vec![
+            FileEntry {
+                path: "src\\engine\\render.cpp".to_string(),
+                kind: FileKind::Code,
+                change_type: FileChangeType::Add,
+                mtime: "2026-02-06T00:00:00Z".to_string(),
+                size_bytes: Some(8),
+            },
+            FileEntry {
+                path: "docs/readme.md".to_string(),
+                kind: FileKind::Docs,
+                change_type: FileChangeType::Add,
+                mtime: "2026-02-06T00:00:00Z".to_string(),
+                size_bytes: Some(12),
+            },
+        ];
+
+        let filtered = filter_initial_entries(entries, &matcher);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].path, "docs/readme.md");
     }
 }

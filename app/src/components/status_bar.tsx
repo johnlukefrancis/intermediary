@@ -42,6 +42,7 @@ export function StatusBar(): React.JSX.Element {
   const {
     config,
     setGlobalExcludes,
+    setClassificationExcludes,
     setOutputWindowsRoot,
     setAgentAutoStart,
     setAgentDistro,
@@ -126,6 +127,8 @@ export function StatusBar(): React.JSX.Element {
           appPaths={appPaths}
           globalExcludes={config.globalExcludes}
           setGlobalExcludes={setGlobalExcludes}
+          classificationExcludes={config.classificationExcludes}
+          setClassificationExcludes={setClassificationExcludes}
           setOutputWindowsRoot={setOutputWindowsRoot}
           recentFilesLimit={config.recentFilesLimit}
           setRecentFilesLimit={setRecentFilesLimit}

@@ -141,11 +141,21 @@ Layout under the staging root:
 
 User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
+- **Classifier config:** Global classification excludes (parallel to bundle excludes)
 - **UI state:** Last active repo (by repoId) + last active worktree per group
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
 The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles plus recent-file caches without deleting repository files.
+
+## File Classification
+
+- Repo watchers classify files in this order:
+  1) `docsGlobs`
+  2) `codeGlobs`
+  3) fallback extension classifier (generated broad-language list)
+- Classification excludes are applied at watcher time to suppress noisy/generated files in Docs/Code panes.
+- Bundle excludes remain separate and affect only zip build contents.
 
 ## Why This Architecture?
 
