@@ -1,5 +1,5 @@
 // Path: app/src/shared/config/repo_root.ts
-// Description: Repo root discriminated union schema and path normalization helpers
+// Description: Repo root authority union schema and path normalization helpers
 
 import { z } from "zod";
 
@@ -13,7 +13,7 @@ export const RepoRootSchema = z.discriminatedUnion("kind", [
     path: z.string().min(1),
   }),
   z.object({
-    kind: z.literal("windows"),
+    kind: z.literal("host"),
     path: z.string().min(1),
   }),
 ]);
@@ -27,8 +27,11 @@ export function isWslRepoRoot(
 }
 
 export function repoRootKey(root: RepoRoot): string {
-  if (root.kind === "windows") {
-    return `windows:${root.path.toLowerCase()}`;
+  if (root.kind === "host") {
+    if (WINDOWS_DRIVE_PATH_REGEX.test(root.path)) {
+      return `host:${root.path.toLowerCase()}`;
+    }
+    return `host:${root.path}`;
   }
   return `wsl:${root.path}`;
 }
@@ -50,6 +53,22 @@ function normalizeWindowsPath(path: string): string | null {
   const rest = (match[2] ?? "").replace(/\\+/g, "\\").replace(/^\\+|\\+$/g, "");
   if (rest.length === 0) return `${drive}:\\`;
   return `${drive}:\\${rest}`;
+}
+
+function normalizeHostPath(path: string): string | null {
+  const windowsPath = normalizeWindowsPath(path);
+  if (windowsPath) {
+    return windowsPath;
+  }
+
+  const trimmed = path.trim().replace(/\\/g, "/").replace(/\/+/g, "/");
+  if (!trimmed.startsWith("/")) {
+    return null;
+  }
+  if (trimmed === "/") {
+    return trimmed;
+  }
+  return trimmed.replace(/\/+$/, "");
 }
 
 function resolveUncWslPath(path: string): RepoRoot | null {
@@ -77,7 +96,7 @@ function resolveUncWslPath(path: string): RepoRoot | null {
     const drive = driveSegment.toUpperCase();
     const rest = pathSegments.slice(2).join("\\");
     return {
-      kind: "windows",
+      kind: "host",
       path: rest.length > 0 ? `${drive}:\\${rest}` : `${drive}:\\`,
     };
   }
@@ -104,16 +123,16 @@ export function repoRootFromInputPath(inputPath: string): RepoRoot | null {
       if (!drive) return null;
       const rest = (mntMatch[2] ?? "").replace(/\//g, "\\");
       return {
-        kind: "windows",
+        kind: "host",
         path: rest.length > 0 ? `${drive}:\\${rest}` : `${drive}:\\`,
       };
     }
     return { kind: "wsl", path: normalizedWsl };
   }
 
-  const windowsPath = normalizeWindowsPath(trimmed);
-  if (windowsPath) {
-    return { kind: "windows", path: windowsPath };
+  const hostPath = normalizeHostPath(trimmed);
+  if (hostPath) {
+    return { kind: "host", path: hostPath };
   }
 
   return null;

@@ -14,20 +14,71 @@ import type {
   BundleSelection,
 } from "../../shared/protocol.js";
 
+function shouldRetryWithLegacyHelloConfig(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return message.includes("invalid_config") || message.includes("invalid config");
+}
+
+function hasHostRepoRoots(config: AppConfig): boolean {
+  return config.repos.some((repo) => repo.root.kind === "host");
+}
+
+function toLegacyHelloConfig(config: AppConfig): AppConfig {
+  const legacyRepos = config.repos.map((repo) => {
+    if (repo.root.kind !== "host") {
+      return repo;
+    }
+    return {
+      ...repo,
+      root: {
+        kind: "windows",
+        path: repo.root.path,
+      },
+    };
+  });
+
+  return {
+    ...config,
+    // TODO(ts-precision): clientHello config is a mixed-version wire seam.
+    repos: legacyRepos as unknown as AppConfig["repos"],
+  };
+}
+
 export async function sendClientHello(
   client: AgentClient,
   config: AppConfig,
-  stagingWslRoot: string,
-  stagingWinRoot: string,
+  stagingHostRoot: string,
+  stagingWslRoot: string | undefined,
   autoStageOnChange: boolean
 ): Promise<ClientHelloResult> {
-  return client.send<ClientHelloResult>({
+  const effectiveStagingWslRoot = stagingWslRoot ?? stagingHostRoot;
+  const baseCommand = {
     type: "clientHello",
-    config,
-    stagingWslRoot,
-    stagingWinRoot,
+    stagingHostRoot,
+    // Legacy compatibility: current in-repo agent still expects stagingWinRoot.
+    stagingWinRoot: stagingHostRoot,
+    // Legacy compatibility: current in-repo agent requires stagingWslRoot.
+    stagingWslRoot: effectiveStagingWslRoot,
     autoStageOnChange,
-  });
+  } as const;
+
+  try {
+    return await client.send<ClientHelloResult>({
+      ...baseCommand,
+      config,
+    });
+  } catch (error) {
+    if (!hasHostRepoRoots(config) || !shouldRetryWithLegacyHelloConfig(error)) {
+      throw error;
+    }
+    return client.send<ClientHelloResult>({
+      ...baseCommand,
+      config: toLegacyHelloConfig(config),
+    });
+  }
 }
 
 export async function sendStageFile(

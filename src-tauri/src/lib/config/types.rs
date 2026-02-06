@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 17;
+pub const CONFIG_VERSION: u32 = 18;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +43,7 @@ pub struct PersistedConfig {
     /// Global classification excludes (used by Docs/Code panes only)
     #[serde(default)]
     pub classification_excludes: GlobalExcludes,
-    /// Custom output folder override (Windows path)
+    /// Custom output folder override (host-native absolute path)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output_windows_root: Option<String>,
     /// Per-tab accent colors, keyed by tabKey
@@ -178,7 +178,7 @@ pub struct RepoConfig {
     pub repo_id: String,
     /// Display name in UI (shown in dropdown for grouped repos)
     pub label: String,
-    /// Path-native repo root (WSL stays WSL, Windows stays Windows)
+    /// Repo root authority (WSL-native or host-native)
     pub root: RepoRoot,
     /// Optional group ID - repos with same groupId share a tab with dropdown
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -204,14 +204,15 @@ pub struct RepoConfig {
 pub enum RepoRoot {
     /// Linux path within WSL (e.g. /home/john/code/repo)
     Wsl { path: String },
-    /// Native Windows path (e.g. C:\code\repo)
-    Windows { path: String },
+    /// Host-native path (Windows path on Windows; POSIX path on macOS/Linux).
+    #[serde(alias = "windows")]
+    Host { path: String },
 }
 
 impl RepoRoot {
     pub fn path(&self) -> &str {
         match self {
-            RepoRoot::Wsl { path } | RepoRoot::Windows { path } => path,
+            RepoRoot::Wsl { path } | RepoRoot::Host { path } => path,
         }
     }
 }

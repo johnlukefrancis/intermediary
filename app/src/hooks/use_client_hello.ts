@@ -65,8 +65,8 @@ export function useClientHello(options: UseClientHelloOptions): HelloState {
 
     const helloKey = [
       connectionState.connectedAt ?? "no-conn",
-      appPaths.stagingWslRoot,
-      appPaths.stagingWindowsRoot,
+      appPaths.stagingHostRoot,
+      appPaths.stagingWslRoot ?? "no-wsl-root",
       configKey,
     ].join("|");
 
@@ -87,8 +87,8 @@ export function useClientHello(options: UseClientHelloOptions): HelloState {
     void sendClientHello(
       client,
       config,
+      appPaths.stagingHostRoot,
       appPaths.stagingWslRoot,
-      appPaths.stagingWindowsRoot,
       autoStageRef.current
     )
       .then((result) => {

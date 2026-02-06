@@ -95,7 +95,7 @@ export function SingleTabItem({
           onClick={() => {
             onOpenFolder(tab.root);
           }}
-          title="Open folder in Explorer"
+          title="Open folder in file manager"
           aria-label="Open repository folder"
         >
           <FolderIcon />
@@ -206,7 +206,7 @@ export function GroupTabItem({
             const activeRepo = tab.repos.find((r) => r.repoId === activeRepoId);
             if (activeRepo) onOpenFolder(activeRepo.root);
           }}
-          title="Open folder in Explorer"
+          title="Open folder in file manager"
           aria-label="Open repository folder"
         >
           <FolderIcon />

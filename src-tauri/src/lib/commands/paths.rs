@@ -8,13 +8,10 @@ use crate::paths::wsl_convert::{run_wslpath, windows_to_wsl_path, wsl_to_windows
 use tauri::AppHandle;
 
 /// Returns resolved application paths for staging, logging, etc.
-/// If `output_windows_root` is provided, uses it as the staging root.
+/// If `output_host_root` is provided, uses it as the staging root.
 #[tauri::command]
-pub fn get_app_paths(
-    app: AppHandle,
-    output_windows_root: Option<String>,
-) -> Result<AppPaths, String> {
-    AppPaths::resolve(&app, output_windows_root.as_deref()).map_err(|e| e.to_string())
+pub fn get_app_paths(app: AppHandle, output_host_root: Option<String>) -> Result<AppPaths, String> {
+    AppPaths::resolve(&app, output_host_root.as_deref()).map_err(|e| e.to_string())
 }
 
 /// Convert a Windows path to WSL path format.
@@ -36,7 +33,7 @@ pub fn resolve_repo_root(input_path: String) -> Result<RepoRoot, String> {
         RepoRootKind::Wsl => Ok(RepoRoot::Wsl {
             path: resolved.path,
         }),
-        RepoRootKind::Windows => Ok(RepoRoot::Windows {
+        RepoRootKind::Host => Ok(RepoRoot::Host {
             path: resolved.path,
         }),
     }

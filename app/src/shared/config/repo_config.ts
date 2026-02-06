@@ -21,7 +21,7 @@ export const RepoConfigSchema = z.object({
   repoId: z.string(),
   /** Display name in the UI (shown in dropdown for grouped repos) */
   label: z.string(),
-  /** Path-native repo root (WSL paths stay WSL, Windows paths stay Windows) */
+  /** Repo root authority: host-native path or WSL-native path */
   root: RepoRootSchema,
   /** Optional group ID - repos with same groupId share a tab with dropdown */
   groupId: z.string().optional(),

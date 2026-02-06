@@ -6,14 +6,31 @@ import type { PersistedConfig } from "./persisted_config.js";
 
 export function migrateRepoRoots(config: PersistedConfig): PersistedConfig {
   const repos = config.repos.map((repo) => {
-    const resolved = repoRootFromLegacyPath(repo.root.path);
-    if (!resolved) {
+    if (repo.root.kind === "host") {
+      const trimmedHostPath = repo.root.path.trim();
+      if (trimmedHostPath === repo.root.path) {
+        return repo;
+      }
+      return {
+        ...repo,
+        root: {
+          ...repo.root,
+          path: trimmedHostPath,
+        },
+      };
+    }
+
+    const normalizedWsl = repoRootFromLegacyPath(repo.root.path);
+    if (!normalizedWsl) {
       return repo;
     }
-    if (resolved.kind === repo.root.kind && resolved.path === repo.root.path) {
+    if (
+      normalizedWsl.kind === repo.root.kind &&
+      normalizedWsl.path === repo.root.path
+    ) {
       return repo;
     }
-    return { ...repo, root: resolved };
+    return { ...repo, root: normalizedWsl };
   });
 
   const hasChanged = repos.some((repo, index) => repo !== config.repos[index]);
@@ -43,21 +60,43 @@ export function normalizeLegacyRepoRoots(input: unknown): unknown {
         return repo;
       }
       const rootRecord = rawRoot as Record<string, unknown>;
-      if (
-        (rootRecord.kind === "wsl" || rootRecord.kind === "windows") &&
-        typeof rootRecord.path === "string"
-      ) {
-        const normalizedRoot = repoRootFromLegacyPath(rootRecord.path);
-        if (normalizedRoot) {
-          if (
-            normalizedRoot.kind !== rootRecord.kind ||
-            normalizedRoot.path !== rootRecord.path
-          ) {
-            return {
-              ...rawRepo,
-              root: normalizedRoot,
-            };
-          }
+      const rootKind = rootRecord.kind;
+      const rootPath = rootRecord.path;
+      if (typeof rootPath !== "string") {
+        return repo;
+      }
+
+      if (rootKind === "wsl") {
+        const normalizedRoot = repoRootFromLegacyPath(rootPath);
+        if (!normalizedRoot) {
+          return repo;
+        }
+        if (
+          normalizedRoot.kind !== rootKind ||
+          normalizedRoot.path !== rootPath
+        ) {
+          return {
+            ...rawRepo,
+            root: normalizedRoot,
+          };
+        }
+      } else if (rootKind === "windows") {
+        const normalizedRoot = repoRootFromLegacyPath(rootPath);
+        const migratedRoot =
+          normalizedRoot?.kind === "host"
+            ? normalizedRoot
+            : { kind: "host" as const, path: rootPath.trim() };
+        return {
+          ...rawRepo,
+          root: migratedRoot,
+        };
+      } else if (rootKind === "host") {
+        const trimmedHostPath = rootPath.trim();
+        if (trimmedHostPath !== rootPath) {
+          return {
+            ...rawRepo,
+            root: { kind: "host", path: trimmedHostPath },
+          };
         }
       }
       return repo;

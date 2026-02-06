@@ -92,11 +92,11 @@ export function useConfigStorage(): ConfigStorageState {
   }, [saveConfigNow]);
 
   const resetConfig = useCallback(() => {
-    const outputWindowsRoot = configRef.current.outputWindowsRoot;
+    const outputHostRoot = configRef.current.outputWindowsRoot;
     const defaults = getDefaultPersistedConfig();
     setConfig(defaults);
     saveConfigNow(defaults);
-    invoke("reset_app_state", { outputWindowsRoot }).catch((err: unknown) => {
+    invoke("reset_app_state", { outputHostRoot }).catch((err: unknown) => {
       const message = getErrorMessage(err, "Reset failed");
       console.error("[ConfigProvider] Reset failed:", err);
       setSaveError(`Reset failed: ${message}`);

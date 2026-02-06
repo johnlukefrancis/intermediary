@@ -56,27 +56,27 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
       setDragState({ isDragging: true, isStaging: false, error: null });
 
       try {
-        let windowsPath: string;
+        let hostPath: string;
 
-        if (stagedInfo?.windowsPath) {
-          windowsPath = stagedInfo.windowsPath;
+        if (stagedInfo?.hostPath) {
+          hostPath = stagedInfo.hostPath;
         } else {
           // Need to stage the file first
           setDragState({ isDragging: true, isStaging: true, error: null });
           const result = await sendStageFile(client, repoId, relativePath);
           const stagedResult: StagedInfo = {
+            hostPath: result.hostPath,
             wslPath: result.wslPath,
-            windowsPath: result.windowsPath,
             bytesCopied: result.bytesCopied,
             mtimeMs: result.mtimeMs,
           };
           onStaged?.(relativePath, stagedResult);
-          windowsPath = stagedResult.windowsPath;
+          hostPath = stagedResult.hostPath;
         }
 
         await startDrag({
-          item: [windowsPath],
-          icon: appPaths.dragIconWindowsPath,
+          item: [hostPath],
+          icon: appPaths.dragIconHostPath,
         });
 
         setDragState(INITIAL_DRAG_STATE);

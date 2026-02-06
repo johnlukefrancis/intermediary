@@ -41,7 +41,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 4. Target user
 
 * Solo developer using agentic coding workflow.
-* **v0:** Repos may be in the WSL Linux filesystem or on Windows drives. Repo roots are persisted path-native as `{ kind: "wsl" | "windows", path }`, and backend routing follows root kind (Windows local backend, WSL backend agent).
+* **v0:** Repos may be in the WSL Linux filesystem or on host-native drives. Repo roots are persisted with explicit authority as `{ kind: "wsl" | "host", path }`, and backend routing follows root kind (host backend, WSL backend agent).
 * Needs frequent repeated "context snapshots" for LLM collaboration.
 
 ---
@@ -137,7 +137,7 @@ Users add and remove repositories via the UI:
 Each repo has:
 
 * `repoId`, `label` (auto-generated from folder name, editable)
-* `root`: `{ kind: "wsl" | "windows", path }` (WSL paths stay WSL, Windows paths stay Windows)
+* `root`: `{ kind: "wsl" | "host", path }` (WSL paths stay WSL, host-native paths stay host-native)
 * Classification rules:
 
   * `docsGlobs` (e.g. `docs/**`, `**/*.md`, `**/*.mdx`)
@@ -243,7 +243,7 @@ Windows-side filesystem watchers (like `ReadDirectoryChangesW`) are not reliable
 WSL-side inotify is also not the correct watcher surface for Windows drive mounts (`/mnt/c/...`) in this product shape.
 So:
 
-* Route Windows roots to a Windows-native backend.
+* Route host roots to a host-native backend.
 * Route WSL roots to a WSL backend agent using inotify.
 * Keep a single host-agent endpoint for UI stability.
 
@@ -297,12 +297,12 @@ Host agent → UI events:
 
 * `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 * `snapshot { repoId, recent: FileEntry[] }`
-* `bundleBuilt { repoId, presetId, windowsPath, aliasWindowsPath, bytes, fileCount, builtAtIso }`
+* `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 * `error { scope, message, details? }`
 
 UI → Host agent commands:
 
-* `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } -> clientHelloResult`
+* `clientHello { config, stagingHostRoot, stagingWslRoot?, autoStageOnChange? } -> clientHelloResult`
 * `setOptions { autoStageOnChange? } -> setOptionsResult`
 * `watchRepo { repoId } -> watchRepoResult`
 * `refresh { repoId } -> refreshResult`

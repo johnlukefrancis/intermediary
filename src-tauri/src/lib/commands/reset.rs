@@ -12,20 +12,20 @@ const STAGING_SUBDIRS: [&str; 3] = ["files", "bundles", "state"];
 /// Reset application state stored on disk.
 /// Clears staging artifacts and caches without touching repository files.
 #[tauri::command]
-pub fn reset_app_state(app: AppHandle, output_windows_root: Option<String>) -> Result<(), String> {
+pub fn reset_app_state(app: AppHandle, output_host_root: Option<String>) -> Result<(), String> {
     let default_root = resolve_default_staging_root(&app).map_err(|err| {
         logging::log("error", "config", "reset_failed", &err);
         err
     })?;
     clear_staging_subdirs(&default_root)?;
 
-    if let Some(override_root) = output_windows_root {
+    if let Some(override_root) = output_host_root {
         let resolved = AppPaths::resolve(&app, Some(override_root.as_str())).map_err(|e| {
             let message = e.to_string();
             logging::log("error", "config", "reset_failed", &message);
             message
         })?;
-        let override_path = PathBuf::from(resolved.staging_windows_root);
+        let override_path = PathBuf::from(resolved.staging_host_root);
         if override_path != default_root {
             clear_staging_subdirs(&override_path)?;
         }

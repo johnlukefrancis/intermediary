@@ -52,7 +52,8 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   }
   // Migration: v14 -> v15: Add uiState.lastActiveGroupRepoIds.
   // Migration: v15 -> v16: Replace repo.wslPath with path-native repo.root.
-  if (config.configVersion < 16) {
+  // Migration: v17 -> v18: Rename repo root authority kind windows -> host.
+  if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }
   // Migration: v16 -> v17: Expand default codeGlobs coverage to broad language support.

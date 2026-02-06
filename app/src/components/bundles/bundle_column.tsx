@@ -10,7 +10,7 @@ import type { BundleState } from "../../hooks/use_bundle_state.js";
 interface BundleColumnProps {
   repoId: string;
   bundleState: BundleState;
-  onDragStart: (windowsPath: string) => Promise<void>;
+  onDragStart: (hostPath: string) => Promise<void>;
   emptyMessage?: string;
 }
 

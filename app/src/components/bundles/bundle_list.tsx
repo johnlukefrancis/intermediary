@@ -7,7 +7,7 @@ import { BundleRow } from "./bundle_row.js";
 
 interface BundleListProps {
   bundles: BundleInfo[];
-  onDragStart: (windowsPath: string) => Promise<void>;
+  onDragStart: (hostPath: string) => Promise<void>;
   emptyMessage?: string;
   /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
   freshlyBuiltAt?: number | null;

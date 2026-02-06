@@ -86,7 +86,7 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** Single UI-facing endpoint and per-repo backend router
 - **Key features:**
   - Maintains repo backend map from path-native roots (`wsl` vs `windows`)
-  - Handles Windows roots locally for watch/refresh/stage/build/list/top-level
+  - Handles host-native roots locally for watch/refresh/stage/build/list/top-level
   - Maintains internal WebSocket client to WSL backend agent
   - Forwards WSL-targeted requests and relays backend events to the UI
   - Emits explicit backend-availability errors without taking down Windows repos
@@ -112,12 +112,12 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 **Agent → UI events:**
 - `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 - `snapshot { repoId, recent: FileEntry[] }`
-- `bundleBuilt { repoId, presetId, windowsPath, aliasWindowsPath, bytes, fileCount, builtAtIso }`
+- `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 - `error { scope, message, details? }`
 - `hello` is defined in protocol types but not emitted in the current agent; handshake uses `clientHello` → `clientHelloResult`.
 
 **UI → Agent commands (request/response):**
-- `clientHello { config, stagingWslRoot, stagingWinRoot, autoStageOnChange? } → clientHelloResult`
+- `clientHello { config, stagingHostRoot, stagingWslRoot?, autoStageOnChange? } → clientHelloResult`
 - `clientHello` may be sent on initial connect and reconnect; the agent treats it as idempotent and safe to re-run.
 - `setOptions { autoStageOnChange? } → setOptionsResult`
 - `watchRepo { repoId } → watchRepoResult`
@@ -161,7 +161,7 @@ The Options menu includes a "Reset all settings" action that restores defaults, 
 
 Windows filesystem watchers (`ReadDirectoryChangesW`) are unreliable for WSL UNC paths (`\\wsl$\...`), while WSL inotify is not a safe watcher surface for Windows drive mounts (`/mnt/c/...`) at scale. Host routing keeps each repo on its native backend.
 
-Repos are persisted as path-native roots (`{ kind: "wsl" | "windows", path }`). The host agent enforces this split at runtime so no Windows repo is watched from WSL.
+Repos are persisted as root-authority roots (`{ kind: "wsl" | "host", path }`). The host agent enforces this split at runtime so no host-native repo is watched from WSL.
 
 ## Directory Structure
 

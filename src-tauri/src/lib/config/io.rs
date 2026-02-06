@@ -1,9 +1,9 @@
 // Path: src-tauri/src/lib/config/io.rs
 // Description: Config file I/O with atomic writes and error handling
 
-use crate::config::types::{PersistedConfig, CONFIG_VERSION};
 use crate::config::generated_code_globs::GENERATED_CODE_EXTENSION_GLOBS;
-use crate::paths::repo_root_resolver::{resolve_repo_root_from_input, RepoRootKind};
+use crate::config::types::{PersistedConfig, CONFIG_VERSION};
+use crate::paths::repo_root_resolver::{resolve_legacy_repo_root_from_input, RepoRootKind};
 use serde_json::{json, Value};
 use std::collections::HashSet;
 use std::fs;
@@ -144,6 +144,8 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     if config.config_version < 17 {
         migrate_default_code_globs(&mut config);
     }
+    // Version 17 -> 18: Rename repo root authority kind windows -> host.
+    // Structural conversion is handled in migrate_legacy_repo_roots().
 
     config.config_version = CONFIG_VERSION;
     config
@@ -199,9 +201,14 @@ fn is_legacy_default_code_globs(globs: &[String]) -> bool {
 }
 
 fn default_code_globs() -> Vec<String> {
-    let mut globs = Vec::with_capacity(CODE_ROOT_GLOBS.len() + GENERATED_CODE_EXTENSION_GLOBS.len());
+    let mut globs =
+        Vec::with_capacity(CODE_ROOT_GLOBS.len() + GENERATED_CODE_EXTENSION_GLOBS.len());
     globs.extend(CODE_ROOT_GLOBS.iter().map(|value| value.to_string()));
-    globs.extend(GENERATED_CODE_EXTENSION_GLOBS.iter().map(|value| value.to_string()));
+    globs.extend(
+        GENERATED_CODE_EXTENSION_GLOBS
+            .iter()
+            .map(|value| value.to_string()),
+    );
     globs
 }
 
@@ -237,34 +244,49 @@ fn migrate_legacy_repo_roots(raw: &mut Value) -> bool {
         };
 
         if let Some(root_value) = repo_obj.get_mut("root") {
-            let replacement = root_value
+            let current_kind = root_value
                 .as_object()
-                .and_then(|root_obj| root_obj.get("path").and_then(Value::as_str))
-                .and_then(resolve_repo_root_from_input)
-                .and_then(|resolved_root| {
-                    let desired_kind = match resolved_root.kind {
-                        RepoRootKind::Wsl => "wsl",
-                        RepoRootKind::Windows => "windows",
-                    };
-                    let current_kind = root_value
-                        .as_object()
-                        .and_then(|root_obj| root_obj.get("kind"))
-                        .and_then(Value::as_str);
-                    let current_path = root_value
-                        .as_object()
-                        .and_then(|root_obj| root_obj.get("path"))
-                        .and_then(Value::as_str);
-                    if current_kind != Some(desired_kind)
-                        || current_path != Some(resolved_root.path.as_str())
-                    {
-                        Some(match resolved_root.kind {
-                            RepoRootKind::Wsl => json!({ "kind": "wsl", "path": resolved_root.path }),
-                            RepoRootKind::Windows => json!({ "kind": "windows", "path": resolved_root.path }),
-                        })
+                .and_then(|root_obj| root_obj.get("kind"))
+                .and_then(Value::as_str);
+            let current_path = root_value
+                .as_object()
+                .and_then(|root_obj| root_obj.get("path"))
+                .and_then(Value::as_str);
+
+            let replacement = match (current_kind, current_path) {
+                (Some("wsl"), Some(path)) => {
+                    resolve_legacy_repo_root_from_input(path).and_then(|resolved_root| {
+                        let next_root = root_json_for_kind(resolved_root.kind, resolved_root.path);
+                        if root_value != &next_root {
+                            Some(next_root)
+                        } else {
+                            None
+                        }
+                    })
+                }
+                (Some("windows"), Some(path)) => {
+                    let migrated_path = resolve_legacy_repo_root_from_input(path)
+                        .filter(|resolved_root| resolved_root.kind == RepoRootKind::Host)
+                        .map(|resolved_root| resolved_root.path)
+                        .unwrap_or_else(|| path.trim().to_string());
+                    let next_root = json!({ "kind": "host", "path": migrated_path });
+                    if root_value != &next_root {
+                        Some(next_root)
                     } else {
                         None
                     }
-                });
+                }
+                (Some("host"), Some(path)) => {
+                    let trimmed = path.trim();
+                    let next_root = json!({ "kind": "host", "path": trimmed });
+                    if root_value != &next_root {
+                        Some(next_root)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            };
             if let Some(new_root) = replacement {
                 *root_value = new_root;
                 changed = true;
@@ -278,14 +300,11 @@ fn migrate_legacy_repo_roots(raw: &mut Value) -> bool {
         let Some(legacy_path) = repo_obj.get("wslPath").and_then(Value::as_str) else {
             continue;
         };
-        let Some(resolved_root) = resolve_repo_root_from_input(legacy_path) else {
+        let Some(resolved_root) = resolve_legacy_repo_root_from_input(legacy_path) else {
             continue;
         };
 
-        let root_json = match resolved_root.kind {
-            RepoRootKind::Wsl => json!({ "kind": "wsl", "path": resolved_root.path }),
-            RepoRootKind::Windows => json!({ "kind": "windows", "path": resolved_root.path }),
-        };
+        let root_json = root_json_for_kind(resolved_root.kind, resolved_root.path);
 
         repo_obj.insert("root".to_string(), root_json);
         repo_obj.remove("wslPath");
@@ -293,6 +312,13 @@ fn migrate_legacy_repo_roots(raw: &mut Value) -> bool {
     }
 
     changed
+}
+
+fn root_json_for_kind(kind: RepoRootKind, path: String) -> Value {
+    match kind {
+        RepoRootKind::Wsl => json!({ "kind": "wsl", "path": path }),
+        RepoRootKind::Host => json!({ "kind": "host", "path": path }),
+    }
 }
 
 #[cfg(test)]

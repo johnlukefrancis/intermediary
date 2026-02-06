@@ -10,7 +10,7 @@ const FRESH_DURATION_MS = 5000;
 
 interface BundleRowProps {
   bundle: BundleInfo;
-  onDragStart: (windowsPath: string) => Promise<void>;
+  onDragStart: (hostPath: string) => Promise<void>;
   /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
   freshlyBuiltAt?: number | null | undefined;
 }
@@ -69,12 +69,12 @@ export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProp
 
       setIsDragging(true);
       try {
-        await onDragStart(bundle.windowsPath);
+        await onDragStart(bundle.hostPath);
       } finally {
         setIsDragging(false);
       }
     },
-    [bundle.windowsPath, bundle.fileName, onDragStart]
+    [bundle.hostPath, bundle.fileName, onDragStart]
   );
 
   const className = [

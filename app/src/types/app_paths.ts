@@ -7,14 +7,14 @@
  * Note: Rust uses snake_case but serde renames to camelCase for JSON
  */
 export interface AppPaths {
-  /** Windows AppData\Local directory for this app */
+  /** Host app-local-data directory for this app */
   appLocalDataDir: string;
-  /** Windows path to staging root */
-  stagingWindowsRoot: string;
-  /** WSL equivalent path to staging root */
-  stagingWslRoot: string;
+  /** Host-native path to staging root */
+  stagingHostRoot: string;
+  /** Optional WSL equivalent path to staging root (Windows + WSL only) */
+  stagingWslRoot?: string;
   /** Log directory path */
   logDir: string;
   /** Path to drag icon PNG */
-  dragIconWindowsPath: string;
+  dragIconHostPath: string;
 }

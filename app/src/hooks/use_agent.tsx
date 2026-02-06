@@ -88,7 +88,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
-  const outputWindowsRootRef = useRef(persistedConfig.outputWindowsRoot);
+  const outputHostRootRef = useRef(persistedConfig.outputWindowsRoot);
   const expectedHost = "127.0.0.1";
   const expectedUrl = `ws://${expectedHost}:${config.agentPort}`;
   const autoStartEnabled = persistedConfig.agentAutoStart;
@@ -166,10 +166,10 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     async function init(): Promise<void> {
       try {
         // Sync ref to the loaded config before resolving paths
-        outputWindowsRootRef.current = persistedConfig.outputWindowsRoot;
-        const outputRoot = outputWindowsRootRef.current;
+        outputHostRootRef.current = persistedConfig.outputWindowsRoot;
+        const outputRoot = outputHostRootRef.current;
         const paths = await invoke<AppPaths>("get_app_paths", {
-          outputWindowsRoot: outputRoot,
+          outputHostRoot: outputRoot,
         });
         if (!mounted) return;
         setAppPaths(paths);
@@ -198,7 +198,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         agentClient.disconnect();
       }
     };
-    // Note: outputWindowsRootRef is used instead of persistedConfig.outputWindowsRoot
+    // Note: outputHostRootRef is used instead of persistedConfig.outputWindowsRoot
     // to avoid reconnecting when only the output path changes. The refreshPaths effect
     // handles output path changes without triggering a full agent reconnection.
   }, [configIsLoaded, config.agentHost, config.agentPort, handleEvent]);
@@ -207,15 +207,15 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   useEffect(() => {
     if (!configIsLoaded) return;
     // Skip if this is the first run or value hasn't changed
-    if (persistedConfig.outputWindowsRoot === outputWindowsRootRef.current) return;
+    if (persistedConfig.outputWindowsRoot === outputHostRootRef.current) return;
 
     async function refreshPaths(): Promise<void> {
       try {
         const paths = await invoke<AppPaths>("get_app_paths", {
-          outputWindowsRoot: persistedConfig.outputWindowsRoot,
+          outputHostRoot: persistedConfig.outputWindowsRoot,
         });
         setAppPaths(paths);
-        outputWindowsRootRef.current = persistedConfig.outputWindowsRoot;
+        outputHostRootRef.current = persistedConfig.outputWindowsRoot;
         // The clientHello effect will re-send when appPaths changes
       } catch (err) {
         console.error("[AgentProvider] Failed to refresh paths:", err);

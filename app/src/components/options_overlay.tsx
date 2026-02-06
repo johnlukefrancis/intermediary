@@ -106,15 +106,15 @@ export function OptionsOverlay({
   }, [setOutputWindowsRoot]);
 
   const handleOpenOutputFolder = useCallback(async () => {
-    if (!appPaths?.stagingWindowsRoot) return;
+    if (!appPaths?.stagingHostRoot) return;
     try {
       await invoke("open_in_file_manager", {
-        folderPath: appPaths.stagingWindowsRoot,
+        folderPath: appPaths.stagingHostRoot,
       });
     } catch (err) {
       console.error("[OptionsOverlay] Failed to open output folder:", err);
     }
-  }, [appPaths?.stagingWindowsRoot]);
+  }, [appPaths?.stagingHostRoot]);
 
   // Derive theme entries from repos (grouped: one per groupId, ungrouped: one per repoId)
   const themeEntries = useMemo((): ThemeEntry[] => {

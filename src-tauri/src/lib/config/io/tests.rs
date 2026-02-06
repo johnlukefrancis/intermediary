@@ -61,7 +61,7 @@ fn test_future_version_rejected() {
 }
 
 #[test]
-fn test_migrates_legacy_wsl_path_to_windows_root() {
+fn test_migrates_legacy_wsl_path_to_host_root() {
     let dir = tempdir().unwrap();
     let path = dir.path().join("config.json");
 
@@ -114,7 +114,7 @@ fn test_migrates_legacy_wsl_path_to_windows_root() {
     assert_eq!(result.config.config_version, CONFIG_VERSION);
     assert!(matches!(
         &result.config.repos[0].root,
-        RepoRoot::Windows { path } if path == r"C:\code\repo"
+        RepoRoot::Host { path } if path == r"C:\code\repo"
     ));
 }
 
@@ -249,4 +249,116 @@ fn test_migrates_expanded_legacy_code_globs_without_inl() {
     let expected_globs = default_code_globs();
     let expected = build_normalized_set(expected_globs.iter().map(|glob| glob.as_str()));
     assert_eq!(migrated, expected);
+}
+
+#[test]
+fn test_preserves_host_posix_root_kind_during_migration() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let legacy = json!({
+        "configVersion": 17,
+        "agentHost": "127.0.0.1",
+        "agentPort": 3141,
+        "agentAutoStart": true,
+        "agentDistro": null,
+        "autoStageGlobal": true,
+        "repos": [{
+            "repoId": "repo",
+            "label": "repo",
+            "root": { "kind": "host", "path": "/Users/jl/code/repo" },
+            "autoStage": true,
+            "docsGlobs": [],
+            "codeGlobs": [],
+            "ignoreGlobs": [],
+            "bundlePresets": [{
+                "presetId": "context",
+                "presetName": "Context",
+                "includeRoot": true,
+                "topLevelDirs": []
+            }]
+        }],
+        "recentFilesLimit": 200,
+        "uiState": {
+            "lastActiveTabId": null,
+            "lastActiveGroupRepoIds": {}
+        },
+        "bundleSelections": {},
+        "globalExcludes": {
+            "dirNames": [],
+            "dirSuffixes": [],
+            "fileNames": [],
+            "extensions": [],
+            "patterns": []
+        },
+        "outputWindowsRoot": null,
+        "tabThemes": {},
+        "starredFiles": {},
+        "themeMode": "dark"
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{legacy}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(matches!(
+        &result.config.repos[0].root,
+        RepoRoot::Host { path } if path == "/Users/jl/code/repo"
+    ));
+}
+
+#[test]
+fn test_preserves_host_mnt_root_kind_during_migration() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let legacy = json!({
+        "configVersion": 17,
+        "agentHost": "127.0.0.1",
+        "agentPort": 3141,
+        "agentAutoStart": true,
+        "agentDistro": null,
+        "autoStageGlobal": true,
+        "repos": [{
+            "repoId": "repo",
+            "label": "repo",
+            "root": { "kind": "host", "path": "/mnt/d/work/repo" },
+            "autoStage": true,
+            "docsGlobs": [],
+            "codeGlobs": [],
+            "ignoreGlobs": [],
+            "bundlePresets": [{
+                "presetId": "context",
+                "presetName": "Context",
+                "includeRoot": true,
+                "topLevelDirs": []
+            }]
+        }],
+        "recentFilesLimit": 200,
+        "uiState": {
+            "lastActiveTabId": null,
+            "lastActiveGroupRepoIds": {}
+        },
+        "bundleSelections": {},
+        "globalExcludes": {
+            "dirNames": [],
+            "dirSuffixes": [],
+            "fileNames": [],
+            "extensions": [],
+            "patterns": []
+        },
+        "outputWindowsRoot": null,
+        "tabThemes": {},
+        "starredFiles": {},
+        "themeMode": "dark"
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{legacy}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(matches!(
+        &result.config.repos[0].root,
+        RepoRoot::Host { path } if path == "/mnt/d/work/repo"
+    ));
 }

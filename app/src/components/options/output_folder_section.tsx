@@ -21,9 +21,9 @@ export function OutputFolderSection({
       <div className="options-row stacked">
         <span
           className={`options-path-display ${!appPaths ? "muted" : ""}`}
-          title={appPaths?.stagingWindowsRoot ?? "Loading..."}
+          title={appPaths?.stagingHostRoot ?? "Loading..."}
         >
-          {appPaths?.stagingWindowsRoot ?? "Loading..."}
+          {appPaths?.stagingHostRoot ?? "Loading..."}
         </span>
         <div className="options-button-row">
           <button

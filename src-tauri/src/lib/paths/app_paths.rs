@@ -11,25 +11,23 @@ use tauri::{AppHandle, Manager};
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppPaths {
-    /// Windows AppData\Local directory for this app
+    /// Host app-local-data directory for this app
     pub app_local_data_dir: String,
-    /// Windows path to staging root
-    pub staging_windows_root: String,
-    /// WSL equivalent path to staging root
-    pub staging_wsl_root: String,
+    /// Host-native path to staging root
+    pub staging_host_root: String,
+    /// Optional WSL equivalent path to staging root (Windows-only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub staging_wsl_root: Option<String>,
     /// Log directory path
     pub log_dir: String,
     /// Path to drag icon PNG
-    pub drag_icon_windows_path: String,
+    pub drag_icon_host_path: String,
 }
 
 impl AppPaths {
     /// Resolve all application paths from the Tauri app handle.
-    /// If `output_windows_root` is provided, use it as the staging root.
-    pub fn resolve(
-        app: &AppHandle,
-        output_windows_root: Option<&str>,
-    ) -> Result<Self, AppPathsError> {
+    /// If `output_host_root` is provided, use it as the staging root.
+    pub fn resolve(app: &AppHandle, output_host_root: Option<&str>) -> Result<Self, AppPathsError> {
         let app_local_data = app
             .path()
             .app_local_data_dir()
@@ -39,33 +37,36 @@ impl AppPaths {
         let app_local_data_str = path_to_string(&app_local_data)?;
 
         // Use override if provided, otherwise default to app_local_data/staging.
-        let staging_windows = match output_windows_root {
+        let staging_host = match output_host_root {
             Some(override_path) => {
                 let trimmed = override_path.trim();
-                validate_windows_drive_path(trimmed)?;
+                validate_host_output_root(trimmed)?;
                 PathBuf::from(trimmed)
             }
             None => app_local_data.join("staging"),
         };
-        ensure_dir(&staging_windows, "staging directory")?;
-        let staging_windows_str = path_to_string(&staging_windows)?;
+        ensure_dir(&staging_host, "staging directory")?;
+        let staging_host_str = path_to_string(&staging_host)?;
 
-        let staging_wsl_root =
-            windows_to_wsl_path(&staging_windows_str).ok_or(AppPathsError::WslConversionFailed)?;
+        let staging_wsl_root = if cfg!(target_os = "windows") {
+            Some(windows_to_wsl_path(&staging_host_str).ok_or(AppPathsError::WslConversionFailed)?)
+        } else {
+            None
+        };
 
         let log_dir = resolve_log_dir(&app_local_data)?;
         let log_dir_str = path_to_string(&log_dir)?;
 
         let drag_icon_path = app_local_data.join("drag_icon.png");
         write_drag_icon_if_missing(&drag_icon_path)?;
-        let drag_icon_windows_path = path_to_string(&drag_icon_path)?;
+        let drag_icon_host_path = path_to_string(&drag_icon_path)?;
 
         Ok(Self {
             app_local_data_dir: app_local_data_str,
-            staging_windows_root: staging_windows_str,
+            staging_host_root: staging_host_str,
             staging_wsl_root,
             log_dir: log_dir_str,
-            drag_icon_windows_path,
+            drag_icon_host_path,
         })
     }
 }
@@ -135,6 +136,13 @@ fn write_drag_icon_if_missing(path: &Path) -> Result<(), AppPathsError> {
 
 /// Validate that path is a Windows drive path (not UNC/wsl$).
 /// Valid paths start with a drive letter, colon, and slash/backslash (e.g., C:\Users\...).
+fn validate_host_output_root(path: &str) -> Result<(), AppPathsError> {
+    if cfg!(target_os = "windows") {
+        return validate_windows_drive_path(path);
+    }
+    validate_posix_absolute_path(path)
+}
+
 fn validate_windows_drive_path(path: &str) -> Result<(), AppPathsError> {
     let trimmed = path.trim();
 
@@ -163,4 +171,19 @@ fn validate_windows_drive_path(path: &str) -> Result<(), AppPathsError> {
             "path must start with a drive root (e.g., C:\\\\Projects)".to_string(),
         )),
     }
+}
+
+fn validate_posix_absolute_path(path: &str) -> Result<(), AppPathsError> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return Err(AppPathsError::InvalidOutputRoot(
+            "path cannot be empty".to_string(),
+        ));
+    }
+    if !trimmed.starts_with('/') {
+        return Err(AppPathsError::InvalidOutputRoot(
+            "path must be an absolute POSIX path (e.g., /Users/name/Intermediary)".to_string(),
+        ));
+    }
+    Ok(())
 }

@@ -1,16 +1,16 @@
 // Path: src-tauri/src/lib/commands/file_manager.rs
-// Description: Open folders in OS file manager (Windows Explorer)
+// Description: Open folders in the host OS file manager
 
 use std::path::Path;
 use std::process::Command;
 
-/// Open a folder in the OS file manager (Windows Explorer).
+/// Open a folder in the host OS file manager.
 ///
 /// # Arguments
-/// * `folder_path` - Windows path to the folder to open
+/// * `folder_path` - Host-native absolute path to the folder to open
 ///
 /// # Errors
-/// Returns an error if the path is empty or Explorer fails to launch.
+/// Returns an error if the path is empty or the platform launcher fails.
 #[tauri::command]
 pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
     let folder_path = folder_path.trim().to_string();
@@ -18,26 +18,42 @@ pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
         return Err("Folder path cannot be empty".to_string());
     }
 
-    if !cfg!(target_os = "windows") {
-        return Err("open_in_file_manager is only supported on Windows".to_string());
-    }
-
-    // Use spawn_blocking for the process execution
     tauri::async_runtime::spawn_blocking(move || {
-        // Skip is_dir check for UNC paths - Rust's Path APIs don't handle them reliably
-        let is_unc = folder_path.starts_with(r"\\");
-        if !is_unc {
-            let path = Path::new(&folder_path);
-            if !path.is_dir() {
-                return Err(format!("Folder does not exist: {folder_path}"));
-            }
+        let path = Path::new(&folder_path);
+        let is_windows_unc = cfg!(target_os = "windows") && folder_path.starts_with(r"\\");
+        if !is_windows_unc && !path.is_dir() {
+            return Err(format!("Folder does not exist: {folder_path}"));
         }
 
-        Command::new("explorer")
-            .arg(&folder_path)
-            .spawn()
-            .map_err(|e| format!("Failed to open explorer: {e}"))?;
-        Ok::<(), String>(())
+        #[cfg(target_os = "windows")]
+        {
+            Command::new("explorer")
+                .arg(&folder_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open Explorer: {e}"))?;
+            return Ok::<(), String>(());
+        }
+
+        #[cfg(target_os = "macos")]
+        {
+            Command::new("open")
+                .arg(&folder_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open Finder: {e}"))?;
+            return Ok::<(), String>(());
+        }
+
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            Command::new("xdg-open")
+                .arg(&folder_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open file manager: {e}"))?;
+            return Ok::<(), String>(());
+        }
+
+        #[allow(unreachable_code)]
+        Err("open_in_file_manager is not supported on this platform".to_string())
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?

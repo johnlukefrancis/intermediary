@@ -42,8 +42,8 @@ export const HelloEventSchema = z.object({
 
 /** Staging info attached to file change events when auto-staged */
 export const StagedInfoSchema = z.object({
-  wslPath: z.string(),
-  windowsPath: z.string(),
+  hostPath: z.string(),
+  wslPath: z.string().optional(),
   bytesCopied: z.number().int().nonnegative(),
   mtimeMs: z.number(),
 });
@@ -71,8 +71,8 @@ export const BundleBuiltEventSchema = z.object({
   type: z.literal("bundleBuilt"),
   repoId: z.string(),
   presetId: z.string(),
-  windowsPath: z.string(),
-  aliasWindowsPath: z.string(),
+  hostPath: z.string(),
+  aliasHostPath: z.string(),
   bytes: z.number().int().nonnegative(),
   fileCount: z.number().int().nonnegative(),
   builtAtIso: z.string(),
@@ -170,10 +170,12 @@ export const ClientHelloCommandSchema = z.object({
   type: z.literal("clientHello"),
   /** Full app configuration */
   config: AppConfigSchema,
-  /** WSL path for staging files, e.g. /mnt/c/Users/.../staging/files */
-  stagingWslRoot: z.string(),
-  /** Windows path for staging files, e.g. C:\Users\...\staging\files */
-  stagingWinRoot: z.string(),
+  /** Host-native staging root path (Windows path on Windows, POSIX on macOS). */
+  stagingHostRoot: z.string(),
+  /** Legacy compatibility for agents that still expect stagingWinRoot. */
+  stagingWinRoot: z.string().optional(),
+  /** Optional WSL path for staging files (Windows + WSL bridge only). */
+  stagingWslRoot: z.string().optional(),
   /** Whether to auto-stage docs/code files on change */
   autoStageOnChange: z.boolean().optional(),
 });
@@ -227,8 +229,8 @@ export const StageFileResultSchema = z.object({
   type: z.literal("stageFileResult"),
   repoId: z.string(),
   path: z.string(),
-  windowsPath: z.string(),
-  wslPath: z.string(),
+  hostPath: z.string(),
+  wslPath: z.string().optional(),
   bytesCopied: z.number().int().nonnegative(),
   mtimeMs: z.number(),
 });
@@ -237,9 +239,9 @@ export const BuildBundleResultSchema = z.object({
   type: z.literal("buildBundleResult"),
   repoId: z.string(),
   presetId: z.string(),
-  windowsPath: z.string(),
-  wslPath: z.string(),
-  aliasWindowsPath: z.string(),
+  hostPath: z.string(),
+  wslPath: z.string().optional(),
+  aliasHostPath: z.string(),
   bytes: z.number().int().nonnegative(),
   fileCount: z.number().int().nonnegative(),
   builtAtIso: z.string(),
@@ -270,7 +272,7 @@ export const GetRepoTopLevelResultSchema = z.object({
 
 /** Info about a single bundle file */
 export const BundleInfoSchema = z.object({
-  windowsPath: z.string(),
+  hostPath: z.string(),
   fileName: z.string(),
   bytes: z.number().int().nonnegative(),
   mtimeMs: z.number(),

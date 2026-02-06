@@ -61,11 +61,11 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const [codeView, setCodeView] = useState<PaneView>("recent");
 
   const handleBundleDragStart = useCallback(
-    async (windowsPath: string) => {
+    async (hostPath: string) => {
       if (!appPaths) return;
       await startDrag({
-        item: [windowsPath],
-        icon: appPaths.dragIconWindowsPath,
+        item: [hostPath],
+        icon: appPaths.dragIconHostPath,
       });
     },
     [appPaths]
