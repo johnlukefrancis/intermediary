@@ -15,6 +15,7 @@ bash ./scripts/build/build_agent_bundle.sh
 
 Run this inside WSL/Linux so the bundled WSL binary matches the runtime environment.
 This script does not require Node inside WSL.
+The script pins `TMPDIR` to the workspace `target/tmp` directory to avoid WSL cross-device temp-file failures during `cargo build --release`.
 
 2) Build the Windows host-agent binary for packaging (run in Windows shell from repo root):
 

@@ -34,6 +34,7 @@ Task name: `Tauri: dev (Windows, watch + sync)`
 Syncs from WSL and builds the production installer.
 Runs the WSL agent bundle script (`scripts/build/build_agent_bundle.sh`) before syncing so
 the packaged resources include the latest Rust agent binary without requiring Node in WSL.
+Then runs `scripts/build/ensure_agent_bundle.mjs` on Windows to refresh/verify `im_host_agent.exe` before `pnpm tauri build`.
 
 Task name: `Tauri: build installer (Windows)`
 

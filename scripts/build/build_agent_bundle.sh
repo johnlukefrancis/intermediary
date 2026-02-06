@@ -12,6 +12,7 @@ fi
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 output_dir="${repo_root}/src-tauri/resources/agent_bundle"
 temp_dir="${output_dir}.tmp"
+rust_tmp_dir="${repo_root}/target/tmp"
 wsl_binary_name="im_agent"
 wsl_binary_path="${repo_root}/target/release/${wsl_binary_name}"
 host_binary_name="im_host_agent.exe"
@@ -26,6 +27,11 @@ if ! command -v cargo >/dev/null 2>&1; then
   echo "cargo not available in PATH" >&2
   exit 1
 fi
+
+# Keep Rust temporary files on the same filesystem as the workspace target dir.
+# This avoids intermittent EXDEV (cross-device link) failures under WSL setups.
+mkdir -p "${rust_tmp_dir}"
+export TMPDIR="${rust_tmp_dir}"
 
 version="$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "${repo_root}/package.json" | head -n1)"
 if [[ -z "${version}" ]]; then
