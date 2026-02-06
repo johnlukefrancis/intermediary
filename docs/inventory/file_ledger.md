@@ -6,7 +6,7 @@ Scope: src-tauri, crates, app, scripts (extensions: .cjs, .css, .d.cts, .d.mts, 
 app/index.html - index module
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
-app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the WSL agent is offline
+app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
@@ -20,7 +20,7 @@ app/src/components/file_row.tsx - Draggable file row with click-to-copy, drag ha
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
-app/src/components/options/agent_section.tsx - Options panel controls for the WSL agent lifecycle
+app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
 app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
 app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
@@ -38,7 +38,7 @@ app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for si
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
 app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
-app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of the WSL agent
+app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host + optional WSL agents
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -95,7 +95,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_warm.css - Warm theme overrides - saturated caramel/toffee brown tones
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
-app/src/types/agent_supervisor.ts - Types for Tauri WSL agent supervisor responses
+app/src/types/agent_supervisor.ts - Types for Tauri dual-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 crates/im_agent/src/bundles/bundle_builder_blocking.rs - Blocking bundle build steps and filesystem operations
@@ -178,12 +178,16 @@ scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw 
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
-src-tauri/src/lib/agent/install.rs - Install the bundled WSL agent runtime into app local data
-src-tauri/src/lib/agent/mod.rs - WSL agent supervisor module exports
-src-tauri/src/lib/agent/supervisor.rs - App-managed WSL agent supervisor with spawn and stop support
-src-tauri/src/lib/agent/types.rs - Types for supervising the WSL agent lifecycle
-src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage the WSL agent supervisor
-src-tauri/src/lib/commands/agent_probe.rs - Probe local agent port availability for diagnostics
+src-tauri/src/lib/agent/install.rs - Install bundled host + WSL agent runtimes into app local data
+src-tauri/src/lib/agent/mod.rs - Host + WSL agent supervisor module exports
+src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
+src-tauri/src/lib/agent/supervisor_helpers.rs - Shared state and helper utilities for dual-agent supervision
+src-tauri/src/lib/agent/supervisor.rs - Public dual-agent supervisor types and wiring
+src-tauri/src/lib/agent/supervisor/lifecycle.rs - Dual-agent supervisor lifecycle implementation
+src-tauri/src/lib/agent/supervisor/processes.rs - Process lifecycle helpers for host/WSL supervisor tasks
+src-tauri/src/lib/agent/types.rs - Types for supervising host + WSL agent lifecycles
+src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
+src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)
 src-tauri/src/lib/commands/mod.rs - Tauri command exports

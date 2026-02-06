@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-02-04
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -9,13 +9,13 @@ Commands for running Intermediary in Windows with WSL source files.
 
 The project includes VS Code tasks that handle sync and build automatically.
 
-Note: Installed builds auto-start the WSL agent. During development these tasks still launch the
-agent from source, and the app will skip auto-start if a local agent is already listening.
+Note: Installed builds auto-start the host agent (`3141`) and conditionally start the WSL backend (`3142`) when WSL repos are configured. During development these tasks launch the WSL backend from source on `3142`; the host remains app-managed on `3141`.
 
 ### Tauri: dev (Windows)
 
 Syncs from WSL, installs dependencies if needed, then starts Tauri dev server.
-Also launches the WSL agent in a separate WSL process.
+Also launches the WSL backend agent in a separate WSL process on `3142`.
+Before launch, it runs `scripts/build/ensure_agent_bundle.mjs` on Windows so `im_host_agent.exe` is present/refreshed in `src-tauri/resources/agent_bundle`.
 
 Task name: `Tauri: dev (Windows)`
 
@@ -24,7 +24,8 @@ This is the **default build task** (Ctrl+Shift+B).
 ### Tauri: dev (Windows, watch + sync)
 
 Same as above, plus starts a background watcher that continuously syncs changes from WSL.
-Also launches the WSL agent in a separate WSL process.
+Also launches the WSL backend agent in a separate WSL process on `3142`.
+This task also runs host-bundle prep (`scripts/build/ensure_agent_bundle.mjs`) before launching Tauri.
 
 Task name: `Tauri: dev (Windows, watch + sync)`
 
@@ -65,7 +66,7 @@ $env:INTERMEDIARY_LOG_DIR='\\wsl$\Ubuntu\home\johnf\code\intermediary\logs'
 pnpm tauri dev
 ```
 
-### 4. Start WSL agent (WSL)
+### 4. Start WSL backend agent (WSL)
 
 In a separate WSL terminal:
 
@@ -95,12 +96,13 @@ The watch sync script monitors WSL for changes and copies them to Windows:
 ```
 
 This is started automatically by the "Tauri: dev (Windows, watch + sync)" task.
+The sync scripts intentionally exclude `src-tauri/resources/agent_bundle/im_host_agent.exe` so WSL mirror updates do not delete the Windows-built host agent binary.
 
 ## Typical Workflow
 
 1. Open VS Code in WSL (`code .` from `/home/johnf/code/intermediary`)
 2. Press Ctrl+Shift+B to run "Tauri: dev (Windows)"
-3. In a separate terminal, run `pnpm run agent:dev` to start the WSL agent
+3. In a separate terminal, run `pnpm run agent:dev` to start the WSL backend on `3142`
 4. Edit code in VS Code; Tauri hot-reloads the frontend
 5. For Rust changes, save and let Tauri rebuild
 
@@ -108,4 +110,4 @@ This is started automatically by the "Tauri: dev (Windows, watch + sync)" task.
 
 - **Always edit in WSL**, not in the Windows mirror directory
 - The Windows mirror is read-only from your perspective; sync scripts overwrite it
-- Logs appear in `logs/run_latest.txt` (backend) and the terminal (agent)
+- Logs appear in `logs/run_latest.txt` (backend) and the terminal (agent tasks)

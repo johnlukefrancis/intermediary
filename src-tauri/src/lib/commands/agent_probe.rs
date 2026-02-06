@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/commands/agent_probe.rs
-// Description: Probe local agent port availability for diagnostics
+// Description: Probe local host-agent port availability for diagnostics
 
 use crate::obs::logging;
 use serde::Serialize;

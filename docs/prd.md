@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-05
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -217,7 +217,8 @@ Bundles should be self-identifying:
 
 ### 7.8 Agent lifecycle
 
-* The app auto-starts the WSL agent on launch by default.
+* The app auto-starts the host agent on launch by default (UI endpoint on `agentPort`).
+* The app starts the WSL backend agent only when any configured repo root has `kind: "wsl"` (on `agentPort + 1`).
 * Auto-start can be disabled in Options.
 * Optional WSL distro override is supported for agent launch.
 * Users can manually restart the agent from Options.
@@ -311,7 +312,8 @@ UI → Host agent commands:
 
 ### 9.4 Staging path translation
 
-* Agent writes staged outputs to `/mnt/<drive>/Users/<you>/AppData/Local/Intermediary/staging/...`
+* Host agent and WSL backend both write staged outputs under the same app staging roots.
+* WSL backend writes via `/mnt/<drive>/Users/<you>/AppData/Local/Intermediary/staging/...`
 * UI references the same file via Windows path:
 
   * `C:\Users\<you>\AppData\Local\Intermediary\staging\...`
@@ -336,7 +338,7 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 ### Must-have
 
 * 1 repo tab (hardcoded or simple config import)
-* Recent changes list for docs + code (from WSL agent)
+* Recent changes list for docs + code (via host agent routing)
 * Manual “Build Bundle” for one preset
 * Staging directory writes
 * Drag-out of:
@@ -383,7 +385,7 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 
 The following assumptions are locked for v0:
 
-* **Repo location:** Repos may be in WSL Linux FS or on Windows drives (user adds via directory picker). The WSL agent is required.
+* **Repo location:** Repos may be in WSL Linux FS or on Windows drives (user adds via directory picker). Host agent is always required; WSL backend is required only when at least one WSL root exists.
 * **Initial repo set:** Empty by default. Users add repos via the "+" button in the tab bar.
 * **Grouped repos:** Repos with matching `groupId` share a tab with a dropdown. Useful for worktrees of the same project.
 * **Bundle selection UI:** Top-level folders only + "include root files" toggle (default ON). No nested subfolder selection in v0.

@@ -1,17 +1,19 @@
 # Agent Commands
-Updated on: 2026-02-04
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
-Commands for running and developing the WSL agent.
+Commands for running and developing the WSL backend agent.
 
 ## Development
 
 Start the agent in dev mode:
 
 ```bash
-cargo run -p im_agent --bin im_agent
+INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent
 ```
+
+Use `3142` when running as the backend under the host-agent model (`hostPort + 1`).
 
 ## Type Check
 
@@ -34,7 +36,7 @@ pnpm run lint
 Connect to the running agent with wscat (optional):
 
 ```bash
-wscat -c ws://127.0.0.1:3141
+wscat -c ws://127.0.0.1:3142
 ```
 
 Send a clientHello to configure the agent:
@@ -47,14 +49,13 @@ Send a clientHello to configure the agent:
     "type": "clientHello",
     "config": {
       "agentHost": "127.0.0.1",
-      "agentPort": 3141,
+      "agentPort": 3142,
       "autoStageGlobal": true,
       "repos": [
         {
           "repoId": "textureportal",
           "label": "TexturePortal",
-          "wslPath": "/home/johnf/code/textureportal",
-          "tabId": "texture-portal",
+          "root": { "kind": "wsl", "path": "/home/johnf/code/textureportal" },
           "autoStage": true,
           "docsGlobs": ["docs/**", "**/*.md", "**/*.mdx"],
           "codeGlobs": ["src/**", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],

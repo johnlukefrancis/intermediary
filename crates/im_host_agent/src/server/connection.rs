@@ -30,10 +30,18 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
     let ws_stream = match accept_async(stream).await {
         Ok(stream) => stream,
         Err(err) => {
-            ctx.logger.warn(
-                "Host-agent WebSocket handshake failed",
-                Some(json!({"peer": peer.to_string(), "error": err.to_string()})),
-            );
+            let error_text = err.to_string();
+            if is_expected_probe_handshake_error(&error_text) {
+                ctx.logger.debug(
+                    "Host-agent probe connection closed before websocket upgrade",
+                    Some(json!({"peer": peer.to_string(), "error": error_text})),
+                );
+            } else {
+                ctx.logger.warn(
+                    "Host-agent WebSocket handshake failed",
+                    Some(json!({"peer": peer.to_string(), "error": error_text})),
+                );
+            }
             return;
         }
     };
@@ -152,4 +160,8 @@ async fn handle_message(raw: &str, ctx: &ConnectionContext) -> Option<String> {
             None
         }
     }
+}
+
+fn is_expected_probe_handshake_error(error_text: &str) -> bool {
+    error_text.contains("Handshake not finished")
 }

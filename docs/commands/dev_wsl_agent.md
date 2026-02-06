@@ -1,5 +1,5 @@
 # WSL Agent Development Commands
-Updated on: 2026-02-04
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -14,7 +14,7 @@ The agent runs inside WSL and requires the Rust toolchain available in WSL.
 Run from the repo root in WSL:
 
 ```bash
-cargo run -p im_agent --bin im_agent
+INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent
 ```
 
 ## Log Output
@@ -25,6 +25,6 @@ The agent logs to the terminal and to:
 
 ## Health Check
 
-If the UI shows "Agent: Disconnected", confirm the agent is running and listening on:
+If the host agent shows WSL backend unavailable, confirm the backend is running and listening on:
 
-- `ws://localhost:3141`
+- `ws://localhost:3142`

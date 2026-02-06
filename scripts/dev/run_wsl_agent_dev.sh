@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Path: scripts/dev/run_wsl_agent_dev.sh
-# Description: Launch the WSL agent for dev unless it is already listening.
+# Description: Launch the WSL backend agent for dev unless it is already listening.
 
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-port="${INTERMEDIARY_AGENT_PORT:-3141}"
+port="${INTERMEDIARY_AGENT_PORT:-3142}"
 
 is_port_listening() {
   if (echo >"/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1; then

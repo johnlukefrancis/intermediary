@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-05
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -73,9 +73,9 @@ Intermediary uses a **host-routed architecture**:
 - **Stack:** Tauri (Rust)
 - **Purpose:** Ensure agent processes are installed and running when the app is open
 - **Key features:**
-  - Installs bundled Rust WSL agent binary (`im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
-  - Launches the WSL backend agent via `wsl.exe` with explicit env configuration
-  - Host agent binary (`im_host_agent`) is now available in the Rust workspace for supervisor wiring
+  - Installs bundled Rust binaries (`im_host_agent.exe` and `im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
+  - Launches the Windows-native host agent on `agentPort` (UI endpoint)
+  - Launches the WSL backend agent on `agentPort + 1` only when any configured repo has `root.kind = "wsl"`
   - Auto-start toggle with optional distro override
   - Restart command and diagnostics surfaced in the UI
   - Stops agent processes on app exit to avoid orphans

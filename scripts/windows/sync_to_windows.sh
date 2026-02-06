@@ -24,6 +24,7 @@ rsync -a --delete \
   --exclude "dist" \
   --exclude "dist-ssr" \
   --exclude "logs" \
+  --exclude "src-tauri/resources/agent_bundle/im_host_agent.exe" \
   --exclude "src-tauri/target" \
   "$SOURCE_DIR/" "$DEST_DIR/"
 

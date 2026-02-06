@@ -30,6 +30,7 @@ sync_once() {
     --exclude "dist" \
     --exclude "dist-ssr" \
     --exclude "logs" \
+    --exclude "src-tauri/resources/agent_bundle/im_host_agent.exe" \
     --exclude "src-tauri/target" \
     --exclude "scripts/zip/output" \
     "$SOURCE_DIR/" "$DEST_DIR/"
@@ -38,9 +39,9 @@ sync_once() {
 sync_once
 
 echo "Watching $SOURCE_DIR -> $DEST_DIR"
-echo "Excluding: .git node_modules target dist dist-ssr logs src-tauri/target scripts/zip/output"
+echo "Excluding: .git node_modules target dist dist-ssr logs src-tauri/resources/agent_bundle/im_host_agent.exe src-tauri/target scripts/zip/output"
 while inotifywait -r -e modify,create,delete,move \
-  --exclude "(\\.git|node_modules|dist|dist-ssr|target|logs|src-tauri/target|scripts/zip/output)" \
+  --exclude "(\\.git|node_modules|dist|dist-ssr|target|logs|src-tauri/resources/agent_bundle/im_host_agent\\.exe|src-tauri/target|scripts/zip/output)" \
   "$SOURCE_DIR" >/dev/null 2>&1; do
   sync_once
   echo "Synced at $(date +%H:%M:%S)"

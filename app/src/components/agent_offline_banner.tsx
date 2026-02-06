@@ -1,5 +1,5 @@
 // Path: app/src/components/agent_offline_banner.tsx
-// Description: Banner with diagnostics when the WSL agent is offline
+// Description: Banner with diagnostics when the host agent endpoint is offline
 
 import type React from "react";
 import { useAgent } from "../hooks/use_agent.js";
@@ -38,7 +38,7 @@ export function AgentOfflineBanner(): React.JSX.Element | null {
 
   return (
     <div className="agent-offline-banner glass-surface" role="status" aria-live="polite">
-      <div className="agent-offline-banner__title">WSL agent offline</div>
+      <div className="agent-offline-banner__title">Agent offline</div>
       <div className="agent-offline-banner__details">
         <span className="agent-offline-banner__detail">
           URL:{" "}

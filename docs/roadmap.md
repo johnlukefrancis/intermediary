@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-02-01
+Updated on: 2026-02-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -18,7 +18,7 @@ Depends on: ADR-000, ADR-007
 
 ## Active Initiatives
 
-**Status:** Core functionality complete. Ready for daily use.
+**Status:** Core functionality complete. Host-routed dual-backend rollout is in progress.
 
 Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with no default repos.
 
@@ -40,6 +40,7 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 
 - Three-column UI (Docs, Code, Bundles) per repo
 - WSL agent with file watching and auto-staging
+- Windows-native host agent endpoint with per-repo backend routing
 - Native drag-out via tauri-plugin-drag
 - Bundle building with manifest and retention
 - Config persistence (tab, bundle selections)
@@ -53,6 +54,6 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 
 - System tray mode
 - Global hotkey for "Build + focus app"
-- Windows-native repo support (no agent needed)
+- Finalize dual-agent supervision hardening (host + conditional WSL launch/diagnostics)
 - Custom bundle presets via UI
 - "Save clipboard as report.md" feature

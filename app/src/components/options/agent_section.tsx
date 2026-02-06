@@ -1,5 +1,5 @@
 // Path: app/src/components/options/agent_section.tsx
-// Description: Options panel controls for the WSL agent lifecycle
+// Description: Options panel controls for host + WSL agent lifecycle
 
 import type React from "react";
 
@@ -22,7 +22,7 @@ export function AgentSection({
     <div className="options-section">
       <div className="options-section-title">Agent</div>
       <div className="options-row">
-        <span className="options-row-label">Auto-start agent</span>
+        <span className="options-row-label">Auto-start agent backend</span>
         <label className="vintage-toggle">
           <input
             type="checkbox"

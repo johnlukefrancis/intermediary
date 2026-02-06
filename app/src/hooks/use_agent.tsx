@@ -92,6 +92,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const expectedUrl = `ws://${expectedHost}:${config.agentPort}`;
   const autoStartEnabled = persistedConfig.agentAutoStart;
   const distroOverride = persistedConfig.agentDistro;
+  const requiresWsl = config.repos.some((repo) => repo.root.kind === "wsl");
 
   // clientHello lifecycle with reconnect support
   const helloState = useClientHello({
@@ -146,6 +147,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     configIsLoaded,
     agentHost: config.agentHost,
     agentPort: config.agentPort,
+    requiresWsl,
     autoStartEnabled,
     distroOverride,
     connectionState,

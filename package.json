@@ -16,7 +16,7 @@
     "tauri": "tauri",
     "lint": "eslint \"app/src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "agent:dev": "cargo run -p im_agent --bin im_agent",
+    "agent:dev": "INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent",
     "agent:bundle": "node scripts/build/build_agent_bundle.mjs",
     "headers:list": "node scripts/fileledger/add_file_headers.mjs --list",
     "headers:write": "node scripts/fileledger/add_file_headers.mjs --write",

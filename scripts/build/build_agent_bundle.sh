@@ -12,8 +12,10 @@ fi
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 output_dir="${repo_root}/src-tauri/resources/agent_bundle"
 temp_dir="${output_dir}.tmp"
-binary_name="im_agent"
-binary_path="${repo_root}/target/release/${binary_name}"
+wsl_binary_name="im_agent"
+wsl_binary_path="${repo_root}/target/release/${wsl_binary_name}"
+host_binary_name="im_host_agent.exe"
+host_binary_path="${output_dir}/${host_binary_name}"
 
 if [[ -s "${HOME}/.cargo/env" ]]; then
   # shellcheck disable=SC1090
@@ -33,15 +35,20 @@ fi
 
 cargo build -p im_agent --bin im_agent --release
 
-if [[ ! -f "${binary_path}" ]]; then
+if [[ ! -f "${wsl_binary_path}" ]]; then
   echo "im_agent binary not found after build" >&2
   exit 1
 fi
 
 rm -rf "${temp_dir}"
 mkdir -p "${temp_dir}"
-cp "${binary_path}" "${temp_dir}/${binary_name}"
-chmod 755 "${temp_dir}/${binary_name}"
+cp "${wsl_binary_path}" "${temp_dir}/${wsl_binary_name}"
+chmod 755 "${temp_dir}/${wsl_binary_name}"
+
+# Preserve the Windows host-agent binary if it already exists in the bundle.
+if [[ -f "${host_binary_path}" ]]; then
+  cp "${host_binary_path}" "${temp_dir}/${host_binary_name}"
+fi
 
 cat > "${temp_dir}/version.json" <<EOF
 {

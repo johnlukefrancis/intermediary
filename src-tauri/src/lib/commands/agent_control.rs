@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/commands/agent_control.rs
-// Description: Tauri commands to manage the WSL agent supervisor
+// Description: Tauri commands to manage host + optional WSL agent supervision
 
 use crate::agent::{AgentSupervisor, AgentSupervisorConfig, AgentSupervisorResult};
 use crate::obs::logging;

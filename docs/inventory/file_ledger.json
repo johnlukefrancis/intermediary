@@ -15,7 +15,7 @@
     },
     {
       "path": "app/src/components/agent_offline_banner.tsx",
-      "summary": "Banner with diagnostics when the WSL agent is offline"
+      "summary": "Banner with diagnostics when the host agent endpoint is offline"
     },
     {
       "path": "app/src/components/bundles/bundle_column.tsx",
@@ -71,7 +71,7 @@
     },
     {
       "path": "app/src/components/options/agent_section.tsx",
-      "summary": "Options panel controls for the WSL agent lifecycle"
+      "summary": "Options panel controls for host + WSL agent lifecycle"
     },
     {
       "path": "app/src/components/options/excludes_section.tsx",
@@ -143,7 +143,7 @@
     },
     {
       "path": "app/src/hooks/agent/use_agent_supervisor.ts",
-      "summary": "Manage auto-start and restart of the WSL agent"
+      "summary": "Manage auto-start and restart of host + optional WSL agents"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -371,7 +371,7 @@
     },
     {
       "path": "app/src/types/agent_supervisor.ts",
-      "summary": "Types for Tauri WSL agent supervisor responses"
+      "summary": "Types for Tauri dual-agent supervisor responses"
     },
     {
       "path": "app/src/types/app_paths.ts",
@@ -703,27 +703,43 @@
     },
     {
       "path": "src-tauri/src/lib/agent/install.rs",
-      "summary": "Install the bundled WSL agent runtime into app local data"
+      "summary": "Install bundled host + WSL agent runtimes into app local data"
     },
     {
       "path": "src-tauri/src/lib/agent/mod.rs",
-      "summary": "WSL agent supervisor module exports"
+      "summary": "Host + WSL agent supervisor module exports"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/process_control.rs",
+      "summary": "Spawn helpers for host/WSL agents and readiness probing"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor_helpers.rs",
+      "summary": "Shared state and helper utilities for dual-agent supervision"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor.rs",
-      "summary": "App-managed WSL agent supervisor with spawn and stop support"
+      "summary": "Public dual-agent supervisor types and wiring"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/lifecycle.rs",
+      "summary": "Dual-agent supervisor lifecycle implementation"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/processes.rs",
+      "summary": "Process lifecycle helpers for host/WSL supervisor tasks"
     },
     {
       "path": "src-tauri/src/lib/agent/types.rs",
-      "summary": "Types for supervising the WSL agent lifecycle"
+      "summary": "Types for supervising host + WSL agent lifecycles"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_control.rs",
-      "summary": "Tauri commands to manage the WSL agent supervisor"
+      "summary": "Tauri commands to manage host + optional WSL agent supervision"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_probe.rs",
-      "summary": "Probe local agent port availability for diagnostics"
+      "summary": "Probe local host-agent port availability for diagnostics"
     },
     {
       "path": "src-tauri/src/lib/commands/config.rs",
