@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/paths/app_paths.rs
 // Description: Application path resolution logic
 
+#[cfg(target_os = "windows")]
 use crate::paths::wsl_convert::windows_to_wsl_path;
 use serde::Serialize;
 use std::fs;
@@ -48,11 +49,7 @@ impl AppPaths {
         ensure_dir(&staging_host, "staging directory")?;
         let staging_host_str = path_to_string(&staging_host)?;
 
-        let staging_wsl_root = if cfg!(target_os = "windows") {
-            Some(windows_to_wsl_path(&staging_host_str).ok_or(AppPathsError::WslConversionFailed)?)
-        } else {
-            None
-        };
+        let staging_wsl_root = resolve_staging_wsl_root(&staging_host_str);
 
         let log_dir = resolve_log_dir(&app_local_data)?;
         let log_dir_str = path_to_string(&log_dir)?;
@@ -76,7 +73,6 @@ impl AppPaths {
 pub enum AppPathsError {
     NoAppLocalData,
     InvalidPath,
-    WslConversionFailed,
     InvalidOutputRoot(String),
     Io {
         context: &'static str,
@@ -89,7 +85,6 @@ impl std::fmt::Display for AppPathsError {
         match self {
             Self::NoAppLocalData => write!(f, "Could not resolve app local data directory"),
             Self::InvalidPath => write!(f, "Path contains invalid UTF-8"),
-            Self::WslConversionFailed => write!(f, "Failed to convert Windows path to WSL path"),
             Self::InvalidOutputRoot(reason) => {
                 write!(f, "Invalid output folder override: {reason}")
             }
@@ -108,6 +103,16 @@ fn path_to_string(path: &Path) -> Result<String, AppPathsError> {
     path.to_str()
         .ok_or(AppPathsError::InvalidPath)
         .map(|value| value.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_staging_wsl_root(staging_host_root: &str) -> Option<String> {
+    windows_to_wsl_path(staging_host_root)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn resolve_staging_wsl_root(_staging_host_root: &str) -> Option<String> {
+    None
 }
 
 fn resolve_log_dir(app_local_data: &PathBuf) -> Result<PathBuf, AppPathsError> {

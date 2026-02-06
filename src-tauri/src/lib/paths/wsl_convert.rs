@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/paths/wsl_convert.rs
 // Description: Windows <-> WSL path conversion utilities
 
+#[cfg(target_os = "windows")]
 use std::process::Command;
 
 /// Convert a Windows path to its WSL equivalent
@@ -79,6 +80,8 @@ pub fn wsl_to_windows_path(wsl_path: &str) -> Option<String> {
 /// Errors that can occur when running wslpath via subprocess.
 #[derive(Debug)]
 pub enum WslConvertError {
+    /// WSL conversion is not available on this host OS
+    UnsupportedPlatform,
     /// wsl.exe not found or failed to execute
     WslNotFound(std::io::Error),
     /// wslpath returned a nonzero exit code
@@ -93,6 +96,9 @@ pub enum WslConvertError {
 impl std::fmt::Display for WslConvertError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::UnsupportedPlatform => {
+                write!(f, "WSL path conversion is only available on Windows hosts")
+            }
             Self::WslNotFound(e) => write!(f, "WSL not found or failed to execute: {e}"),
             Self::WslpathFailed { exit_code, stderr } => {
                 let code_str = exit_code
@@ -112,6 +118,7 @@ impl std::error::Error for WslConvertError {}
 /// This is a blocking function; call from `spawn_blocking` in async contexts.
 ///
 /// Example: `/home/john/code` -> `\\wsl.localhost\<distro>\home\john\code`
+#[cfg(target_os = "windows")]
 pub fn run_wslpath(wsl_path: &str) -> Result<String, WslConvertError> {
     let mut command = Command::new("wsl.exe");
     if let Ok(distro) = std::env::var("INTERMEDIARY_WSL_DISTRO") {
@@ -143,6 +150,11 @@ pub fn run_wslpath(wsl_path: &str) -> Result<String, WslConvertError> {
     }
 
     Ok(windows_path)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn run_wslpath(_wsl_path: &str) -> Result<String, WslConvertError> {
+    Err(WslConvertError::UnsupportedPlatform)
 }
 
 #[cfg(test)]
@@ -198,6 +210,12 @@ mod tests {
 
     #[test]
     fn test_wsl_convert_error_display() {
+        let err = WslConvertError::UnsupportedPlatform;
+        assert_eq!(
+            err.to_string(),
+            "WSL path conversion is only available on Windows hosts"
+        );
+
         let err = WslConvertError::WslpathFailed {
             exit_code: Some(1),
             stderr: "path not found".to_string(),

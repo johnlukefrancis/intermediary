@@ -18,6 +18,9 @@ pub fn get_app_paths(app: AppHandle, output_host_root: Option<String>) -> Result
 /// Used by frontend when adding repos via directory picker.
 #[tauri::command]
 pub fn convert_windows_to_wsl(windows_path: String) -> Result<String, String> {
+    if !cfg!(target_os = "windows") {
+        return Err(wsl_conversion_unsupported_error());
+    }
     windows_to_wsl_path(&windows_path)
         .ok_or_else(|| format!("Invalid Windows path format: {}", windows_path))
 }
@@ -43,6 +46,10 @@ pub fn resolve_repo_root(input_path: String) -> Result<RepoRoot, String> {
 /// Handles both /mnt/X/... paths (fast pure conversion) and native WSL paths (via wslpath).
 #[tauri::command]
 pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> {
+    if !cfg!(target_os = "windows") {
+        return Err(wsl_conversion_unsupported_error());
+    }
+
     // Fast path: /mnt/X/... uses pure Rust conversion
     if let Some(win_path) = wsl_to_windows_path(&wsl_path) {
         return Ok(win_path);
@@ -52,4 +59,8 @@ pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> 
     tauri::async_runtime::spawn_blocking(move || run_wslpath(&wsl_path).map_err(|e| e.to_string()))
         .await
         .map_err(|e| format!("Task join error: {e}"))?
+}
+
+fn wsl_conversion_unsupported_error() -> String {
+    "WSL path conversion is only available on Windows hosts".to_string()
 }

@@ -77,7 +77,8 @@ fn installed_bundle_matches(bundle_dir: &Path, installed_dir: &Path) -> Result<b
         return Ok(false);
     }
 
-    if !files_equal(&bundle_wsl, &installed_wsl)? || !files_equal(&bundle_version, &installed_version)?
+    if !files_equal(&bundle_wsl, &installed_wsl)?
+        || !files_equal(&bundle_version, &installed_version)?
     {
         return Ok(false);
     }
@@ -153,7 +154,11 @@ fn resolve_bundle_dir(resource_dir: &Path) -> Result<PathBuf, String> {
 
     if let Ok(cwd) = std::env::current_dir() {
         candidates.push(cwd.join("resources").join(AGENT_BUNDLE_DIR));
-        candidates.push(cwd.join("src-tauri").join("resources").join(AGENT_BUNDLE_DIR));
+        candidates.push(
+            cwd.join("src-tauri")
+                .join("resources")
+                .join(AGENT_BUNDLE_DIR),
+        );
     }
 
     if let Ok(win_root) = std::env::var("INTERMEDIARY_WIN_PATH") {
@@ -242,8 +247,12 @@ fn copy_host_binary(
     })?;
 
     let dest = target_dir.join(HOST_AGENT_BINARY_FILE);
-    fs::copy(&source, &dest)
-        .map_err(|err| format!("Failed to copy {HOST_AGENT_BINARY_FILE} from {}: {err}", source.display()))?;
+    fs::copy(&source, &dest).map_err(|err| {
+        format!(
+            "Failed to copy {HOST_AGENT_BINARY_FILE} from {}: {err}",
+            source.display()
+        )
+    })?;
     Ok(())
 }
 
@@ -255,8 +264,16 @@ fn resolve_host_binary_source(
 
     candidates.push(bundle_dir.join(HOST_AGENT_BINARY_FILE));
     if let Ok(cwd) = std::env::current_dir() {
-        candidates.push(cwd.join("target").join("release").join(HOST_AGENT_BINARY_FILE));
-        candidates.push(cwd.join("target").join("debug").join(HOST_AGENT_BINARY_FILE));
+        candidates.push(
+            cwd.join("target")
+                .join("release")
+                .join(HOST_AGENT_BINARY_FILE),
+        );
+        candidates.push(
+            cwd.join("target")
+                .join("debug")
+                .join(HOST_AGENT_BINARY_FILE),
+        );
         candidates.push(
             cwd.join("..")
                 .join("target")
@@ -278,7 +295,11 @@ fn resolve_host_binary_source(
                     .join("release")
                     .join(HOST_AGENT_BINARY_FILE),
             );
-            candidates.push(root.join("target").join("debug").join(HOST_AGENT_BINARY_FILE));
+            candidates.push(
+                root.join("target")
+                    .join("debug")
+                    .join(HOST_AGENT_BINARY_FILE),
+            );
             candidates.push(
                 root.join("src-tauri")
                     .join("resources")
