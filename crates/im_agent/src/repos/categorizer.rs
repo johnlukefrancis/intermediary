@@ -12,7 +12,9 @@ const DOC_DIRS: &[&str] = &["docs", "doc", "documentation", "wiki"];
 
 const CODE_EXTENSIONS: &[&str] = &[
     ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".rs", ".toml", ".css", ".scss",
-    ".html", ".svelte", ".vue", ".py", ".go", ".yaml", ".yml",
+    ".html", ".svelte", ".vue", ".py", ".go", ".yaml", ".yml", ".c", ".h", ".hpp", ".hh",
+    ".hxx", ".cc", ".cpp", ".cxx", ".ipp", ".inl", ".cs", ".java", ".kt", ".kts", ".swift",
+    ".m", ".mm",
 ];
 
 #[derive(Debug, Clone)]
@@ -96,4 +98,23 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
     }
 
     FileKind::Other
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fallback_classifies_cpp_family_as_code() {
+        assert_eq!(fallback_categorize("Test.cpp"), FileKind::Code);
+        assert_eq!(fallback_categorize("Source/GameMode.hpp"), FileKind::Code);
+        assert_eq!(fallback_categorize("Source/LinuxEntry.cc"), FileKind::Code);
+        assert_eq!(fallback_categorize("Source/Platform.mm"), FileKind::Code);
+    }
+
+    #[test]
+    fn fallback_keeps_docs_priority() {
+        assert_eq!(fallback_categorize("docs/notes.txt"), FileKind::Docs);
+        assert_eq!(fallback_categorize("README.md"), FileKind::Docs);
+    }
 }

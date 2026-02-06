@@ -31,6 +31,16 @@ export const DEFAULT_CODE_GLOBS = [
   "**/*.yml",
   "**/*.py",
   "**/*.go",
+  "**/*.c",
+  "**/*.h",
+  "**/*.hpp",
+  "**/*.cc",
+  "**/*.cpp",
+  "**/*.cxx",
+  "**/*.cs",
+  "**/*.java",
+  "**/*.kt",
+  "**/*.swift",
 ];
 
 export const DEFAULT_IGNORE_GLOBS = [
