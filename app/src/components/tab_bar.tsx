@@ -131,11 +131,7 @@ export function TabBar({
 
   const handleOpenFolder = useCallback(async (root: RepoRoot) => {
     try {
-      const hostPath =
-        root.kind === "host"
-          ? root.path
-          : await invoke<string>("convert_wsl_to_windows", { wslPath: root.path });
-      await invoke("open_in_file_manager", { folderPath: hostPath });
+      await invoke("open_in_file_manager", { folderPath: root.path });
     } catch (err) {
       console.error("[TabBar] Failed to open folder:", err);
     }

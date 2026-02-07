@@ -10,15 +10,18 @@ import { pathToFileURL } from "node:url";
 const repoRoot = process.cwd();
 const bundleDir = path.join(repoRoot, "src-tauri", "resources", "agent_bundle");
 const wslBinaryPath = path.join(bundleDir, "im_agent");
-const hostBinaryPath = path.join(bundleDir, "im_host_agent.exe");
+const hostBinaryName =
+  process.platform === "win32" ? "im_host_agent.exe" : "im_host_agent";
+const hostBinaryPath = path.join(bundleDir, hostBinaryName);
 const versionPath = path.join(bundleDir, "version.json");
 const packageJsonPath = path.join(repoRoot, "package.json");
 const hostBuildBinaryPath = path.join(
   repoRoot,
   "target",
   "release",
-  "im_host_agent.exe"
+  hostBinaryName
 );
+const requiresWslBinary = process.platform === "win32";
 
 export async function ensureAgentBundle() {
   const pkg = JSON.parse(await readFile(packageJsonPath, "utf8"));
@@ -27,15 +30,17 @@ export async function ensureAgentBundle() {
     throw new Error("package.json version is missing");
   }
 
-  const wslBinaryInfo = await readRequiredFileInfo(
-    wslBinaryPath,
-    "Agent bundle is missing im_agent. See docs/commands/agent_bundle.md."
-  );
-
-  if (!wslBinaryInfo.isFile() || wslBinaryInfo.size === 0) {
-    throw new Error(
-      "Agent bundle im_agent is missing or empty. See docs/commands/agent_bundle.md."
+  if (requiresWslBinary) {
+    const wslBinaryInfo = await readRequiredFileInfo(
+      wslBinaryPath,
+      "Agent bundle is missing im_agent. See docs/commands/agent_bundle.md."
     );
+
+    if (!wslBinaryInfo.isFile() || wslBinaryInfo.size === 0) {
+      throw new Error(
+        "Agent bundle im_agent is missing or empty. See docs/commands/agent_bundle.md."
+      );
+    }
   }
 
   await ensureHostBinary();
@@ -74,16 +79,14 @@ export async function ensureAgentBundle() {
 }
 
 async function ensureHostBinary() {
-  if (process.platform === "win32") {
-    await runCommand("cargo", [
-      "build",
-      "-p",
-      "im_host_agent",
-      "--bin",
-      "im_host_agent",
-      "--release",
-    ]);
-  }
+  await runCommand("cargo", [
+    "build",
+    "-p",
+    "im_host_agent",
+    "--bin",
+    "im_host_agent",
+    "--release",
+  ]);
 
   const builtHostBinary = await tryReadFileInfo(hostBuildBinaryPath);
   if (builtHostBinary && builtHostBinary.isFile() && builtHostBinary.size > 0) {
@@ -98,7 +101,7 @@ async function ensureHostBinary() {
   }
 
   throw new Error(
-    "Agent bundle is missing im_host_agent.exe. See docs/commands/agent_bundle.md."
+    `Agent bundle is missing ${hostBinaryName}. See docs/commands/agent_bundle.md.`
   );
 }
 

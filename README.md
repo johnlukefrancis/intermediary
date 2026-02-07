@@ -18,33 +18,28 @@ A single-window "handoff console" that:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Windows (Tauri App)                      │
+│                Host OS (Windows/macOS)                      │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  React/TS Frontend                                    │  │
-│  │  - Tab bar (one per repo)                             │  │
-│  │  - Docs column | Code column | Bundles column         │  │
-│  │  - Drag handles for each file row                     │  │
+│  │  Tauri App (React/TS + Rust commands)                │  │
+│  │  - Docs | Code | Bundles columns                     │  │
+│  │  - Native drag-out and host file-manager actions     │  │
 │  └───────────────────────────────────────────────────────┘  │
+│                            │                                │
+│                   WebSocket (localhost)                     │
+│                            │                                │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  Rust Backend (Tauri commands)                        │  │
-│  │  - Config management                                  │  │
-│  │  - Staging operations                                 │  │
-│  │  - Native drag-out via tauri-plugin-drag              │  │
-│  │  - WebSocket client to WSL agent                      │  │
+│  │  Host Agent (im_host_agent)                          │  │
+│  │  - UI-facing endpoint                                │  │
+│  │  - Routes host-native repos locally                  │  │
+│  │  - Forwards WSL repos to WSL backend (Windows only)  │  │
 │  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                   WebSocket (localhost)
-                            │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                     WSL boundary (Windows only)
+                               │
 ┌─────────────────────────────────────────────────────────────┐
-│                       WSL (Agent)                           │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Rust Agent                                           │  │
-│  │  - notify file watchers (inotify on Linux)            │  │
-│  │  - Emits fileChanged/snapshot events                  │  │
-│  │  - Stages files + builds bundles                      │  │
-│  │  - Atomic writes (temp + rename)                      │  │
-│  └───────────────────────────────────────────────────────┘  │
+│                    WSL Backend (im_agent)                   │
+│  - inotify watching, staging, bundle build, events          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,11 +47,11 @@ A single-window "handoff console" that:
 
 | Component | Technology |
 |-----------|------------|
-| Windows UI | Tauri v2 |
+| Host UI | Tauri v2 |
 | Frontend | React + TypeScript |
-| Backend | Rust |
-| WSL Agent | Rust (`crates/im_agent`) |
-| File Watching | notify (inotify on Linux) |
+| Host Agent | Rust (`crates/im_host_agent`) |
+| WSL Backend Agent | Rust (`crates/im_agent`, Windows-only backend) |
+| File Watching | notify (inotify on Linux / native host FS handling) |
 | Bundling | Rust `im_bundle` library (crates/im_bundle) |
 | IPC | WebSocket (JSON request/response + events) |
 | Drag-out | `tauri-plugin-drag` |
@@ -88,7 +83,8 @@ intermediary/
 │   └── tauri.conf.json
 │
 ├── crates/                 # Rust workspace crates
-│   ├── im_agent/           # WSL agent daemon (Rust)
+│   ├── im_host_agent/      # Host routing agent daemon (Rust)
+│   ├── im_agent/           # WSL backend agent daemon (Rust)
 │   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
 │
 ├── docs/                   # Documentation
@@ -115,14 +111,14 @@ intermediary/
 
 ### Staging Directory
 
-All draggable files originate from a staging directory on the Windows filesystem:
+All draggable files originate from a host staging directory:
 ```
-%LOCALAPPDATA%\Intermediary\staging\
-  files\<repoId>\...
-  bundles\<repoId>\<presetId>\...
+<app_local_data>/staging/
+  files/<repoId>/...
+  bundles/<repoId>/<presetId>/...
 ```
 
-The WSL agent writes to this path via `/mnt/c/...`, and the Tauri app reads the same files via their Windows paths.
+On Windows, the WSL backend writes to the host staging directory through its `/mnt/<drive>/...` mirror path.
 
 ### Bundle Manifests
 
@@ -175,7 +171,7 @@ UI → Agent:
 
 ### Prerequisites
 
-- Windows 10/11 with WSL2
+- Windows 10/11 (WSL2 required for WSL repos) or macOS
 - Rust (stable)
 - Node.js 20+ with pnpm
 - VS Code (recommended)
@@ -183,13 +179,13 @@ UI → Agent:
 ### Setup & Running
 
 Use the command docs for current, copy-safe steps:
-- `docs/commands/dev_wsl_agent.md` — start the WSL agent
-- `docs/commands/dev_windows.md` — run the Windows UI (Tauri)
+- `docs/commands/dev_windows.md` — Windows development workflow
+- `docs/commands/dev_wsl_agent.md` — WSL backend development (Windows+WSL only)
 - `docs/commands/zip_bundles.md` — build repo context bundles
 
 ## Status
 
-**Current phase:** Core app + WSL agent implemented; documentation alignment in progress.
+**Current phase:** Host-routed architecture implemented (host agent + optional Windows WSL backend); ongoing parity hardening and documentation alignment.
 
 See [docs/roadmap.md](docs/roadmap.md) for development phases.
 

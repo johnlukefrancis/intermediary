@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/agent/supervisor_helpers.rs
-// Description: Shared state and helper utilities for dual-agent supervision
+// Description: Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
 
 use std::process::Child;
 use std::time::Instant;

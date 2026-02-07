@@ -1,7 +1,6 @@
 // Path: src-tauri/src/lib/agent/install.rs
-// Description: Install bundled host + WSL agent runtimes into app local data
+// Description: Install bundled agent runtimes into app local data with platform-specific requirements
 
-use crate::paths::wsl_convert::windows_to_wsl_path;
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,16 +8,18 @@ use std::path::{Path, PathBuf};
 const AGENT_BUNDLE_DIR: &str = "agent_bundle";
 const AGENT_INSTALL_DIR: &str = "agent";
 const WSL_AGENT_BINARY_FILE: &str = "im_agent";
+#[cfg(target_os = "windows")]
 const HOST_AGENT_BINARY_FILE: &str = "im_host_agent.exe";
+#[cfg(not(target_os = "windows"))]
+const HOST_AGENT_BINARY_FILE: &str = "im_host_agent";
 const AGENT_VERSION_FILE: &str = "version.json";
 
 #[derive(Debug, Clone)]
 pub struct AgentBundlePaths {
-    pub agent_dir_windows: PathBuf,
-    pub agent_dir_wsl: String,
-    pub log_dir_windows: PathBuf,
-    pub log_dir_wsl: String,
-    pub host_agent_binary_windows: PathBuf,
+    pub agent_dir_host: PathBuf,
+    pub log_dir_host: PathBuf,
+    pub host_agent_binary_host: PathBuf,
+    pub wsl_agent_binary_host: Option<PathBuf>,
     pub version: String,
 }
 
@@ -36,21 +37,21 @@ pub fn ensure_agent_bundle(
     let version_path = bundle_dir.join(AGENT_VERSION_FILE);
     let version = read_version(&version_path)?;
 
-    let agent_dir_windows = app_local_data.join(AGENT_INSTALL_DIR);
-    let installed_version_path = agent_dir_windows.join(AGENT_VERSION_FILE);
+    let agent_dir_host = app_local_data.join(AGENT_INSTALL_DIR);
+    let installed_version_path = agent_dir_host.join(AGENT_VERSION_FILE);
     let installed_version = read_installed_version(&installed_version_path);
 
     let should_install = if installed_version.as_deref() != Some(version.as_str()) {
         true
     } else {
-        !installed_bundle_matches(&bundle_dir, &agent_dir_windows)?
+        !installed_bundle_matches(&bundle_dir, &agent_dir_host)?
     };
 
     if should_install {
-        install_bundle(&bundle_dir, &agent_dir_windows)?;
+        install_bundle(&bundle_dir, &agent_dir_host)?;
     }
 
-    build_bundle_paths(agent_dir_windows, app_local_data.join("logs"), version)
+    build_bundle_paths(agent_dir_host, app_local_data.join("logs"), version)
 }
 
 fn installed_bundle_matches(bundle_dir: &Path, installed_dir: &Path) -> Result<bool, String> {
@@ -58,29 +59,38 @@ fn installed_bundle_matches(bundle_dir: &Path, installed_dir: &Path) -> Result<b
         return Ok(false);
     }
 
-    let bundle_wsl = bundle_dir.join(WSL_AGENT_BINARY_FILE);
     let bundle_version = bundle_dir.join(AGENT_VERSION_FILE);
-    if !bundle_wsl.is_file() {
-        return Err(format!(
-            "Agent bundle missing required file: {WSL_AGENT_BINARY_FILE}"
-        ));
-    }
     if !bundle_version.is_file() {
         return Err(format!(
             "Agent bundle missing required file: {AGENT_VERSION_FILE}"
         ));
     }
+    if requires_wsl_binary() {
+        let bundle_wsl = bundle_dir.join(WSL_AGENT_BINARY_FILE);
+        if !bundle_wsl.is_file() {
+            return Err(format!(
+                "Agent bundle missing required file: {WSL_AGENT_BINARY_FILE}"
+            ));
+        }
+    }
 
-    let installed_wsl = installed_dir.join(WSL_AGENT_BINARY_FILE);
     let installed_version = installed_dir.join(AGENT_VERSION_FILE);
-    if !installed_wsl.is_file() || !installed_version.is_file() {
+    if !installed_version.is_file() {
         return Ok(false);
     }
 
-    if !files_equal(&bundle_wsl, &installed_wsl)?
-        || !files_equal(&bundle_version, &installed_version)?
-    {
+    if !files_equal(&bundle_version, &installed_version)? {
         return Ok(false);
+    }
+    if requires_wsl_binary() {
+        let bundle_wsl = bundle_dir.join(WSL_AGENT_BINARY_FILE);
+        let installed_wsl = installed_dir.join(WSL_AGENT_BINARY_FILE);
+        if !installed_wsl.is_file() {
+            return Ok(false);
+        }
+        if !files_equal(&bundle_wsl, &installed_wsl)? {
+            return Ok(false);
+        }
     }
 
     let (host_source, _) = resolve_host_binary_source(bundle_dir, installed_dir);
@@ -114,21 +124,21 @@ fn files_equal(left: &Path, right: &Path) -> Result<bool, String> {
 }
 
 pub fn resolve_installed_agent_bundle(app_local_data: &Path) -> Result<AgentBundlePaths, String> {
-    let agent_dir_windows = app_local_data.join(AGENT_INSTALL_DIR);
-    let version = read_version(&agent_dir_windows.join(AGENT_VERSION_FILE))?;
+    let agent_dir_host = app_local_data.join(AGENT_INSTALL_DIR);
+    let version = read_version(&agent_dir_host.join(AGENT_VERSION_FILE))?;
 
-    if !agent_dir_windows.join(WSL_AGENT_BINARY_FILE).is_file() {
-        return Err(format!(
-            "Installed agent is missing required file: {WSL_AGENT_BINARY_FILE}"
-        ));
-    }
-    if !agent_dir_windows.join(HOST_AGENT_BINARY_FILE).is_file() {
+    if !agent_dir_host.join(HOST_AGENT_BINARY_FILE).is_file() {
         return Err(format!(
             "Installed agent is missing required file: {HOST_AGENT_BINARY_FILE}"
         ));
     }
+    if requires_wsl_binary() && !agent_dir_host.join(WSL_AGENT_BINARY_FILE).is_file() {
+        return Err(format!(
+            "Installed agent is missing required file: {WSL_AGENT_BINARY_FILE}"
+        ));
+    }
 
-    build_bundle_paths(agent_dir_windows, app_local_data.join("logs"), version)
+    build_bundle_paths(agent_dir_host, app_local_data.join("logs"), version)
 }
 
 pub fn resolve_launch_bundle(
@@ -189,17 +199,22 @@ fn resolve_bundle_dir(resource_dir: &Path) -> Result<PathBuf, String> {
         .join(", ");
 
     Err(format!(
-        "Agent bundle resources missing required files ({WSL_AGENT_BINARY_FILE}, {AGENT_VERSION_FILE}). Tried: {attempted}"
+        "Agent bundle resources missing required files for this platform. Tried: {attempted}"
     ))
 }
 
 fn bundle_has_core_files(bundle_dir: &Path) -> bool {
-    bundle_dir.join(WSL_AGENT_BINARY_FILE).is_file()
-        && bundle_dir.join(AGENT_VERSION_FILE).is_file()
+    if !bundle_dir.join(AGENT_VERSION_FILE).is_file() {
+        return false;
+    }
+    if requires_wsl_binary() && !bundle_dir.join(WSL_AGENT_BINARY_FILE).is_file() {
+        return false;
+    }
+    true
 }
 
-fn install_bundle(bundle_dir: &Path, agent_dir_windows: &Path) -> Result<(), String> {
-    let temp_dir = agent_dir_windows.with_extension("tmp");
+fn install_bundle(bundle_dir: &Path, agent_dir_host: &Path) -> Result<(), String> {
+    let temp_dir = agent_dir_host.with_extension("tmp");
     if temp_dir.exists() {
         fs::remove_dir_all(&temp_dir)
             .map_err(|err| format!("Failed to clear temp agent bundle: {err}"))?;
@@ -208,16 +223,18 @@ fn install_bundle(bundle_dir: &Path, agent_dir_windows: &Path) -> Result<(), Str
     fs::create_dir_all(&temp_dir)
         .map_err(|err| format!("Failed to create agent bundle temp dir: {err}"))?;
 
-    copy_required(bundle_dir, &temp_dir, WSL_AGENT_BINARY_FILE)?;
-    copy_host_binary(bundle_dir, &temp_dir, agent_dir_windows)?;
+    if requires_wsl_binary() {
+        copy_required(bundle_dir, &temp_dir, WSL_AGENT_BINARY_FILE)?;
+    }
+    copy_host_binary(bundle_dir, &temp_dir, agent_dir_host)?;
     copy_required(bundle_dir, &temp_dir, AGENT_VERSION_FILE)?;
 
-    if agent_dir_windows.exists() {
-        fs::remove_dir_all(agent_dir_windows)
+    if agent_dir_host.exists() {
+        fs::remove_dir_all(agent_dir_host)
             .map_err(|err| format!("Failed to remove old agent bundle: {err}"))?;
     }
 
-    fs::rename(&temp_dir, agent_dir_windows)
+    fs::rename(&temp_dir, agent_dir_host)
         .map_err(|err| format!("Failed to install agent bundle: {err}"))?;
 
     Ok(())
@@ -345,32 +362,30 @@ fn read_version(path: &Path) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-fn path_to_string(path: &Path) -> Result<String, String> {
-    path.to_str()
-        .ok_or_else(|| "Path contains invalid UTF-8".to_string())
-        .map(|value| value.to_string())
-}
-
 fn build_bundle_paths(
-    agent_dir_windows: PathBuf,
-    log_dir_windows: PathBuf,
+    agent_dir_host: PathBuf,
+    log_dir_host: PathBuf,
     version: String,
 ) -> Result<AgentBundlePaths, String> {
-    if let Err(err) = fs::create_dir_all(&log_dir_windows) {
+    if let Err(err) = fs::create_dir_all(&log_dir_host) {
         return Err(format!("Failed to create log directory: {err}"));
     }
 
-    let agent_dir_wsl = windows_to_wsl_path(&path_to_string(&agent_dir_windows)?)
-        .ok_or_else(|| "Failed to convert agent directory to WSL path".to_string())?;
-    let log_dir_wsl = windows_to_wsl_path(&path_to_string(&log_dir_windows)?)
-        .ok_or_else(|| "Failed to convert log directory to WSL path".to_string())?;
+    let wsl_agent_binary_host = if requires_wsl_binary() {
+        Some(agent_dir_host.join(WSL_AGENT_BINARY_FILE))
+    } else {
+        None
+    };
 
     Ok(AgentBundlePaths {
-        host_agent_binary_windows: agent_dir_windows.join(HOST_AGENT_BINARY_FILE),
-        agent_dir_windows,
-        agent_dir_wsl,
-        log_dir_windows,
-        log_dir_wsl,
+        host_agent_binary_host: agent_dir_host.join(HOST_AGENT_BINARY_FILE),
+        agent_dir_host,
+        log_dir_host,
+        wsl_agent_binary_host,
         version,
     })
+}
+
+fn requires_wsl_binary() -> bool {
+    cfg!(target_os = "windows")
 }

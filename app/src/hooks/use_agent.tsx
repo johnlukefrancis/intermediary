@@ -51,6 +51,7 @@ interface AgentContextValue {
   helloState: HelloState;
   agentError: AgentErrorEvent | null;
   agentDiagnostics: AgentDiagnostics | null;
+  platformSupportsWsl: boolean;
   config: AppConfig;
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
@@ -63,6 +64,13 @@ const AgentContext = createContext<AgentContextValue | null>(null);
 
 interface AgentProviderProps {
   children: ReactNode;
+}
+
+function hostSupportsWsl(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+  return /Windows/i.test(navigator.userAgent);
 }
 
 export function AgentProvider({ children }: AgentProviderProps): React.JSX.Element {
@@ -94,6 +102,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const autoStartEnabled = persistedConfig.agentAutoStart;
   const distroOverride = persistedConfig.agentDistro;
   const requiresWsl = config.repos.some((repo) => repo.root.kind === "wsl");
+  const platformSupportsWsl = hostSupportsWsl();
 
   // clientHello lifecycle with reconnect support
   const helloState = useClientHello({
@@ -148,6 +157,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     configIsLoaded,
     agentHost: config.agentHost,
     agentPort: config.agentPort,
+    platformSupportsWsl,
     requiresWsl,
     autoStartEnabled,
     distroOverride,
@@ -267,6 +277,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
             supervisorError: supervisorError,
           }
         : null,
+    platformSupportsWsl,
     config,
     appPaths,
     autoStageOnChange,

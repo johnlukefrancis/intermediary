@@ -14,9 +14,9 @@ Intermediary uses a **host-routed architecture**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Windows Host                            │
+│                      Host OS (Windows/macOS)               │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │              Tauri App (Windows UI)                 │    │
+│  │              Tauri App (Host UI)                    │    │
 │  │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │    │
 │  │  │  Docs   │  │  Code   │  │    Zip Bundles      │  │    │
 │  │  │ Column  │  │ Column  │  │      Column         │  │    │
@@ -31,7 +31,7 @@ Intermediary uses a **host-routed architecture**:
 │  │                Host Agent (Rust)                    │    │
 │  │  • Single endpoint UI connects to                  │    │
 │  │  • Routes per-repo commands by root kind           │    │
-│  │  • Handles Windows repos locally                   │    │
+│  │  • Handles host-native repos locally               │    │
 │  │  • Forwards WSL repos to internal WSL backend      │    │
 │  └─────────────────────────────────────────────────────┘    │
 └────────────────────────┬────────────────────────────────────┘
@@ -57,7 +57,7 @@ Intermediary uses a **host-routed architecture**:
 
 ## Components
 
-### Windows UI (Tauri)
+### Host UI (Tauri)
 
 - **Stack:** Tauri + React/TypeScript
 - **Purpose:** Single-window "handoff console" with repo tabs
@@ -68,15 +68,15 @@ Intermediary uses a **host-routed architecture**:
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
   - Tabs are driven by configured repos (repoId + label), no project-specific UI
 
-### Agent Supervisor (Windows)
+### Agent Supervisor (Host)
 
 - **Stack:** Tauri (Rust)
-- **Purpose:** Ensure agent processes are installed and running when the app is open
+- **Purpose:** Ensure the host agent is installed and running when the app is open
 - **Key features:**
-  - Installs bundled Rust binaries (`im_host_agent.exe` and `im_agent`) into `%LOCALAPPDATA%\Intermediary\agent`
-  - Launches the Windows-native host agent on `agentPort` (UI endpoint)
-  - Launches the WSL backend agent on `agentPort + 1` only when any configured repo has `root.kind = "wsl"`
-  - Auto-start toggle with optional distro override
+  - Installs bundled host-agent runtime into the app local data `agent` directory
+  - Launches the host agent on `agentPort` (UI endpoint)
+  - On Windows only: launches the WSL backend agent on `agentPort + 1` when any configured repo has `root.kind = "wsl"`
+  - Auto-start toggle with optional distro override (Windows-only control)
   - Restart command and diagnostics surfaced in the UI
   - Stops agent processes on app exit to avoid orphans
 
@@ -85,7 +85,7 @@ Intermediary uses a **host-routed architecture**:
 - **Stack:** Rust (Tokio + WebSocket)
 - **Purpose:** Single UI-facing endpoint and per-repo backend router
 - **Key features:**
-  - Maintains repo backend map from path-native roots (`wsl` vs `windows`)
+  - Maintains repo backend map from path-native roots (`wsl` vs `host`)
   - Handles host-native roots locally for watch/refresh/stage/build/list/top-level
   - Maintains internal WebSocket client to WSL backend agent
   - Forwards WSL-targeted requests and relays backend events to the UI
@@ -130,8 +130,8 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 ### Staging System
 
 Staging roots are resolved by the Tauri backend (`get_app_paths`) from the app local data directory:
-- Windows root: `%LOCALAPPDATA%\Intermediary\staging`
-- WSL root: `/mnt/<drive>/Users/<user>/AppData/Local/Intermediary/staging`
+- Host root (all platforms): `<app_local_data>/staging`
+- Optional WSL mirror root (Windows only): `/mnt/<drive>/.../Intermediary/staging`
 
 Layout under the staging root:
 - Files: `staging/files/<repoId>/...`

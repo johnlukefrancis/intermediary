@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/agent/mod.rs
-// Description: Host + WSL agent supervisor module exports
+// Description: Host-agent supervisor module exports (with optional Windows WSL backend)
 
 pub mod install;
 mod process_control;

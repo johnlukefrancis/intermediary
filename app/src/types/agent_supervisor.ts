@@ -1,5 +1,5 @@
 // Path: app/src/types/agent_supervisor.ts
-// Description: Types for Tauri dual-agent supervisor responses
+// Description: Types for Tauri host-agent supervisor responses
 
 export type AgentSupervisorStatus =
   | "started"
@@ -7,11 +7,16 @@ export type AgentSupervisorStatus =
   | "disabled"
   | "backoff";
 
+export interface AgentSupervisorWslStatus {
+  required: boolean;
+  port: number;
+}
+
 export interface AgentSupervisorResult {
   status: AgentSupervisorStatus;
   port: number;
-  wslPort: number;
-  requiresWsl: boolean;
+  supportsWsl: boolean;
+  wsl?: AgentSupervisorWslStatus;
   agentDir: string;
   logDir: string;
   message?: string | null;

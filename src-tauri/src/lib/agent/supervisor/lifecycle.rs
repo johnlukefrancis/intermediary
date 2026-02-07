@@ -1,12 +1,14 @@
 // Path: src-tauri/src/lib/agent/supervisor/lifecycle.rs
-// Description: Dual-agent supervisor lifecycle implementation
+// Description: Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 
 use super::{build_result, AgentSupervisor, EnsureProcessResult};
 use crate::agent::install::resolve_launch_bundle;
 use crate::agent::supervisor_helpers::{
     resolve_expected_dirs, resolve_wsl_port, should_prefer_installed_bundle, ProcessKind,
 };
-use crate::agent::types::{AgentSupervisorConfig, AgentSupervisorResult, AgentSupervisorStatus};
+use crate::agent::types::{
+    AgentSupervisorConfig, AgentSupervisorResult, AgentSupervisorStatus, AgentSupervisorWslStatus,
+};
 use crate::obs::logging;
 use tauri::{AppHandle, Manager};
 
@@ -48,42 +50,49 @@ impl AgentSupervisor {
         if config.port < 1024 {
             return Err("Agent port must be >= 1024".to_string());
         }
-        let wsl_port = resolve_wsl_port(config.port, config.requires_wsl)?;
+        let supports_wsl = cfg!(target_os = "windows");
+        let requested_wsl = config.wsl.as_ref().is_some_and(|wsl| wsl.required);
+        let requires_wsl = supports_wsl && requested_wsl;
+        let wsl_port = resolve_wsl_port(config.port, requires_wsl)?;
+        let wsl_status = wsl_supervisor_status(supports_wsl, requires_wsl, wsl_port);
+        let unsupported_wsl_message = requested_wsl
+            .then_some("WSL backend launch is only supported on Windows hosts".to_string())
+            .filter(|_| !supports_wsl);
         let (agent_dir, log_dir) = resolve_expected_dirs(app)?;
 
         if !config.auto_start && !force {
-            if !config.requires_wsl {
+            if !requires_wsl {
                 self.stop_process(ProcessKind::Wsl).await?;
             }
             return Ok(build_result(
                 AgentSupervisorStatus::Disabled,
                 config.port,
-                wsl_port,
-                config.requires_wsl,
+                supports_wsl,
+                wsl_status.clone(),
                 agent_dir,
                 log_dir,
-                None,
+                unsupported_wsl_message.clone(),
             ));
         }
 
         let host_listening = self.probe_listening(config.port).await?;
-        let wsl_listening = if config.requires_wsl {
+        let wsl_listening = if requires_wsl {
             self.probe_listening(wsl_port).await?
         } else {
             false
         };
 
-        if host_listening && !config.requires_wsl {
+        if host_listening && !requires_wsl {
             self.stop_process(ProcessKind::Wsl).await?;
             self.set_last_error(None)?;
             return Ok(build_result(
                 AgentSupervisorStatus::AlreadyRunning,
                 config.port,
-                wsl_port,
-                config.requires_wsl,
+                supports_wsl,
+                wsl_status.clone(),
                 agent_dir,
                 log_dir,
-                None,
+                unsupported_wsl_message.clone(),
             ));
         }
         if host_listening && wsl_listening {
@@ -91,11 +100,11 @@ impl AgentSupervisor {
             return Ok(build_result(
                 AgentSupervisorStatus::AlreadyRunning,
                 config.port,
-                wsl_port,
-                config.requires_wsl,
+                supports_wsl,
+                wsl_status.clone(),
                 agent_dir,
                 log_dir,
-                None,
+                unsupported_wsl_message.clone(),
             ));
         }
 
@@ -122,28 +131,32 @@ impl AgentSupervisor {
             return Ok(build_result(
                 AgentSupervisorStatus::Backoff,
                 config.port,
-                wsl_port,
-                config.requires_wsl,
+                supports_wsl,
+                wsl_status.clone(),
                 agent_dir,
                 log_dir,
-                Some("Host agent launch backoff active".to_string()),
+                merge_supervisor_message(
+                    "Host agent launch backoff active".to_string(),
+                    unsupported_wsl_message.clone(),
+                ),
             ));
         }
 
         let mut wsl_result = EnsureProcessResult::AlreadyRunning;
-        if config.requires_wsl {
+        if requires_wsl {
+            let distro = config.wsl.as_ref().and_then(|wsl| wsl.distro.as_deref());
             wsl_result = self
-                .ensure_wsl_running(&bundle, config.distro.as_deref(), wsl_port, force)
+                .ensure_wsl_running(&bundle, distro, wsl_port, force)
                 .await?;
             if wsl_result == EnsureProcessResult::Backoff {
                 return Ok(build_result(
                     AgentSupervisorStatus::Backoff,
                     config.port,
-                    wsl_port,
-                    config.requires_wsl,
+                    supports_wsl,
+                    wsl_status.clone(),
                     agent_dir,
                     log_dir,
-                    Some("WSL agent launch backoff active".to_string()),
+                    Some("WSL backend launch backoff active".to_string()),
                 ));
             }
         } else {
@@ -162,11 +175,32 @@ impl AgentSupervisor {
         Ok(build_result(
             status,
             config.port,
-            wsl_port,
-            config.requires_wsl,
+            supports_wsl,
+            wsl_status,
             agent_dir,
             log_dir,
-            None,
+            unsupported_wsl_message,
         ))
+    }
+}
+
+fn wsl_supervisor_status(
+    supports_wsl: bool,
+    requires_wsl: bool,
+    wsl_port: u16,
+) -> Option<AgentSupervisorWslStatus> {
+    if !supports_wsl {
+        return None;
+    }
+    Some(AgentSupervisorWslStatus {
+        required: requires_wsl,
+        port: wsl_port,
+    })
+}
+
+fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Option<String> {
+    match secondary {
+        Some(secondary) => Some(format!("{primary}. {secondary}")),
+        None => Some(primary),
     }
 }

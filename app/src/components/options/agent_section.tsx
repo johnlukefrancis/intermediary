@@ -6,6 +6,7 @@ import type React from "react";
 interface AgentSectionProps {
   agentAutoStart: boolean;
   setAgentAutoStart: (value: boolean) => void;
+  supportsWsl: boolean;
   agentDistro: string | null;
   setAgentDistro: (value: string | null) => void;
   restartAgent: () => void;
@@ -14,6 +15,7 @@ interface AgentSectionProps {
 export function AgentSection({
   agentAutoStart,
   setAgentAutoStart,
+  supportsWsl,
   agentDistro,
   setAgentDistro,
   restartAgent,
@@ -34,21 +36,23 @@ export function AgentSection({
           <span className="vintage-toggle-track" aria-hidden="true" />
         </label>
       </div>
-      <div className="options-row stacked">
-        <span className="options-row-label">WSL distro override</span>
-        <input
-          type="text"
-          className="options-text-input"
-          value={agentDistro ?? ""}
-          placeholder="Ubuntu"
-          onChange={(event) => {
-            setAgentDistro(event.target.value);
-          }}
-        />
-        <span className="options-hint">
-          Leave blank to use the default WSL distro for agent launch
-        </span>
-      </div>
+      {supportsWsl ? (
+        <div className="options-row stacked">
+          <span className="options-row-label">WSL distro override</span>
+          <input
+            type="text"
+            className="options-text-input"
+            value={agentDistro ?? ""}
+            placeholder="Ubuntu"
+            onChange={(event) => {
+              setAgentDistro(event.target.value);
+            }}
+          />
+          <span className="options-hint">
+            Leave blank to use the default WSL distro for agent launch
+          </span>
+        </div>
+      ) : null}
       <div className="options-row">
         <button
           type="button"

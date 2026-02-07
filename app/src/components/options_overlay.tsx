@@ -22,6 +22,7 @@ interface OptionsOverlayProps {
   setAutoStageOnChange: (value: boolean) => void;
   agentAutoStart: boolean;
   setAgentAutoStart: (value: boolean) => void;
+  supportsWsl: boolean;
   agentDistro: string | null;
   setAgentDistro: (value: string | null) => void;
   restartAgent: () => void;
@@ -58,6 +59,7 @@ export function OptionsOverlay({
   setAutoStageOnChange,
   agentAutoStart,
   setAgentAutoStart,
+  supportsWsl,
   agentDistro,
   setAgentDistro,
   restartAgent,
@@ -180,6 +182,7 @@ export function OptionsOverlay({
         <AgentSection
           agentAutoStart={agentAutoStart}
           setAgentAutoStart={setAgentAutoStart}
+          supportsWsl={supportsWsl}
           agentDistro={agentDistro}
           setAgentDistro={setAgentDistro}
           restartAgent={restartAgent}

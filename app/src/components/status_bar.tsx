@@ -37,6 +37,7 @@ export function StatusBar(): React.JSX.Element {
     helloState,
     agentError,
     agentDiagnostics,
+    platformSupportsWsl,
     restartAgent,
   } = useAgent();
   const {
@@ -121,6 +122,7 @@ export function StatusBar(): React.JSX.Element {
           setAutoStageOnChange={setAutoStageOnChange}
           agentAutoStart={config.agentAutoStart}
           setAgentAutoStart={setAgentAutoStart}
+          supportsWsl={platformSupportsWsl}
           agentDistro={config.agentDistro}
           setAgentDistro={setAgentDistro}
           restartAgent={restartAgent}

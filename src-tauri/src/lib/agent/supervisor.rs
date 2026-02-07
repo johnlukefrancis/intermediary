@@ -1,8 +1,8 @@
 // Path: src-tauri/src/lib/agent/supervisor.rs
-// Description: Public dual-agent supervisor types and wiring
+// Description: Public host-agent supervisor types and wiring
 
 use super::supervisor_helpers::AgentSupervisorState;
-use super::types::{AgentSupervisorResult, AgentSupervisorStatus};
+use super::types::{AgentSupervisorResult, AgentSupervisorStatus, AgentSupervisorWslStatus};
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -23,8 +23,8 @@ pub struct AgentSupervisor {
 fn build_result(
     status: AgentSupervisorStatus,
     port: u16,
-    wsl_port: u16,
-    requires_wsl: bool,
+    supports_wsl: bool,
+    wsl: Option<AgentSupervisorWslStatus>,
     agent_dir: String,
     log_dir: String,
     message: Option<String>,
@@ -32,8 +32,8 @@ fn build_result(
     AgentSupervisorResult {
         status,
         port,
-        wsl_port,
-        requires_wsl,
+        supports_wsl,
+        wsl,
         agent_dir,
         log_dir,
         message,
