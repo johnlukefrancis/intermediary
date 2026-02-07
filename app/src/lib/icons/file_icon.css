@@ -1,0 +1,55 @@
+/*
+ * Path: app/src/lib/icons/file_icon.css
+ * Description: Per-family colors and base styling for file-type icons
+ */
+
+/* ===== BASE ICON ===== */
+.file-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.file-row:hover .file-icon { opacity: 1; }
+
+/* ===== FAMILY COLORS — muted brand-adjacent tones ===== */
+.file-icon--typescript  { color: #5c9bcf; }
+.file-icon--javascript  { color: #c5b44e; }
+.file-icon--rust        { color: #c17a50; }
+.file-icon--python      { color: #6b9e6b; }
+.file-icon--go          { color: #6fb8c9; }
+.file-icon--java        { color: #b07050; }
+.file-icon--csharp      { color: #7a6aad; }
+.file-icon--cpp         { color: #5c80b0; }
+.file-icon--ruby        { color: #b05050; }
+.file-icon--swift       { color: #cf6940; }
+.file-icon--dart        { color: #4fa8b8; }
+.file-icon--elixir      { color: #7b5ea7; }
+.file-icon--clojure     { color: #5c9e5c; }
+.file-icon--lua         { color: #4a6fb5; }
+.file-icon--php         { color: #6a6aad; }
+.file-icon--scala       { color: #b05050; }
+.file-icon--html        { color: #cf6040; }
+.file-icon--css         { color: #4a8cc9; }
+.file-icon--vue         { color: #5aad6b; }
+.file-icon--svelte      { color: #cf5030; }
+.file-icon--shell       { color: #6b9e6b; }
+.file-icon--sql         { color: #c5a04e; }
+.file-icon--config      { color: #8a8a8a; }
+.file-icon--markup      { color: #a07050; }
+.file-icon--markdown    { color: #8a8a8a; }
+.file-icon--r           { color: #4a6fb5; }
+.file-icon--julia       { color: #7a5ea0; }
+.file-icon--perl        { color: #5c80b0; }
+.file-icon--elm         { color: #5cacad; }
+.file-icon--zig         { color: #cf9e30; }
+.file-icon--nim         { color: #c5b44e; }
+.file-icon--fsharp      { color: #5c80b0; }
+.file-icon--solidity    { color: #5a5a8a; }
+.file-icon--verilog     { color: #6a8a6a; }
+.file-icon--astro       { color: #cf5060; }
+.file-icon--docker      { color: #4a8cc9; }
+.file-icon--makefile    { color: #8a8a8a; }
+.file-icon--generic     { color: var(--color-text-muted); }

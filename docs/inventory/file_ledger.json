@@ -55,7 +55,7 @@
     },
     {
       "path": "app/src/components/file_row.tsx",
-      "summary": "Draggable file row with click-to-copy, drag handle, and star toggle"
+      "summary": "Draggable file row with file-type icon, click-to-copy, and star toggle"
     },
     {
       "path": "app/src/components/group_remove_button.tsx",
@@ -206,6 +206,22 @@
       "summary": "Typed helper functions for sending agent commands"
     },
     {
+      "path": "app/src/lib/icons/file_family.ts",
+      "summary": "Extension-to-language-family mapping for file-type icon resolution"
+    },
+    {
+      "path": "app/src/lib/icons/file_icon.css",
+      "summary": "Per-family colors and base styling for file-type icons"
+    },
+    {
+      "path": "app/src/lib/icons/file_icons.tsx",
+      "summary": "Devicon-derived SVG path data and FileIcon component for file-type icons"
+    },
+    {
+      "path": "app/src/lib/icons/index.ts",
+      "summary": "Barrel export for file-type icon system"
+    },
+    {
       "path": "app/src/lib/theme/accent_utils.ts",
       "summary": "Convert hex accent color to CSS variable values for runtime theming"
     },
@@ -323,7 +339,7 @@
     },
     {
       "path": "app/src/styles/file_row.css",
-      "summary": "Hardware-style file row with drag handle and star toggle"
+      "summary": "File row with file-type icon, bottom change glow, and full-row drag"
     },
     {
       "path": "app/src/styles/main.css",

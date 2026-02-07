@@ -1,9 +1,10 @@
 // Path: app/src/components/file_row.tsx
-// Description: Draggable file row with click-to-copy, drag handle, and star toggle
+// Description: Draggable file row with file-type icon, click-to-copy, and star toggle
 
 import type React from "react";
 import { useCallback } from "react";
 import type { FileEntry, StagedInfo } from "../shared/protocol.js";
+import { getFileFamily, FileIcon } from "../lib/icons/index.js";
 import "../styles/file_row.css";
 
 interface FileRowProps {
@@ -20,10 +21,10 @@ interface FileRowProps {
 }
 
 function formatRelativeTime(isoDate: string): string {
-  if (!isoDate) return "—";
+  if (!isoDate) return "\u2014";
 
   const then = new Date(isoDate).getTime();
-  if (Number.isNaN(then)) return "—";
+  if (Number.isNaN(then)) return "\u2014";
 
   const now = Date.now();
   const diffMs = now - then;
@@ -59,24 +60,24 @@ export function FileRow({
 }: FileRowProps): React.JSX.Element {
   const clipboardText = `@${file.path}`;
 
-  // Click row -> copy @path to clipboard (unless click originated from a button)
+  // MouseDown on row -> copy @path + trigger drag (skip if target is a button)
+  const handleRowMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      if ((e.target as HTMLElement).closest("button")) return;
+      void navigator.clipboard.writeText(clipboardText);
+      void onDragStart(repoId, file.path, stagedInfo);
+    },
+    [repoId, file.path, stagedInfo, clipboardText, onDragStart]
+  );
+
+  // Click row -> copy @path (unless click originated from a button)
   const handleRowClick = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest("button")) return;
       void navigator.clipboard.writeText(clipboardText);
     },
     [clipboardText]
-  );
-
-  // Drag handle mousedown -> copy @path + trigger drag
-  const handleDragHandleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button !== 0) return;
-      e.stopPropagation();
-      void navigator.clipboard.writeText(clipboardText);
-      void onDragStart(repoId, file.path, stagedInfo);
-    },
-    [repoId, file.path, stagedInfo, clipboardText, onDragStart]
   );
 
   // Star button click -> toggle starred (no copy, no drag)
@@ -90,23 +91,17 @@ export function FileRow({
 
   const fileName = getFileName(file.path);
   const directory = getDirectory(file.path);
+  const family = getFileFamily(file.path);
 
   return (
     <div
       className="file-row"
+      data-change-type={file.changeType}
+      onMouseDown={handleRowMouseDown}
       onClick={handleRowClick}
       title={`Click to copy ${clipboardText}`}
     >
-      <span className={`file-state-marker file-state-marker--${file.changeType}`} />
-      <button
-        type="button"
-        className="file-drag-handle"
-        onMouseDown={handleDragHandleMouseDown}
-        title="Drag to share (also copies path)"
-        aria-label="Drag file"
-      >
-        ⋮⋮
-      </button>
+      <FileIcon family={family} />
       <div className="file-info">
         <span className="file-name">{fileName}</span>
         {directory && <span className="file-dir">{directory}</span>}
