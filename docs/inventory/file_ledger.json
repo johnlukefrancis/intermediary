@@ -398,8 +398,12 @@
       "summary": "Dark glass vintage theme - fills semantic token slots"
     },
     {
+      "path": "app/src/styles/theme_light.css",
+      "summary": "Light theme overrides - warm parchment/linen tones, muted and soft"
+    },
+    {
       "path": "app/src/styles/theme_warm.css",
-      "summary": "Warm theme overrides - saturated caramel/toffee brown tones"
+      "summary": "Warm theme overrides - golden hour amber tones, saturated and warm"
     },
     {
       "path": "app/src/styles/tokens.css",

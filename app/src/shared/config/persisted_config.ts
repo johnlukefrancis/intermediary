@@ -59,7 +59,7 @@ export const TabThemeSchema = z.object({
 export type TabTheme = z.infer<typeof TabThemeSchema>;
 
 /** Theme mode for global color temperature */
-export const ThemeModeSchema = z.enum(["dark", "warm"]);
+export const ThemeModeSchema = z.enum(["dark", "light", "warm"]);
 
 export type ThemeMode = z.infer<typeof ThemeModeSchema>;
 

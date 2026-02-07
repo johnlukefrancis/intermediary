@@ -156,6 +156,8 @@ pub enum ThemeMode {
     /// Standard dark mode with blue undertones
     #[default]
     Dark,
+    /// Muted warm light mode — parchment/linen aesthetic
+    Light,
     /// Blue-light filter mode with amber/sepia undertones
     Warm,
 }

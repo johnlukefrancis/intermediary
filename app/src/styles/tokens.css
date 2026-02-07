@@ -143,7 +143,9 @@
   /* ===== DECK SUBSTRATE ===== */
   --deck-grid-dot: var(--theme-deck-grid-dot);
   --deck-grid-size: 16px;
-  --deck-grain-opacity: 0.4;
+  --deck-grain-opacity-min: var(--theme-deck-grain-opacity-min);
+  --deck-grain-opacity-max: var(--theme-deck-grain-opacity-max);
+  --deck-grain-opacity: var(--deck-grain-opacity-max); /* fallback if animation disabled */
   --deck-vignette-strength: 0.35;
   --deck-vignette-tint: var(--theme-deck-vignette-tint);
 }

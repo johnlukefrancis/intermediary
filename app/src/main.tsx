@@ -10,6 +10,7 @@ import { AgentProvider } from "./hooks/use_agent.js";
 import "./styles/tokens.css";
 import "./styles/theme_dark.css";
 import "./styles/theme_warm.css";
+import "./styles/theme_light.css";
 import "./styles/theme_accents.css";
 import "./styles/effects.css";
 import "./styles/motion.css";

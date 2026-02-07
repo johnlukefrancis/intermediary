@@ -32,8 +32,8 @@
 }
 
 @keyframes substrate-breathe {
-  0%, 100% { opacity: 0.3; }
-  50%      { opacity: 0.6; }
+  0%, 100% { opacity: var(--deck-grain-opacity-min); }
+  50%      { opacity: var(--deck-grain-opacity-max); }
 }
 
 .app::before {

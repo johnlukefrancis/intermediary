@@ -78,21 +78,28 @@ export function ThemeSection({
   return (
     <div className="options-section">
       <div className="options-section-title">Theme</div>
-      <div
-        className="options-row"
-        title="Blue-light filter with amber/sepia tones"
-      >
-        <span className="options-row-label">Warm mode</span>
-        <label className="vintage-toggle">
-          <input
-            type="checkbox"
-            checked={themeMode === "warm"}
-            onChange={(event) => {
-              setThemeMode(event.target.checked ? "warm" : "dark");
-            }}
-          />
-          <span className="vintage-toggle-track" aria-hidden="true" />
-        </label>
+      <div className="options-row" title="Global color scheme">
+        <span className="options-row-label">Theme</span>
+        <div
+          className="theme-mode-switcher"
+          role="radiogroup"
+          aria-label="Theme mode"
+        >
+          {(["dark", "light", "warm"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              role="radio"
+              aria-checked={themeMode === mode}
+              className={`theme-mode-option${themeMode === mode ? " active" : ""}`}
+              onClick={() => {
+                setThemeMode(mode);
+              }}
+            >
+              {mode.charAt(0).toUpperCase() + mode.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
       {entries.length === 0 ? null : (
         <div className="options-theme-list">
