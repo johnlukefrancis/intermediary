@@ -68,8 +68,8 @@
 
   /* ===== DECK SUBSTRATE ===== */
   --theme-deck-grid-dot: rgba(44, 38, 32, 0.04);
-  --theme-deck-grain-opacity-min: 0.6;
-  --theme-deck-grain-opacity-max: 0.9;
+  --theme-deck-grain-opacity-min: 0.45;
+  --theme-deck-grain-opacity-max: 0.65;
   --theme-deck-vignette-tint: rgba(180, 168, 148, 0.25);
 
   /* ===== LEGACY BRIDGE ===== */

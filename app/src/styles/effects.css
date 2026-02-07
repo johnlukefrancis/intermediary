@@ -22,7 +22,7 @@
     linear-gradient(180deg, var(--color-bg-base) 0%, var(--color-gradient-bottom) 100%);
 }
 
-/* ===== SUBSTRATE (custom texture + dot grid) ===== */
+/* ===== SUBSTRATE (film grain texture) ===== */
 /* Sits BEHIND content at z-index: 0 - no text fuzzing */
 /* Swap texture by updating the theme texture id (app/assets/textures) */
 
@@ -43,17 +43,14 @@
   z-index: 0;
   pointer-events: none;
 
-  /* Composite layers: texture + dot grid */
-  background:
-    /* Custom texture layer */
-    var(--deck-texture-url),
-    /* Dot grid layer */
-    radial-gradient(
-      circle at center,
-      var(--deck-grid-dot) 1px,
-      transparent 1px
-    );
-  background-size: 256px 256px, var(--deck-grid-size) var(--deck-grid-size);
+  /* Single texture layer — dot grid removed for cleaner noise */
+  background: var(--deck-texture-url);
+  background-size: 256px 256px;
+
+  /* Film grain treatment: soften pattern + strip independent color */
+  filter: blur(1.5px);
+  mix-blend-mode: luminosity;
+
   opacity: var(--deck-grain-opacity);
   animation:
     substrate-breathe 12s ease-in-out infinite,
