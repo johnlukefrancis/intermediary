@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/theme_warm.css
- * Description: Warm theme overrides - saturated caramel/toffee brown tones
+ * Description: Warm theme overrides - golden hour amber tones, saturated and warm
  */
 
 /* Activated via [data-theme-mode="warm"] on document root */
@@ -8,67 +8,67 @@
   color-scheme: dark;
 
   /* ===== BACKGROUND PALETTE ===== */
-  /* Saturated caramel/toffee browns - rich and warm */
-  --theme-bg-base: #2a2016;
-  --theme-bg-surface: #382a1c;
-  --theme-bg-elevated: #483620;
-  --theme-bg-hover: #5a4428;
-  --theme-bg-active: #6c5232;
+  /* Golden hour yellow — warm honey/wheat tones */
+  --theme-bg-base: #6a5420;
+  --theme-bg-surface: #7c6428;
+  --theme-bg-elevated: #8e7432;
+  --theme-bg-hover: #a0843c;
+  --theme-bg-active: #b29448;
 
   /* ===== TEXT PALETTE ===== */
-  /* Warm cream/ivory for contrast */
-  --theme-text-primary: #f0e8d8;
-  --theme-text-secondary: #c8b898;
-  --theme-text-muted: #a08868;
+  /* Golden cream — yellow-shifted for honey warmth */
+  --theme-text-primary: #f8f0e0;
+  --theme-text-secondary: #d8c878;
+  --theme-text-muted: #b8a850;
 
   /* ===== BORDER PALETTE ===== */
-  --theme-border: #5a4428;
-  --theme-border-subtle: #44341c;
-  --theme-border-highlight: rgba(240, 220, 180, 0.14);
+  --theme-border: #a07440;
+  --theme-border-subtle: #7c5830;
+  --theme-border-highlight: rgba(248, 220, 160, 0.18);
 
   /* ===== SEMANTIC STATES ===== */
   /* Warm-shifted for sepia context */
   --theme-success: #70c878;
-  --theme-success-soft: #2a3c28;
+  --theme-success-soft: #304828;
   --theme-success-muted: #589060;
 
   --theme-error: #e86860;
-  --theme-error-soft: #422824;
+  --theme-error-soft: #58302a;
   --theme-error-muted: #b05850;
 
   --theme-warning: #e8a820;
-  --theme-warning-soft: #443820;
+  --theme-warning-soft: #5a4420;
   --theme-warning-muted: #b08838;
 
   --theme-info: #88b8e0;
-  --theme-info-soft: #283848;
+  --theme-info-soft: #384858;
   --theme-info-muted: #608098;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(56, 42, 28, 0.90);
-  --theme-glass-border: rgba(240, 220, 180, 0.12);
+  --theme-glass-bg: rgba(106, 68, 32, 0.90);
+  --theme-glass-border: rgba(248, 220, 160, 0.16);
 
   /* ===== VINTAGE GLASS ===== */
-  --theme-glass-vintage-bg: rgba(48, 36, 24, 0.68);
-  --theme-glass-vintage-header: rgba(56, 42, 28, 0.72);
-  --theme-glass-vintage-content: rgba(42, 32, 22, 0.78);
-  --theme-glass-vintage-reflection: rgba(240, 220, 180, 0.06);
-  --theme-glass-vintage-edge: rgba(240, 220, 180, 0.14);
+  --theme-glass-vintage-bg: rgba(96, 60, 28, 0.68);
+  --theme-glass-vintage-header: rgba(106, 68, 32, 0.72);
+  --theme-glass-vintage-content: rgba(88, 54, 24, 0.78);
+  --theme-glass-vintage-reflection: rgba(248, 220, 160, 0.08);
+  --theme-glass-vintage-edge: rgba(248, 220, 160, 0.18);
   --theme-glass-vintage-dither: 0.08;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(72, 54, 32, 0.5);
-  --theme-gradient-bottom: #1c1610;
-  --theme-bg-hover-subtle: rgba(240, 220, 180, 0.06);
+  --theme-gradient-top: rgba(140, 100, 50, 0.5);
+  --theme-gradient-bottom: #3a2410;
+  --theme-bg-hover-subtle: rgba(248, 220, 160, 0.08);
   --theme-scanline: rgba(0, 0, 0, 0.03);
 
   /* ===== DECK FRAME ===== */
-  --theme-deck-frame-outer: #5a4428;
-  --theme-deck-frame-inner: rgba(240, 220, 180, 0.10);
+  --theme-deck-frame-outer: #a07440;
+  --theme-deck-frame-inner: rgba(248, 220, 160, 0.14);
 
   /* ===== DECK SUBSTRATE ===== */
-  --theme-deck-grid-dot: rgba(240, 220, 180, 0.06);
-  --theme-deck-vignette-tint: rgba(28, 22, 16, 0.35);
+  --theme-deck-grid-dot: rgba(248, 220, 160, 0.08);
+  --theme-deck-vignette-tint: rgba(58, 36, 16, 0.35);
 
   /* ===== LEGACY BRIDGE ===== */
   --bg-primary: var(--theme-bg-base);
