@@ -38,7 +38,7 @@ app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for si
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
 app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
-app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host + optional WSL agents
+app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host-agent supervision with optional Windows WSL backend
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -68,7 +68,7 @@ app/src/shared/config/persisted_config_migrations.ts - Persisted config migratio
 app/src/shared/config/persisted_config_repo_roots_migration.ts - Repo root migration helpers for persisted config normalization
 app/src/shared/config/persisted_config.ts - Persisted config schema, types, and defaults
 app/src/shared/config/repo_config.ts - RepoConfig schema and type
-app/src/shared/config/repo_root.ts - Repo root discriminated union schema and path normalization helpers
+app/src/shared/config/repo_root.ts - Repo root authority union schema and path normalization helpers
 app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
@@ -86,7 +86,11 @@ app/src/styles/empty_repo_state.css - Empty state display when no repositories a
 app/src/styles/file_row.css - Hardware-style file row with drag handle and star toggle
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
-app/src/styles/options_overlay.css - Full-screen transparent overlay with centered glass panel for app options
+app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
+app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and advanced grid/groups for excludes
+app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
+app/src/styles/options_overlay.css - Overlay backdrop, panel shell, close button, and keyframe animations
+app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
@@ -97,7 +101,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_warm.css - Warm theme overrides - saturated caramel/toffee brown tones
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
 app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
-app/src/types/agent_supervisor.ts - Types for Tauri dual-agent supervisor responses
+app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
 crates/im_agent/src/bundles/bundle_builder_blocking.rs - Blocking bundle build steps and filesystem operations
@@ -183,18 +187,18 @@ scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw 
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
-src-tauri/src/lib/agent/install.rs - Install bundled host + WSL agent runtimes into app local data
-src-tauri/src/lib/agent/mod.rs - Host + WSL agent supervisor module exports
+src-tauri/src/lib/agent/install.rs - Install bundled agent runtimes into app local data with platform-specific requirements
+src-tauri/src/lib/agent/mod.rs - Host-agent supervisor module exports (with optional Windows WSL backend)
 src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
-src-tauri/src/lib/agent/supervisor_helpers.rs - Shared state and helper utilities for dual-agent supervision
-src-tauri/src/lib/agent/supervisor.rs - Public dual-agent supervisor types and wiring
-src-tauri/src/lib/agent/supervisor/lifecycle.rs - Dual-agent supervisor lifecycle implementation
+src-tauri/src/lib/agent/supervisor_helpers.rs - Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
+src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
+src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 src-tauri/src/lib/agent/supervisor/processes.rs - Process lifecycle helpers for host/WSL supervisor tasks
-src-tauri/src/lib/agent/types.rs - Types for supervising host + WSL agent lifecycles
+src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
 src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
-src-tauri/src/lib/commands/file_manager.rs - Open folders in OS file manager (Windows Explorer)
+src-tauri/src/lib/commands/file_manager.rs - Open folders in the host OS file manager
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches

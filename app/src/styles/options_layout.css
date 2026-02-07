@@ -1,0 +1,93 @@
+/*
+ * Path: app/src/styles/options_layout.css
+ * Description: Two-column grid layout, sections, rows, footer, and responsive fallback
+ */
+
+/* ===== TWO-COLUMN GRID ===== */
+.options-body {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+}
+
+.options-column-primary,
+.options-column-secondary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ===== SECTIONS ===== */
+.options-section + .options-section {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.options-section-title {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+/* ===== ROWS ===== */
+.options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.options-row + .options-row {
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.options-row-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+/* Staging path row - stacked layout */
+.options-row.stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.options-row.stacked .options-row-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ===== HINTS ===== */
+.options-hint {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* ===== FOOTER (RESET / DANGER ZONE) ===== */
+.options-footer {
+  grid-column: 1 / -1;
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ===== RESPONSIVE: SINGLE COLUMN ===== */
+@media (max-width: 700px) {
+  .options-body {
+    grid-template-columns: 1fr;
+  }
+
+  .options-panel {
+    min-width: 0;
+  }
+}

@@ -1,7 +1,7 @@
 // Path: app/src/app.tsx
 // Description: Root component with config-driven tab state management
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { StatusBar } from "./components/status_bar.js";
 import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
@@ -194,16 +194,38 @@ export function App(): React.JSX.Element {
     [accentStyle, textureUrl]
   );
 
+  // Expose header height as CSS variable for overlay positioning
+  const appRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    const app = appRef.current;
+    if (!header || !app) return;
+
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) {
+        app.style.setProperty(
+          "--header-stack-height",
+          `${entry.contentRect.height}px`
+        );
+      }
+    });
+    ro.observe(header);
+    return () => { ro.disconnect(); };
+  }, []);
+
   // Empty state: no repos configured
   if (config.repos.length === 0) {
     return (
       <div
+        ref={appRef}
         className="app"
         data-motion={motionPaused ? "paused" : undefined}
         data-theme-mode={config.themeMode}
         style={themeStyle}
       >
-        <header className="header-stack glass-surface">
+        <header ref={headerRef} className="header-stack glass-surface">
           <AgentOfflineBanner />
           <StatusBar />
         </header>
@@ -216,13 +238,14 @@ export function App(): React.JSX.Element {
 
   return (
     <div
+      ref={appRef}
       className="app"
       data-active-tab={activeRepoId}
       data-motion={motionPaused ? "paused" : undefined}
       data-theme-mode={config.themeMode}
       style={themeStyle}
     >
-      <header className="header-stack glass-surface">
+      <header ref={headerRef} className="header-stack glass-surface">
         <TabBar
           tabs={tabs}
           activeRepoId={activeRepoId}

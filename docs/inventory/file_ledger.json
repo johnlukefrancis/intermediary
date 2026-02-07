@@ -143,7 +143,7 @@
     },
     {
       "path": "app/src/hooks/agent/use_agent_supervisor.ts",
-      "summary": "Manage auto-start and restart of host + optional WSL agents"
+      "summary": "Manage auto-start and restart of host-agent supervision with optional Windows WSL backend"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -263,7 +263,7 @@
     },
     {
       "path": "app/src/shared/config/repo_root.ts",
-      "summary": "Repo root discriminated union schema and path normalization helpers"
+      "summary": "Repo root authority union schema and path normalization helpers"
     },
     {
       "path": "app/src/shared/config/version.ts",
@@ -334,8 +334,24 @@
       "summary": "Motion utilities, transition presets, and reduced-motion support"
     },
     {
+      "path": "app/src/styles/options_controls.css",
+      "summary": "Buttons, text/number inputs, checkbox rows, and path display controls"
+    },
+    {
+      "path": "app/src/styles/options_excludes.css",
+      "summary": "Collapsible sections, chevron toggle, and advanced grid/groups for excludes"
+    },
+    {
+      "path": "app/src/styles/options_layout.css",
+      "summary": "Two-column grid layout, sections, rows, footer, and responsive fallback"
+    },
+    {
       "path": "app/src/styles/options_overlay.css",
-      "summary": "Full-screen transparent overlay with centered glass panel for app options"
+      "summary": "Overlay backdrop, panel shell, close button, and keyframe animations"
+    },
+    {
+      "path": "app/src/styles/options_theme.css",
+      "summary": "Theme section styles - color picker, texture picker, rename controls"
     },
     {
       "path": "app/src/styles/panels.css",
@@ -379,7 +395,7 @@
     },
     {
       "path": "app/src/types/agent_supervisor.ts",
-      "summary": "Types for Tauri dual-agent supervisor responses"
+      "summary": "Types for Tauri host-agent supervisor responses"
     },
     {
       "path": "app/src/types/app_paths.ts",
@@ -723,11 +739,11 @@
     },
     {
       "path": "src-tauri/src/lib/agent/install.rs",
-      "summary": "Install bundled host + WSL agent runtimes into app local data"
+      "summary": "Install bundled agent runtimes into app local data with platform-specific requirements"
     },
     {
       "path": "src-tauri/src/lib/agent/mod.rs",
-      "summary": "Host + WSL agent supervisor module exports"
+      "summary": "Host-agent supervisor module exports (with optional Windows WSL backend)"
     },
     {
       "path": "src-tauri/src/lib/agent/process_control.rs",
@@ -735,15 +751,15 @@
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor_helpers.rs",
-      "summary": "Shared state and helper utilities for dual-agent supervision"
+      "summary": "Shared state and helper utilities for host-agent supervision with optional Windows WSL backend"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor.rs",
-      "summary": "Public dual-agent supervisor types and wiring"
+      "summary": "Public host-agent supervisor types and wiring"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/lifecycle.rs",
-      "summary": "Dual-agent supervisor lifecycle implementation"
+      "summary": "Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/processes.rs",
@@ -751,7 +767,7 @@
     },
     {
       "path": "src-tauri/src/lib/agent/types.rs",
-      "summary": "Types for supervising host + WSL agent lifecycles"
+      "summary": "Types for supervising host agent lifecycle with optional Windows WSL backend"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_control.rs",
@@ -767,7 +783,7 @@
     },
     {
       "path": "src-tauri/src/lib/commands/file_manager.rs",
-      "summary": "Open folders in OS file manager (Windows Explorer)"
+      "summary": "Open folders in the host OS file manager"
     },
     {
       "path": "src-tauri/src/lib/commands/mod.rs",

@@ -1,0 +1,148 @@
+/*
+ * Path: app/src/styles/options_controls.css
+ * Description: Buttons, text/number inputs, checkbox rows, and path display controls
+ */
+
+/* ===== TEXT INPUTS ===== */
+.options-text-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  transition: border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out);
+}
+
+.options-text-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.options-text-input:hover {
+  border-color: var(--color-border);
+}
+
+.options-text-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: var(--color-bg-primary);
+}
+
+/* ===== NUMBER INPUTS ===== */
+.options-number-input {
+  width: 80px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  text-align: right;
+  transition: border-color var(--duration-normal) var(--ease-out),
+    background var(--duration-normal) var(--ease-out);
+}
+
+.options-number-input:hover {
+  border-color: var(--color-border);
+}
+
+.options-number-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: var(--color-bg-primary);
+}
+
+/* Hide number input spinners for cleaner look */
+.options-number-input::-webkit-outer-spin-button,
+.options-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.options-number-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ===== BUTTONS ===== */
+.options-button-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.options-button {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+.options-button:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.options-button--destructive {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-bg-base);
+}
+
+.options-button--destructive:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.options-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.options-button:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ===== CHECKBOX ROWS ===== */
+.options-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  padding: var(--space-2) 0;
+}
+
+.options-checkbox-row input {
+  margin-top: 2px;
+}
+
+/* ===== OUTPUT PATH DISPLAY ===== */
+.options-path-display {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-sm);
+  padding: var(--space-3) var(--space-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.options-path-display.muted {
+  color: var(--color-text-muted);
+}

@@ -16,6 +16,10 @@ import { OutputFolderSection } from "./options/output_folder_section.js";
 import { ResetSection } from "./options/reset_section.js";
 import { ThemeSection } from "./options/theme_section.js";
 import "../styles/options_overlay.css";
+import "../styles/options_layout.css";
+import "../styles/options_controls.css";
+import "../styles/options_theme.css";
+import "../styles/options_excludes.css";
 
 interface OptionsOverlayProps {
   autoStageOnChange: boolean;
@@ -172,57 +176,65 @@ export function OptionsOverlay({
           ×
         </button>
 
-        <GeneralSection
-          autoStageOnChange={autoStageOnChange}
-          setAutoStageOnChange={setAutoStageOnChange}
-          recentFilesLimit={recentFilesLimit}
-          setRecentFilesLimit={setRecentFilesLimit}
-        />
+        <div className="options-body">
+          <div className="options-column-primary">
+            <ThemeSection
+              entries={themeEntries}
+              tabThemes={tabThemes}
+              themeMode={themeMode}
+              setThemeMode={setThemeMode}
+              setTabThemeAccent={setTabThemeAccent}
+              setTabThemeTexture={setTabThemeTexture}
+              clearTabTheme={clearTabTheme}
+              renameRepoLabel={renameRepoLabel}
+              renameGroupLabel={renameGroupLabel}
+            />
 
-        <AgentSection
-          agentAutoStart={agentAutoStart}
-          setAgentAutoStart={setAgentAutoStart}
-          supportsWsl={supportsWsl}
-          agentDistro={agentDistro}
-          setAgentDistro={setAgentDistro}
-          restartAgent={restartAgent}
-        />
+            <GeneralSection
+              autoStageOnChange={autoStageOnChange}
+              setAutoStageOnChange={setAutoStageOnChange}
+              recentFilesLimit={recentFilesLimit}
+              setRecentFilesLimit={setRecentFilesLimit}
+            />
 
-        {/* Bundle Excludes */}
-        <ExcludesSection
-          title="Bundle Excludes"
-          recommendedLabel="Recommended bundle excludes"
-          excludes={globalExcludes}
-          setExcludes={setGlobalExcludes}
-        />
+            <AgentSection
+              agentAutoStart={agentAutoStart}
+              setAgentAutoStart={setAgentAutoStart}
+              supportsWsl={supportsWsl}
+              agentDistro={agentDistro}
+              setAgentDistro={setAgentDistro}
+              restartAgent={restartAgent}
+            />
+          </div>
 
-        {/* Classification Excludes */}
-        <ExcludesSection
-          title="Classification Excludes"
-          recommendedLabel="Recommended classification excludes"
-          excludes={classificationExcludes}
-          setExcludes={setClassificationExcludes}
-        />
+          <div className="options-column-secondary">
+            <OutputFolderSection
+              appPaths={appPaths}
+              onChooseOutputFolder={() => void handleChooseOutputFolder()}
+              onOpenOutputFolder={() => void handleOpenOutputFolder()}
+            />
 
-        <OutputFolderSection
-          appPaths={appPaths}
-          onChooseOutputFolder={() => void handleChooseOutputFolder()}
-          onOpenOutputFolder={() => void handleOpenOutputFolder()}
-        />
+            {/* Bundle Excludes */}
+            <ExcludesSection
+              title="Bundle Excludes"
+              recommendedLabel="Recommended bundle excludes"
+              excludes={globalExcludes}
+              setExcludes={setGlobalExcludes}
+            />
 
-        <ThemeSection
-          entries={themeEntries}
-          tabThemes={tabThemes}
-          themeMode={themeMode}
-          setThemeMode={setThemeMode}
-          setTabThemeAccent={setTabThemeAccent}
-          setTabThemeTexture={setTabThemeTexture}
-          clearTabTheme={clearTabTheme}
-          renameRepoLabel={renameRepoLabel}
-          renameGroupLabel={renameGroupLabel}
-        />
+            {/* Classification Excludes */}
+            <ExcludesSection
+              title="Classification Excludes"
+              recommendedLabel="Recommended classification excludes"
+              excludes={classificationExcludes}
+              setExcludes={setClassificationExcludes}
+            />
+          </div>
 
-        <ResetSection resetConfig={resetConfig} />
+          <div className="options-footer">
+            <ResetSection resetConfig={resetConfig} />
+          </div>
+        </div>
       </div>
     </div>,
     document.body
