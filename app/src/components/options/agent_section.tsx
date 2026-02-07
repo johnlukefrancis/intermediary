@@ -37,7 +37,10 @@ export function AgentSection({
         </label>
       </div>
       {supportsWsl ? (
-        <div className="options-row stacked">
+        <div
+          className="options-row stacked"
+          title="Leave blank to use the default WSL distro for agent launch"
+        >
           <span className="options-row-label">WSL distro override</span>
           <input
             type="text"
@@ -48,9 +51,6 @@ export function AgentSection({
               setAgentDistro(event.target.value);
             }}
           />
-          <span className="options-hint">
-            Leave blank to use the default WSL distro for agent launch
-          </span>
         </div>
       ) : null}
       <div className="options-row">

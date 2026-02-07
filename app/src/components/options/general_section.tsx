@@ -35,7 +35,10 @@ export function GeneralSection({
           <span className="vintage-toggle-track" aria-hidden="true" />
         </label>
       </div>
-      <div className="options-row">
+      <div
+        className="options-row"
+        title="Higher values may impact UI performance"
+      >
         <span className="options-row-label">Recent files limit</span>
         <input
           type="number"
@@ -51,7 +54,6 @@ export function GeneralSection({
           }}
         />
       </div>
-      <span className="options-hint">Higher values may impact UI performance</span>
     </div>
   );
 }
