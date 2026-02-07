@@ -33,6 +33,10 @@
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
   margin-bottom: var(--space-3);
+  text-decoration: underline;
+  text-decoration-color: var(--color-text-muted);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
 }
 
 /* ===== ROWS ===== */
