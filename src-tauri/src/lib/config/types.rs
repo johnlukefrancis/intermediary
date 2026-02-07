@@ -254,7 +254,7 @@ fn default_agent_auto_start() -> bool {
 }
 
 fn default_recent_files_limit() -> u32 {
-    200
+    40
 }
 
 #[cfg(test)]

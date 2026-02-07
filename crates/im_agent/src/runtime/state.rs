@@ -45,7 +45,7 @@ impl AgentRuntime {
             recent_files_store: None,
             watchers: HashMap::new(),
             auto_stage_on_change: true,
-            recent_files_limit: 200,
+            recent_files_limit: 40,
         }
     }
 

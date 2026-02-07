@@ -103,7 +103,7 @@ export const PersistedConfigSchema = z.object({
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
   /** Maximum recent files to track per repo (25-2000) */
-  recentFilesLimit: z.number().int().min(25).max(2000).default(200),
+  recentFilesLimit: z.number().int().min(25).max(2000).default(40),
   /** Remembered UI state */
   uiState: UiStateSchema.default({}),
   /** Bundle selections per repo/preset */
