@@ -181,7 +181,9 @@ export function TabBar({
     <nav className="tab-bar" ref={navRef}>
       <button
         type="button"
-        className={`tab-bar-scroll-arrow left${scrollState.canScrollLeft ? "" : " hidden"}`}
+        className={`tab-bar-scroll-arrow left${
+          !scrollState.isOverflowing ? " gone" : !scrollState.canScrollLeft ? " hidden" : ""
+        }`}
         onClick={scrollLeft}
         aria-label="Scroll tabs left"
       >
@@ -231,7 +233,9 @@ export function TabBar({
 
       <button
         type="button"
-        className={`tab-bar-scroll-arrow right${scrollState.canScrollRight ? "" : " hidden"}`}
+        className={`tab-bar-scroll-arrow right${
+          !scrollState.isOverflowing ? " gone" : !scrollState.canScrollRight ? " hidden" : ""
+        }`}
         onClick={scrollRight}
         aria-label="Scroll tabs right"
       >

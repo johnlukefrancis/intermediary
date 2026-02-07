@@ -151,3 +151,14 @@
   color: var(--theme-text-primary);
   text-shadow: 0 0 8px var(--color-accent-glow);
 }
+
+/* Add-repo button: legible on light parchment */
+[data-theme-mode="light"] .tab-add-button {
+  color: var(--theme-text-secondary);
+  border-color: var(--theme-border);
+}
+
+[data-theme-mode="light"] .tab-add-button:hover {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}

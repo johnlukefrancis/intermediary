@@ -128,3 +128,15 @@
   color: var(--theme-text-primary);
   text-shadow: 0 0 10px var(--color-accent-glow);
 }
+
+/* Add-repo button: warm glow at rest, brighter on hover */
+[data-theme-mode="warm"] .tab-add-button {
+  color: var(--theme-text-secondary);
+  border-color: var(--theme-border);
+  text-shadow: 0 0 4px var(--color-accent-glow);
+}
+
+[data-theme-mode="warm"] .tab-add-button:hover {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 8px var(--color-accent-glow);
+}
