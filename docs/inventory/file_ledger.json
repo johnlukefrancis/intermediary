@@ -123,7 +123,7 @@
     },
     {
       "path": "app/src/components/tab_bar.tsx",
-      "summary": "Tab navigation with grouped repo dropdown support"
+      "summary": "Tab navigation with grouped repo dropdown support and scroll overflow arrows"
     },
     {
       "path": "app/src/components/tab_bar/tab_bar_items.tsx",
@@ -188,6 +188,10 @@
     {
       "path": "app/src/hooks/use_starred_files.ts",
       "summary": "Hook exposing starred file state and actions for a repo"
+    },
+    {
+      "path": "app/src/hooks/use_tab_bar_scroll.ts",
+      "summary": "Scroll overflow detection and hold-to-scroll for the tab bar track"
     },
     {
       "path": "app/src/hooks/use_worktree_add.ts",

@@ -107,3 +107,24 @@
   color: var(--theme-text-primary);
   text-shadow: 0 0 6px var(--color-accent-glow);
 }
+
+/* Tab bar bg var for fade masks */
+[data-theme-mode="warm"] .tab-bar {
+  --tab-bar-bg: var(--theme-bg-elevated);
+}
+
+/* Tab button legibility: primary text + graduated accent glow */
+[data-theme-mode="warm"] .tab-button {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 4px var(--color-accent-glow);
+}
+
+[data-theme-mode="warm"] .tab-button:hover {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+[data-theme-mode="warm"] .tab-button.active {
+  color: var(--theme-text-primary);
+  text-shadow: 0 0 10px var(--color-accent-glow);
+}

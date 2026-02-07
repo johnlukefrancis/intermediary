@@ -1,5 +1,5 @@
 // Path: app/src/components/tab_bar.tsx
-// Description: Tab navigation with grouped repo dropdown support
+// Description: Tab navigation with grouped repo dropdown support and scroll overflow arrows
 
 import type React from "react";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -7,10 +7,13 @@ import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
 import type { RepoRoot, TabTheme } from "../shared/config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
+import { useTabBarScroll } from "../hooks/use_tab_bar_scroll.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import {
   GroupTabItem,
   SingleTabItem,
+  SingleTabDropdown,
+  GroupTabDropdown,
   isGroupActive,
 } from "./tab_bar/tab_bar_items.js";
 import {
@@ -33,6 +36,10 @@ function getThemeKey(tab: TabItem): string {
   return tab.type === "group" ? tab.groupId : tab.repoId;
 }
 
+function getDropdownId(tab: TabItem): string {
+  return tab.type === "group" ? tab.groupId : tab.repoId;
+}
+
 export function TabBar({
   tabs,
   activeRepoId,
@@ -43,6 +50,13 @@ export function TabBar({
 }: TabBarProps): React.JSX.Element {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const {
+    trackRef,
+    scrollState,
+    scrollLeft,
+    scrollRight,
+  } = useTabBarScroll();
   const {
     isAdding,
     addError,
@@ -65,6 +79,7 @@ export function TabBar({
     return styles;
   }, [tabs, tabThemes]);
 
+  /* Close dropdown on outside click */
   useEffect(() => {
     if (!openDropdownId) return;
 
@@ -79,6 +94,23 @@ export function TabBar({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openDropdownId]);
+
+  /* Auto-scroll active tab into view */
+  useEffect(() => {
+    if (!activeRepoId || !trackRef.current) return;
+    const track = trackRef.current;
+    const activeEl = track.querySelector<HTMLElement>("[aria-current='page']");
+    if (!activeEl) return;
+
+    const trackRect = track.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+
+    if (elRect.left < trackRect.left) {
+      track.scrollBy({ left: elRect.left - trackRect.left - 8, behavior: "smooth" });
+    } else if (elRect.right > trackRect.right) {
+      track.scrollBy({ left: elRect.right - trackRect.right + 8, behavior: "smooth" });
+    }
+  }, [activeRepoId, trackRef]);
 
   const handleGroupClick = useCallback(
     (group: GroupTab) => {
@@ -137,63 +169,108 @@ export function TabBar({
     }
   }, []);
 
-  return (
-    <nav className="tab-bar">
-      {tabs.map((tab) => {
-        const isOpen = openDropdownId === (tab.type === "group" ? tab.groupId : tab.repoId);
-        const themeKey = getThemeKey(tab);
-        const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
+  /* Find open dropdown's tab + accent for rendering outside the track */
+  const openTab = openDropdownId
+    ? tabs.find((t) => getDropdownId(t) === openDropdownId)
+    : null;
+  const openTabAccent = openTab
+    ? (tabAccentStyles.get(getThemeKey(openTab)) ?? defaultAccentStyle)
+    : defaultAccentStyle;
 
-        if (tab.type === "single") {
+  return (
+    <nav className="tab-bar" ref={navRef}>
+      <button
+        type="button"
+        className={`tab-bar-scroll-arrow left${scrollState.canScrollLeft ? "" : " hidden"}`}
+        onClick={scrollLeft}
+        aria-label="Scroll tabs left"
+      >
+        ◀
+      </button>
+
+      <div className="tab-bar-track" ref={trackRef}>
+        {tabs.map((tab) => {
+          const isOpen = openDropdownId === getDropdownId(tab);
+          const themeKey = getThemeKey(tab);
+          const accentStyle = tabAccentStyles.get(themeKey) ?? defaultAccentStyle;
+
+          if (tab.type === "single") {
+            return (
+              <SingleTabItem
+                key={tab.repoId}
+                tab={tab}
+                isActive={activeRepoId === tab.repoId}
+                isOpen={isOpen}
+                accentStyle={accentStyle}
+                onRepoChange={onRepoChange}
+                onOpenFolder={(root) => {
+                  void handleOpenFolder(root);
+                }}
+                onToggleDropdown={toggleDropdown}
+              />
+            );
+          }
+
           return (
-            <SingleTabItem
-              key={tab.repoId}
+            <GroupTabItem
+              key={tab.groupId}
               tab={tab}
-              isActive={activeRepoId === tab.repoId}
+              activeRepoId={activeRepoId}
               isOpen={isOpen}
-              isAdding={isAdding}
-              addError={addError}
               accentStyle={accentStyle}
-              dropdownRef={dropdownRef}
-              onRepoChange={onRepoChange}
+              lastActiveGroupRepoIds={lastActiveGroupRepoIds}
+              onGroupClick={handleGroupClick}
               onOpenFolder={(root) => {
                 void handleOpenFolder(root);
               }}
               onToggleDropdown={toggleDropdown}
+            />
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className={`tab-bar-scroll-arrow right${scrollState.canScrollRight ? "" : " hidden"}`}
+        onClick={scrollRight}
+        aria-label="Scroll tabs right"
+      >
+        ▶
+      </button>
+
+      <AddRepoButton {...(onRepoAdded ? { onRepoAdded } : {})} />
+
+      {/* Dropdown rendered outside track to avoid overflow clip */}
+      {openTab && (
+        <div className="tab-bar-dropdown-anchor" ref={dropdownRef}>
+          {openTab.type === "single" ? (
+            <SingleTabDropdown
+              tab={openTab}
+              isAdding={isAdding}
+              addError={addError}
+              accentStyle={openTabAccent}
               onAddWorktree={(singleTab) => {
                 void handleAddWorktreeToSingle(singleTab);
               }}
             />
-          );
-        }
-
-        return (
-          <GroupTabItem
-            key={tab.groupId}
-            tab={tab}
-            activeRepoId={activeRepoId}
-            isOpen={isOpen}
-            isAdding={isAdding}
-            addError={addError}
-            accentStyle={accentStyle}
-            dropdownRef={dropdownRef}
-            lastActiveGroupRepoIds={lastActiveGroupRepoIds}
-            onGroupClick={handleGroupClick}
-            onRepoSelect={handleRepoSelect}
-            onOpenFolder={(root) => {
-              void handleOpenFolder(root);
-            }}
-            onToggleDropdown={toggleDropdown}
-            onAddWorktreeToGroup={(groupId, groupLabel) => {
-              void handleAddWorktreeToGroup(groupId, groupLabel);
-            }}
-            onCloseDropdown={() => {
-              setOpenDropdownId(null);
-            }}
-          />
-        );
-      })}
-      <AddRepoButton {...(onRepoAdded ? { onRepoAdded } : {})} />
+          ) : (
+            <GroupTabDropdown
+              tab={openTab}
+              activeRepoId={activeRepoId}
+              isAdding={isAdding}
+              addError={addError}
+              accentStyle={openTabAccent}
+              onRepoSelect={handleRepoSelect}
+              onAddWorktreeToGroup={(groupId, groupLabel) => {
+                void handleAddWorktreeToGroup(groupId, groupLabel);
+              }}
+              onCloseDropdown={() => {
+                setOpenDropdownId(null);
+              }}
+            />
+          )}
+        </div>
+      )}
     </nav>
   );
 }
