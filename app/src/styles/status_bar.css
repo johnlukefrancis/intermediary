@@ -4,6 +4,7 @@
  */
 
 .status-bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,6 +13,29 @@
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-vintage-reflection),
+    inset 0 -1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Vintage console: dither grain + scanline overlay */
+.status-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      var(--color-scanline) 0px,
+      var(--color-scanline) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    var(--deck-texture-url);
+  background-size: auto, 128px 128px;
+  opacity: var(--glass-vintage-dither);
 }
 
 .status-left {

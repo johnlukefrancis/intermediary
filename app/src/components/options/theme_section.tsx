@@ -77,7 +77,6 @@ export function ThemeSection({
 
   return (
     <div className="options-section">
-      <div className="options-section-title">Theme</div>
       <div className="options-row" title="Global color scheme">
         <span className="options-row-label">Theme</span>
         <div
