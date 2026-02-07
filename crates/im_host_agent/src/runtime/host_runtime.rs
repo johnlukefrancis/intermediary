@@ -1,7 +1,8 @@
 // Path: crates/im_host_agent/src/runtime/host_runtime.rs
-// Description: Host runtime that routes protocol commands to Windows-local or WSL backend
+// Description: Host runtime that routes protocol commands to host-local or WSL backend
 
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
@@ -10,19 +11,22 @@ use im_agent::protocol::{
     SetOptionsCommand, UiCommand, UiResponse,
 };
 use im_agent::server::EventBus;
+use tokio::time::timeout;
 
 use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
 use crate::runtime::host_runtime_helpers::{
     build_repo_backend_map, build_wsl_client_hello, parse_app_config, repo_id_from_command,
     should_forward_wsl_hello,
 };
-use crate::runtime::local_windows_backend::LocalWindowsBackend;
+use crate::runtime::local_host_backend::LocalHostBackend;
 use crate::runtime::router::resolve_repo_backend;
 use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
 
+const WSL_CLIENT_HELLO_TIMEOUT: Duration = Duration::from_secs(8);
+
 pub struct HostRuntime {
-    local_backend: LocalWindowsBackend,
+    local_backend: LocalHostBackend,
     repo_backends: HashMap<String, RepoBackend>,
     wsl_client: Option<WslBackendClient>,
     wsl_port: u16,
@@ -32,7 +36,7 @@ pub struct HostRuntime {
 impl HostRuntime {
     pub fn new(wsl_port: u16, logger: Logger) -> Self {
         Self {
-            local_backend: LocalWindowsBackend::new(),
+            local_backend: LocalHostBackend::new(),
             repo_backends: HashMap::new(),
             wsl_client: None,
             wsl_port,
@@ -85,7 +89,7 @@ impl HostRuntime {
 
         let mut watched_ids: HashSet<String> = local_result.watched_repo_ids.into_iter().collect();
 
-        if should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now) {
+        if cfg!(target_os = "windows") && should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now) {
             let wsl_hello = build_wsl_client_hello(&parsed_config, &command)?;
             if let Some(wsl_result) = self.try_forward_client_hello(wsl_hello, event_bus).await {
                 watched_ids.extend(wsl_result.watched_repo_ids);
@@ -107,7 +111,7 @@ impl HostRuntime {
         event_bus: &EventBus,
     ) -> im_agent::protocol::SetOptionsResult {
         let result = self.local_backend.apply_set_options(command.clone());
-        if !self.has_wsl_repos() {
+        if !self.has_wsl_repos() || !cfg!(target_os = "windows") {
             return result;
         }
 
@@ -127,16 +131,20 @@ impl HostRuntime {
         command: UiCommand,
         event_bus: &EventBus,
     ) -> Result<UiResponse, AgentError> {
+        let repo_id = repo_id_from_command(&command).map(str::to_string);
         let backend = resolve_repo_backend(&command, &self.repo_backends)?
             .ok_or_else(|| AgentError::new("UNKNOWN_COMMAND", "Unsupported command"))?;
 
         match backend {
-            RepoBackend::Windows => self.dispatch_windows_command(command, event_bus).await,
-            RepoBackend::Wsl => self.forward_wsl_command(command, event_bus).await,
+            RepoBackend::Host => self.dispatch_host_command(command, event_bus).await,
+            RepoBackend::Wsl if cfg!(target_os = "windows") => {
+                self.forward_wsl_command(command, event_bus).await
+            }
+            RepoBackend::Wsl => Err(Self::unsupported_wsl_root_error(repo_id)),
         }
     }
 
-    async fn dispatch_windows_command(
+    async fn dispatch_host_command(
         &mut self,
         command: UiCommand,
         event_bus: &EventBus,
@@ -181,11 +189,22 @@ impl HostRuntime {
         command: ClientHelloCommand,
         event_bus: &EventBus,
     ) -> Option<ClientHelloResult> {
-        match self
-            .wsl_client(event_bus)
-            .forward_command(UiCommand::ClientHello(command))
-            .await
-        {
+        let wsl_client = self.wsl_client(event_bus);
+        let forward = wsl_client.forward_command(UiCommand::ClientHello(command));
+
+        let forwarded = match timeout(WSL_CLIENT_HELLO_TIMEOUT, forward).await {
+            Ok(result) => result,
+            Err(_) => {
+                self.emit_wsl_unavailable(
+                    event_bus,
+                    "Timed out waiting for WSL backend clientHello response".to_string(),
+                    None,
+                );
+                return None;
+            }
+        };
+
+        match forwarded {
             Ok(UiResponse::ClientHelloResult(result)) => Some(result),
             Ok(_) => {
                 self.emit_wsl_unavailable(
@@ -260,5 +279,16 @@ impl HostRuntime {
         );
 
         event_bus.broadcast_event(AgentEvent::Error(event));
+    }
+
+    fn unsupported_wsl_root_error(repo_id: Option<String>) -> AgentError {
+        let repo_suffix = repo_id
+            .as_deref()
+            .map(|value| format!(" (repo: {value})"))
+            .unwrap_or_default();
+        AgentError::new(
+            "UNSUPPORTED_REPO_ROOT",
+            format!("WSL repo roots are not supported on this platform{repo_suffix}"),
+        )
     }
 }

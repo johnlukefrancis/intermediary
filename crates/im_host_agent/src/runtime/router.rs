@@ -46,16 +46,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn routes_windows_repo_command_to_windows_backend() {
+    fn routes_host_repo_command_to_host_backend() {
         let mut routes = HashMap::new();
-        routes.insert("repo_windows".to_string(), RepoBackend::Windows);
+        routes.insert("repo_host".to_string(), RepoBackend::Host);
 
         let command = UiCommand::WatchRepo(WatchRepoCommand {
-            repo_id: "repo_windows".to_string(),
+            repo_id: "repo_host".to_string(),
         });
 
         let routed = resolve_repo_backend(&command, &routes).expect("route");
-        assert_eq!(routed, Some(RepoBackend::Windows));
+        assert_eq!(routed, Some(RepoBackend::Host));
     }
 
     #[test]

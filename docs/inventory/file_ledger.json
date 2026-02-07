@@ -191,7 +191,7 @@
     },
     {
       "path": "app/src/hooks/use_tab_bar_scroll.ts",
-      "summary": "Scroll overflow detection and hold-to-scroll for the tab bar track"
+      "summary": "Scroll overflow detection and snap-to-next-tab for the tab bar track"
     },
     {
       "path": "app/src/hooks/use_worktree_add.ts",
@@ -507,7 +507,7 @@
     },
     {
       "path": "crates/im_agent/src/protocol/tests.rs",
-      "summary": "Protocol envelope serialization tests"
+      "summary": "Protocol envelope serialization and backward-compat tests"
     },
     {
       "path": "crates/im_agent/src/repos/categorizer.rs",
@@ -595,11 +595,11 @@
     },
     {
       "path": "crates/im_agent/src/staging/path_bridge.rs",
-      "summary": "Staging path bridging between WSL and Windows layouts"
+      "summary": "Staging path bridging between WSL and host platform layouts"
     },
     {
       "path": "crates/im_agent/src/staging/stager.rs",
-      "summary": "Atomic staging of files into the Windows-accessible directory"
+      "summary": "Atomic staging of files into the host-accessible directory"
     },
     {
       "path": "crates/im_bundle/src/bin/im_bundle_cli.rs",
@@ -682,12 +682,12 @@
       "summary": "Host runtime that routes protocol commands to Windows-local or WSL backend"
     },
     {
-      "path": "crates/im_host_agent/src/runtime/local_windows_backend.rs",
-      "summary": "Windows-native local backend for repo watch, staging, and bundle operations"
+      "path": "crates/im_host_agent/src/runtime/local_host_backend.rs",
+      "summary": "Host-native local backend for repo watch, staging, and bundle operations"
     },
     {
       "path": "crates/im_host_agent/src/runtime/mod.rs",
-      "summary": "Host runtime exports for backend routing and local Windows handling"
+      "summary": "Host runtime exports for backend routing and local host handling"
     },
     {
       "path": "crates/im_host_agent/src/runtime/repo_backend.rs",

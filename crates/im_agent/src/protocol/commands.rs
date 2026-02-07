@@ -9,8 +9,10 @@ use serde_json::Value;
 pub struct ClientHelloCommand {
     // TODO(protocol-precision): replace Value with typed AppConfig once shared schema exists.
     pub config: Value,
-    pub staging_wsl_root: String,
-    pub staging_win_root: String,
+    #[serde(alias = "stagingWinRoot")]
+    pub staging_host_root: String,
+    #[serde(default)]
+    pub staging_wsl_root: Option<String>,
     pub auto_stage_on_change: Option<bool>,
 }
 

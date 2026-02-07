@@ -32,8 +32,8 @@ pub(crate) struct BuildBundleBlockingOptions {
 pub(crate) struct BlockingBundleResult {
     pub(crate) repo_id: String,
     pub(crate) preset_id: String,
-    pub(crate) wsl_path: String,
-    pub(crate) windows_path: String,
+    pub(crate) host_path: String,
+    pub(crate) wsl_path: Option<String>,
     pub(crate) bytes: u64,
     pub(crate) file_count: u64,
     pub(crate) built_at_iso: String,
@@ -46,7 +46,7 @@ pub(crate) fn build_bundle_blocking(
     git_info: GitInfo,
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
 ) -> Result<BlockingBundleResult, AgentError> {
-    let staging_root = staging_root_path(&options.staging, options.staging_kind);
+    let staging_root = staging_root_path(&options.staging, options.staging_kind)?;
     let output_dir = Path::new(staging_root)
         .join("bundles")
         .join(&options.repo_id)
@@ -89,13 +89,13 @@ pub(crate) fn build_bundle_blocking(
     }
 
     let local_bundle_path = final_path.to_string_lossy().to_string();
-    let (wsl_path, windows_path) = build_bundle_paths(&local_bundle_path, options.staging_kind)?;
+    let (host_path, wsl_path) = build_bundle_paths(&local_bundle_path, options.staging_kind)?;
 
     Ok(BlockingBundleResult {
         repo_id: options.repo_id,
         preset_id: options.preset_id,
+        host_path,
         wsl_path,
-        windows_path,
         bytes: bundle_result.bytes_written,
         file_count: bundle_result.file_count,
         built_at_iso,
@@ -175,27 +175,30 @@ fn temp_path_for(path: &Path) -> PathBuf {
     path.with_file_name(temp_name)
 }
 
-fn staging_root_path<'a>(staging: &'a PathBridgeConfig, kind: StagingRootKind) -> &'a str {
+fn staging_root_path<'a>(
+    staging: &'a PathBridgeConfig,
+    kind: StagingRootKind,
+) -> Result<&'a str, AgentError> {
     match kind {
-        StagingRootKind::Wsl => &staging.staging_wsl_root,
-        StagingRootKind::Windows => &staging.staging_win_root,
+        StagingRootKind::Wsl => staging.staging_wsl_root.as_deref().ok_or_else(|| {
+            AgentError::new(
+                "MISSING_WSL_ROOT",
+                "WSL staging root is required for WSL staging kind",
+            )
+        }),
+        StagingRootKind::Host => Ok(&staging.staging_host_root),
     }
 }
 
 fn build_bundle_paths(
     local_path: &str,
     staging_kind: StagingRootKind,
-) -> Result<(String, String), AgentError> {
+) -> Result<(String, Option<String>), AgentError> {
     match staging_kind {
-        StagingRootKind::Wsl => Ok((local_path.to_string(), wsl_to_windows(local_path)?)),
-        StagingRootKind::Windows => {
-            let wsl_path = windows_to_wsl(local_path).ok_or_else(|| {
-                AgentError::new(
-                    "INVALID_PATH",
-                    format!("Cannot convert Windows bundle path to WSL: {local_path}"),
-                )
-            })?;
-            Ok((wsl_path, local_path.to_string()))
+        StagingRootKind::Wsl => Ok((wsl_to_windows(local_path)?, Some(local_path.to_string()))),
+        StagingRootKind::Host => {
+            let wsl_path = windows_to_wsl(local_path);
+            Ok((local_path.to_string(), wsl_path))
         }
     }
 }

@@ -22,8 +22,13 @@ pub struct ListBundlesOptions {
 
 pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>, AgentError> {
     let staging_root = match options.staging_kind {
-        StagingRootKind::Wsl => &options.staging.staging_wsl_root,
-        StagingRootKind::Windows => &options.staging.staging_win_root,
+        StagingRootKind::Wsl => options.staging.staging_wsl_root.as_deref().ok_or_else(|| {
+            AgentError::new(
+                "MISSING_WSL_ROOT",
+                "WSL staging root is required for WSL staging kind",
+            )
+        })?,
+        StagingRootKind::Host => &options.staging.staging_host_root,
     };
     let target_dir = Path::new(staging_root)
         .join("bundles")
@@ -61,7 +66,7 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
             continue;
         }
 
-        let wsl_path = entry.path();
+        let local_path = entry.path();
         let metadata = entry
             .metadata()
             .await
@@ -78,7 +83,7 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
         candidates.push(BundleCandidate {
             file_name,
-            wsl_path,
+            local_path,
             bytes: metadata.len(),
             mtime_ms,
             timestamp,
@@ -92,7 +97,7 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
     for candidate in &mut candidates {
         if candidate.timestamp.is_none() {
-            candidate.manifest_time = read_manifest_time(&candidate.wsl_path).await;
+            candidate.manifest_time = read_manifest_time(&candidate.local_path).await;
         }
     }
 
@@ -106,13 +111,13 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
     let mut results = Vec::with_capacity(candidates.len());
     for (index, candidate) in candidates.into_iter().enumerate() {
-        let local_path = candidate.wsl_path.to_string_lossy().to_string();
-        let windows_path = match options.staging_kind {
-            StagingRootKind::Wsl => wsl_to_windows(&local_path)?,
-            StagingRootKind::Windows => local_path,
+        let local_path_str = candidate.local_path.to_string_lossy().to_string();
+        let host_path = match options.staging_kind {
+            StagingRootKind::Wsl => wsl_to_windows(&local_path_str)?,
+            StagingRootKind::Host => local_path_str,
         };
         results.push(BundleInfo {
-            windows_path,
+            host_path,
             file_name: candidate.file_name,
             bytes: candidate.bytes,
             mtime_ms: candidate.mtime_ms,
@@ -125,7 +130,7 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
 struct BundleCandidate {
     file_name: String,
-    wsl_path: PathBuf,
+    local_path: PathBuf,
     bytes: u64,
     mtime_ms: u64,
     timestamp: Option<DateTime<Utc>>,
@@ -212,8 +217,8 @@ mod tests {
 
         let results = list_bundles(ListBundlesOptions {
             staging: PathBridgeConfig {
-                staging_wsl_root: root.path().to_string_lossy().to_string(),
-                staging_win_root: "C:\\bundles".to_string(),
+                staging_host_root: "C:\\bundles".to_string(),
+                staging_wsl_root: Some(root.path().to_string_lossy().to_string()),
             },
             staging_kind: StagingRootKind::Wsl,
             repo_id: repo_id.to_string(),

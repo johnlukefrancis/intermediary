@@ -33,8 +33,10 @@ pub struct FileEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StagedInfo {
-    pub wsl_path: String,
-    pub windows_path: String,
+    #[serde(alias = "windowsPath")]
+    pub host_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wsl_path: Option<String>,
     pub bytes_copied: u64,
     pub mtime_ms: u64,
 }
@@ -63,8 +65,10 @@ pub struct SnapshotEvent {
 pub struct BundleBuiltEvent {
     pub repo_id: String,
     pub preset_id: String,
-    pub windows_path: String,
-    pub alias_windows_path: String,
+    #[serde(alias = "windowsPath")]
+    pub host_path: String,
+    #[serde(alias = "aliasWindowsPath")]
+    pub alias_host_path: String,
     pub bytes: u64,
     pub file_count: u64,
     pub built_at_iso: String,

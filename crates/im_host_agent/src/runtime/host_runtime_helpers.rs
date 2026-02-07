@@ -31,8 +31,8 @@ pub(super) fn build_wsl_client_hello(
 
     Ok(ClientHelloCommand {
         config,
+        staging_host_root: source_command.staging_host_root.clone(),
         staging_wsl_root: source_command.staging_wsl_root.clone(),
-        staging_win_root: source_command.staging_win_root.clone(),
         auto_stage_on_change: source_command.auto_stage_on_change,
     })
 }

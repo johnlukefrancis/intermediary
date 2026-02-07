@@ -9,7 +9,11 @@ import type {
   StagedInfo,
   AgentEvent,
 } from "../shared/protocol.js";
-import { sendGetRepoTopLevel, sendRefresh } from "../lib/agent/messages.js";
+import {
+  sendGetRepoTopLevel,
+  sendRefresh,
+  sendWatchRepo,
+} from "../lib/agent/messages.js";
 
 export interface RepoState {
   recentDocs: FileEntry[];
@@ -54,6 +58,7 @@ export function useRepoState(repoId: string): RepoState {
   const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
   const [topLevelSubdirs, setTopLevelSubdirs] = useState<Record<string, string[]>>({});
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
+  const refreshInFlightKeyRef = useRef<string | null>(null);
 
   const registerStaged = useCallback((relativePath: string, stagedInfo: StagedInfo) => {
     setStagedByPath((prev) => {
@@ -117,6 +122,8 @@ export function useRepoState(repoId: string): RepoState {
     setTopLevelDirs([]);
     setTopLevelFiles([]);
     setTopLevelSubdirs({});
+    lastHelloRefreshKeyRef.current = null;
+    refreshInFlightKeyRef.current = null;
   }, [repoId]);
 
   useEffect(() => {
@@ -134,30 +141,41 @@ export function useRepoState(repoId: string): RepoState {
       return;
     }
     if (!helloState.watchedRepoIds.includes(repoId)) {
-      return;
+      // Continue: we can recover by watching this repo on demand below.
     }
 
     const refreshKey = `${repoId}:${helloState.lastHelloAt}`;
     if (lastHelloRefreshKeyRef.current === refreshKey) {
       return;
     }
-    lastHelloRefreshKeyRef.current = refreshKey;
+    if (refreshInFlightKeyRef.current === refreshKey) {
+      return;
+    }
+    refreshInFlightKeyRef.current = refreshKey;
 
     setIsLoading(true);
-    void sendRefresh(client, repoId).catch((err: unknown) => {
-      console.error("[useRepoState] refresh failed:", err);
-      setIsLoading(false);
-    });
+    void (async () => {
+      try {
+        if (!helloState.watchedRepoIds.includes(repoId)) {
+          await sendWatchRepo(client, repoId);
+        }
 
-    void sendGetRepoTopLevel(client, repoId)
-      .then((result) => {
+        await sendRefresh(client, repoId);
+        const result = await sendGetRepoTopLevel(client, repoId);
         setTopLevelDirs(result.dirs);
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});
-      })
-      .catch((err: unknown) => {
-        console.error("[useRepoState] getRepoTopLevel failed:", err);
-      });
+        lastHelloRefreshKeyRef.current = refreshKey;
+        setIsLoading(false);
+      } catch (err: unknown) {
+        console.error("[useRepoState] repo hydration failed:", err);
+        setIsLoading(false);
+      } finally {
+        if (refreshInFlightKeyRef.current === refreshKey) {
+          refreshInFlightKeyRef.current = null;
+        }
+      }
+    })();
   }, [
     repoId,
     client,

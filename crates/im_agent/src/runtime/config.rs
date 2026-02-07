@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepoRootKind {
     Wsl,
-    Windows,
+    Host,
 }
 
 impl RepoRootKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Wsl => "wsl",
-            Self::Windows => "windows",
+            Self::Host => "host",
         }
     }
 }
@@ -112,7 +112,7 @@ impl RepoConfig {
     pub fn root_kind(&self) -> RepoRootKind {
         match self.root {
             RepoRoot::Wsl { .. } => RepoRootKind::Wsl,
-            RepoRoot::Windows { .. } => RepoRootKind::Windows,
+            RepoRoot::Host { .. } => RepoRootKind::Host,
         }
     }
 
@@ -120,8 +120,8 @@ impl RepoConfig {
         self.root.wsl_path()
     }
 
-    pub fn windows_root_path(&self) -> Option<&str> {
-        self.root.windows_path()
+    pub fn host_root_path(&self) -> Option<&str> {
+        self.root.host_path()
     }
 
     pub fn root_path_for_kind(&self, kind: RepoRootKind) -> Option<&str> {
@@ -133,41 +133,42 @@ impl RepoConfig {
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum RepoRoot {
     Wsl { path: String },
-    Windows { path: String },
+    #[serde(alias = "windows")]
+    Host { path: String },
 }
 
 impl RepoRoot {
     pub fn kind(&self) -> &'static str {
         match self {
             Self::Wsl { .. } => "wsl",
-            Self::Windows { .. } => "windows",
+            Self::Host { .. } => "host",
         }
     }
 
     pub fn path(&self) -> &str {
         match self {
-            Self::Wsl { path } | Self::Windows { path } => path,
+            Self::Wsl { path } | Self::Host { path } => path,
         }
     }
 
     pub fn wsl_path(&self) -> Option<&str> {
         match self {
             Self::Wsl { path } => Some(path),
-            Self::Windows { .. } => None,
+            Self::Host { .. } => None,
         }
     }
 
-    pub fn windows_path(&self) -> Option<&str> {
+    pub fn host_path(&self) -> Option<&str> {
         match self {
             Self::Wsl { .. } => None,
-            Self::Windows { path } => Some(path),
+            Self::Host { path } => Some(path),
         }
     }
 
     pub fn path_for_kind(&self, kind: RepoRootKind) -> Option<&str> {
         match kind {
             RepoRootKind::Wsl => self.wsl_path(),
-            RepoRootKind::Windows => self.windows_path(),
+            RepoRootKind::Host => self.host_path(),
         }
     }
 }

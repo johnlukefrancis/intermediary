@@ -7,6 +7,7 @@ import type {
   ClientHelloResult,
   StageFileResult,
   SetOptionsResult,
+  WatchRepoResult,
   GetRepoTopLevelResult,
   RefreshResult,
   BuildBundleResult,
@@ -100,6 +101,16 @@ export async function sendSetOptions(
   return client.send<SetOptionsResult>({
     type: "setOptions",
     autoStageOnChange,
+  });
+}
+
+export async function sendWatchRepo(
+  client: AgentClient,
+  repoId: string
+): Promise<WatchRepoResult> {
+  return client.send<WatchRepoResult>({
+    type: "watchRepo",
+    repoId,
   });
 }
 

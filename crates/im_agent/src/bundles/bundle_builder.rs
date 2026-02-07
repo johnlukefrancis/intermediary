@@ -27,9 +27,9 @@ pub struct BuildBundleOptions {
 }
 
 pub struct BuildBundleResult {
-    pub wsl_path: String,
-    pub windows_path: String,
-    pub alias_windows_path: String,
+    pub host_path: String,
+    pub wsl_path: Option<String>,
+    pub alias_host_path: String,
     pub bytes: u64,
     pub file_count: u64,
     pub built_at_iso: String,
@@ -105,9 +105,9 @@ pub async fn build_bundle(
     }));
 
     Ok(BuildBundleResult {
+        host_path: build_result.host_path.clone(),
         wsl_path: build_result.wsl_path.clone(),
-        windows_path: build_result.windows_path.clone(),
-        alias_windows_path: build_result.windows_path,
+        alias_host_path: build_result.host_path,
         bytes: build_result.bytes,
         file_count: build_result.file_count,
         built_at_iso: build_result.built_at_iso,

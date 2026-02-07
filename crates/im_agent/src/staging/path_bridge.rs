@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/staging/path_bridge.rs
-// Description: Staging path bridging between WSL and Windows layouts
+// Description: Staging path bridging between WSL and host platform layouts
 
 use std::path::{Path, PathBuf};
 
@@ -7,19 +7,19 @@ use crate::error::AgentError;
 
 #[derive(Debug, Clone)]
 pub struct PathBridgeConfig {
-    pub staging_wsl_root: String,
-    pub staging_win_root: String,
+    pub staging_host_root: String,
+    pub staging_wsl_root: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StagingRootKind {
     Wsl,
-    Windows,
+    Host,
 }
 
 pub struct StagedPaths {
-    pub wsl_path: String,
-    pub windows_path: String,
+    pub host_path: String,
+    pub wsl_path: Option<String>,
 }
 
 pub fn build_staged_paths(
@@ -37,43 +37,59 @@ pub fn build_staged_paths_for_kind(
     staging_kind: StagingRootKind,
 ) -> Result<StagedPaths, AgentError> {
     let normalized_relative = relative_path.replace('\\', "/");
-    let wsl_root = normalize_wsl_root(&config.staging_wsl_root);
-    let win_root = normalize_win_root(&config.staging_win_root);
+
+    let host_root = normalize_host_root(&config.staging_host_root);
 
     let wsl_path = match staging_kind {
-        StagingRootKind::Wsl => join_slash_path(&wsl_root, repo_id, &normalized_relative),
-        StagingRootKind::Windows => {
-            let windows_target = join_windows_path(&win_root, repo_id, &normalized_relative);
-            windows_to_wsl(&windows_target).ok_or_else(|| {
+        StagingRootKind::Wsl => {
+            let wsl_root_str = config.staging_wsl_root.as_deref().ok_or_else(|| {
                 AgentError::new(
-                    "INVALID_PATH",
-                    format!(
-                        "Cannot convert Windows staging path to WSL path: {}",
-                        windows_target
-                    ),
+                    "MISSING_WSL_ROOT",
+                    "WSL staging root is required for WSL staging kind",
                 )
-            })?
+            })?;
+            let wsl_root = normalize_wsl_root(wsl_root_str);
+            Some(join_slash_path(&wsl_root, repo_id, &normalized_relative))
+        }
+        StagingRootKind::Host => {
+            let host_target = join_host_path(&host_root, repo_id, &normalized_relative);
+            windows_to_wsl(&host_target).map(Some).unwrap_or(None)
         }
     };
 
-    let windows_path = match staging_kind {
+    let host_path = match staging_kind {
         StagingRootKind::Wsl => {
+            let wsl_root_str = config.staging_wsl_root.as_deref().ok_or_else(|| {
+                AgentError::new(
+                    "MISSING_WSL_ROOT",
+                    "WSL staging root is required for WSL staging kind",
+                )
+            })?;
+            let wsl_root = normalize_wsl_root(wsl_root_str);
             let source = join_slash_path(&wsl_root, repo_id, &normalized_relative);
             wsl_to_windows(&source)?
         }
-        StagingRootKind::Windows => join_windows_path(&win_root, repo_id, &normalized_relative),
+        StagingRootKind::Host => join_host_path(&host_root, repo_id, &normalized_relative),
     };
 
     Ok(StagedPaths {
+        host_path,
         wsl_path,
-        windows_path,
     })
 }
 
-pub fn staging_local_path(staged_paths: &StagedPaths, staging_kind: StagingRootKind) -> &str {
+pub fn staging_local_path<'a>(
+    staged_paths: &'a StagedPaths,
+    staging_kind: StagingRootKind,
+) -> Result<&'a str, AgentError> {
     match staging_kind {
-        StagingRootKind::Wsl => &staged_paths.wsl_path,
-        StagingRootKind::Windows => &staged_paths.windows_path,
+        StagingRootKind::Wsl => staged_paths.wsl_path.as_deref().ok_or_else(|| {
+            AgentError::new(
+                "MISSING_WSL_ROOT",
+                "WSL path is not available for staging",
+            )
+        }),
+        StagingRootKind::Host => Ok(&staged_paths.host_path),
     }
 }
 
@@ -131,12 +147,21 @@ fn normalize_wsl_root(root: &str) -> String {
     }
 }
 
-fn normalize_win_root(root: &str) -> String {
-    let trimmed = root.trim_end_matches('\\');
-    if trimmed.to_ascii_lowercase().ends_with("\\files") {
-        trimmed.to_string()
+fn normalize_host_root(root: &str) -> String {
+    if root.contains('\\') || (root.len() >= 2 && root.as_bytes()[1] == b':') {
+        let trimmed = root.trim_end_matches('\\');
+        if trimmed.to_ascii_lowercase().ends_with("\\files") {
+            trimmed.to_string()
+        } else {
+            format!("{trimmed}\\files")
+        }
     } else {
-        format!("{trimmed}\\files")
+        let trimmed = root.trim_end_matches('/');
+        if trimmed.ends_with("/files") {
+            trimmed.to_string()
+        } else {
+            format!("{trimmed}/files")
+        }
     }
 }
 
@@ -148,9 +173,17 @@ fn join_slash_path(root: &str, repo_id: &str, relative: &str) -> String {
         .to_string()
 }
 
-fn join_windows_path(root: &str, repo_id: &str, relative: &str) -> String {
-    let relative_windows = relative.replace('/', "\\");
-    format!("{root}\\{repo_id}\\{relative_windows}")
+fn join_host_path(root: &str, repo_id: &str, relative: &str) -> String {
+    if root.contains('\\') || (root.len() >= 2 && root.as_bytes()[1] == b':') {
+        let relative_windows = relative.replace('/', "\\");
+        format!("{root}\\{repo_id}\\{relative_windows}")
+    } else {
+        Path::new(root)
+            .join(repo_id)
+            .join(relative)
+            .to_string_lossy()
+            .to_string()
+    }
 }
 
 pub fn ensure_path_dir(path: &str) -> PathBuf {

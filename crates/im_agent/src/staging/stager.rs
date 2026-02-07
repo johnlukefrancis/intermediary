@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/staging/stager.rs
-// Description: Atomic staging of files into the Windows-accessible directory
+// Description: Atomic staging of files into the host-accessible directory
 
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -14,8 +14,8 @@ use crate::staging::path_bridge::{
 
 #[derive(Debug, Clone)]
 pub struct StageResult {
-    pub wsl_path: String,
-    pub windows_path: String,
+    pub host_path: String,
+    pub wsl_path: Option<String>,
     pub bytes_copied: u64,
     pub mtime_ms: u64,
 }
@@ -51,7 +51,7 @@ pub async fn stage_file_for_kind(
     } else {
         build_staged_paths_for_kind(config, repo_id, relative_path, staging_kind)?
     };
-    let local_dest_path = staging_local_path(&staged_paths, staging_kind);
+    let local_dest_path = staging_local_path(&staged_paths, staging_kind)?;
 
     let dest_dir = ensure_path_dir(local_dest_path);
     fs::create_dir_all(&dest_dir)
@@ -87,8 +87,8 @@ pub async fn stage_file_for_kind(
         .unwrap_or(0);
 
     Ok(StageResult {
+        host_path: staged_paths.host_path,
         wsl_path: staged_paths.wsl_path,
-        windows_path: staged_paths.windows_path,
         bytes_copied,
         mtime_ms,
     })
@@ -177,8 +177,8 @@ mod tests {
         let root = TempDir::new().expect("tempdir");
         let staging_root = root.path().join("staging");
         let config = PathBridgeConfig {
-            staging_wsl_root: staging_root.to_string_lossy().to_string(),
-            staging_win_root: "C:\\staging".to_string(),
+            staging_host_root: "C:\\staging".to_string(),
+            staging_wsl_root: Some(staging_root.to_string_lossy().to_string()),
         };
         (root, config)
     }

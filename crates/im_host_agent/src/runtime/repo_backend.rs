@@ -6,7 +6,7 @@ use im_agent::runtime::RepoRootKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RepoBackend {
-    Windows,
+    Host,
     Wsl,
 }
 
@@ -14,7 +14,7 @@ impl RepoBackend {
     pub fn from_repo_config(repo: &RepoConfig) -> Self {
         match repo.root_kind() {
             RepoRootKind::Wsl => Self::Wsl,
-            RepoRootKind::Windows => Self::Windows,
+            RepoRootKind::Host => Self::Host,
         }
     }
 }

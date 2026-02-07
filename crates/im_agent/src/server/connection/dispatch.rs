@@ -59,7 +59,7 @@ pub async fn dispatch_command(
                 crate::protocol::StageFileResult {
                     repo_id: command.repo_id,
                     path: command.path,
-                    windows_path: result.windows_path,
+                    host_path: result.host_path,
                     wsl_path: result.wsl_path,
                     bytes_copied: result.bytes_copied,
                     mtime_ms: result.mtime_ms,
@@ -119,8 +119,8 @@ pub async fn dispatch_command(
                 .broadcast_event(crate::protocol::AgentEvent::BundleBuilt(BundleBuiltEvent {
                     repo_id: command.repo_id.clone(),
                     preset_id: command.preset_id.clone(),
-                    windows_path: result.windows_path.clone(),
-                    alias_windows_path: result.alias_windows_path.clone(),
+                    host_path: result.host_path.clone(),
+                    alias_host_path: result.alias_host_path.clone(),
                     bytes: result.bytes,
                     file_count: result.file_count,
                     built_at_iso: result.built_at_iso.clone(),
@@ -130,9 +130,9 @@ pub async fn dispatch_command(
                 crate::protocol::BuildBundleResult {
                     repo_id: command.repo_id,
                     preset_id: command.preset_id,
-                    windows_path: result.windows_path,
+                    host_path: result.host_path,
                     wsl_path: result.wsl_path,
-                    alias_windows_path: result.alias_windows_path,
+                    alias_host_path: result.alias_host_path,
                     bytes: result.bytes,
                     file_count: result.file_count,
                     built_at_iso: result.built_at_iso,
