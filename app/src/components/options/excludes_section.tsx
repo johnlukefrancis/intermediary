@@ -8,6 +8,7 @@ import { useExcludesState } from "./excludes/use_excludes_state.js";
 
 interface ExcludesSectionProps {
   title?: string;
+  hint?: string;
   recommendedLabel?: string;
   excludes: GlobalExcludes;
   setExcludes: (excludes: GlobalExcludes) => void;
@@ -15,6 +16,7 @@ interface ExcludesSectionProps {
 
 export function ExcludesSection({
   title = "Excludes",
+  hint,
   recommendedLabel = "Recommended excludes",
   excludes,
   setExcludes,
@@ -33,7 +35,7 @@ export function ExcludesSection({
 
   return (
     <div className="options-section">
-      <div className="options-section-title">{title}</div>
+      <div className="options-section-title" title={hint}>{title}</div>
       <label className="options-checkbox-row">
         <input
           type="checkbox"

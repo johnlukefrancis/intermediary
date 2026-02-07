@@ -23,7 +23,10 @@ export function AgentSection({
   return (
     <div className="options-section">
       <div className="options-section-title">Agent</div>
-      <div className="options-row">
+      <div
+        className="options-row"
+        title="Automatically launch the agent backend when the app starts"
+      >
         <span className="options-row-label">Auto-start agent backend</span>
         <label className="vintage-toggle">
           <input
@@ -57,6 +60,7 @@ export function AgentSection({
         <button
           type="button"
           className="options-button"
+          title="Stop and relaunch the agent backend process"
           onClick={() => {
             restartAgent();
           }}

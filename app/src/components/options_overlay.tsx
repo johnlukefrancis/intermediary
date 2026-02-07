@@ -231,6 +231,7 @@ export function OptionsOverlay({
             {/* Bundle Excludes */}
             <ExcludesSection
               title="Bundle Excludes"
+              hint="Files and folders excluded from ZIP bundles"
               recommendedLabel="Recommended bundle excludes"
               excludes={globalExcludes}
               setExcludes={setGlobalExcludes}
@@ -239,6 +240,7 @@ export function OptionsOverlay({
             {/* Classification Excludes */}
             <ExcludesSection
               title="Classification Excludes"
+              hint="Hide noisy or generated files from the Docs/Code panes without affecting bundles"
               recommendedLabel="Recommended classification excludes"
               excludes={classificationExcludes}
               setExcludes={setClassificationExcludes}

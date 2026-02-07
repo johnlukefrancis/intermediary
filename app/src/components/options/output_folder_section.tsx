@@ -17,7 +17,12 @@ export function OutputFolderSection({
 }: OutputFolderSectionProps): React.JSX.Element {
   return (
     <div className="options-section">
-      <div className="options-section-title">Output Folder</div>
+      <div
+        className="options-section-title"
+        title="Where bundled ZIP files are saved on disk"
+      >
+        Output Folder
+      </div>
       <div className="options-row stacked">
         <span
           className={`options-path-display ${!appPaths ? "muted" : ""}`}
