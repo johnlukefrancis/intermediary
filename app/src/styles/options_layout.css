@@ -83,11 +83,11 @@
 
 /* ===== RESPONSIVE: SINGLE COLUMN ===== */
 @media (max-width: 700px) {
-  .options-body {
-    grid-template-columns: 1fr;
+  .options-overlay {
+    padding-inline: var(--space-3);
   }
 
-  .options-panel {
-    min-width: 0;
+  .options-body {
+    grid-template-columns: 1fr;
   }
 }

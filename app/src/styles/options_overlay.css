@@ -11,7 +11,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: var(--header-stack-height, 80px);
+  padding-top: calc(var(--header-stack-height, 80px) + var(--space-6));
+  padding-bottom: var(--space-6);
+  padding-inline: var(--space-6);
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(var(--blur-sm));
   -webkit-backdrop-filter: blur(var(--blur-sm));
@@ -37,9 +39,8 @@
   box-shadow: var(--shadow-inset-subtle), var(--shadow-drop-md);
   padding: var(--space-6);
   padding-top: var(--space-8);
-  width: min(92vw, 1100px);
-  min-width: 600px;
-  margin-bottom: var(--space-6);
+  width: 100%;
+  max-width: 1100px;
   animation: panel-scale-in var(--duration-normal) var(--ease-out);
 }
 
