@@ -25,9 +25,9 @@
 .file-icon--cpp         { color: #5c80b0; }
 .file-icon--ruby        { color: #b05050; }
 .file-icon--swift       { color: #cf6940; }
-.file-icon--dart        { color: #4fa8b8; }
+.file-icon--dart        { color: #4a8ec9; }
 .file-icon--elixir      { color: #7b5ea7; }
-.file-icon--clojure     { color: #5c9e5c; }
+.file-icon--clojure     { color: #5c85c9; }
 .file-icon--lua         { color: #4a6fb5; }
 .file-icon--php         { color: #6a6aad; }
 .file-icon--scala       { color: #b05050; }
@@ -43,13 +43,13 @@
 .file-icon--r           { color: #4a6fb5; }
 .file-icon--julia       { color: #7a5ea0; }
 .file-icon--perl        { color: #5c80b0; }
-.file-icon--elm         { color: #5cacad; }
+.file-icon--elm         { color: #4a8ec9; }
 .file-icon--zig         { color: #cf9e30; }
 .file-icon--nim         { color: #c5b44e; }
 .file-icon--fsharp      { color: #5c80b0; }
 .file-icon--solidity    { color: #5a5a8a; }
 .file-icon--verilog     { color: #6a8a6a; }
-.file-icon--astro       { color: #cf5060; }
+.file-icon--astro       { color: #cf7030; }
 .file-icon--docker      { color: #4a8cc9; }
 .file-icon--makefile    { color: #8a8a8a; }
 .file-icon--generic     { color: var(--color-text-muted); }
