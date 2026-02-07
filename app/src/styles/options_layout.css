@@ -8,6 +8,8 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--space-6);
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .options-column-primary,
