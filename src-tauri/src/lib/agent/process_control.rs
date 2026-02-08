@@ -4,10 +4,12 @@
 use super::install::AgentBundlePaths;
 use crate::commands::agent_probe::probe_port_blocking;
 use crate::paths::wsl_convert::windows_to_wsl_path;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
+
+#[cfg(unix)]
+use std::io::ErrorKind;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
