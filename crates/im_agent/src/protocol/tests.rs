@@ -66,6 +66,44 @@ fn legacy_client_hello_staging_win_root_alias() {
 }
 
 #[test]
+fn client_hello_accepts_host_and_legacy_root_when_equal() {
+    let json = json!({
+        "type": "clientHello",
+        "config": {"autoStageGlobal": true},
+        "stagingHostRoot": "C:\\staging",
+        "stagingWinRoot": "C:\\staging",
+        "stagingWslRoot": "/mnt/c/staging"
+    });
+
+    let command: UiCommand = serde_json::from_value(json).expect("parse clientHello");
+    match command {
+        UiCommand::ClientHello(hello) => {
+            assert_eq!(hello.staging_host_root, "C:\\staging");
+            assert_eq!(hello.staging_wsl_root.as_deref(), Some("/mnt/c/staging"));
+        }
+        _ => panic!("expected ClientHello"),
+    }
+}
+
+#[test]
+fn client_hello_rejects_conflicting_host_and_legacy_root() {
+    let json = json!({
+        "type": "clientHello",
+        "config": {"autoStageGlobal": true},
+        "stagingHostRoot": "C:\\new",
+        "stagingWinRoot": "C:\\old",
+        "stagingWslRoot": "/mnt/c/staging"
+    });
+
+    let err = serde_json::from_value::<UiCommand>(json).expect_err("conflicting roots should fail");
+    assert!(
+        err.to_string()
+            .contains("conflicting stagingHostRoot/stagingWinRoot values"),
+        "unexpected error: {err}"
+    );
+}
+
+#[test]
 fn canonical_client_hello_serializes_host_root() {
     let hello = ClientHelloCommand {
         config: json!({}),

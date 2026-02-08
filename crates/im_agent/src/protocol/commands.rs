@@ -1,19 +1,64 @@
 // Path: crates/im_agent/src/protocol/commands.rs
 // Description: UI-to-agent command payloads for the WebSocket protocol
 
+use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientHelloCommand {
     // TODO(protocol-precision): replace Value with typed AppConfig once shared schema exists.
     pub config: Value,
-    #[serde(alias = "stagingWinRoot")]
     pub staging_host_root: String,
-    #[serde(default)]
     pub staging_wsl_root: Option<String>,
     pub auto_stage_on_change: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ClientHelloCommandWire {
+    // TODO(protocol-precision): replace Value with typed AppConfig once shared schema exists.
+    config: Value,
+    #[serde(default)]
+    staging_host_root: Option<String>,
+    #[serde(default)]
+    staging_win_root: Option<String>,
+    #[serde(default)]
+    staging_wsl_root: Option<String>,
+    #[serde(default)]
+    auto_stage_on_change: Option<bool>,
+}
+
+impl<'de> Deserialize<'de> for ClientHelloCommand {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let wire = ClientHelloCommandWire::deserialize(deserializer)?;
+        let staging_host_root = match (wire.staging_host_root, wire.staging_win_root) {
+            (Some(host), Some(legacy)) => {
+                if host != legacy {
+                    return Err(de::Error::custom(
+                        "conflicting stagingHostRoot/stagingWinRoot values",
+                    ));
+                }
+                host
+            }
+            (Some(host), None) => host,
+            (None, Some(legacy)) => legacy,
+            (None, None) => {
+                return Err(de::Error::missing_field("stagingHostRoot"));
+            }
+        };
+
+        Ok(Self {
+            config: wire.config,
+            staging_host_root,
+            staging_wsl_root: wire.staging_wsl_root,
+            auto_stage_on_change: wire.auto_stage_on_change,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
