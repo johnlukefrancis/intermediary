@@ -35,6 +35,8 @@ pub struct FileEntry {
 pub struct StagedInfo {
     #[serde(alias = "windowsPath")]
     pub host_path: String,
+    #[serde(rename = "windowsPath", skip_serializing_if = "Option::is_none")]
+    pub legacy_windows_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wsl_path: Option<String>,
     pub bytes_copied: u64,
@@ -67,8 +69,12 @@ pub struct BundleBuiltEvent {
     pub preset_id: String,
     #[serde(alias = "windowsPath")]
     pub host_path: String,
+    #[serde(rename = "windowsPath", skip_serializing_if = "Option::is_none")]
+    pub legacy_windows_path: Option<String>,
     #[serde(alias = "aliasWindowsPath")]
     pub alias_host_path: String,
+    #[serde(rename = "aliasWindowsPath", skip_serializing_if = "Option::is_none")]
+    pub legacy_alias_windows_path: Option<String>,
     pub bytes: u64,
     pub file_count: u64,
     pub built_at_iso: String,

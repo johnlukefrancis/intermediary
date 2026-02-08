@@ -102,7 +102,8 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
     for (index, candidate) in candidates.into_iter().enumerate() {
         let views = layout.path_views_for_runtime_path(&candidate.local_path)?;
         results.push(BundleInfo {
-            host_path: views.host_path,
+            host_path: views.host_path.clone(),
+            legacy_windows_path: Some(views.host_path),
             file_name: candidate.file_name,
             bytes: candidate.bytes,
             mtime_ms: candidate.mtime_ms,

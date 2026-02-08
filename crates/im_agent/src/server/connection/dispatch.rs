@@ -55,11 +55,13 @@ pub async fn dispatch_command(
             };
 
             let result = stage_file(&staging, &command.repo_id, &repo_root, &command.path).await?;
+            let host_path = result.host_path;
             Ok(UiResponse::StageFileResult(
                 crate::protocol::StageFileResult {
                     repo_id: command.repo_id,
                     path: command.path,
-                    host_path: result.host_path,
+                    host_path: host_path.clone(),
+                    legacy_windows_path: Some(host_path),
                     wsl_path: result.wsl_path,
                     bytes_copied: result.bytes_copied,
                     mtime_ms: result.mtime_ms,
@@ -120,7 +122,9 @@ pub async fn dispatch_command(
                     repo_id: command.repo_id.clone(),
                     preset_id: command.preset_id.clone(),
                     host_path: result.host_path.clone(),
+                    legacy_windows_path: Some(result.host_path.clone()),
                     alias_host_path: result.alias_host_path.clone(),
+                    legacy_alias_windows_path: Some(result.alias_host_path.clone()),
                     bytes: result.bytes,
                     file_count: result.file_count,
                     built_at_iso: result.built_at_iso.clone(),
@@ -130,9 +134,11 @@ pub async fn dispatch_command(
                 crate::protocol::BuildBundleResult {
                     repo_id: command.repo_id,
                     preset_id: command.preset_id,
-                    host_path: result.host_path,
+                    host_path: result.host_path.clone(),
+                    legacy_windows_path: Some(result.host_path),
                     wsl_path: result.wsl_path,
-                    alias_host_path: result.alias_host_path,
+                    alias_host_path: result.alias_host_path.clone(),
+                    legacy_alias_windows_path: Some(result.alias_host_path),
                     bytes: result.bytes,
                     file_count: result.file_count,
                     built_at_iso: result.built_at_iso,
