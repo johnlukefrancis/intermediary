@@ -13,20 +13,27 @@ use im_agent::protocol::{EnvelopeKind, RequestEnvelope, UiCommand, UiResponse};
 use im_agent::server::EventBus;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
-use tokio::time::sleep;
+use tokio::time::{sleep, timeout};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use crate::error_codes::WSL_BACKEND_TIMEOUT;
 
 use super::wsl_backend_messages::{
     fail_pending_requests, handle_backend_message, wsl_unavailable_error,
 };
 
 const RECONNECT_DELAY_MS: u64 = 750;
+const FORWARD_REQUEST_TIMEOUT: Duration = Duration::from_secs(12);
 
 #[derive(Clone)]
 pub struct WslBackendClient {
-    request_tx: mpsc::UnboundedSender<ForwardRequest>,
+    request_tx: mpsc::UnboundedSender<RequestLoopMessage>,
     request_counter: Arc<AtomicU64>,
+}
+
+enum RequestLoopMessage {
+    Forward(ForwardRequest),
+    Cancel { request_id: String },
 }
 
 struct ForwardRequest {
@@ -49,22 +56,41 @@ impl WslBackendClient {
     }
 
     pub async fn forward_command(&self, command: UiCommand) -> Result<UiResponse, AgentError> {
+        self.forward_command_with_timeout(command, FORWARD_REQUEST_TIMEOUT)
+            .await
+    }
+
+    async fn forward_command_with_timeout(
+        &self,
+        command: UiCommand,
+        timeout_duration: Duration,
+    ) -> Result<UiResponse, AgentError> {
         let request_id = self.next_request_id();
         let (response_tx, response_rx) = oneshot::channel();
 
         self.request_tx
-            .send(ForwardRequest {
-                request_id,
+            .send(RequestLoopMessage::Forward(ForwardRequest {
+                request_id: request_id.clone(),
                 command,
                 response_tx,
-            })
+            }))
             .map_err(|_| wsl_unavailable_error("WSL backend request loop is offline"))?;
 
-        match response_rx.await {
-            Ok(result) => result,
-            Err(_) => Err(wsl_unavailable_error(
+        let timeout_ms = timeout_duration.as_millis();
+        match timeout(timeout_duration, response_rx).await {
+            Ok(Ok(result)) => result,
+            Ok(Err(_)) => Err(wsl_unavailable_error(
                 "WSL backend closed before returning a response",
             )),
+            Err(_) => {
+                let _ = self
+                    .request_tx
+                    .send(RequestLoopMessage::Cancel { request_id });
+                Err(AgentError::new(
+                    WSL_BACKEND_TIMEOUT,
+                    format!("WSL backend timed out after {timeout_ms}ms waiting for response"),
+                ))
+            }
         }
     }
 
@@ -76,7 +102,7 @@ impl WslBackendClient {
 
 async fn run_client_loop(
     endpoint: String,
-    mut request_rx: mpsc::UnboundedReceiver<ForwardRequest>,
+    mut request_rx: mpsc::UnboundedReceiver<RequestLoopMessage>,
     event_bus: EventBus,
     logger: Logger,
 ) {
@@ -109,11 +135,12 @@ async fn run_client_loop(
                 _ = &mut retry_delay => break,
                 request = request_rx.recv() => {
                     match request {
-                        Some(request) => {
+                        Some(RequestLoopMessage::Forward(request)) => {
                             let _ = request.response_tx.send(Err(wsl_unavailable_error(
                                 "WSL backend is not available",
                             )));
                         }
+                        Some(RequestLoopMessage::Cancel { .. }) => {}
                         None => return,
                     }
                 }
@@ -124,7 +151,7 @@ async fn run_client_loop(
 
 async fn run_connected(
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-    request_rx: &mut mpsc::UnboundedReceiver<ForwardRequest>,
+    request_rx: &mut mpsc::UnboundedReceiver<RequestLoopMessage>,
     event_bus: &EventBus,
     logger: &Logger,
 ) {
@@ -139,33 +166,39 @@ async fn run_connected(
                     fail_pending_requests(&mut pending, "WSL backend request loop closed");
                     break;
                 };
+                match request {
+                    RequestLoopMessage::Forward(request) => {
+                        let envelope = RequestEnvelope {
+                            kind: EnvelopeKind::Request,
+                            request_id: request.request_id.clone(),
+                            payload: request.command,
+                        };
 
-                let envelope = RequestEnvelope {
-                    kind: EnvelopeKind::Request,
-                    request_id: request.request_id.clone(),
-                    payload: request.command,
-                };
+                        let payload = match serde_json::to_string(&envelope) {
+                            Ok(payload) => payload,
+                            Err(err) => {
+                                let _ = request.response_tx.send(Err(AgentError::internal(format!(
+                                    "Failed to serialize WSL request: {err}"
+                                ))));
+                                continue;
+                            }
+                        };
 
-                let payload = match serde_json::to_string(&envelope) {
-                    Ok(payload) => payload,
-                    Err(err) => {
-                        let _ = request.response_tx.send(Err(AgentError::internal(format!(
-                            "Failed to serialize WSL request: {err}"
-                        ))));
-                        continue;
+                        pending.insert(request.request_id.clone(), request.response_tx);
+
+                        if let Err(err) = sink.send(Message::Text(payload)).await {
+                            if let Some(response_tx) = pending.remove(&request.request_id) {
+                                let _ = response_tx.send(Err(wsl_unavailable_error(format!(
+                                    "Failed to send request to WSL backend: {err}"
+                                ))));
+                            }
+                            fail_pending_requests(&mut pending, "WSL backend disconnected while sending request");
+                            break;
+                        }
                     }
-                };
-
-                pending.insert(request.request_id.clone(), request.response_tx);
-
-                if let Err(err) = sink.send(Message::Text(payload)).await {
-                    if let Some(response_tx) = pending.remove(&request.request_id) {
-                        let _ = response_tx.send(Err(wsl_unavailable_error(format!(
-                            "Failed to send request to WSL backend: {err}"
-                        ))));
+                    RequestLoopMessage::Cancel { request_id } => {
+                        cancel_pending_request(&mut pending, &request_id);
                     }
-                    fail_pending_requests(&mut pending, "WSL backend disconnected while sending request");
-                    break;
                 }
             }
             message = read_stream.next() => {
@@ -194,5 +227,73 @@ async fn run_connected(
                 }
             }
         }
+    }
+}
+
+fn cancel_pending_request(
+    pending: &mut HashMap<String, oneshot::Sender<Result<UiResponse, AgentError>>>,
+    request_id: &str,
+) {
+    pending.remove(request_id);
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> WslBackendClient {
+        WslBackendClient {
+            request_tx,
+            request_counter: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    #[test]
+    fn cancel_message_removes_pending_entry() {
+        let (response_tx, _response_rx) = oneshot::channel::<Result<UiResponse, AgentError>>();
+        let mut pending = HashMap::new();
+        pending.insert("req_1".to_string(), response_tx);
+
+        cancel_pending_request(&mut pending, "req_1");
+
+        assert!(!pending.contains_key("req_1"));
+    }
+
+    #[tokio::test]
+    async fn forward_command_timeout_enqueues_cancel_message() {
+        let (request_tx, mut request_rx) = mpsc::unbounded_channel();
+        let client = client_for_test(request_tx);
+
+        let recv_task = tokio::spawn(async move {
+            let held_request = match request_rx.recv().await {
+                Some(RequestLoopMessage::Forward(request)) => request,
+                _ => panic!("expected forward request"),
+            };
+            let request_id = held_request.request_id.clone();
+
+            let cancel = request_rx.recv().await.expect("cancel message");
+            match cancel {
+                RequestLoopMessage::Cancel {
+                    request_id: cancel_id,
+                } => {
+                    assert_eq!(cancel_id, request_id);
+                }
+                _ => panic!("expected cancel message"),
+            }
+
+            drop(held_request);
+        });
+
+        let err = client
+            .forward_command_with_timeout(UiCommand::Unknown, Duration::from_millis(10))
+            .await
+            .expect_err("timeout expected");
+        assert_eq!(err.code(), WSL_BACKEND_TIMEOUT);
+        assert!(
+            err.message().contains("timed out"),
+            "unexpected message: {}",
+            err.message()
+        );
+
+        recv_task.await.expect("receiver task");
     }
 }

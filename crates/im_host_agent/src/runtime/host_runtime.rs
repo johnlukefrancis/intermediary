@@ -13,7 +13,7 @@ use im_agent::protocol::{
 use im_agent::server::EventBus;
 use tokio::time::timeout;
 
-use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
+use crate::error_codes::{WSL_BACKEND_TIMEOUT, WSL_BACKEND_UNAVAILABLE};
 use crate::runtime::host_runtime_helpers::{
     build_repo_backend_map, build_wsl_client_hello, parse_app_config, repo_id_from_command,
     should_forward_wsl_hello,
@@ -106,7 +106,9 @@ impl HostRuntime {
 
         let mut watched_ids: HashSet<String> = local_result.watched_repo_ids.into_iter().collect();
 
-        if cfg!(target_os = "windows") && should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now) {
+        if cfg!(target_os = "windows")
+            && should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now)
+        {
             let wsl_hello = build_wsl_client_hello(&parsed_config, &command)?;
             if let Some(wsl_result) = self.try_forward_client_hello(wsl_hello, event_bus).await {
                 watched_ids.extend(wsl_result.watched_repo_ids);
@@ -276,13 +278,28 @@ impl HostRuntime {
         event_bus: &EventBus,
         repo_id: Option<String>,
     ) {
-        if err.code() != WSL_BACKEND_UNAVAILABLE {
+        if err.code() != WSL_BACKEND_UNAVAILABLE && err.code() != WSL_BACKEND_TIMEOUT {
             return;
         }
-        self.emit_wsl_unavailable(event_bus, err.message().to_string(), repo_id);
+        self.emit_wsl_unavailable_with_code(
+            event_bus,
+            err.message().to_string(),
+            repo_id,
+            err.code(),
+        );
     }
 
     fn emit_wsl_unavailable(&self, event_bus: &EventBus, message: String, repo_id: Option<String>) {
+        self.emit_wsl_unavailable_with_code(event_bus, message, repo_id, WSL_BACKEND_UNAVAILABLE);
+    }
+
+    fn emit_wsl_unavailable_with_code(
+        &self,
+        event_bus: &EventBus,
+        message: String,
+        repo_id: Option<String>,
+        raw_code: &str,
+    ) {
         let event = AgentErrorEvent::new(
             "wslBackend",
             message.clone(),
@@ -290,7 +307,7 @@ impl HostRuntime {
                 code: None,
                 doc_path: None,
                 repo_id,
-                raw_code: Some(WSL_BACKEND_UNAVAILABLE.to_string()),
+                raw_code: Some(raw_code.to_string()),
                 raw_message: Some(message),
             }),
         );
