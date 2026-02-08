@@ -7,10 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::fs;
 
 use crate::error::AgentError;
-use crate::staging::path_bridge::{
-    build_staged_paths, build_staged_paths_for_kind, ensure_path_dir, staging_local_path,
-    PathBridgeConfig, StagingRootKind,
-};
+use crate::staging::{PathBridgeConfig, StagingLayout, StagingRootKind};
 
 #[derive(Debug, Clone)]
 pub struct StageResult {
@@ -46,19 +43,18 @@ pub async fn stage_file_for_kind(
     validate_relative_path(relative_path)?;
 
     let source_path = Path::new(repo_root).join(relative_path);
-    let staged_paths = if staging_kind == StagingRootKind::Wsl {
-        build_staged_paths(config, repo_id, relative_path)?
-    } else {
-        build_staged_paths_for_kind(config, repo_id, relative_path, staging_kind)?
-    };
-    let local_dest_path = staging_local_path(&staged_paths, staging_kind)?;
-
-    let dest_dir = ensure_path_dir(local_dest_path);
+    let layout = StagingLayout::from_config(config, staging_kind)?;
+    let staged_paths = layout.file_paths(repo_id, relative_path)?;
+    let local_dest_path = staged_paths.runtime_path.clone();
+    let dest_dir = local_dest_path
+        .parent()
+        .map(|path| path.to_path_buf())
+        .unwrap_or_else(|| local_dest_path.clone());
     fs::create_dir_all(&dest_dir)
         .await
         .map_err(|err| AgentError::internal(format!("Failed to create staging dir: {err}")))?;
 
-    let temp_path = temp_path_for(Path::new(local_dest_path));
+    let temp_path = temp_path_for(&local_dest_path);
 
     let bytes_copied = match fs::copy(&source_path, &temp_path).await {
         Ok(bytes) => bytes,
@@ -68,14 +64,14 @@ pub async fn stage_file_for_kind(
         }
     };
 
-    if let Err(err) = fs::rename(&temp_path, local_dest_path).await {
+    if let Err(err) = fs::rename(&temp_path, &local_dest_path).await {
         let _ = fs::remove_file(&temp_path).await;
         return Err(AgentError::internal(format!(
             "Failed to finalize staged file: {err}"
         )));
     }
 
-    let metadata = fs::metadata(local_dest_path)
+    let metadata = fs::metadata(&local_dest_path)
         .await
         .map_err(|err| AgentError::internal(format!("Failed to stat staged file: {err}")))?;
 
@@ -177,7 +173,7 @@ mod tests {
         let root = TempDir::new().expect("tempdir");
         let staging_root = root.path().join("staging");
         let config = PathBridgeConfig {
-            staging_host_root: "C:\\staging".to_string(),
+            staging_host_root: staging_root.to_string_lossy().to_string(),
             staging_wsl_root: Some(staging_root.to_string_lossy().to_string()),
         };
         (root, config)

@@ -50,11 +50,22 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         .info("Client connected", Some(json!({"peer": peer.to_string()})));
 
     let (mut sink, mut stream) = ws_stream.split();
-    let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Message>();
+    let (response_tx, mut response_rx) = mpsc::unbounded_channel::<Message>();
+    let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Message>();
 
     let writer_logger = ctx.logger.clone();
     let writer = tokio::spawn(async move {
-        while let Some(message) = out_rx.recv().await {
+        loop {
+            let next = tokio::select! {
+                biased;
+                response = response_rx.recv() => response,
+                event = event_rx.recv() => event,
+            };
+
+            let Some(message) = next else {
+                break;
+            };
+
             if let Err(err) = sink.send(message).await {
                 writer_logger.warn(
                     "Failed to send WebSocket message",
@@ -67,12 +78,12 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
 
     let mut broadcast_rx = ctx.event_bus.subscribe();
     let broadcast_logger = ctx.logger.clone();
-    let out_tx_clone = out_tx.clone();
+    let event_tx_clone = event_tx.clone();
     let broadcast_task = tokio::spawn(async move {
         loop {
             match broadcast_rx.recv().await {
                 Ok(text) => {
-                    if out_tx_clone.send(Message::Text(text)).is_err() {
+                    if event_tx_clone.send(Message::Text(text)).is_err() {
                         break;
                     }
                 }
@@ -88,7 +99,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         match message {
             Ok(Message::Text(text)) => {
                 if let Some(response) = handle_message(&text, &ctx).await {
-                    let _ = out_tx.send(Message::Text(response));
+                    let _ = response_tx.send(Message::Text(response));
                 }
             }
             Ok(Message::Binary(_)) => {
@@ -109,7 +120,8 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     }
 
-    drop(out_tx);
+    drop(response_tx);
+    drop(event_tx);
     broadcast_task.abort();
     let _ = writer.await;
 

@@ -14,7 +14,7 @@ use im_bundle::BundlePlan;
 
 use crate::error::AgentError;
 use crate::protocol::{BundleSelection, GlobalExcludes};
-use crate::staging::{windows_to_wsl, wsl_to_windows, PathBridgeConfig, StagingRootKind};
+use crate::staging::{PathBridgeConfig, StagingLayout, StagingRootKind};
 
 use super::git_info::GitInfo;
 
@@ -46,11 +46,8 @@ pub(crate) fn build_bundle_blocking(
     git_info: GitInfo,
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
 ) -> Result<BlockingBundleResult, AgentError> {
-    let staging_root = staging_root_path(&options.staging, options.staging_kind)?;
-    let output_dir = Path::new(staging_root)
-        .join("bundles")
-        .join(&options.repo_id)
-        .join(&options.preset_id);
+    let layout = StagingLayout::from_config(&options.staging, options.staging_kind)?;
+    let output_dir = layout.bundles_dir(&options.repo_id, &options.preset_id);
     std::fs::create_dir_all(&output_dir)
         .map_err(|err| AgentError::internal(format!("Failed to create bundle directory: {err}")))?;
 
@@ -88,14 +85,13 @@ pub(crate) fn build_bundle_blocking(
         )));
     }
 
-    let local_bundle_path = final_path.to_string_lossy().to_string();
-    let (host_path, wsl_path) = build_bundle_paths(&local_bundle_path, options.staging_kind)?;
+    let bundle_paths = layout.path_views_for_runtime_path(&final_path)?;
 
     Ok(BlockingBundleResult {
         repo_id: options.repo_id,
         preset_id: options.preset_id,
-        host_path,
-        wsl_path,
+        host_path: bundle_paths.host_path,
+        wsl_path: bundle_paths.wsl_path,
         bytes: bundle_result.bytes_written,
         file_count: bundle_result.file_count,
         built_at_iso,
@@ -173,34 +169,6 @@ fn temp_path_for(path: &Path) -> PathBuf {
         .unwrap_or_else(|| "bundle".to_string());
     let temp_name = format!("{file_name}.{suffix}.tmp");
     path.with_file_name(temp_name)
-}
-
-fn staging_root_path<'a>(
-    staging: &'a PathBridgeConfig,
-    kind: StagingRootKind,
-) -> Result<&'a str, AgentError> {
-    match kind {
-        StagingRootKind::Wsl => staging.staging_wsl_root.as_deref().ok_or_else(|| {
-            AgentError::new(
-                "MISSING_WSL_ROOT",
-                "WSL staging root is required for WSL staging kind",
-            )
-        }),
-        StagingRootKind::Host => Ok(&staging.staging_host_root),
-    }
-}
-
-fn build_bundle_paths(
-    local_path: &str,
-    staging_kind: StagingRootKind,
-) -> Result<(String, Option<String>), AgentError> {
-    match staging_kind {
-        StagingRootKind::Wsl => Ok((wsl_to_windows(local_path)?, Some(local_path.to_string()))),
-        StagingRootKind::Host => {
-            let wsl_path = windows_to_wsl(local_path);
-            Ok((local_path.to_string(), wsl_path))
-        }
-    }
 }
 
 #[cfg(test)]

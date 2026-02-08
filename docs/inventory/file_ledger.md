@@ -150,8 +150,8 @@ crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSock
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
+crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
 crates/im_agent/src/staging/mod.rs - Staging module exports
-crates/im_agent/src/staging/path_bridge.rs - Staging path bridging between WSL and host platform layouts
 crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-accessible directory
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
@@ -172,7 +172,7 @@ crates/im_host_agent/src/error_codes.rs - Shared host-agent error code constants
 crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent daemon
 crates/im_host_agent/src/main.rs - Host agent daemon entry point
 crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
-crates/im_host_agent/src/runtime/host_runtime.rs - Host runtime that routes protocol commands to Windows-local or WSL backend
+crates/im_host_agent/src/runtime/host_runtime.rs - Host runtime that routes protocol commands to host-local or WSL backend
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing

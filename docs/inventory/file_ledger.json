@@ -590,12 +590,12 @@
       "summary": "WebSocket accept loop and connection dispatch"
     },
     {
-      "path": "crates/im_agent/src/staging/mod.rs",
-      "summary": "Staging module exports"
+      "path": "crates/im_agent/src/staging/layout.rs",
+      "summary": "Central staging layout derivation for file and bundle outputs"
     },
     {
-      "path": "crates/im_agent/src/staging/path_bridge.rs",
-      "summary": "Staging path bridging between WSL and host platform layouts"
+      "path": "crates/im_agent/src/staging/mod.rs",
+      "summary": "Staging module exports"
     },
     {
       "path": "crates/im_agent/src/staging/stager.rs",
@@ -679,7 +679,7 @@
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime.rs",
-      "summary": "Host runtime that routes protocol commands to Windows-local or WSL backend"
+      "summary": "Host runtime that routes protocol commands to host-local or WSL backend"
     },
     {
       "path": "crates/im_host_agent/src/runtime/local_host_backend.rs",

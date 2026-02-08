@@ -215,6 +215,33 @@ export function useBundleState(
     persistSelection(repoId, presetId, selection);
   }, [repoId, persistSelection]);
 
+  // Refresh bundle list for a preset
+  const refreshBundles = useCallback(
+    async (presetId: string) => {
+      if (!client || connectionState.status !== "connected") return;
+
+      try {
+        const result = await sendListBundles(client, repoId, presetId);
+        setPresets((prev) => {
+          const next = new Map(prev);
+          const preset = next.get(presetId);
+          if (preset) {
+            next.set(presetId, {
+              ...preset,
+              bundles: result.bundles,
+              isBuilding: false,
+              buildProgress: null,
+            });
+          }
+          return next;
+        });
+      } catch (err) {
+        console.error("[useBundleState] refreshBundles failed:", err);
+      }
+    },
+    [client, connectionState.status, repoId]
+  );
+
   // Build bundle for a preset
   const buildBundle = useCallback(
     async (presetId: string) => {
@@ -246,7 +273,21 @@ export function useBundleState(
         // Pass global excludes from persisted config
         const globalExcludes = persistedConfig.globalExcludes;
         await sendBuildBundle(client, repoId, presetId, preset.selection, globalExcludes);
-        // Bundle list will be refreshed via bundleBuilt event
+        setPresets((prev) => {
+          const next = new Map(prev);
+          const p = next.get(presetId);
+          if (p) {
+            next.set(presetId, {
+              ...p,
+              isBuilding: false,
+              buildProgress: null,
+              freshlyBuiltAt: Date.now(),
+            });
+          }
+          return next;
+        });
+        // Keep event-driven updates, but do not depend solely on event delivery for completion.
+        void refreshBundles(presetId);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         setPresets((prev) => {
@@ -264,34 +305,7 @@ export function useBundleState(
         });
       }
     },
-    [client, connectionState.status, presets, repoId, persistedConfig.globalExcludes]
-  );
-
-  // Refresh bundle list for a preset
-  const refreshBundles = useCallback(
-    async (presetId: string) => {
-      if (!client || connectionState.status !== "connected") return;
-
-      try {
-        const result = await sendListBundles(client, repoId, presetId);
-        setPresets((prev) => {
-          const next = new Map(prev);
-          const preset = next.get(presetId);
-          if (preset) {
-            next.set(presetId, {
-              ...preset,
-              bundles: result.bundles,
-              isBuilding: false,
-              buildProgress: null,
-            });
-          }
-          return next;
-        });
-      } catch (err) {
-        console.error("[useBundleState] refreshBundles failed:", err);
-      }
-    },
-    [client, connectionState.status, repoId]
+    [client, connectionState.status, presets, repoId, persistedConfig.globalExcludes, refreshBundles]
   );
 
   // Handle agent events

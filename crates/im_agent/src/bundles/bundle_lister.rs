@@ -9,7 +9,7 @@ use tokio::fs;
 
 use crate::error::AgentError;
 use crate::protocol::BundleInfo;
-use crate::staging::{wsl_to_windows, PathBridgeConfig, StagingRootKind};
+use crate::staging::{PathBridgeConfig, StagingLayout, StagingRootKind};
 
 const MANIFEST_NAME: &str = "BUNDLE_MANIFEST.json";
 
@@ -21,19 +21,8 @@ pub struct ListBundlesOptions {
 }
 
 pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>, AgentError> {
-    let staging_root = match options.staging_kind {
-        StagingRootKind::Wsl => options.staging.staging_wsl_root.as_deref().ok_or_else(|| {
-            AgentError::new(
-                "MISSING_WSL_ROOT",
-                "WSL staging root is required for WSL staging kind",
-            )
-        })?,
-        StagingRootKind::Host => &options.staging.staging_host_root,
-    };
-    let target_dir = Path::new(staging_root)
-        .join("bundles")
-        .join(&options.repo_id)
-        .join(&options.preset_id);
+    let layout = StagingLayout::from_config(&options.staging, options.staging_kind)?;
+    let target_dir = layout.bundles_dir(&options.repo_id, &options.preset_id);
 
     let mut entries = match fs::read_dir(&target_dir).await {
         Ok(entries) => entries,
@@ -111,13 +100,9 @@ pub async fn list_bundles(options: ListBundlesOptions) -> Result<Vec<BundleInfo>
 
     let mut results = Vec::with_capacity(candidates.len());
     for (index, candidate) in candidates.into_iter().enumerate() {
-        let local_path_str = candidate.local_path.to_string_lossy().to_string();
-        let host_path = match options.staging_kind {
-            StagingRootKind::Wsl => wsl_to_windows(&local_path_str)?,
-            StagingRootKind::Host => local_path_str,
-        };
+        let views = layout.path_views_for_runtime_path(&candidate.local_path)?;
         results.push(BundleInfo {
-            host_path,
+            host_path: views.host_path,
             file_name: candidate.file_name,
             bytes: candidate.bytes,
             mtime_ms: candidate.mtime_ms,

@@ -154,20 +154,25 @@ export function useRepoState(repoId: string): RepoState {
     refreshInFlightKeyRef.current = refreshKey;
 
     setIsLoading(true);
+    const isStale = (): boolean => refreshInFlightKeyRef.current !== refreshKey;
     void (async () => {
       try {
         if (!helloState.watchedRepoIds.includes(repoId)) {
           await sendWatchRepo(client, repoId);
         }
 
+        if (isStale()) return;
         await sendRefresh(client, repoId);
+        if (isStale()) return;
         const result = await sendGetRepoTopLevel(client, repoId);
+        if (isStale()) return;
         setTopLevelDirs(result.dirs);
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});
         lastHelloRefreshKeyRef.current = refreshKey;
         setIsLoading(false);
       } catch (err: unknown) {
+        if (isStale()) return;
         console.error("[useRepoState] repo hydration failed:", err);
         setIsLoading(false);
       } finally {
@@ -176,6 +181,12 @@ export function useRepoState(repoId: string): RepoState {
         }
       }
     })();
+
+    return () => {
+      if (refreshInFlightKeyRef.current === refreshKey) {
+        refreshInFlightKeyRef.current = null;
+      }
+    };
   }, [
     repoId,
     client,
