@@ -78,6 +78,23 @@ impl HostRuntime {
         event_bus: &EventBus,
     ) -> Result<ClientHelloResult, AgentError> {
         let parsed_config = parse_app_config(&command.config)?;
+        let wsl_repo_ids: Vec<String> = parsed_config
+            .repos
+            .iter()
+            .filter(|repo| repo.root_kind() == im_agent::runtime::RepoRootKind::Wsl)
+            .map(|repo| repo.repo_id.clone())
+            .collect();
+
+        if cfg!(not(target_os = "windows")) && !wsl_repo_ids.is_empty() {
+            return Err(AgentError::new(
+                "UNSUPPORTED_REPO_ROOT",
+                format!(
+                    "WSL repo roots are not supported on this platform (repos: {})",
+                    wsl_repo_ids.join(", ")
+                ),
+            ));
+        }
+
         let had_wsl_repos_before = self.has_wsl_repos();
         self.repo_backends = build_repo_backend_map(&parsed_config);
         let has_wsl_repos_now = self.has_wsl_repos();
