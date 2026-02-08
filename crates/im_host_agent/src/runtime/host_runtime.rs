@@ -20,6 +20,7 @@ use crate::runtime::host_runtime_helpers::{
 };
 use crate::runtime::local_host_backend::LocalHostBackend;
 use crate::runtime::router::resolve_repo_backend;
+use crate::runtime::wsl_client_hello_cache::WslClientHelloCache;
 use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
 
@@ -28,6 +29,7 @@ const WSL_CLIENT_HELLO_TIMEOUT: Duration = Duration::from_secs(8);
 pub struct HostRuntime {
     local_backend: LocalHostBackend,
     repo_backends: HashMap<String, RepoBackend>,
+    wsl_client_hello_cache: WslClientHelloCache,
     wsl_client: Option<WslBackendClient>,
     wsl_port: u16,
     logger: Logger,
@@ -38,6 +40,7 @@ impl HostRuntime {
         Self {
             local_backend: LocalHostBackend::new(),
             repo_backends: HashMap::new(),
+            wsl_client_hello_cache: WslClientHelloCache::default(),
             wsl_client: None,
             wsl_port,
             logger,
@@ -110,9 +113,22 @@ impl HostRuntime {
             && should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now)
         {
             let wsl_hello = build_wsl_client_hello(&parsed_config, &command)?;
-            if let Some(wsl_result) = self.try_forward_client_hello(wsl_hello, event_bus).await {
-                watched_ids.extend(wsl_result.watched_repo_ids);
+            self.wsl_client_hello_cache.update_latest(wsl_hello)?;
+            match self
+                .replay_cached_wsl_client_hello_if_needed(event_bus)
+                .await
+            {
+                Ok(Some(wsl_result)) => watched_ids.extend(wsl_result.watched_repo_ids),
+                Ok(None) => {}
+                Err(err) => self.emit_wsl_unavailable_with_code(
+                    event_bus,
+                    err.message().to_string(),
+                    None,
+                    err.code(),
+                ),
             }
+        } else if cfg!(target_os = "windows") {
+            self.wsl_client_hello_cache.clear();
         }
 
         let mut watched_repo_ids: Vec<String> = watched_ids.into_iter().collect();
@@ -157,6 +173,8 @@ impl HostRuntime {
         match backend {
             RepoBackend::Host => self.dispatch_host_command(command, event_bus).await,
             RepoBackend::Wsl if cfg!(target_os = "windows") => {
+                self.replay_cached_wsl_client_hello_if_needed(event_bus)
+                    .await?;
                 self.forward_wsl_command(command, event_bus).await
             }
             RepoBackend::Wsl => Err(Self::unsupported_wsl_root_error(repo_id)),
@@ -203,40 +221,47 @@ impl HostRuntime {
         }
     }
 
-    async fn try_forward_client_hello(
+    async fn replay_cached_wsl_client_hello_if_needed(
+        &mut self,
+        event_bus: &EventBus,
+    ) -> Result<Option<ClientHelloResult>, AgentError> {
+        let Some(pending_hello) = self.wsl_client_hello_cache.pending() else {
+            return Ok(None);
+        };
+
+        let result = self
+            .forward_client_hello_to_wsl(pending_hello.command.clone(), event_bus)
+            .await?;
+        self.wsl_client_hello_cache
+            .mark_applied_if_latest(&pending_hello.fingerprint);
+        Ok(Some(result))
+    }
+
+    async fn forward_client_hello_to_wsl(
         &mut self,
         command: ClientHelloCommand,
         event_bus: &EventBus,
-    ) -> Option<ClientHelloResult> {
+    ) -> Result<ClientHelloResult, AgentError> {
         let wsl_client = self.wsl_client(event_bus);
         let forward = wsl_client.forward_command(UiCommand::ClientHello(command));
 
         let forwarded = match timeout(WSL_CLIENT_HELLO_TIMEOUT, forward).await {
             Ok(result) => result,
             Err(_) => {
-                self.emit_wsl_unavailable(
-                    event_bus,
-                    "Timed out waiting for WSL backend clientHello response".to_string(),
-                    None,
-                );
-                return None;
+                return Err(AgentError::new(
+                    WSL_BACKEND_TIMEOUT,
+                    "Timed out waiting for WSL backend clientHello response",
+                ));
             }
         };
 
         match forwarded {
-            Ok(UiResponse::ClientHelloResult(result)) => Some(result),
-            Ok(_) => {
-                self.emit_wsl_unavailable(
-                    event_bus,
-                    "WSL backend returned unexpected response type for clientHello".to_string(),
-                    None,
-                );
-                None
-            }
-            Err(err) => {
-                self.emit_wsl_unavailable(event_bus, err.message().to_string(), None);
-                None
-            }
+            Ok(UiResponse::ClientHelloResult(result)) => Ok(result),
+            Ok(_) => Err(AgentError::new(
+                WSL_BACKEND_UNAVAILABLE,
+                "WSL backend returned unexpected response type for clientHello",
+            )),
+            Err(err) => Err(err),
         }
     }
 
@@ -287,10 +312,6 @@ impl HostRuntime {
             repo_id,
             err.code(),
         );
-    }
-
-    fn emit_wsl_unavailable(&self, event_bus: &EventBus, message: String, repo_id: Option<String>) {
-        self.emit_wsl_unavailable_with_code(event_bus, message, repo_id, WSL_BACKEND_UNAVAILABLE);
     }
 
     fn emit_wsl_unavailable_with_code(

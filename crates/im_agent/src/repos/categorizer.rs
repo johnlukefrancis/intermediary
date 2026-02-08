@@ -3,9 +3,9 @@
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
+use super::generated_code_extensions::GENERATED_CODE_EXTENSIONS;
 use crate::error::AgentError;
 use crate::protocol::FileKind;
-use super::generated_code_extensions::GENERATED_CODE_EXTENSIONS;
 
 const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
 

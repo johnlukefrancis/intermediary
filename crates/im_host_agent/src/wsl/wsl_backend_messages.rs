@@ -39,9 +39,7 @@ pub(super) fn handle_backend_message(
     let response: ResponseEnvelope = match serde_json::from_value(value) {
         Ok(response) => response,
         Err(err) => {
-            let message = format!(
-                "WSL backend protocol mismatch while parsing response: {err}"
-            );
+            let message = format!("WSL backend protocol mismatch while parsing response: {err}");
             logger.warn(
                 "Unexpected message from WSL backend",
                 Some(serde_json::json!({"error": err.to_string(), "action": "failing_pending_requests"})),

@@ -132,9 +132,13 @@ impl RepoConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum RepoRoot {
-    Wsl { path: String },
+    Wsl {
+        path: String,
+    },
     #[serde(alias = "windows")]
-    Host { path: String },
+    Host {
+        path: String,
+    },
 }
 
 impl RepoRoot {

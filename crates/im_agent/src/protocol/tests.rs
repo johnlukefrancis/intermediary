@@ -4,8 +4,8 @@
 use serde_json::json;
 
 use super::{
-    AgentEvent, ClientHelloCommand, ClientHelloResult, RequestEnvelope, ResponseEnvelope, UiCommand,
-    UiResponse,
+    AgentEvent, ClientHelloCommand, ClientHelloResult, RequestEnvelope, ResponseEnvelope,
+    UiCommand, UiResponse,
 };
 use crate::runtime::RepoRoot;
 
@@ -59,7 +59,10 @@ fn legacy_client_hello_staging_win_root_alias() {
     match command {
         UiCommand::ClientHello(hello) => {
             assert_eq!(hello.staging_host_root, "C:\\old_staging");
-            assert_eq!(hello.staging_wsl_root.as_deref(), Some("/mnt/c/old_staging"));
+            assert_eq!(
+                hello.staging_wsl_root.as_deref(),
+                Some("/mnt/c/old_staging")
+            );
         }
         _ => panic!("expected ClientHello"),
     }
@@ -168,7 +171,37 @@ fn legacy_stage_file_result_windows_path_alias() {
     match response {
         UiResponse::StageFileResult(result) => {
             assert_eq!(result.host_path, "C:\\staging\\repo\\src\\main.ts");
-            assert_eq!(result.wsl_path.as_deref(), Some("/mnt/c/staging/repo/src/main.ts"));
+            assert_eq!(
+                result.wsl_path.as_deref(),
+                Some("/mnt/c/staging/repo/src/main.ts")
+            );
+        }
+        _ => panic!("expected StageFileResult"),
+    }
+}
+
+#[test]
+fn stage_file_result_accepts_host_and_legacy_windows_paths_together() {
+    let json = json!({
+        "type": "stageFileResult",
+        "repoId": "repo",
+        "path": "src/main.ts",
+        "hostPath": "C:\\staging\\repo\\src\\main.ts",
+        "windowsPath": "C:\\staging\\repo\\src\\main.ts",
+        "wslPath": "/mnt/c/staging/repo/src/main.ts",
+        "bytesCopied": 128,
+        "mtimeMs": 1700000000000_u64
+    });
+
+    let response: UiResponse =
+        serde_json::from_value(json).expect("parse dual-path stageFileResult");
+    match response {
+        UiResponse::StageFileResult(result) => {
+            assert_eq!(result.host_path, "C:\\staging\\repo\\src\\main.ts");
+            assert_eq!(
+                result.legacy_windows_path.as_deref(),
+                Some("C:\\staging\\repo\\src\\main.ts")
+            );
         }
         _ => panic!("expected StageFileResult"),
     }
@@ -188,12 +221,57 @@ fn legacy_build_bundle_result_windows_aliases() {
         "builtAtIso": "2026-02-07T00:00:00Z"
     });
 
-    let response: UiResponse = serde_json::from_value(json).expect("parse legacy buildBundleResult");
+    let response: UiResponse =
+        serde_json::from_value(json).expect("parse legacy buildBundleResult");
     match response {
         UiResponse::BuildBundleResult(result) => {
             assert_eq!(result.host_path, "C:\\staging\\bundles\\repo.zip");
-            assert_eq!(result.alias_host_path, "C:\\staging\\bundles\\repo_latest.zip");
-            assert_eq!(result.wsl_path.as_deref(), Some("/mnt/c/staging/bundles/repo.zip"));
+            assert_eq!(
+                result.alias_host_path,
+                "C:\\staging\\bundles\\repo_latest.zip"
+            );
+            assert_eq!(
+                result.wsl_path.as_deref(),
+                Some("/mnt/c/staging/bundles/repo.zip")
+            );
+        }
+        _ => panic!("expected BuildBundleResult"),
+    }
+}
+
+#[test]
+fn build_bundle_result_accepts_host_and_legacy_paths_together() {
+    let json = json!({
+        "type": "buildBundleResult",
+        "repoId": "repo",
+        "presetId": "context",
+        "hostPath": "C:\\staging\\bundles\\repo.zip",
+        "windowsPath": "C:\\staging\\bundles\\repo.zip",
+        "aliasHostPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "aliasWindowsPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "wslPath": "/mnt/c/staging/bundles/repo.zip",
+        "bytes": 1024,
+        "fileCount": 8,
+        "builtAtIso": "2026-02-07T00:00:00Z"
+    });
+
+    let response: UiResponse =
+        serde_json::from_value(json).expect("parse dual-path buildBundleResult");
+    match response {
+        UiResponse::BuildBundleResult(result) => {
+            assert_eq!(result.host_path, "C:\\staging\\bundles\\repo.zip");
+            assert_eq!(
+                result.legacy_windows_path.as_deref(),
+                Some("C:\\staging\\bundles\\repo.zip")
+            );
+            assert_eq!(
+                result.alias_host_path,
+                "C:\\staging\\bundles\\repo_latest.zip"
+            );
+            assert_eq!(
+                result.legacy_alias_windows_path.as_deref(),
+                Some("C:\\staging\\bundles\\repo_latest.zip")
+            );
         }
         _ => panic!("expected BuildBundleResult"),
     }
@@ -216,10 +294,72 @@ fn legacy_bundle_built_event_windows_aliases() {
     match event {
         AgentEvent::BundleBuilt(result) => {
             assert_eq!(result.host_path, "C:\\staging\\bundles\\repo.zip");
-            assert_eq!(result.alias_host_path, "C:\\staging\\bundles\\repo_latest.zip");
+            assert_eq!(
+                result.alias_host_path,
+                "C:\\staging\\bundles\\repo_latest.zip"
+            );
         }
         _ => panic!("expected BundleBuilt"),
     }
+}
+
+#[test]
+fn bundle_built_event_accepts_host_and_legacy_paths_together() {
+    let json = json!({
+        "type": "bundleBuilt",
+        "repoId": "repo",
+        "presetId": "context",
+        "hostPath": "C:\\staging\\bundles\\repo.zip",
+        "windowsPath": "C:\\staging\\bundles\\repo.zip",
+        "aliasHostPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "aliasWindowsPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "bytes": 1024,
+        "fileCount": 8,
+        "builtAtIso": "2026-02-07T00:00:00Z"
+    });
+
+    let event: AgentEvent = serde_json::from_value(json).expect("parse dual-path bundleBuilt");
+    match event {
+        AgentEvent::BundleBuilt(result) => {
+            assert_eq!(result.host_path, "C:\\staging\\bundles\\repo.zip");
+            assert_eq!(
+                result.legacy_windows_path.as_deref(),
+                Some("C:\\staging\\bundles\\repo.zip")
+            );
+            assert_eq!(
+                result.alias_host_path,
+                "C:\\staging\\bundles\\repo_latest.zip"
+            );
+            assert_eq!(
+                result.legacy_alias_windows_path.as_deref(),
+                Some("C:\\staging\\bundles\\repo_latest.zip")
+            );
+        }
+        _ => panic!("expected BundleBuilt"),
+    }
+}
+
+#[test]
+fn bundle_built_event_rejects_conflicting_host_and_legacy_paths() {
+    let json = json!({
+        "type": "bundleBuilt",
+        "repoId": "repo",
+        "presetId": "context",
+        "hostPath": "C:\\staging\\bundles\\new.zip",
+        "windowsPath": "C:\\staging\\bundles\\old.zip",
+        "aliasHostPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "aliasWindowsPath": "C:\\staging\\bundles\\repo_latest.zip",
+        "bytes": 1024,
+        "fileCount": 8,
+        "builtAtIso": "2026-02-07T00:00:00Z"
+    });
+
+    let err =
+        serde_json::from_value::<AgentEvent>(json).expect_err("conflicting paths should fail");
+    assert!(
+        err.to_string().contains("conflicting hostPath/windowsPath"),
+        "unexpected error: {err}"
+    );
 }
 
 #[test]
@@ -243,7 +383,45 @@ fn legacy_list_bundles_result_windows_path_alias() {
         serde_json::from_value(json).expect("parse legacy listBundlesResult");
     match response {
         UiResponse::ListBundlesResult(result) => {
-            assert_eq!(result.bundles[0].host_path, "C:\\staging\\bundles\\repo.zip");
+            assert_eq!(
+                result.bundles[0].host_path,
+                "C:\\staging\\bundles\\repo.zip"
+            );
+        }
+        _ => panic!("expected ListBundlesResult"),
+    }
+}
+
+#[test]
+fn list_bundles_result_accepts_host_and_legacy_paths_together() {
+    let json = json!({
+        "type": "listBundlesResult",
+        "repoId": "repo",
+        "presetId": "context",
+        "bundles": [
+            {
+                "hostPath": "C:\\staging\\bundles\\repo.zip",
+                "windowsPath": "C:\\staging\\bundles\\repo.zip",
+                "fileName": "repo.zip",
+                "bytes": 1024,
+                "mtimeMs": 1700000000000_u64,
+                "isLatestAlias": false
+            }
+        ]
+    });
+
+    let response: UiResponse =
+        serde_json::from_value(json).expect("parse dual-path listBundlesResult");
+    match response {
+        UiResponse::ListBundlesResult(result) => {
+            assert_eq!(
+                result.bundles[0].host_path,
+                "C:\\staging\\bundles\\repo.zip"
+            );
+            assert_eq!(
+                result.bundles[0].legacy_windows_path.as_deref(),
+                Some("C:\\staging\\bundles\\repo.zip")
+            );
         }
         _ => panic!("expected ListBundlesResult"),
     }
@@ -271,7 +449,10 @@ fn legacy_file_changed_staged_windows_path_alias() {
         AgentEvent::FileChanged(result) => {
             let staged = result.staged.expect("staged payload");
             assert_eq!(staged.host_path, "C:\\staging\\repo\\src\\main.ts");
-            assert_eq!(staged.wsl_path.as_deref(), Some("/mnt/c/staging/repo/src/main.ts"));
+            assert_eq!(
+                staged.wsl_path.as_deref(),
+                Some("/mnt/c/staging/repo/src/main.ts")
+            );
         }
         _ => panic!("expected FileChanged"),
     }

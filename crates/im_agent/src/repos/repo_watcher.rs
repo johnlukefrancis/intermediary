@@ -155,7 +155,10 @@ impl RepoWatcher {
     }
 }
 
-fn filter_initial_entries(entries: Vec<FileEntry>, ignore_matcher: &IgnoreMatcher) -> Vec<FileEntry> {
+fn filter_initial_entries(
+    entries: Vec<FileEntry>,
+    ignore_matcher: &IgnoreMatcher,
+) -> Vec<FileEntry> {
     entries
         .into_iter()
         .filter(|entry| {

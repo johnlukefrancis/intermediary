@@ -177,12 +177,14 @@ crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backe
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
 crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection
+crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs - Caches and fingerprints latest WSL clientHello payload for resilient bootstrap replay
 crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSocket handling and response serialization
 crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
 crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
 crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
 crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
+crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarded command timeout routing and pending-request cleanup
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 scripts/classification/code_extensions_source.mjs - Pinned baseline + local overrides for code-classification file extensions.
 scripts/classification/generate_code_classification_artifacts.mjs - Generate TS/Rust code-classification extension artifacts from a pinned source list.

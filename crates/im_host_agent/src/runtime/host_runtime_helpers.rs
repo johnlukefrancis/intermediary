@@ -37,6 +37,10 @@ pub(super) fn build_wsl_client_hello(
     })
 }
 
+pub(super) fn client_hello_fingerprint(command: &ClientHelloCommand) -> Result<String, AgentError> {
+    serde_json::to_string(command).map_err(|err| AgentError::new("INVALID_CONFIG", err.to_string()))
+}
+
 pub(super) fn parse_app_config(config: &serde_json::Value) -> Result<AppConfig, AgentError> {
     serde_json::from_value(config.clone())
         .map_err(|err| AgentError::new("INVALID_CONFIG", err.to_string()))
@@ -60,7 +64,10 @@ pub(super) fn should_forward_wsl_hello(had_wsl_before: bool, has_wsl_now: bool) 
 
 #[cfg(test)]
 mod tests {
-    use super::should_forward_wsl_hello;
+    use serde_json::json;
+
+    use super::{client_hello_fingerprint, should_forward_wsl_hello};
+    use im_agent::protocol::ClientHelloCommand;
 
     #[test]
     fn forwards_when_config_still_has_wsl_repos() {
@@ -76,5 +83,21 @@ mod tests {
     #[test]
     fn skips_wsl_hello_when_no_wsl_repos_ever_configured() {
         assert!(!should_forward_wsl_hello(false, false));
+    }
+
+    #[test]
+    fn fingerprint_changes_when_payload_changes() {
+        let baseline = ClientHelloCommand {
+            config: json!({"repos": [{"repoId": "a", "root": {"kind": "wsl", "path": "/repo"}}]}),
+            staging_host_root: "C:\\staging".to_string(),
+            staging_wsl_root: Some("/mnt/c/staging".to_string()),
+            auto_stage_on_change: Some(false),
+        };
+        let mut changed = baseline.clone();
+        changed.auto_stage_on_change = Some(true);
+
+        let baseline_fp = client_hello_fingerprint(&baseline).expect("baseline fingerprint");
+        let changed_fp = client_hello_fingerprint(&changed).expect("changed fingerprint");
+        assert_ne!(baseline_fp, changed_fp);
     }
 }

@@ -698,6 +698,10 @@
       "summary": "Repo-id command routing for host-agent backend selection"
     },
     {
+      "path": "crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs",
+      "summary": "Caches and fingerprints latest WSL clientHello payload for resilient bootstrap replay"
+    },
+    {
       "path": "crates/im_host_agent/src/server/connection.rs",
       "summary": "Host-agent per-connection WebSocket handling and response serialization"
     },
@@ -720,6 +724,10 @@
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_client.rs",
       "summary": "Persistent WebSocket client for forwarding commands/events to the WSL backend agent"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs",
+      "summary": "Unit tests for WSL backend forwarded command timeout routing and pending-request cleanup"
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_messages.rs",

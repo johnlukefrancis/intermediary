@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::error_codes::WSL_BACKEND_TIMEOUT;
 use futures_util::{SinkExt, StreamExt};
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
@@ -16,14 +17,15 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::time::{sleep, timeout};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
-use crate::error_codes::WSL_BACKEND_TIMEOUT;
 
 use super::wsl_backend_messages::{
     fail_pending_requests, handle_backend_message, wsl_unavailable_error,
 };
 
 const RECONNECT_DELAY_MS: u64 = 750;
-const FORWARD_REQUEST_TIMEOUT: Duration = Duration::from_secs(12);
+const FORWARD_REQUEST_TIMEOUT_DEFAULT: Duration = Duration::from_secs(60);
+const FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO: Duration = Duration::from_secs(12);
+const FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE: Duration = Duration::from_secs(5 * 60);
 
 #[derive(Clone)]
 pub struct WslBackendClient {
@@ -56,7 +58,8 @@ impl WslBackendClient {
     }
 
     pub async fn forward_command(&self, command: UiCommand) -> Result<UiResponse, AgentError> {
-        self.forward_command_with_timeout(command, FORWARD_REQUEST_TIMEOUT)
+        let timeout_duration = timeout_for_command(&command);
+        self.forward_command_with_timeout(command, timeout_duration)
             .await
     }
 
@@ -97,6 +100,20 @@ impl WslBackendClient {
     fn next_request_id(&self) -> String {
         let next = self.request_counter.fetch_add(1, Ordering::Relaxed) + 1;
         format!("host_wsl_req_{next}")
+    }
+}
+
+fn timeout_for_command(command: &UiCommand) -> Duration {
+    match command {
+        UiCommand::ClientHello(_) => FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO,
+        UiCommand::BuildBundle(_) => FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE,
+        UiCommand::SetOptions(_)
+        | UiCommand::WatchRepo(_)
+        | UiCommand::Refresh(_)
+        | UiCommand::StageFile(_)
+        | UiCommand::GetRepoTopLevel(_)
+        | UiCommand::ListBundles(_)
+        | UiCommand::Unknown => FORWARD_REQUEST_TIMEOUT_DEFAULT,
     }
 }
 
@@ -236,64 +253,6 @@ fn cancel_pending_request(
 ) {
     pending.remove(request_id);
 }
+
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> WslBackendClient {
-        WslBackendClient {
-            request_tx,
-            request_counter: Arc::new(AtomicU64::new(0)),
-        }
-    }
-
-    #[test]
-    fn cancel_message_removes_pending_entry() {
-        let (response_tx, _response_rx) = oneshot::channel::<Result<UiResponse, AgentError>>();
-        let mut pending = HashMap::new();
-        pending.insert("req_1".to_string(), response_tx);
-
-        cancel_pending_request(&mut pending, "req_1");
-
-        assert!(!pending.contains_key("req_1"));
-    }
-
-    #[tokio::test]
-    async fn forward_command_timeout_enqueues_cancel_message() {
-        let (request_tx, mut request_rx) = mpsc::unbounded_channel();
-        let client = client_for_test(request_tx);
-
-        let recv_task = tokio::spawn(async move {
-            let held_request = match request_rx.recv().await {
-                Some(RequestLoopMessage::Forward(request)) => request,
-                _ => panic!("expected forward request"),
-            };
-            let request_id = held_request.request_id.clone();
-
-            let cancel = request_rx.recv().await.expect("cancel message");
-            match cancel {
-                RequestLoopMessage::Cancel {
-                    request_id: cancel_id,
-                } => {
-                    assert_eq!(cancel_id, request_id);
-                }
-                _ => panic!("expected cancel message"),
-            }
-
-            drop(held_request);
-        });
-
-        let err = client
-            .forward_command_with_timeout(UiCommand::Unknown, Duration::from_millis(10))
-            .await
-            .expect_err("timeout expected");
-        assert_eq!(err.code(), WSL_BACKEND_TIMEOUT);
-        assert!(
-            err.message().contains("timed out"),
-            "unexpected message: {}",
-            err.message()
-        );
-
-        recv_task.await.expect("receiver task");
-    }
-}
+mod tests;
