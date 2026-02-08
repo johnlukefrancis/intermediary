@@ -1,5 +1,5 @@
 # Agent Bundle Commands
-Updated on: 2026-02-06
+Updated on: 2026-02-08
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -24,6 +24,14 @@ cargo build -p im_host_agent --bin im_host_agent --release
 ```
 
 3) Run the Tauri build as usual. The pre-build validation copies `target/release/im_host_agent(.exe)` into `src-tauri/resources/agent_bundle/` when needed and verifies bundle/version consistency.
+
+## macOS Signing/Notarization Note
+
+When shipping macOS builds, treat `im_host_agent` as a bundled helper binary that must be part of the app-signing and notarization workflow.
+
+- Include `src-tauri/resources/agent_bundle/im_host_agent` in signing inputs.
+- Ensure notarization covers the final packaged app that contains this helper.
+- If helper signing/notarization is skipped, runtime launch can fail with macOS permission errors even when local debug builds work.
 
 ## Output
 

@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-02-06
+Updated on: 2026-02-08
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -29,7 +29,7 @@ Depends on: ADR-000, ADR-007
 
 ## P2 — Degraded but usable
 
-*None*
+- 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
 
 ---
 

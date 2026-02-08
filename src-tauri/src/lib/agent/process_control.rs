@@ -4,6 +4,7 @@
 use super::install::AgentBundlePaths;
 use crate::commands::agent_probe::probe_port_blocking;
 use crate::paths::wsl_convert::windows_to_wsl_path;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::process::{Child, Command};
 use std::time::{Duration, Instant};
@@ -43,7 +44,7 @@ pub fn spawn_host_agent_process(
             path_to_string(&bundle.log_dir_host)?,
         )
         .spawn()
-        .map_err(|err| format!("Failed to spawn host agent: {err}"))
+        .map_err(|err| format_host_spawn_error(&bundle.host_agent_binary_host, err))
 }
 
 pub fn spawn_wsl_agent_process(
@@ -146,4 +147,19 @@ fn path_to_string(path: &Path) -> Result<String, String> {
     path.to_str()
         .ok_or_else(|| "Path contains invalid UTF-8".to_string())
         .map(|value| value.to_string())
+}
+
+fn format_host_spawn_error(binary_path: &Path, err: std::io::Error) -> String {
+    #[cfg(unix)]
+    if err.kind() == ErrorKind::PermissionDenied {
+        return format!(
+            "Failed to spawn host agent: permission denied (binary: {}). Likely causes: executable bit missing, macOS quarantine attribute, or signing/notarization misconfiguration for bundled helper binaries. Original error: {err}",
+            binary_path.display()
+        );
+    }
+
+    format!(
+        "Failed to spawn host agent (binary: {}): {err}",
+        binary_path.display()
+    )
 }

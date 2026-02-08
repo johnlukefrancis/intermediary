@@ -4,6 +4,8 @@
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 const AGENT_BUNDLE_DIR: &str = "agent_bundle";
 const AGENT_INSTALL_DIR: &str = "agent";
@@ -376,9 +378,11 @@ fn build_bundle_paths(
     } else {
         None
     };
+    let host_agent_binary_host = agent_dir_host.join(HOST_AGENT_BINARY_FILE);
+    ensure_host_agent_permissions(&host_agent_binary_host)?;
 
     Ok(AgentBundlePaths {
-        host_agent_binary_host: agent_dir_host.join(HOST_AGENT_BINARY_FILE),
+        host_agent_binary_host,
         agent_dir_host,
         log_dir_host,
         wsl_agent_binary_host,
@@ -388,4 +392,20 @@ fn build_bundle_paths(
 
 fn requires_wsl_binary() -> bool {
     cfg!(target_os = "windows")
+}
+
+#[cfg(unix)]
+fn ensure_host_agent_permissions(host_agent_binary: &Path) -> Result<(), String> {
+    let permissions = fs::Permissions::from_mode(0o755);
+    fs::set_permissions(host_agent_binary, permissions).map_err(|err| {
+        format!(
+            "Failed to set executable permissions on host agent binary ({}): {err}",
+            host_agent_binary.display()
+        )
+    })
+}
+
+#[cfg(not(unix))]
+fn ensure_host_agent_permissions(_host_agent_binary: &Path) -> Result<(), String> {
+    Ok(())
 }
