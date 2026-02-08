@@ -1,288 +1,283 @@
-## Goal in user-visible terms
+You’re right to insist on “not hopefully.” Right now you’ve *mostly* made the UI + Tauri side “host‑aware”, but the **Rust agent core still leaks “Windows path semantics” into the places that must be “host semantics”**. That’s the exact kind of thing that will “work for me on Windows” and then faceplant instantly on macOS.
 
-**In scope**
-
-* The app runs on macOS and behaves like Windows: add a repo, see file changes, drag files/bundles out, build bundles, open folders.
-* Repo roots stay in their native world:
-
-  * mac repos stay mac paths.
-  * Windows repos stay Windows paths.
-  * WSL repos stay WSL paths.
-* The UI never needs to “pretend” a Windows repo is a WSL repo.
-
-**Out of scope (for this pass)**
-
-* Mac App Store sandbox correctness (security-scoped bookmarks, entitlements). You can ship unsigned/notarized first; sandboxing is a separate boss fight.
-* Linux desktop support (but we’ll keep the architecture open to it).
-
-This aligns with the architecture-first contract: fix the ownership model instead of patching symptoms. 
+Below is a static audit of the remaining risk surface, then a single end‑state design that makes macOS work *first try*, and finally a PR‑ladder of prompts to get it over the line.
 
 ---
 
-## Behavior table
+## Static audit: what will still break on macOS (and why)
 
-| Situation                 | Input                                                                 | Expected visible behavior                                                                                                         |
-| ------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Add repo on mac           | User picks `/Users/jl/code/myrepo`                                    | Repo appears immediately, file changes stream, no conversion step, no “WSL agent” drama.                                          |
-| Add repo on Windows drive | User picks `C:\UnrealProjects\InfiniteAbyss`                          | Repo is handled as **host-native**, not converted to `/mnt/c/...`. The system keeps running.                                      |
-| Add repo in WSL           | User picks `\\wsl.localhost\Ubuntu\home\jl\code\repo` (or equivalent) | Repo is stored/handled as **WSL-native**. Host agent routes it to WSL subagent (or whatever your design is), UI still just works. |
-| Drag file / bundle on mac | Drag a row                                                            | Drag uses a **mac absolute path** to a staged file. No `windowsPath` fiction.                                                     |
-| “Open folder”             | Click folder icon                                                     | Finder opens on mac; Explorer opens on Windows. No conversion gymnastics.                                                         |
+### P0: Rust agent still assumes “host == Windows”
 
----
+Your TypeScript protocol + config are already “host/wsl” flavored (and include compatibility fallbacks), and the PRD explicitly describes **stagingHostRoot** and host‑side paths as first‑class concepts. 
 
-## Invariants you need (non-negotiable, or you’ll relapse)
+But the Rust agent layer still carries:
 
-1. **Repo path authority is explicit**
+* `RepoRootKind::Windows` as the “host backend”
+* `windowsPath` as the canonical output path field
+* “Windows path join” logic that hardcodes backslashes and drive letter logic
 
-   * Every repo config must declare whether its root is **host-native** or **WSL-native**.
-   * No implicit conversion and no “store only WSL path and hope”. That’s the bug factory you’re escaping.
+On macOS, **a host path is POSIX** (`/Users/...`). Any place that:
 
-2. **UI speaks in “host paths” only**
+* appends `\\files` or
+* joins with `\\` or
+* tries to convert host paths “Windows→WSL”
 
-   * Anything draggable must resolve to a host-OS path (Windows or mac) because the desktop drag system lives there.
+…is going to generate paths that *don’t exist* on macOS, or worse, create directories literally containing backslashes in their names.
 
-3. **WSL paths are internal metadata**
+This is the single largest reason “mac works, hopefully” is not true yet.
 
-   * Useful for bridging, staging, and debugging on Windows, but not a UI-level contract.
+### P0: Staging root semantics are inconsistent across commands
 
-4. **Staging is always on the host filesystem**
+Your PRD specifies a clean staging layout:
 
-   * On Windows, WSL writes into staging via `/mnt/<drive>/...`.
-   * On mac, staging is just… a folder. Like nature intended.
+* `staging/files/<repoId>/<relativePath>`
+* `staging/bundles/<repoId>/<presetId>/<bundleId>.zip` 
 
-5. **Protocol fields do not encode OS lies**
+If *any* command computes staging paths differently (e.g., “staging root already includes `/files`”), you’ll get:
 
-   * Stop calling it `windowsPath` if it’s going to be used on mac. That naming rot spreads everywhere.
+* “bundle built but listBundles returns none”
+* “stageFile succeeds but drag path doesn’t exist”
+* “mac uses wrong separators and all staging ops go to nonsense paths”
 
-These are the contract-level fixes ADR-007 is talking about. 
+Even if it “works” today for your workflow, this kind of inconsistency is exactly what will turn into nondeterministic bugs on a machine you can’t debug on.
 
----
+### P0: macOS sidecar execution can fail with “permission denied” unless you’re explicit
 
-## The one correct design for mac support (and also fixing Windows properly)
+On macOS it’s common to hit “Permission denied (os error 13)” when spawning bundled helper binaries/sidecars if executable bits aren’t correct or quarantining/codesigning isn’t handled. ([GitHub][1])
 
-### Design: Host-first agent contract + platform-neutral paths
+Even if you *think* the exec bit is preserved, you want the Tauri install step to **force executable perms** on unix targets after copying into AppLocalData.
 
-**Core move:** The UI’s “agent” contract becomes **host-native**. WSL becomes an implementation detail behind that contract (Windows only). This is consistent with the “host app owns drag-out + staging” architecture described in the system overview, but removes the v0 mistake where Windows repos were forced through WSL.
+Also, when you eventually ship, macOS signing/notarization rules apply to embedded binaries/sidecars too. ([Tauri][2])
 
-### What changes
+### P1: Drag-out is probably fine, but only if host paths are real
 
-#### 1) Config schema: replace `wslPath` with a `repoRoot` union
+Your drag approach is “startDrag on mousedown” using a plugin, not DOM drag events — good. The underlying drag library supports macOS. ([GitHub][3])
+But drag-out will only work if:
 
-Today your RepoConfig is basically “everything is WSL”. That’s why mac is currently impossible without lying.
+* the returned `hostPath` points to a real, existing file on disk
+* you didn’t accidentally return a “Windows-shaped” path on mac
 
-**New shape (conceptual):**
-
-* `repoRoot.kind: "host" | "wsl"`
-* If `host`: `hostPath` (Windows path on Windows; POSIX path on mac)
-* If `wsl`: `wslPath` (Linux path, like `/home/jl/code/repo`)
-
-And while you’re here:
-
-* Rename `outputWindowsRoot` → `outputHostRoot` (or similar). On mac it’s not Windows. Shocking, I know.
-
-You’ll also need a migration because your persisted config currently stores repos as `{ wslPath }`. That migration is straightforward:
-
-* If a stored path starts with `/mnt/<drive>/...`, migrate it to `host` + convert to `C:\...`.
-* If it starts with `/home/...` or `/...` (but not `/mnt/<drive>`), keep it as `wsl`.
-  That’s an architecture fix, not a patch.
-
-This is TypeScript contract work, so follow ADR-005 (no type weakening). 
-
-#### 2) Protocol: rename “windowsPath” to “hostPath”
-
-Your protocol types currently hardcode Windows naming in the payloads (`windowsPath`, `stagingWinRoot`, `dragIconWindowsPath`). That’s not “Windows-first”, that’s “Windows-only”.
-
-For mac support:
-
-* `StagedInfo.windowsPath` → `StagedInfo.hostPath`
-* `BundleBuiltEvent.windowsPath` → `hostPath`
-* `ClientHelloCommand.stagingWinRoot` → `stagingHostRoot`
-* `AppPaths.dragIconWindowsPath` → `dragIconHostPath`
-* Keep `stagingWslRoot` only as an **optional** field, and only when running on Windows with WSL support.
-
-This change touches:
-
-* TS protocol (`app/src/shared/protocol.ts`)
-* Rust agent protocol structs (`crates/im_agent/...`) and whatever `im_host_agent` uses
-
-Yes, this is one of those “rename everything” refactors. It’s still the right move, because it eliminates an entire class of confusion bugs permanently.
-
-#### 3) Tauri backend paths: make `AppPaths` platform-neutral
-
-Right now `AppPaths` is explicitly Windows and does Windows validation and always computes WSL conversions. That won’t survive a mac build cleanly.
-
-You need:
-
-* `stagingHostRoot` (always)
-* `logDir` (always)
-* `dragIconHostPath` (always)
-* `stagingWslRoot` (only on Windows, only if you actually need WSL bridging)
-
-Also the output override validator must become OS-aware:
-
-* Windows: allow only drive paths (like today)
-* mac: allow absolute POSIX paths
-
-This is Rust runtime boundary work, so ADR-008/009 apply.
-
-#### 4) UI: remove WSL assumptions from “Add repo”, “Open folder”, and drag
-
-Obvious but non-trivial because it’s wired everywhere:
-
-* **Add repo** cannot always call `convert_windows_to_wsl`. On mac it’s nonsense. On Windows it’s only valid for UNC `\\wsl...` selections.
-* **Open folder** cannot go `wslPath -> convert_wsl_to_windows -> explorer`. On mac it’s Finder, and for host repos it’s direct.
-* **Drag** must drag `hostPath`, not `windowsPath`.
-
-#### 5) Supervisor: mac can’t “start WSL”
-
-Your current agent supervisor is explicitly “WSL agent supervisor”, including running `wsl.exe`. mac needs a host-agent supervisor.
-
-Assuming `im_host_agent` exists, the mac work is:
-
-* Supervisor launches `im_host_agent` sidecar on mac (and Windows too)
-* WSL agent launching becomes either:
-
-  * internal to `im_host_agent` (cleaner), or
-  * kept in Tauri but only used on Windows (messier, and duplicates ownership)
-
-Either way, mac does not touch WSL at all.
-
-#### 6) “Open in file manager” must be cross-platform
-
-`open_in_file_manager` is Windows-only right now. mac needs Finder open (typically via `open <path>`), but do it in a platform module.
+So drag-out is downstream of the path model refactor.
 
 ---
 
-## How big is the mac refactor, really?
+## The one correct end-state design
 
-Assuming `im_host_agent` is implemented and behaves correctly on Windows, mac support is:
+This is the contract that makes macOS “just work”, keeps Windows+WSL working, and leaves Linux as “basically free” later.
 
-### Big refactors (the “ass crack bastard” part)
+### Canonical concepts
 
-1. **Config schema migration** from “WSL-only paths” to “path authority union”
-2. **Protocol rename and normalization** from Windows-specific names to host-neutral names
-3. **Tauri AppPaths rewrite** to platform-neutral paths and platform validation
-4. **Supervisor split** into host-agent supervisor (all platforms) + optional WSL support (Windows only)
+**RepoRoot.kind**
 
-These are structural changes that touch a lot of files, but they’re mechanical and testable.
+* `host` = path that is native to the host OS (Windows drive path on Windows; POSIX on macOS/Linux)
+* `wsl` = POSIX path inside WSL/Linux fs (Windows-only feature)
 
-### Smaller mac-specific work
+**Protocol paths**
 
-* Finder open implementation
-* UI hiding/adjusting WSL-only controls (distro override, WSL banner wording, etc.)
-* Packaging: include the mac `im_host_agent` binary in the bundle resources
+* Always return `hostPath`
+* Return `wslPath` only when the backend is WSL and you actually have a meaningful WSL-side path
 
-### Biggest mac risk (not code, but reality)
+**Staging roots**
 
-macOS privacy and sandbox behavior can block filesystem watching/access unless the app is signed correctly or the user granted permissions. If you distribute normally (not App Store sandbox), you can usually operate on user-selected folders. Still: expect some “why won’t it watch Desktop” tickets.
+* `stagingHostRoot` is always the base staging root, and subdirs are added *by the agent*:
 
----
+  * `files/…`
+  * `bundles/…`
+  * (later `state/…`)
+* `stagingWslRoot` is optional and only meaningful on Windows when a WSL backend is used
 
-## Rejected (noncompliant) approaches
+This matches the PRD’s intent and removes ambiguity.
 
-1. **“Just convert mac paths into some fake Windows/WSL path”**
+### Behavior table
 
-   * Violates the path-authority invariant.
-   * Creates the same category of bug you’re fixing right now, but with different punctuation.
+| Scenario                                            | Expected behavior                                                                                     | Where enforced                                      |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| macOS user adds `/Users/alice/Projects/foo`         | Classified as `host`, watched bg outputs use POSIX paths, drag-out works                              | Host path model in Rust + consistent staging layout |
+| Windows user adds `C:\UnrealProjects\InfiniteAbyss` | Classified as `host`, watched by host backend, no WSL conversions invoked                             | RepoRoot.kind routing                               |
+| Windows user adds WSL repo `/home/alice/code/foo`   | Classified as `wsl`, routed to WSL backend, outputs include `hostPath` (Windows) + optional `wslPath` | WSL backend returns dual paths; host agent routes   |
 
-2. **“Keep `windowsPath` fields and just shove mac paths into them”**
+### Invariants (non-negotiable)
 
-   * Works until it doesn’t.
-   * Bakes semantic lies into your protocol forever, guaranteeing future regressions when you add Linux or do any debugging.
+* **`hostPath` is always a host-native path string**. Never “converted to WSL”. Ever.
+* **Only the WSL backend does Windows↔WSL bridging**, and only to produce `hostPath` for the UI.
+* **All staging path derivation goes through one shared “staging layout” module** so stage/list/bundle/alias can’t drift.
+* On non-Windows platforms, `wsl` repo roots are explicitly rejected with a clear error (no weird timeouts).
 
-ADR-007 says no. 
-
----
-
-## Tradeoffs
-
-* **Pro:** Once the protocol/config are host-neutral, mac becomes “just another host”. This is the exact leverage you want.
-* **Pro:** Fixes Windows-drive repos correctly too, because both problems are the same root contract violation.
-* **Con:** You will touch a wide swath of TS and Rust. It’s not a “small diff” situation.
-* **Con:** You must write and test a config migration carefully or you’ll strand existing users’ repo lists.
-* **Con:** mac distribution will raise permissions/signing questions sooner than Windows did.
+This is exactly the kind of architecture-first “fix the heart of the issue” approach you were demanding.
 
 ---
 
-## Agent prompt ladder (designed for the end state)
+## How “ass crack bastard” is the refactor?
 
-These are written assuming your working tree includes `im_host_agent` already, but they don’t depend on it being perfect. They focus on the host-neutral contract that mac needs.
+It’s big *conceptually*, but **contained** in code:
 
-### Prompt 1: Protocol + TS config refactor (path authority + hostPath naming)
+* Rust agent protocol + config types (rename + serde aliasesderivation (centralize, fix layout)
+* Host agent backend naming (`LocalWindowsBackend` → `LocalHostBackend`) and routing
+* Tauri install step: set executable perms on mac/Linux
 
-branch: `jl/host_path_authority_protocol_ts`
+The UI already has compatibility shims and host/wsl config shape, so UI changes should be small or even optional. This aligns with the repo’s “native contracts + rails” style: fix the contract, then make adapters minimal.
+
+---
+
+## Prompts to execute (PR ladder)
+
+These are written so you can hand them to Codex/Claude and let them grind.
+
+### PR 1 — Rust protocol + config becomes host-iases)
 
 ```text
-Task: Refactor the UI-side config + protocol to be host-OS neutral (support macOS) by introducing explicit repo path authority and replacing windowsPath naming with hostPath.
-Context: Intermediary currently treats repos as WSL-only (RepoConfig.wslPath) and protocol payloads are Windows-named. macOS support requires host-native repo roots and host-native staged paths. Assume im_host_agent exists and will accept the updated protocol.
-Refs: {@docs/system_overview.md, @docs/prd.md, @docs/compliance/adr_005_typescript_native_contracts_and_rails.md, @docs/compliance/adr_007_architecture_first_execution.md, @app/src/shared/config/repo_config.ts, @app/src/shared/config/persisted_config.ts, @app/src/shared/config/persisted_config_migrations.ts, @app/src/shared/protocol.ts, @app/src/hooks/use_drag.ts, @app/src/hooks/use_client_hello.ts, @app/src/components/add_repo_button.tsx, @app/src/components/tab_bar.tsx, @app/src/components/options_overlay.tsx, @app/src/types/app_paths.ts}
+Task: Make Rust agent protocol + config host-native (host/wsl), with serde aliases for legacy windows/wsl field names.
+
+Context:
+- TS already uses hostPath/aliasHostPath and host/wsl repo roots, with fallbacks.
+- PRD expects stagingHostRoot and host-side staging layout. Align Rust to that contract.
+- Goal: macOS host backend can represent POSIX host roots without “Windows semantics”.
+
+Refs:
+- @crates/im_agent/src/runtime/config.rs
+- @crates/im_agent/src/protocol/commands.rs
+- @crates/im_agent/src/protocol/responses.rs
+- @crates/im_agent/src/protocol/events.rs
+- @crates/im_host_agent/src/runtime/host_runtime_helpers.rs (parse_app_config)
+- @crates/im_host_agent/src/runtime/repo_backend.rs (backend mapping)
+
 Deliver:
-- Update RepoConfig to use an explicit repo root authority union (host vs wsl) instead of only wslPath.
-- Add a persisted config migration that converts existing repos: /mnt/<drive>/... => host repo root (Windows path), native Linux paths => wsl repo root.
-- Rename protocol fields in TS from windowsPath/stagingWinRoot/dragIconWindowsPath to hostPath/stagingHostRoot/dragIconHostPath; keep stagingWslRoot optional.
-- Update UI codepaths that stage/drag/open folders to use hostPath semantics.
-- Keep types tight; no type weakening. Update any call sites and helper types accordingly.
-Constraints: Respect ADR-000 modularity; no band-aids per ADR-007; follow ADR-005 TypeScript rails; update docs only if needed and follow docs workflow; Skills: architecture-first, typescript-native-rails, docs-discipline, workflow-closeout.
+1) Update Rust AppConfig repo root model:
+   - RepoRootKind becomes { Host, Wsl } (or equivalent).
+   - Support deserializing legacy "windows" as alias of "host".
+   - Support deserializing legacy "windowsPath" as alias of "hostPath".
+   - Reject WSL roots on non-Windows at validation layer (clear error).
+2) Update Rust protocol payloads:
+   - ClientHelloCommand takes stagingHostRoot (required) and stagingWslRoot (optional),
+     but accept legacy stagingWinRoot/stagingWslRoot as aliases.
+   - StageFile/BuildBundle results and events use hostPath (+ optional wslPath) as canonical.
+   - Accept legacy windowsPath/aliasWindowsPath fields via serde aliases for backward compatibility.
+3) Ensure host agent can parse AppConfig with the new kinds.
+4) Compile on Windows + non-Windows (no cfg breakage).
+
+Constraints:
+- Skills: rust-runtime-rails, typescript-native-rails, architecture-first, modularity
+- Keep files small; if a file blows past ~200 LOC, split per modular discipline.
+- Errors must be explicit and actionable (no silent fallbacks).
+- Do not change UI in this PR.
+- Closeout: update file ledger if required and run checks per @docs/commands/workflow/closeout_checks.md.
 ```
 
-### Prompt 2: Tauri backend paths become platform-neutral (mac-ready AppPaths)
+Why this matters: it removes the “host==Windows” lie from the data model, which is step 1 for macOS.
 
-branch: `jl/platform_neutral_app_paths`
+---
+
+### PR 2 — One staging layout, used everywhere (POSIX-safe)
 
 ```text
-Task: Make src-tauri AppPaths + related commands platform-neutral so the app can run on macOS (host paths always, optional WSL staging paths only on Windows).
-Context: Current AppPaths logic is Windows-specific (outputWindowsRoot validation, stagingWindowsRoot, stagingWslRoot always computed). macOS needs host-only paths and cannot depend on wsl.exe. UI will rely on hostPath naming and stagingHostRoot.
-Refs: {@docs/compliance/adr_008_rust_runtime_contracts_and_error_handling.md, @docs/compliance/adr_009_rust_concurrency_and_io_boundary_rules.md, @docs/compliance/adr_007_architecture_first_execution.md, @src-tauri/src/lib/paths/app_paths.rs, @src-tauri/src/lib/paths/wsl_convert.rs, @src-tauri/src/lib/commands/paths.rs}
+Task: Centralize staging path derivation into a single staging layout module that works on macOS/Linux (POSIX) and Windows, and update all staging/bundle/list operations to use it.
+
+Refs:
+- @crates/im_agent/src/staging/mod.rs
+- @crates/im_agent/src/staging/stager.rs
+- @crates/im_agent/src/staging/path_bridge.rs (likely to replace/delete)
+- @crates/im_agent/src/bundles/bundle_builder_blocking.rs
+- @crates/im_agent/src/bundles/bundle_builder.rs
+- @crates/im_agent/src/bundles/bundle_lister.rs
+- @docs/prd.md (staging layout contract)
+
 Deliver:
-- Refactor AppPaths struct + resolver to expose stagingHostRoot + dragIconHostPath on all platforms.
-- Make stagingWslRoot optional and only resolved on Windows builds (or only when needed).
-- Replace outputWindowsRoot with outputHostRoot (platform-appropriate validation).
-- Update Tauri commands in @src-tauri/src/lib/commands/paths.rs to match the new API.
-- Ensure no panics/unwraps across command boundaries; errors are actionable strings.
-Constraints: Respect ADR-000 modularity; no band-aids per ADR-007; Rust rails ADR-008/009; Skills: architecture-first, rust-runtime-rails, workflow-closeout.
+1) Implement a staging layout module that derives:
+   - runtime filesystem paths for writing (PathBuf) from stagingHostRoot or stagingWslRoot depending on runtime
+   - hostPath strings for returning to UI (host-native)
+   - optional wslPath strings for WSL backend only
+   The module must explicitly encode:
+   - files/<repoId>/<relativePath>
+   - bundles/<repoId>/<presetId>/<bundleId>.zip
+2) Remove any logic that treats staging root as already including "/files" or "\\files".
+3) Ensure stage_file, build_bundle, list_bundles all agree on the same directories.
+4) Add unit tests (on non-Windows these approximate macOS) to prove:
+   - POSIX host roots produce POSIX output paths (no backslashes)
+   - Windows host roots still produce correct windows hostPath strings
+   - WSL backend still produces valid hostPath via conversion when stagingWslRoot is used
+5) Keep behavior identical on Windows for existing users (except “now it’s correct + consistent”).
+
+Constraints:
+- Skills: rust-runtime-rails, modularity, review-lens
+- Do not introduce OS-dependent string concatenation for POSIX paths; use PathBuf joins for runtime fs paths.
+- Legacy support: if old inputs exist, accept them; but outputs should follow the new protocol contract.
+- Closeout per @docs/commands/workflow/closeout_checks.md.
 ```
 
-### Prompt 3: Cross-platform “open folder” and remove WSL-only assumptions
+This PR is the “macOS will actually work” moment, because it kills the backslash/path conversion poison at the source.
 
-branch: `jl/cross_platform_open_folder`
+---
 
-```text
-Task: Make open_in_file_manager cross-platform (Windows Explorer + macOS Finder) and update frontend usage to stop depending on WSL-to-Windows conversion for host repos.
-Context: Current open_in_file_manager is Windows-only and tab bar assumes repos are WSL paths requiring conversion. With path authority, host repos open directly; WSL repos open via appropriate host-visible path if available.
-Refs: {@docs/compliance/adr_005_typescript_native_contracts_and_rails.md, @src-tauri/src/lib/commands/file_manager.rs, @app/src/components/tab_bar.tsx, @app/src/components/options_overlay.tsx}
-Deliver:
-- Implement cross-platform open_in_file_manager behavior (Windows + macOS).
-- Update the UI so “open folder” uses host repo root directly when repo is host-authority; avoid WSL conversion unless the repo is actually WSL-authority and needs it.
-Constraints: Respect ADR-000 modularity; no band-aids per ADR-007; Skills: typescript-native-rails, rust-runtime-rails, workflow-closeout.
-```
-
-### Prompt 4: Supervisor refactor for mac (spawn host agent, WSL optional)
-
-branch: `jl/host_agent_supervisor_macos`
+### PR 3 — Host agent backend naming + routing becomes host/wsl (no Windows leakage)
 
 ```text
-Task: Refactor the agent supervisor to support macOS by supervising the host agent as the primary daemon; keep WSL launching as Windows-only and/or delegated to the host agent.
-Context: Current supervisor explicitly launches wsl.exe and installs a WSL agent bundle. macOS needs a host-agent supervisor and cannot launch WSL. Assume im_host_agent exists and should be the UI-facing WebSocket server.
-Refs: {@docs/system_overview.md, @docs/compliance/adr_007_architecture_first_execution.md, @docs/compliance/adr_008_rust_runtime_contracts_and_error_handling.md, @docs/compliance/adr_009_rust_concurrency_and_io_boundary_rules.md, @src-tauri/src/lib/agent/supervisor.rs, @src-tauri/src/lib/agent/install.rs, @src-tauri/src/lib/commands/agent_control.rs, @app/src/hooks/agent/use_agent_supervisor.ts, @app/src/components/options/agent_section.tsx}
+Task: Update im_host_agent to treat the local backend as "Host" (not "Windows") and route repos by {host,wsl} kinds.
+
+Refs:
+- @crates/im_host_agent/src/runtime/local_windows_backend.rs
+- @crates/im_host_agent/src/runtime/host_runtime.rs
+- @crates/im_host_agent/src/runtime/repo_backend.rs
+- @crates/im_host_agent/src/runtime/host_runtime_helpers.rs
+- @crates/im_host_agent/src/server/dispatch.rs
+- @crates/im_host_agent/src/wsl/wsl_backend_client.rs
+
 Deliver:
-- Introduce a platform-neutral supervisor contract and macOS implementation that spawns the host agent.
-- Gate WSL-specific fields (like distro override) behind Windows-only logic in both backend and UI.
-- Update any resources/installation expectations so mac builds can bundle the host agent correctly.
-Constraints: Respect ADR-000 modularity; no band-aids per ADR-007; Rust rails ADR-008/009; Skills: architecture-first, rust-runtime-rails, typescript-native-rails, docs-discipline, workflow-closeout.
+1) Rename/refactor LocalWindowsBackend -> LocalHostBackend (file + type names).
+2) RepoBackend enum becomes { Host, Wsl } and mapping uses the new RepoRootKind.
+3) HostRuntime uses AgentRuntime configured for Host roots and Host staging kind.
+4) Ensure on macOS/Linux:
+   - host backend is used
+   - WSL backend is never constructed/spawned
+   - if config contains WSL repos, return a clear error early (no hangs)
+5) Confirm all WebSocket routing still works: stageFile/buildBundle/listBundles/events.
+
+Constraints:
+- Skills: rust-runtime-rails, architecture-first, modularity
+- No “special-casing mac by pretending it’s Windows”.
+- Closeout per @docs/commands/workflow/closeout_checks.md.
 ```
 
 ---
 
-## Bottom line
+### PR 4 — macOS robustness: executable perms + signing notes
 
-Mac support is not “extra work”. It’s the accountability audit for whether your new path authority model is real.
+```text
+Task: Harden macOS/Linux execution of the host agent binary and improve failure diagnostics.
 
-If you do the host-neutral protocol + config + AppPaths refactor properly, mac becomes:
+Refs:
+- @src-tauri/src/lib/agent/install.rs
+- @src-tauri/src/lib/agent/process_control.rs
+- @docs/commands/agent_bundle.md
+- @docs/known_issues.md (optional update)
 
-* “spawn host agent”
-* “watch posix paths”
-* “drag staged host paths”
-* “open Finder”
+Deliver:
+1) After copying agent binaries into AppLocalData, ensure on unix targets:
+   - host agent binary has executable permissions (chmod 755 equivalent).
+2) If spawning host agent fails with PermissionDenied on unix:
+   - log a high-signal error explaining likely causes (missing exec bit, quarantine, signing).
+3) Update @docs/commands/agent_bundle.md to include a macOS note:
+   - helper binaries must be included in signing/notarization workflows (Tauri sidecar rules).
+4) Add a known issue entry if you cannot fully guarantee notarization behavior yet.
 
-Which is exactly what software is supposed to feel like before humans get involved.
+Constraints:
+- Skills: rust-runtime-rails, docs-discipline, tauri-security-baseline
+- Do not add inline runnable commands to docs outside docs/commands/**.
+- Closeout per @docs/commands/workflow/closeout_checks.md.
+```
+
+This is the “prevent the classic mac ‘os error 13’ rage spiral” PR. The web evidence that this is a real failure mode is very solid. ([GitHub][1])
+
+---
+
+## What you get after these PRs
+
+* macOS runs host agent, watches host repos, stages files, builds bundles, drags out — using real POSIX paths.
+* Windows still works for host repos and WSL repos, but the model is now explicit and consistent.
+* Protocol aligns with the PRD: host-native first, WSL optional.
+* You stop depending on the TS “legacy fallback” as a core system function (it becomes actual backward-compat only).
+
+If you execute only one thing: **PR 2 (staging layout centralization)** is the critical “make mac ns safest to do PR 1 → PR 2 → PR 3 in order, because the type model should lead the filesystem behavior. That’s straight-up architecture-first discipline.
+
+[1]: https://github.com/tauri-apps/tauri/issues/4653?utm_source=chatgpt.com "Getting PermissionDenied when using Sidecar in MacOS"
+[2]: https://v2.tauri.app/distribute/sign/macos/?utm_source=chatgpt.com "macOS Code Signing"
+[3]: https://github.com/gsidhu/tauri-drag?utm_source=chatgpt.com "gsidhu/tauri-drag: Draggable for GUI apps on Windows ..."
