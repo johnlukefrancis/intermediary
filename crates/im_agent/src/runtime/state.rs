@@ -92,39 +92,53 @@ impl AgentRuntime {
             self.recent_files_store = Some(RecentFilesStore::new(state_dir, logger.clone()));
         }
 
-        // Keep clientHello lightweight: watcher startup happens on demand via watchRepo.
-        // This avoids long hello latencies when many repos are configured.
         for repo in parsed_config.repos.iter() {
-            if repo.root.path_for_kind(self.supported_root_kind).is_some() {
+            if self.watchers.contains_key(&repo.repo_id) {
                 continue;
             }
-            logger.info(
-                "Skipping unsupported repo root for runtime",
-                Some(serde_json::json!({
-                    "repoId": repo.repo_id,
-                    "supportedRootKind": self.supported_root_kind.as_str(),
-                    "rootKind": repo.root.kind(),
-                    "rootPath": repo.root.path()
-                })),
-            );
-            if self.supported_root_kind == RepoRootKind::Host
-                && repo.root_kind() == RepoRootKind::Wsl
-                && cfg!(not(target_os = "windows"))
-            {
-                event_bus.broadcast_event(AgentEvent::Error(AgentErrorEvent::new(
-                    "config",
-                    format!(
-                        "WSL repo root not supported on this platform: {}",
-                        repo.repo_id
-                    ),
-                    Some(AgentErrorDetails {
-                        code: None,
-                        doc_path: None,
-                        repo_id: Some(repo.repo_id.clone()),
-                        raw_code: Some("UNSUPPORTED_REPO_ROOT".to_string()),
-                        raw_message: None,
-                    }),
-                )));
+            let Some(repo_root) = repo.root.path_for_kind(self.supported_root_kind) else {
+                logger.info(
+                    "Skipping unsupported repo root for runtime",
+                    Some(serde_json::json!({
+                        "repoId": repo.repo_id,
+                        "supportedRootKind": self.supported_root_kind.as_str(),
+                        "rootKind": repo.root.kind(),
+                        "rootPath": repo.root.path()
+                    })),
+                );
+                if self.supported_root_kind == RepoRootKind::Host
+                    && repo.root_kind() == RepoRootKind::Wsl
+                    && cfg!(not(target_os = "windows"))
+                {
+                    event_bus.broadcast_event(AgentEvent::Error(AgentErrorEvent::new(
+                        "config",
+                        format!(
+                            "WSL repo root not supported on this platform: {}",
+                            repo.repo_id
+                        ),
+                        Some(AgentErrorDetails {
+                            code: None,
+                            doc_path: None,
+                            repo_id: Some(repo.repo_id.clone()),
+                            raw_code: Some("UNSUPPORTED_REPO_ROOT".to_string()),
+                            raw_message: None,
+                        }),
+                    )));
+                }
+                continue;
+            };
+            if !is_valid_repo_root(repo_root).await {
+                logger.warn(
+                    "Invalid repo root, skipping watcher",
+                    Some(serde_json::json!({"repoId": repo.repo_id, "rootPath": repo_root})),
+                );
+                continue;
+            }
+            if let Err(err) = self.start_repo_watcher(repo, event_bus, logger).await {
+                logger.error(
+                    "Failed to start repo watcher",
+                    Some(serde_json::json!({"repoId": repo.repo_id, "error": err.message()})),
+                );
             }
         }
 

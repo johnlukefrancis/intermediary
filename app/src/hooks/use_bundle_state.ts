@@ -453,10 +453,6 @@ export function useBundleState(
     ) {
       return;
     }
-    if (!helloState.watchedRepoIds.includes(repoId)) {
-      return;
-    }
-
     const refreshKey = `${repoId}:${activePresetId}:${helloState.lastHelloAt}`;
     if (lastRefreshKeyRef.current === refreshKey) {
       return;
@@ -471,7 +467,6 @@ export function useBundleState(
     connectionState.status,
     helloState.status,
     helloState.lastHelloAt,
-    helloState.watchedRepoIds,
     refreshBundles,
   ]);
 
