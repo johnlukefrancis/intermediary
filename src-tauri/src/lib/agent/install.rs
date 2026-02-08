@@ -6,6 +6,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(target_os = "macos")]
+use std::process::Command;
 
 const AGENT_BUNDLE_DIR: &str = "agent_bundle";
 const AGENT_INSTALL_DIR: &str = "agent";
@@ -402,10 +404,52 @@ fn ensure_host_agent_permissions(host_agent_binary: &Path) -> Result<(), String>
             "Failed to set executable permissions on host agent binary ({}): {err}",
             host_agent_binary.display()
         )
-    })
+    })?;
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Err(err) = clear_macos_quarantine(host_agent_binary) {
+            crate::obs::logging::log(
+                "warn",
+                "agent",
+                "clear_quarantine_failed",
+                &format!(
+                    "Could not clear com.apple.quarantine on {}: {err}",
+                    host_agent_binary.display()
+                ),
+            );
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(not(unix))]
 fn ensure_host_agent_permissions(_host_agent_binary: &Path) -> Result<(), String> {
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn clear_macos_quarantine(host_agent_binary: &Path) -> Result<(), String> {
+    let output = Command::new("xattr")
+        .arg("-d")
+        .arg("com.apple.quarantine")
+        .arg(host_agent_binary)
+        .output()
+        .map_err(|err| format!("Failed to execute xattr: {err}"))?;
+
+    if output.status.success() {
+        return Ok(());
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if stderr.contains("No such xattr") {
+        return Ok(());
+    }
+
+    Err(format!(
+        "xattr exited with status {}. stderr: {}",
+        output.status,
+        stderr.trim()
+    ))
 }

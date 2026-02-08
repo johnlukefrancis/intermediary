@@ -33,6 +33,19 @@ When shipping macOS builds, treat `im_host_agent` as a bundled helper binary tha
 - Ensure notarization covers the final packaged app that contains this helper.
 - If helper signing/notarization is skipped, runtime launch can fail with macOS permission errors even when local debug builds work.
 
+## Troubleshooting: Gatekeeper/quarantine
+
+At runtime, Intermediary now attempts to clear `com.apple.quarantine` on the installed host helper after copy + `chmod +x`.
+This is best-effort and non-privileged. If the clear attempt fails, launch still proceeds and existing spawn diagnostics remain the source of truth.
+
+If you still hit macOS `PermissionDenied` launch failures, remove quarantine manually from the installed helper:
+
+```bash
+xattr -d com.apple.quarantine "$HOME/Library/Application Support/intermediary/agent/im_host_agent"
+```
+
+Then relaunch the app and retry agent startup. If the error persists, treat signing/notarization coverage of the bundled helper as the next root cause.
+
 ## Output
 
 Artifacts are written to:
