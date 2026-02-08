@@ -1,283 +1,364 @@
-You’re right to insist on “not hopefully.” Right now you’ve *mostly* made the UI + Tauri side “host‑aware”, but the **Rust agent core still leaks “Windows path semantics” into the places that must be “host semantics”**. That’s the exact kind of thing that will “work for me on Windows” and then faceplant instantly on macOS.
-
-Below is a static audit of the remaining risk surface, then a single end‑state design that makes macOS work *first try*, and finally a PR‑ladder of prompts to get it over the line.
+Below is a static review of the **current codebase state** from `intermediary_context_20260208_030535_a7637d7.zip`, focused on the requested areas. I’m ordering findings by severity and including **exact file + line references**.
 
 ---
 
-## Static audit: what will still break on macOS (and why)
+## P0 Findings
 
-### P0: Rust agent still assumes “host == Windows”
+### P0.1 — Forwarded WSL requests can hang indefinitely, potentially wedging the host agent
 
-Your TypeScript protocol + config are already “host/wsl” flavored (and include compatibility fallbacks), and the PRD explicitly describes **stagingHostRoot** and host‑side paths as first‑class concepts. 
+**Why this matters:** If the WSL backend accepts a WebSocket connection but then becomes unresponsive (or a bug causes it to stop replying), the host agent can wait forever on the pending response. Because host-agent dispatch is serialized via a runtime write lock, **one stuck forwarded request can effectively stall the host agent** (UI will time out client-side, but the backend remains wedged until restart).
 
-But the Rust agent layer still carries:
+**Evidence**
 
-* `RepoRootKind::Windows` as the “host backend”
-* `windowsPath` as the canonical output path field
-* “Windows path join” logic that hardcodes backslashes and drive letter logic
+* Host runtime forwards WSL repo commands without any timeout:
 
-On macOS, **a host path is POSIX** (`/Users/...`). Any place that:
+  * `crates/im_host_agent/src/runtime/host_runtime.rs`:
 
-* appends `\\files` or
-* joins with `\\` or
-* tries to convert host paths “Windows→WSL”
+    * `forward_wsl_command()` awaits `wsl_client.forward_command(..)` with no timeout. Lines **239–257**.
+    * Called from `dispatch_repo_command()` for all WSL-routed repo commands (e.g., `stageFile`, `refresh`, `buildBundle`, etc.). Lines **149–200**.
+* WSL backend client has no per-request timeout:
 
-…is going to generate paths that *don’t exist* on macOS, or worse, create directories literally containing backslashes in their names.
+  * `crates/im_host_agent/src/wsl/wsl_backend_client.rs`:
 
-This is the single largest reason “mac works, hopefully” is not true yet.
+    * `forward_command()` awaits `response_rx.await` indefinitely. Lines **55–84**.
 
-### P0: Staging root semantics are inconsistent across commands
+**Risk / Failure mode**
 
-Your PRD specifies a clean staging layout:
+* UI request timeouts (30s in the web client) can occur while the host agent is still waiting, leading to:
 
-* `staging/files/<repoId>/<relativePath>`
-* `staging/bundles/<repoId>/<presetId>/<bundleId>.zip` 
+  * repeat timeouts,
+  * inability to recover without restarting the agent/app,
+  * potential pending-map growth if the backend never responds.
 
-If *any* command computes staging paths differently (e.g., “staging root already includes `/files`”), you’ll get:
+**Architectural contract impact**
 
-* “bundle built but listBundles returns none”
-* “stageFile succeeds but drag path doesn’t exist”
-* “mac uses wrong separators and all staging ops go to nonsense paths”
+* This is in tension with ADR-009’s emphasis on explicit cancellation/bounded lifecycles (unbounded await on an external component). See `docs/compliance/adr_009_rust_concurrency_and_io_boundary_rules.md` sections on explicit cancellation/timeouts and bounded lifetimes (esp. I9.3/I9.4).
 
-Even if it “works” today for your workflow, this kind of inconsistency is exactly what will turn into nondeterministic bugs on a machine you can’t debug on.
+**Recommended fix**
 
-### P0: macOS sidecar execution can fail with “permission denied” unless you’re explicit
+* Implement **server-side timeouts** for forwarded WSL commands. Options (in increasing rigor):
 
-On macOS it’s common to hit “Permission denied (os error 13)” when spawning bundled helper binaries/sidecars if executable bits aren’t correct or quarantining/codesigning isn’t handled. ([GitHub][1])
-
-Even if you *think* the exec bit is preserved, you want the Tauri install step to **force executable perms** on unix targets after copying into AppLocalData.
-
-Also, when you eventually ship, macOS signing/notarization rules apply to embedded binaries/sidecars too. ([Tauri][2])
-
-### P1: Drag-out is probably fine, but only if host paths are real
-
-Your drag approach is “startDrag on mousedown” using a plugin, not DOM drag events — good. The underlying drag library supports macOS. ([GitHub][3])
-But drag-out will only work if:
-
-* the returned `hostPath` points to a real, existing file on disk
-* you didn’t accidentally return a “Windows-shaped” path on mac
-
-So drag-out is downstream of the path model refactor.
+  1. Wrap `response_rx.await` in `tokio::time::timeout` inside `WslBackendClient::forward_command` and return a structured error on timeout.
+  2. Additionally remove/cleanup pending entries on timeout (to prevent leaks).
+  3. Add circuit-breaker behavior: after N timeouts, drop the WSL connection and fail pending requests immediately.
 
 ---
 
-## The one correct end-state design
+## P1 Findings
 
-This is the contract that makes macOS “just work”, keeps Windows+WSL working, and leaves Linux as “basically free” later.
+### P1.1 — WSL bootstrap can succeed “locally” while silently failing to initialize WSL backend config
 
-### Canonical concepts
+**Why this matters:** `clientHello` is the bootstrap that seeds repo config and starts watchers (directly or indirectly). The host runtime currently returns the local host-backend `clientHelloResult` even if forwarding to WSL fails, and only emits an event. That makes startup appear “successful” from the request/response perspective while WSL repos may remain non-functional until a later `clientHello` happens again.
 
-**RepoRoot.kind**
+**Evidence**
 
-* `host` = path that is native to the host OS (Windows drive path on Windows; POSIX on macOS/Linux)
-* `wsl` = POSIX path inside WSL/Linux fs (Windows-only feature)
+* Host runtime treats WSL forwarding failure as non-fatal for `clientHello`:
 
-**Protocol paths**
+  * `crates/im_host_agent/src/runtime/host_runtime.rs`:
 
-* Always return `hostPath`
-* Return `wslPath` only when the backend is WSL and you actually have a meaningful WSL-side path
+    * `handle_client_hello()` returns `Ok(local_response)` even if `try_forward_client_hello()` fails; it emits an error event instead. Lines **115–136**.
+* `try_forward_client_hello()` has a timeout (good), but there is no “retry on later readiness” mechanism:
 
-**Staging roots**
+  * `crates/im_host_agent/src/runtime/host_runtime.rs` lines **259–330** (timeout + emit).
 
-* `stagingHostRoot` is always the base staging root, and subdirs are added *by the agent*:
+**Concrete scenario**
 
-  * `files/…`
-  * `bundles/…`
-  * (later `state/…`)
-* `stagingWslRoot` is optional and only meaningful on Windows when a WSL backend is used
+* On Windows with WSL repos:
 
-This matches the PRD’s intent and removes ambiguity.
+  * UI connects as soon as host agent is up.
+  * `clientHello` is sent before WSL backend is ready (or backend is temporarily unreachable).
+  * Forwarding fails → UI gets a *successful* `clientHelloResult` from the host backend, but WSL backend never receives config.
+  * Later WSL backend comes up; WSL repo commands may fail with “unknown repo” until a new `clientHello` is sent.
 
-### Behavior table
+**Recommended fix**
 
-| Scenario                                            | Expected behavior                                                                                     | Where enforced                                      |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| macOS user adds `/Users/alice/Projects/foo`         | Classified as `host`, watched bg outputs use POSIX paths, drag-out works                              | Host path model in Rust + consistent staging layout |
-| Windows user adds `C:\UnrealProjects\InfiniteAbyss` | Classified as `host`, watched by host backend, no WSL conversions invoked                             | RepoRoot.kind routing                               |
-| Windows user adds WSL repo `/home/alice/code/foo`   | Classified as `wsl`, routed to WSL backend, outputs include `hostPath` (Windows) + optional `wslPath` | WSL backend returns dual paths; host agent routes   |
+* Ensure WSL backend eventually receives config:
 
-### Invariants (non-negotiable)
+  * Cache the last WSL-filtered `clientHello` payload inside host runtime and **re-send it**:
 
-* **`hostPath` is always a host-native path string**. Never “converted to WSL”. Ever.
-* **Only the WSL backend does Windows↔WSL bridging**, and only to produce `hostPath` for the UI.
-* **All staging path derivation goes through one shared “staging layout” module** so stage/list/bundle/alias can’t drift.
-* On non-Windows platforms, `wsl` repo roots are explicitly rejected with a clear error (no weird timeouts).
-
-This is exactly the kind of architecture-first “fix the heart of the issue” approach you were demanding.
+    * when WSL backend connects/reconnects, or
+    * before the first forwarded WSL repo command if WSL isn’t “initialized”.
+  * Alternatively: extend `clientHelloResult` with a `wslReady` (or `wslConfigured`) boolean so the UI can retry `clientHello` on a backoff loop when required.
 
 ---
 
-## How “ass crack bastard” is the refactor?
+### P1.2 — macOS Gatekeeper/quarantine is only handled via diagnostics, not proactively remediated
 
-It’s big *conceptually*, but **contained** in code:
+**Why this matters:** You’ve added strong diagnostics and ensured executable permissions, but on macOS a copied-out helper binary can still fail to execute if it retains quarantine attributes (`com.apple.quarantine`) or if signing/notarization isn’t correct. Today, the code *explains* what might be wrong, but does not attempt remediation.
 
-* Rust agent protocol + config types (rename + serde aliasesderivation (centralize, fix layout)
-* Host agent backend naming (`LocalWindowsBackend` → `LocalHostBackend`) and routing
-* Tauri install step: set executable perms on mac/Linux
+**Evidence**
 
-The UI already has compatibility shims and host/wsl config shape, so UI changes should be small or even optional. This aligns with the repo’s “native contracts + rails” style: fix the contract, then make adapters minimal.
+* Exec bit hardening exists (good):
+
+  * `src-tauri/src/lib/agent/install.rs` sets mode `0o755` on unix. Lines **414–451**.
+* PermissionDenied diagnostics are high-signal (good):
+
+  * `src-tauri/src/lib/agent/process_control.rs` returns a tailored message for `PermissionDenied` with macOS quarantine/signing hints. Lines **132–188**.
+* But there is no explicit quarantine removal step after copy/install.
+
+**Recommended hardening**
+
+* After copying `im_host_agent` to the installed location on macOS, try to remove the quarantine attribute:
+
+  * Preferred: use an xattr library (or `xattr` crate) programmatically.
+  * Acceptable: invoke `/usr/bin/xattr -d com.apple.quarantine <path>` (careful with sandbox/entitlements).
+  * Failures should degrade to a warning + keep current diagnostics.
 
 ---
 
-## Prompts to execute (PR ladder)
+## P2 Findings
 
-These are written so you can hand them to Codex/Claude and let them grind.
+### P2.1 — PRD and system overview still contain Windows-specific config/staging statements that no longer match macOS/Linux parity reality
 
-### PR 1 — Rust protocol + config becomes host-iases)
+**Why this matters:** Your implementation now clearly supports “host-native staging roots on all platforms,” but some doc “contracts” still describe Windows-only persistence/paths. That can mislead future changes and reviews.
+
+**Evidence**
+
+* PRD still says staging is on Windows filesystem and defaults to `%LOCALAPPDATA%`:
+
+  * `docs/prd.md` lines **168–182** (“Windows filesystem”, `%LOCALAPPDATA%`).
+* System overview says config persists to `%LOCALAPPDATA%\Intermediary\config.json` (Windows-only):
+
+  * `docs/system_overview.md` lines **140–149**.
+
+**Recommendation**
+
+* Update both docs to specify platform-appropriate locations:
+
+  * Windows: `%LOCALAPPDATA%\Intermediary\...`
+  * macOS: `~/Library/Application Support/<bundle-id or app name>/...`
+  * Linux: likely `~/.local/share/<app>/...`
+
+This is “doc-only,” but because you explicitly requested contract checks vs PRD/ADRs, it’s worth correcting so design intent matches the implementation.
+
+---
+
+### P2.2 — Legacy TS path parsing helper can still misclassify POSIX host paths as WSL paths (migration risk)
+
+**Why this matters:** The *current* add-repo flow correctly routes through Rust (`resolve_repo_root`) and is OS-aware. However, the older TS heuristic in `repo_root.ts` still treats any `/...` path as WSL unless it looks like `/mnt/<drive>...`, which is correct on Windows but wrong on macOS/Linux if it were used by a migration path or future UI code.
+
+**Evidence**
+
+* TS heuristic:
+
+  * `app/src/shared/config/repo_root.ts`:
+
+    * `if (trimmed.startsWith("/")) { ... return { kind: "wsl", path: normalizedWsl }; }` Lines **124–148**.
+* Current UI add-repo uses Rust resolver (good):
+
+  * `app/src/components/add_repo_button.tsx` uses `invoke("resolve_repo_root", ...)`. Lines **31–69**.
+
+**Recommendation**
+
+* Either:
+
+  * Deprecate/remove the TS heuristic (and ensure migrations never rely on it for mac/Linux), or
+  * Gate it by platform (`hostSupportsWsl()`), treating POSIX absolute paths as `{kind:"host"}` on non-Windows.
+
+---
+
+## P3 Findings
+
+### P3.1 — Naming/comments still contain “windows” terminology in host-native code paths (low risk, but adds confusion)
+
+**Examples**
+
+* UI uses `outputWindowsRoot` even on macOS/Linux (functionally OK, but conceptually confusing):
+
+  * `app/src/components/options_overlay.tsx` uses `setOutputWindowsRoot(...)` for all platforms. Lines **86–109**.
+* Some naming and legacy fields persist for backward compat (expected), but consider tightening terminology in comments/docs.
+
+**Recommendation**
+
+* Not required for correctness, but improves long-term clarity:
+
+  * Prefer “host” language in comments/docs when meaning “host across platforms.”
+
+---
+
+## Confirmed OK (requested focus areas)
+
+### Rust protocol/config: host-native model + backward-compat serde aliases
+
+* Repo root kind alias:
+
+  * `crates/im_agent/src/runtime/config.rs` has `#[serde(alias = "windows")]` on both `RepoRootKind::Host` and `RepoRoot::Host`. Lines **132–145**.
+  * Tauri config also aliases legacy `windows` roots:
+
+    * `src-tauri/src/lib/config/types.rs` lines **214–236**.
+* Protocol payload host-path aliasing:
+
+  * Events:
+
+    * `crates/im_agent/src/protocol/events.rs` uses `#[serde(alias = "windowsPath")]` and `#[serde(alias = "aliasWindowsPath")]`. Lines **34–52**.
+  * Responses:
+
+    * `crates/im_agent/src/protocol/responses.rs` includes `windowsPath` + `aliasWindowsPath` optional fields. Lines **33–43**.
+* `clientHello` legacy staging field support:
+
+  * `crates/im_agent/src/protocol/commands.rs` custom deserializer supports `stagingHostRoot` + legacy `stagingWinRoot`. Lines **34–83**.
+
+### Staging layout
+
+* Layout matches requested contract:
+
+  * `crates/im_agent/src/staging/layout.rs`:
+
+    * Files root: `staging/files/<repoId>/...` lines **74–76**.
+    * Bundles dir: `staging/bundles/<repoId>/<presetId>/...` lines **82–85**.
+* Bundle filenames produced as `<repoId>_<presetId>_<timestamp>.zip`:
+
+  * `crates/im_agent/src/bundles/bundle_builder_blocking.rs` lines **35–62**.
+
+### Host-agent backend routing correctness
+
+* Clear split:
+
+  * `RepoBackend { Host, Wsl }` in `crates/im_host_agent/src/runtime/repo_backend.rs`.
+* Non-Windows fail-fast for WSL roots:
+
+  * `crates/im_host_agent/src/runtime/host_runtime.rs` returns error if WSL repos present on non-Windows. Lines **93–104**.
+* No hidden WSL client spawn on macOS/Linux:
+
+  * WSL client only constructed under `cfg!(target_os = "windows")`:
+
+    * `crates/im_host_agent/src/runtime/host_runtime.rs` lines **111–123**, **287–309**.
+
+### macOS/Linux execution hardening
+
+* Exec bit enforcement for installed host agent:
+
+  * `src-tauri/src/lib/agent/install.rs` `ensure_host_agent_permissions` sets `0o755`. Lines **414–451**.
+* High-signal `PermissionDenied` diagnostics:
+
+  * `src-tauri/src/lib/agent/process_control.rs` lines **132–188**.
+* Signing/notarization coverage exists (but could be expanded):
+
+  * `docs/commands/agent_bundle.md` includes a note about signing/notarization. Lines **15–23**.
+
+---
+
+## Residual risks (production “still could fail” list)
+
+Even if everything works locally, these could still bite in production:
+
+1. **WSL backend partial hangs** (connected but not responding) wedging host agent due to missing timeouts/cancellation. (P0 above)
+2. **WSL startup race** where host agent is ready before WSL backend and WSL never receives `clientHello` unless retried. (P1 above)
+3. **macOS quarantine / Gatekeeper** blocking execution of the copied-out host agent binary even when chmod is correct (especially for non-notarized builds or certain distribution methods).
+4. **Architecture mismatch on macOS** (Intel vs Apple Silicon) if `im_host_agent` isn’t built universal or matched to the shipped app slice → “Exec format error”.
+5. **Missing sidecar signing**: app is signed/notarized but embedded helper binary isn’t (or signature is invalid after packaging) → `PermissionDenied` / OS refusal.
+6. **File watcher edge cases on network/external volumes** on macOS/Linux (notify backend limitations); watchers might fail to start or miss events.
+7. **Staging root on restricted locations** (user selects an output folder without write/exec rights) leading to confusing failures unless error messaging stays high-signal.
+
+---
+
+## Codex prompts for further hardening
+
+Below are ready-to-run prompts (architecture-first, with explicit refs and deliverables).
+
+### Prompt 1 — Add bounded timeouts + cleanup for WSL forwarded requests
 
 ```text
-Task: Make Rust agent protocol + config host-native (host/wsl), with serde aliases for legacy windows/wsl field names.
+Task
+Implement server-side timeouts and cleanup for host→WSL forwarded requests so the host agent cannot wedge indefinitely if the WSL backend stops responding.
 
-Context:
-- TS already uses hostPath/aliasHostPath and host/wsl repo roots, with fallbacks.
-- PRD expects stagingHostRoot and host-side staging layout. Align Rust to that contract.
-- Goal: macOS host backend can represent POSIX host roots without “Windows semantics”.
+Context
+HostRuntime forwards repo commands to WslBackendClient without a timeout. WslBackendClient.forward_command awaits a oneshot forever; if the WSL backend is unresponsive, the host runtime can stall and UI timeouts do not recover the agent.
 
-Refs:
-- @crates/im_agent/src/runtime/config.rs
-- @crates/im_agent/src/protocol/commands.rs
-- @crates/im_agent/src/protocol/responses.rs
-- @crates/im_agent/src/protocol/events.rs
-- @crates/im_host_agent/src/runtime/host_runtime_helpers.rs (parse_app_config)
-- @crates/im_host_agent/src/runtime/repo_backend.rs (backend mapping)
+Refs
+- crates/im_host_agent/src/runtime/host_runtime.rs (forward_wsl_command + dispatch_repo_command)
+- crates/im_host_agent/src/wsl/wsl_backend_client.rs (forward_command, pending map lifecycle)
+- docs/compliance/adr_009_rust_concurrency_and_io_boundary_rules.md (timeouts/cancellation expectations)
 
-Deliver:
-1) Update Rust AppConfig repo root model:
-   - RepoRootKind becomes { Host, Wsl } (or equivalent).
-   - Support deserializing legacy "windows" as alias of "host".
-   - Support deserializing legacy "windowsPath" as alias of "hostPath".
-   - Reject WSL roots on non-Windows at validation layer (clear error).
-2) Update Rust protocol payloads:
-   - ClientHelloCommand takes stagingHostRoot (required) and stagingWslRoot (optional),
-     but accept legacy stagingWinRoot/stagingWslRoot as aliases.
-   - StageFile/BuildBundle results and events use hostPath (+ optional wslPath) as canonical.
-   - Accept legacy windowsPath/aliasWindowsPath fields via serde aliases for backward compatibility.
-3) Ensure host agent can parse AppConfig with the new kinds.
-4) Compile on Windows + non-Windows (no cfg breakage).
+Deliver
+1) Add per-request timeout (configurable constant) for forwarded WSL commands.
+2) Ensure pending entries do not leak indefinitely on timeout (remove them or sweep).
+3) Return a structured AgentError with a new raw_code (e.g., WSL_BACKEND_TIMEOUT) or reuse WSL_BACKEND_UNAVAILABLE with a distinct message.
+4) Add targeted tests (unit-level where possible) covering timeout + cleanup behavior.
 
-Constraints:
-- Skills: rust-runtime-rails, typescript-native-rails, architecture-first, modularity
-- Keep files small; if a file blows past ~200 LOC, split per modular discipline.
-- Errors must be explicit and actionable (no silent fallbacks).
-- Do not change UI in this PR.
-- Closeout: update file ledger if required and run checks per @docs/commands/workflow/closeout_checks.md.
+Constraints
+- Follow ADR-008 error-handling pattern (structured codes/messages/details; no panics).
+- Keep changes modular; avoid invasive refactors unless necessary.
+- Do not widen security scope or change bind host behavior.
 ```
 
-Why this matters: it removes the “host==Windows” lie from the data model, which is step 1 for macOS.
-
----
-
-### PR 2 — One staging layout, used everywhere (POSIX-safe)
+### Prompt 2 — Make WSL clientHello bootstrap self-healing
 
 ```text
-Task: Centralize staging path derivation into a single staging layout module that works on macOS/Linux (POSIX) and Windows, and update all staging/bundle/list operations to use it.
+Task
+Make WSL bootstrap self-healing: if forwarding clientHello to WSL fails (backend not ready), ensure the host agent will eventually deliver the latest WSL-filtered clientHello once the backend becomes available.
 
-Refs:
-- @crates/im_agent/src/staging/mod.rs
-- @crates/im_agent/src/staging/stager.rs
-- @crates/im_agent/src/staging/path_bridge.rs (likely to replace/delete)
-- @crates/im_agent/src/bundles/bundle_builder_blocking.rs
-- @crates/im_agent/src/bundles/bundle_builder.rs
-- @crates/im_agent/src/bundles/bundle_lister.rs
-- @docs/prd.md (staging layout contract)
+Context
+HostRuntime currently returns local clientHello success even if WSL forwarding fails, and only emits an error event. This can leave WSL backend unconfigured until a future clientHello, causing unknown-repo errors.
 
-Deliver:
-1) Implement a staging layout module that derives:
-   - runtime filesystem paths for writing (PathBuf) from stagingHostRoot or stagingWslRoot depending on runtime
-   - hostPath strings for returning to UI (host-native)
-   - optional wslPath strings for WSL backend only
-   The module must explicitly encode:
-   - files/<repoId>/<relativePath>
-   - bundles/<repoId>/<presetId>/<bundleId>.zip
-2) Remove any logic that treats staging root as already including "/files" or "\\files".
-3) Ensure stage_file, build_bundle, list_bundles all agree on the same directories.
-4) Add unit tests (on non-Windows these approximate macOS) to prove:
-   - POSIX host roots produce POSIX output paths (no backslashes)
-   - Windows host roots still produce correct windows hostPath strings
-   - WSL backend still produces valid hostPath via conversion when stagingWslRoot is used
-5) Keep behavior identical on Windows for existing users (except “now it’s correct + consistent”).
+Refs
+- crates/im_host_agent/src/runtime/host_runtime.rs (handle_client_hello, try_forward_client_hello)
+- crates/im_host_agent/src/wsl/wsl_backend_client.rs (connection lifecycle)
+- docs/system_overview.md (clientHello idempotency assumptions)
 
-Constraints:
-- Skills: rust-runtime-rails, modularity, review-lens
-- Do not introduce OS-dependent string concatenation for POSIX paths; use PathBuf joins for runtime fs paths.
-- Legacy support: if old inputs exist, accept them; but outputs should follow the new protocol contract.
-- Closeout per @docs/commands/workflow/closeout_checks.md.
+Deliver
+1) Cache the most recent WSL-filtered clientHello payload in HostRuntime.
+2) Add logic to retry sending it when:
+   a) the WSL backend becomes connected, and/or
+   b) before the first forwarded WSL repo command if not yet initialized.
+3) Ensure idempotency: repeated clientHello forwards must not cause churn in the WSL runtime when config fingerprint is unchanged.
+4) Add tests or a minimal harness to validate the sequence: host up → clientHello sent → WSL up later → WSL receives config automatically.
+
+Constraints
+- Windows-only behavior; no WSL spawning or connections on macOS/Linux.
+- Maintain current “degrade gracefully” behavior (host repos should still work even if WSL is down).
 ```
 
-This PR is the “macOS will actually work” moment, because it kills the backslash/path conversion poison at the source.
-
----
-
-### PR 3 — Host agent backend naming + routing becomes host/wsl (no Windows leakage)
+### Prompt 3 — macOS quarantine hardening for installed host agent binary
 
 ```text
-Task: Update im_host_agent to treat the local backend as "Host" (not "Windows") and route repos by {host,wsl} kinds.
+Task
+Harden macOS execution by attempting to remove quarantine xattrs from the installed host agent binary after copying it out of the app bundle.
 
-Refs:
-- @crates/im_host_agent/src/runtime/local_windows_backend.rs
-- @crates/im_host_agent/src/runtime/host_runtime.rs
-- @crates/im_host_agent/src/runtime/repo_backend.rs
-- @crates/im_host_agent/src/runtime/host_runtime_helpers.rs
-- @crates/im_host_agent/src/server/dispatch.rs
-- @crates/im_host_agent/src/wsl/wsl_backend_client.rs
+Context
+We already chmod +x the installed binary and provide strong PermissionDenied diagnostics, but quarantine xattrs can still block execution on macOS for some distribution paths.
 
-Deliver:
-1) Rename/refactor LocalWindowsBackend -> LocalHostBackend (file + type names).
-2) RepoBackend enum becomes { Host, Wsl } and mapping uses the new RepoRootKind.
-3) HostRuntime uses AgentRuntime configured for Host roots and Host staging kind.
-4) Ensure on macOS/Linux:
-   - host backend is used
-   - WSL backend is never constructed/spawned
-   - if config contains WSL repos, return a clear error early (no hangs)
-5) Confirm all WebSocket routing still works: stageFile/buildBundle/listBundles/events.
+Refs
+- src-tauri/src/lib/agent/install.rs (ensure_host_agent_permissions, install flow)
+- src-tauri/src/lib/agent/process_control.rs (PermissionDenied diagnostics)
+- docs/commands/agent_bundle.md (signing/notarization note)
+- docs/compliance/adr_010_tauri_security_baseline.md (avoid risky scope widening)
 
-Constraints:
-- Skills: rust-runtime-rails, architecture-first, modularity
-- No “special-casing mac by pretending it’s Windows”.
-- Closeout per @docs/commands/workflow/closeout_checks.md.
+Deliver
+1) On macOS only, after copying and chmod, attempt to clear com.apple.quarantine on the installed host agent binary.
+2) If clearing fails, log a warning and keep the existing high-signal diagnostics on spawn failure.
+3) Add docs: short “Troubleshooting: Gatekeeper/quarantine” section with clear user steps (xattr command) and how it maps to the new behavior.
+
+Constraints
+- macOS-only code paths (cfg(target_os="macos")).
+- No background daemons or privileged operations.
+- Do not reduce current error message quality.
 ```
 
----
-
-### PR 4 — macOS robustness: executable perms + signing notes
+### Prompt 4 — Align docs (PRD/system overview) with host-native macOS/Linux parity
 
 ```text
-Task: Harden macOS/Linux execution of the host agent binary and improve failure diagnostics.
+Task
+Update PRD + system overview docs to reflect host-native staging/config persistence across Windows/macOS/Linux.
 
-Refs:
-- @src-tauri/src/lib/agent/install.rs
-- @src-tauri/src/lib/agent/process_control.rs
-- @docs/commands/agent_bundle.md
-- @docs/known_issues.md (optional update)
+Context
+Implementation supports host-native paths across platforms, but docs still reference Windows-only locations in some sections.
 
-Deliver:
-1) After copying agent binaries into AppLocalData, ensure on unix targets:
-   - host agent binary has executable permissions (chmod 755 equivalent).
-2) If spawning host agent fails with PermissionDenied on unix:
-   - log a high-signal error explaining likely causes (missing exec bit, quarantine, signing).
-3) Update @docs/commands/agent_bundle.md to include a macOS note:
-   - helper binaries must be included in signing/notarization workflows (Tauri sidecar rules).
-4) Add a known issue entry if you cannot fully guarantee notarization behavior yet.
+Refs
+- docs/prd.md (Staging System section 7.3)
+- docs/system_overview.md (Config Persistence section)
+- src-tauri/src/lib/paths/app_paths.rs (source of truth for app local data + staging roots)
 
-Constraints:
-- Skills: rust-runtime-rails, docs-discipline, tauri-security-baseline
-- Do not add inline runnable commands to docs outside docs/commands/**.
-- Closeout per @docs/commands/workflow/closeout_checks.md.
+Deliver
+1) Update docs/prd.md staging section to describe host staging root for all platforms + WSL mirror root only on Windows.
+2) Update docs/system_overview.md config persistence to list per-platform config locations (Windows/macOS/Linux).
+3) Ensure wording matches current code + protocol fields (stagingHostRoot, stagingWslRoot?).
+
+Constraints
+- Keep docs concise; avoid implementation trivia.
+- Don’t introduce requirements the code doesn’t meet.
 ```
-
-This is the “prevent the classic mac ‘os error 13’ rage spiral” PR. The web evidence that this is a real failure mode is very solid. ([GitHub][1])
 
 ---
 
-## What you get after these PRs
-
-* macOS runs host agent, watches host repos, stages files, builds bundles, drags out — using real POSIX paths.
-* Windows still works for host repos and WSL repos, but the model is now explicit and consistent.
-* Protocol aligns with the PRD: host-native first, WSL optional.
-* You stop depending on the TS “legacy fallback” as a core system function (it becomes actual backward-compat only).
-
-If you execute only one thing: **PR 2 (staging layout centralization)** is the critical “make mac ns safest to do PR 1 → PR 2 → PR 3 in order, because the type model should lead the filesystem behavior. That’s straight-up architecture-first discipline.
-
-[1]: https://github.com/tauri-apps/tauri/issues/4653?utm_source=chatgpt.com "Getting PermissionDenied when using Sidecar in MacOS"
-[2]: https://v2.tauri.app/distribute/sign/macos/?utm_source=chatgpt.com "macOS Code Signing"
-[3]: https://github.com/gsidhu/tauri-drag?utm_source=chatgpt.com "gsidhu/tauri-drag: Draggable for GUI apps on Windows ..."
+If you want, I can also produce a **one-page “ship checklist”** specifically for macOS (agent bundle contents, codesign targets, notarization verification steps, and the expected error signatures if anything is wrong).
