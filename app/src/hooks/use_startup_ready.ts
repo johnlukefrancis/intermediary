@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 let didSignalStartupReady = false;
-const MAX_STARTUP_READY_ATTEMPTS = 20;
+const RETRY_DELAY_MS_BASE = 250;
+const RETRY_DELAY_MS_MAX = 5_000;
 
 /**
  * Signals backend once the frontend shell is ready.
@@ -14,10 +15,9 @@ const MAX_STARTUP_READY_ATTEMPTS = 20;
  */
 export function useStartupReady(isLoaded: boolean): void {
   const [attempt, setAttempt] = useState(0);
-  const [gaveUp, setGaveUp] = useState(false);
 
   useEffect(() => {
-    if (!isLoaded || didSignalStartupReady || gaveUp) {
+    if (!isLoaded || didSignalStartupReady) {
       return;
     }
 
@@ -28,14 +28,17 @@ export function useStartupReady(isLoaded: boolean): void {
       })
       .catch((err: unknown) => {
         didSignalStartupReady = false;
-        if (attempt + 1 >= MAX_STARTUP_READY_ATTEMPTS) {
-          setGaveUp(true);
-          document.documentElement.dataset.bootPhase = "ready";
-          console.error("[startup] startup_ready failed after max retries:", err);
-          return;
-        }
-        setAttempt((prev) => prev + 1);
-        console.error("[startup] Failed to signal startup_ready:", err);
+        const delayMs = Math.min(
+          RETRY_DELAY_MS_MAX,
+          RETRY_DELAY_MS_BASE * 2 ** Math.min(attempt, 4)
+        );
+        console.error(
+          `[startup] Failed to signal startup_ready (retry in ${delayMs}ms):`,
+          err
+        );
+        window.setTimeout(() => {
+          setAttempt((prev) => prev + 1);
+        }, delayMs);
       });
-  }, [isLoaded, attempt, gaveUp]);
+  }, [isLoaded, attempt]);
 }
