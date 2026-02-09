@@ -94,9 +94,7 @@ export function FileListColumn({
         {
           label: "Open All Files",
           onClick: () => {
-            for (const p of selected) {
-              void fileActions.openFile(repoRoot, p);
-            }
+            void fileActions.openFiles(repoRoot, selected);
           },
         },
         {

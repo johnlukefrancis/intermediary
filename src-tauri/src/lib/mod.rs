@@ -12,7 +12,7 @@ use commands::agent_control::{ensure_agent_running, restart_agent, stop_agent};
 use commands::agent_probe::probe_agent_port;
 use commands::config::{load_config, save_config};
 use commands::file_manager::open_in_file_manager;
-use commands::file_opener::{open_file, reveal_in_file_manager};
+use commands::file_opener::{open_file, open_files, reveal_in_file_manager};
 use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
@@ -48,7 +48,8 @@ pub fn run() {
             convert_wsl_to_windows,
             open_in_file_manager,
             reveal_in_file_manager,
-            open_file
+            open_file,
+            open_files
         ])
         .build(tauri::generate_context!())
         .expect("error building tauri application");

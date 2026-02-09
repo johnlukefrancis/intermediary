@@ -46,6 +46,104 @@ fn resolve_host_file_path(root: &RepoRoot, relative_path: &str) -> Result<String
     resolve_host_path(&absolute_path)
 }
 
+fn resolve_host_file_paths(root: &RepoRoot, relative_paths: &[String]) -> Result<Vec<String>, String> {
+    if relative_paths.is_empty() {
+        return Err("No files provided".to_string());
+    }
+
+    let mut host_paths = Vec::with_capacity(relative_paths.len());
+    for relative_path in relative_paths {
+        let host_path = resolve_host_file_path(root, relative_path)?;
+        let path = Path::new(&host_path);
+        if !path.exists() || path.is_dir() {
+            return Err(format!("File does not exist: {host_path}"));
+        }
+        host_paths.push(host_path);
+    }
+
+    Ok(host_paths)
+}
+
+fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
+    if host_paths.is_empty() {
+        return Err("No files provided".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(host_paths)
+            .spawn()
+            .map_err(|e| format!("Failed to open files: {e}"))?;
+        return Ok(());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(host_paths)
+            .spawn()
+            .map_err(|e| format!("Failed to open files: {e}"))?;
+        return Ok(());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if Command::new("gio")
+            .arg("open")
+            .args(host_paths)
+            .spawn()
+            .is_ok()
+        {
+            return Ok(());
+        }
+
+        Command::new("sh")
+            .arg("-c")
+            .arg("for p in \"$@\"; do xdg-open \"$p\"; done")
+            .arg("intermediary-open-files")
+            .args(host_paths)
+            .spawn()
+            .map_err(|e| format!("Failed to open files: {e}"))?;
+        return Ok(());
+    }
+
+    #[allow(unreachable_code)]
+    Err("open_file is not supported on this platform".to_string())
+}
+
+fn open_paths_with_vscode(host_paths: &[String]) -> Result<(), String> {
+    if host_paths.is_empty() {
+        return Err("No files provided".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let candidates = ["code.cmd", "code"];
+        for candidate in candidates {
+            if Command::new(candidate)
+                .arg("--reuse-window")
+                .args(host_paths)
+                .spawn()
+                .is_ok()
+            {
+                return Ok(());
+            }
+        }
+        return Err("Failed to open files with VS Code".to_string());
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Command::new("code")
+            .arg("--reuse-window")
+            .args(host_paths)
+            .spawn()
+            .map_err(|e| format!("Failed to open files with VS Code: {e}"))?;
+        Ok(())
+    }
+}
+
 fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Result<String, String> {
     let root_path = root.path().trim().to_string();
     if root_path.is_empty() {
@@ -118,48 +216,38 @@ pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Re
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
-/// Open a file with the OS default application.
-///
-/// # Errors
-/// Returns an error if path validation fails or the platform launcher fails.
 #[tauri::command]
 pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let host_path = resolve_host_file_path(&root, &relative_path)?;
-        let path = Path::new(&host_path);
-        if !path.exists() || path.is_dir() {
-            return Err(format!("File does not exist: {host_path}"));
+        let host_paths = resolve_host_file_paths(&root, &[relative_path])?;
+        open_paths_with_default_app(&host_paths)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+}
+
+#[tauri::command]
+pub async fn open_files(
+    root: RepoRoot,
+    relative_paths: Vec<String>,
+    prefer_vscode: bool,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let host_paths = resolve_host_file_paths(&root, &relative_paths)?;
+
+        if prefer_vscode {
+            if let Err(vscode_err) = open_paths_with_vscode(&host_paths) {
+                open_paths_with_default_app(&host_paths).map_err(|fallback_err| {
+                    format!(
+                        "Failed to open files with VS Code ({vscode_err}) and fallback launcher ({fallback_err})"
+                    )
+                })?;
+            }
+        } else {
+            open_paths_with_default_app(&host_paths)?;
         }
 
-        #[cfg(target_os = "windows")]
-        {
-            Command::new("explorer")
-                .arg(&host_path)
-                .spawn()
-                .map_err(|e| format!("Failed to open file: {e}"))?;
-            return Ok::<(), String>(());
-        }
-
-        #[cfg(target_os = "macos")]
-        {
-            Command::new("open")
-                .arg(&host_path)
-                .spawn()
-                .map_err(|e| format!("Failed to open file: {e}"))?;
-            return Ok::<(), String>(());
-        }
-
-        #[cfg(all(unix, not(target_os = "macos")))]
-        {
-            Command::new("xdg-open")
-                .arg(&host_path)
-                .spawn()
-                .map_err(|e| format!("Failed to open file: {e}"))?;
-            return Ok::<(), String>(());
-        }
-
-        #[allow(unreachable_code)]
-        Err("open_file is not supported on this platform".to_string())
+        Ok::<(), String>(())
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
