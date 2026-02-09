@@ -73,6 +73,14 @@ export function FileListColumn({
         onClick: () => { void fileActions.openFile(repoRoot, file.path); },
       },
       {
+        label: "Copy Relative Path",
+        onClick: () => {
+          void navigator.clipboard.writeText(file.path).catch((err: unknown) => {
+            console.error("[ContextMenu] copy_relative_path failed:", err);
+          });
+        },
+      },
+      {
         label: isStarred(kind, file.path) ? "Unfavourite" : "Favourite",
         onClick: () => { toggle(kind, file.path); },
       }

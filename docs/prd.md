@@ -86,17 +86,17 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 ### File row interactions
 
-* **Click row** → copies `@<repo-relative-path>` to clipboard (forward slashes)
-* **Drag handle** → stages file, starts OS drag, also copies `@<path>` to clipboard
+* **Left click row** → stages file / starts OS drag behavior (no clipboard copy)
 * **Star button** → toggles starred status (does not copy or drag)
 * **Right-click row** → opens context menu with:
   * Open Containing Folder
   * Open File
+  * Copy Relative Path
   * Favourite / Unfavourite
 
 ### Drag interaction
 
-* Each row has a **drag handle** region.
+* Each row has a drag surface for initiating OS-level file drag.
 * Dragging the row begins an OS-level drag containing the staged file path.
 * For WSL sources, the app ensures the file is copied to staging first.
 

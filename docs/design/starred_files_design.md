@@ -12,8 +12,8 @@ Depends on: ADR-000, ADR-007
 
   * `[DOCS]` / `[CODE]` button = “Recent changes” page
   * **Star icon** = “Starred” page (disabled/grey when empty)
-* **Click a file row** = clipboard becomes `@<repo-relative-path>`
-* **Drag a file** (via a handle) = stages file + starts OS drag, and also copies `@<repo-relative-path>` to clipboard
+* **Right-click a file row** = context menu includes **Copy Relative Path** (`<repo-relative-path>`)
+* **Drag a file** (via a handle/row drag surface) = stages file + starts OS drag (no clipboard copy)
 * **Configurable cap** (default stays 200), exposed in Options.
 
 Also: you *already* have a cap today. It’s just hardcoded twice:
@@ -27,8 +27,8 @@ So the “2000 files lag” nightmare is currently prevented… accidentally. We
 
 | Situation        | Input                                  | Expected behavior                                                       |
 | ---------------- | -------------------------------------- | ----------------------------------------------------------------------- |
-| Copy path fast   | Click any file row                     | Clipboard becomes `@docs/.../file.md` (repo-relative, `@` prefix)       |
-| Share file       | Drag via drag-handle                   | File is staged, OS drag starts, clipboard also becomes `@relative/path` |
+| Copy path fast   | Right-click row → Copy Relative Path   | Clipboard becomes `docs/.../file.md` (repo-relative, plain path)         |
+| Share file       | Drag via drag-handle                   | File is staged, OS drag starts                                            |
 | Pin a file       | Click star on a row                    | File is added/removed from that repo’s starred list (docs/code)         |
 | Switch lists     | Click `[DOCS]` / `[CODE]`              | Pane shows “recent changes” list                                        |
 | Switch to pinned | Click Star icon in header              | Pane shows “starred files” list (only if count > 0)                     |
@@ -36,11 +36,11 @@ So the “2000 files lag” nightmare is currently prevented… accidentally. We
 
 ## Invariants (don’t break these)
 
-1. Clipboard string is always exactly `@` + **repo-relative path** (forward slashes).
+1. `Copy Relative Path` writes exactly the **repo-relative path** (forward slashes, no prefix).
 2. Starred lists are **unique** per repo+kind, stable order (most-recently-starred first).
 3. If starred count is 0 for that pane, header star button is **disabled** and pane cannot stay on “starred”.
 4. Recent files limit is **one value** used by both agent MRU storage and UI slicing.
-5. Clicking star/drag-handle must **not** trigger “copy path” click handler.
+5. Left-click/drag interactions must **not** write to clipboard.
 
 ## One design (the end state)
 
@@ -57,8 +57,8 @@ So the “2000 files lag” nightmare is currently prevented… accidentally. We
 
 * File rows become:
 
-  * **Click row** → copy `@path`
-  * **Drag handle** → copy `@path` + stage + start drag
+  * **Right-click row** → context menu actions, including **Copy Relative Path**
+  * **Drag handle** → stage + start drag
   * **Star button** → toggle starred (no copy, no drag)
 * Docs/Code headers become:
 
@@ -71,8 +71,8 @@ So the “2000 files lag” nightmare is currently prevented… accidentally. We
 
 ## Rejected (noncompliant / annoying) approaches
 
-* **Make the entire row start drag on mouse down** and also copy on click
-  Conflicts with “click should copy” and causes accidental drags. Also contradicts the PRD’s “drag handle region” intent.
+* **Make the entire row start drag on mouse down** while leaving copy behavior implicit
+  Conflicts with explicit context-menu copy actions and causes accidental drags.
 * **Keep MRU capacity hardcoded and only cap UI rendering**
   Looks fine until disk/state grows and the agent is still churning through huge lists. You want one knob.
 

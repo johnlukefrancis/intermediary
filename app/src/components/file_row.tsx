@@ -1,5 +1,5 @@
 // Path: app/src/components/file_row.tsx
-// Description: Draggable file row with file-type icon, click-to-copy, and star toggle
+// Description: Draggable file row with file-type icon, context menu, and star toggle
 
 import type React from "react";
 import { useCallback } from "react";
@@ -60,26 +60,14 @@ export function FileRow({
   onToggleStar,
   onContextMenu,
 }: FileRowProps): React.JSX.Element {
-  const clipboardText = `@${file.path}`;
-
-  // MouseDown on row -> copy @path + trigger drag (skip if target is a button)
+  // MouseDown on row -> trigger drag (skip if target is a button)
   const handleRowMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest("button")) return;
-      void navigator.clipboard.writeText(clipboardText);
       void onDragStart(repoId, file.path, stagedInfo);
     },
-    [repoId, file.path, stagedInfo, clipboardText, onDragStart]
-  );
-
-  // Click row -> copy @path (unless click originated from a button)
-  const handleRowClick = useCallback(
-    (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest("button")) return;
-      void navigator.clipboard.writeText(clipboardText);
-    },
-    [clipboardText]
+    [repoId, file.path, stagedInfo, onDragStart]
   );
 
   // Star button click -> toggle starred (no copy, no drag)
@@ -109,9 +97,8 @@ export function FileRow({
       className="file-row"
       data-change-type={file.changeType}
       onMouseDown={handleRowMouseDown}
-      onClick={handleRowClick}
       onContextMenu={handleContextMenu}
-      title={`Click to copy ${clipboardText}`}
+      title="Right-click for file actions"
     >
       <FileIcon family={family} />
       <div className="file-info">

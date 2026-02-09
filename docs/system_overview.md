@@ -63,7 +63,7 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
   - Three-column layout per repo: Docs, Code, Zip Bundles
-  - File-row right-click context menu with `Open File`, `Open Containing Folder`, and `Favourite/Unfavourite`
+  - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
