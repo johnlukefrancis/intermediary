@@ -7,7 +7,7 @@
     },
     {
       "path": "app/splashscreen.html",
-      "summary": "Static splashscreen page shown before main window is ready"
+      "summary": "Deck-themed boot screen shown before main window is ready"
     },
     {
       "path": "app/src/app.tsx",
@@ -340,6 +340,10 @@
     {
       "path": "app/src/styles/badges.css",
       "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]"
+    },
+    {
+      "path": "app/src/styles/boot.css",
+      "summary": "Boot phase opacity gate - smooth fade-in when main window becomes ready"
     },
     {
       "path": "app/src/styles/bundle_column.css",

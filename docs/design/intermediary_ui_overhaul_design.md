@@ -31,6 +31,7 @@ theme_dark.css    → Fills semantic slots with dark theme values
 theme_accents.css → Default accent fallback (runtime values applied via inline styles)
 effects.css       → Background gradient, grain, glass utilities
 motion.css        → Transition presets, reduced-motion support
+boot.css          → Boot phase opacity gate, splash-to-main fade-in
 a11y.css          → Focus rings, disabled states, screen reader utilities
 badges.css        → Unified badge primitives
 main.css          → Layout reset and base structure
@@ -45,6 +46,7 @@ main.css          → Layout reset and base structure
 | `theme_dark.css` | Dark theme values (V2: aggressive), semantic states, glass surface, deck frame/substrate | ~85 |
 | `theme_accents.css` | Default accent fallback only (runtime values applied via inline styles in app.tsx) | ~22 |
 | `effects.css` | Deck chassis frame, substrate (grid + grain at z:0), vignette, glass/glow utilities | ~80 |
+| `boot.css` | Boot phase opacity gate for splash-to-main fade-in transition | ~10 |
 | `main.css` | Reset, document sizing, app shell layout | ~90 |
 
 ---

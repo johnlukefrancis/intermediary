@@ -1,0 +1,16 @@
+/*
+ * Path: app/src/styles/boot.css
+ * Description: Boot phase opacity gate - smooth fade-in when main window becomes ready
+ */
+
+/* Hold content invisible during pre-boot (window is hidden anyway;
+   this prevents any flash during the show() -> bootPhase="ready" gap) */
+[data-boot-phase="pre"] #root {
+  opacity: 0;
+}
+
+/* Token-driven fade-in reveal.
+   Reduced motion collapses this via the global rule in motion.css. */
+#root {
+  transition: opacity var(--duration-normal) var(--ease-out);
+}

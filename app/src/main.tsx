@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./app.js";
 import { ConfigProvider } from "./hooks/use_config.js";
 import { AgentProvider } from "./hooks/use_agent.js";
-// CSS imports - ORDER MATTERS (tokens -> theme -> accents -> effects -> layout -> panels -> chrome -> components)
+// CSS imports - ORDER MATTERS (tokens -> theme -> accents -> effects -> motion -> boot -> a11y -> layout -> panels -> chrome -> components)
 import "./styles/tokens.css";
 import "./styles/theme_dark.css";
 import "./styles/theme_warm.css";
@@ -14,6 +14,7 @@ import "./styles/theme_light.css";
 import "./styles/theme_accents.css";
 import "./styles/effects.css";
 import "./styles/motion.css";
+import "./styles/boot.css";
 import "./styles/a11y.css";
 import "./styles/badges.css";
 import "./styles/main.css";

@@ -4,7 +4,7 @@ Scope: src-tauri, crates, app, scripts (extensions: .cjs, .css, .d.cts, .d.mts, 
 
 ```text
 app/index.html - index module
-app/splashscreen.html - Static splashscreen page shown before main window is ready
+app/splashscreen.html - Deck-themed boot screen shown before main window is ready
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
 app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
@@ -88,6 +88,7 @@ app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
 app/src/styles/agent_offline_banner.css - Banner styling for offline WSL agent diagnostics
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
+app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main window becomes ready
 app/src/styles/bundle_column.css - Hardware-style bundle column with segmented controls and command buttons
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
