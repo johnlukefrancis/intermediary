@@ -18,6 +18,7 @@ interface FileRowProps {
     stagedInfo: StagedInfo | undefined
   ) => void | Promise<void>;
   onToggleStar: () => void;
+  onContextMenu: (e: React.MouseEvent, file: FileEntry) => void;
 }
 
 function formatRelativeTime(isoDate: string): string {
@@ -57,6 +58,7 @@ export function FileRow({
   isStarred,
   onDragStart,
   onToggleStar,
+  onContextMenu,
 }: FileRowProps): React.JSX.Element {
   const clipboardText = `@${file.path}`;
 
@@ -89,6 +91,15 @@ export function FileRow({
     [onToggleStar]
   );
 
+  // Right-click -> context menu
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      onContextMenu(e, file);
+    },
+    [onContextMenu, file]
+  );
+
   const fileName = getFileName(file.path);
   const directory = getDirectory(file.path);
   const family = getFileFamily(file.path);
@@ -99,6 +110,7 @@ export function FileRow({
       data-change-type={file.changeType}
       onMouseDown={handleRowMouseDown}
       onClick={handleRowClick}
+      onContextMenu={handleContextMenu}
       title={`Click to copy ${clipboardText}`}
     >
       <FileIcon family={family} />

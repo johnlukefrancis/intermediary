@@ -63,6 +63,7 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
   - Three-column layout per repo: Docs, Code, Zip Bundles
+  - File-row right-click context menu with `Open File`, `Open Containing Folder`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
@@ -126,6 +127,12 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `buildBundle { repoId, presetId, selection } → buildBundleResult`
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
+
+### Host OS File Actions
+
+- File-row context-menu actions are executed through Tauri commands.
+- Command inputs are `root` (`{ kind: "wsl" | "host", path }`) + `relativePath` (repo-relative slash path), not frontend-built absolute paths.
+- The backend validates relative paths, resolves host-visible paths (including Windows WSL conversion), and launches native file-manager/open handlers per OS.
 
 ### Staging System
 

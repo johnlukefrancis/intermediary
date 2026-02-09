@@ -5,5 +5,6 @@ pub mod agent_control;
 pub mod agent_probe;
 pub mod config;
 pub mod file_manager;
+pub mod file_opener;
 pub mod paths;
 pub mod reset;

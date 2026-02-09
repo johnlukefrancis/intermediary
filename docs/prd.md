@@ -89,6 +89,10 @@ Depends on: ADR-000, ADR-006, ADR-007
 * **Click row** → copies `@<repo-relative-path>` to clipboard (forward slashes)
 * **Drag handle** → stages file, starts OS drag, also copies `@<path>` to clipboard
 * **Star button** → toggles starred status (does not copy or drag)
+* **Right-click row** → opens context menu with:
+  * Open Containing Folder
+  * Open File
+  * Favourite / Unfavourite
 
 ### Drag interaction
 
@@ -223,6 +227,7 @@ Bundles should be self-identifying:
 * If staging copy fails: show per-item error and log.
 * If bundle build fails: show build error output (truncate) and keep last good build.
 * Reconnects may re-run `clientHello`; the agent treats the handshake as idempotent and safe to call multiple times.
+* File-row context menu actions validate repo-relative input before any OS launch; invalid/traversal paths must fail with an explicit error.
 
 ### 7.8 Agent lifecycle
 

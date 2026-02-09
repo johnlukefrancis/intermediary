@@ -13,9 +13,10 @@ app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag supp
 app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
+app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
-app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components
+app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components with context menu
 app/src/components/file_row.tsx - Draggable file row with file-type icon, click-to-copy, and star toggle
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
@@ -47,6 +48,7 @@ app/src/hooks/use_config_actions.ts - Core config action factory functions for r
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
+app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
@@ -85,6 +87,7 @@ app/src/styles/bundle_column.css - Hardware-style bundle column with segmented c
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
+app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
@@ -207,6 +210,7 @@ src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + op
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in the host OS file manager
+src-tauri/src/lib/commands/file_opener.rs - Reveal files in file manager or open with default application
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches

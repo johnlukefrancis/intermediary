@@ -22,7 +22,7 @@ pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
     }
 
     tauri::async_runtime::spawn_blocking(move || {
-        let host_path = resolve_host_folder_path(&folder_path)?;
+        let host_path = resolve_host_path(&folder_path)?;
         let path = Path::new(&host_path);
         let is_windows_unc = cfg!(target_os = "windows") && host_path.starts_with(r"\\");
         if !is_windows_unc && !path.is_dir() {
@@ -64,7 +64,7 @@ pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
 }
 
 #[cfg(target_os = "windows")]
-fn resolve_host_folder_path(folder_path: &str) -> Result<String, String> {
+pub(crate) fn resolve_host_path(folder_path: &str) -> Result<String, String> {
     if !folder_path.starts_with('/') {
         return Ok(folder_path.to_string());
     }
@@ -79,6 +79,6 @@ fn resolve_host_folder_path(folder_path: &str) -> Result<String, String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn resolve_host_folder_path(folder_path: &str) -> Result<String, String> {
+pub(crate) fn resolve_host_path(folder_path: &str) -> Result<String, String> {
     Ok(folder_path.to_string())
 }

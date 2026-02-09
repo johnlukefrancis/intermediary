@@ -42,6 +42,10 @@
       "summary": "Generic confirmation dialog with portal rendering"
     },
     {
+      "path": "app/src/components/context_menu.tsx",
+      "summary": "Generic reusable right-click context menu with glass aesthetic"
+    },
+    {
       "path": "app/src/components/drag_error_notice.tsx",
       "summary": "Small inline error notice for drag failures"
     },
@@ -51,7 +55,7 @@
     },
     {
       "path": "app/src/components/file_list_column.tsx",
-      "summary": "Column wrapper that renders a list of FileRow components"
+      "summary": "Column wrapper that renders a list of FileRow components with context menu"
     },
     {
       "path": "app/src/components/file_row.tsx",
@@ -176,6 +180,10 @@
     {
       "path": "app/src/hooks/use_drag.ts",
       "summary": "Drag-out logic with on-demand staging"
+    },
+    {
+      "path": "app/src/hooks/use_file_actions.ts",
+      "summary": "Hook for OS-level file operations (reveal in file manager, open file)"
     },
     {
       "path": "app/src/hooks/use_motion_governor.ts",
@@ -328,6 +336,10 @@
     {
       "path": "app/src/styles/confirm_modal.css",
       "summary": "Confirmation dialog overlay with glass panel styling"
+    },
+    {
+      "path": "app/src/styles/context_menu.css",
+      "summary": "Right-click context menu with glass aesthetic"
     },
     {
       "path": "app/src/styles/drag_error_notice.css",
@@ -816,6 +828,10 @@
     {
       "path": "src-tauri/src/lib/commands/file_manager.rs",
       "summary": "Open folders in the host OS file manager"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/file_opener.rs",
+      "summary": "Reveal files in file manager or open with default application"
     },
     {
       "path": "src-tauri/src/lib/commands/mod.rs",
