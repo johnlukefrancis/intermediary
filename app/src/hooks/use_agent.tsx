@@ -103,8 +103,6 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const distroOverride = persistedConfig.agentDistro;
   const requiresWsl = config.repos.some((repo) => repo.root.kind === "wsl");
   const platformSupportsWsl = hostSupportsWsl();
-
-  // clientHello lifecycle with reconnect support
   const helloState = useClientHello({
     client,
     connectionState,
@@ -153,7 +151,14 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     port: config.agentPort,
     connectionState,
   });
-  const { supervisorResult, supervisorError, restartAgent } = useAgentSupervisor({
+  const {
+    supervisorResult,
+    supervisorError,
+    startupGateRequired,
+    startupEnsureState,
+    startupEnsureError,
+    restartAgent,
+  } = useAgentSupervisor({
     configIsLoaded,
     agentHost: config.agentHost,
     agentPort: config.agentPort,
@@ -164,18 +169,15 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     connectionState,
   });
   useAgentShutdown();
-
-  // Initialize on mount (after config is loaded)
+  const startupGateReady = !startupGateRequired || startupEnsureState === "ready";
   useEffect(() => {
-    // Don't initialize until config is loaded
-    if (!configIsLoaded) return;
+    if (!configIsLoaded || !startupGateReady) return;
 
     let mounted = true;
     let agentClient: AgentClient | null = null;
 
     async function init(): Promise<void> {
       try {
-        // Sync ref to the loaded config before resolving paths
         outputHostRootRef.current = persistedConfig.outputWindowsRoot;
         const outputRoot = outputHostRootRef.current;
         const paths = await invoke<AppPaths>("get_app_paths", {
@@ -208,15 +210,9 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         agentClient.disconnect();
       }
     };
-    // Note: outputHostRootRef is used instead of persistedConfig.outputWindowsRoot
-    // to avoid reconnecting when only the output path changes. The refreshPaths effect
-    // handles output path changes without triggering a full agent reconnection.
-  }, [configIsLoaded, config.agentHost, config.agentPort, handleEvent]);
-
-  // Refresh appPaths when outputWindowsRoot changes (after initial init)
+  }, [configIsLoaded, startupGateReady, config.agentHost, config.agentPort, handleEvent]);
   useEffect(() => {
     if (!configIsLoaded) return;
-    // Skip if this is the first run or value hasn't changed
     if (persistedConfig.outputWindowsRoot === outputHostRootRef.current) return;
 
     async function refreshPaths(): Promise<void> {
@@ -226,7 +222,6 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         });
         setAppPaths(paths);
         outputHostRootRef.current = persistedConfig.outputWindowsRoot;
-        // The clientHello effect will re-send when appPaths changes
       } catch (err) {
         console.error("[AgentProvider] Failed to refresh paths:", err);
       }
@@ -238,7 +233,6 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const setAutoStageOnChange = useCallback(
     (value: boolean) => {
       setAutoStageOnChangeState(value);
-      // Persist to config
       setAutoStageGlobal(value);
 
       if (!client || connectionState.status !== "connected") {
@@ -274,7 +268,11 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
             port: config.agentPort,
             autoStartEnabled,
             supervisorStatus: supervisorResult?.status ?? null,
-            supervisorError: supervisorError,
+            supervisorError:
+              supervisorError ??
+              (startupGateRequired && startupEnsureState === "failed"
+                ? startupEnsureError
+                : null),
           }
         : null,
     platformSupportsWsl,
@@ -287,9 +285,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   };
 
   return (
-    <AgentContext.Provider value={value}>
-      {children}
-    </AgentContext.Provider>
+    <AgentContext.Provider value={value}>{children}</AgentContext.Provider>
   );
 }
 

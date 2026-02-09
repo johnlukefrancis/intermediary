@@ -146,6 +146,10 @@
       "summary": "Stop the WSL agent when the app window is closing"
     },
     {
+      "path": "app/src/hooks/agent/use_agent_supervisor_helpers.ts",
+      "summary": "Shared parsing and request helpers for agent supervisor hook"
+    },
+    {
       "path": "app/src/hooks/agent/use_agent_supervisor.ts",
       "summary": "Manage auto-start and restart of host-agent supervision with optional Windows WSL backend"
     },
@@ -220,6 +224,10 @@
     {
       "path": "app/src/lib/agent/messages.ts",
       "summary": "Typed helper functions for sending agent commands"
+    },
+    {
+      "path": "app/src/lib/agent/transient_wsl_error.ts",
+      "summary": "Detect transient WSL transport/bootstrap failures and compute retry delays"
     },
     {
       "path": "app/src/lib/icons/file_family.ts",

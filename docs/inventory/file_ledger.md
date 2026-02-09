@@ -39,6 +39,7 @@ app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for si
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
 app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
+app/src/hooks/agent/use_agent_supervisor_helpers.ts - Shared parsing and request helpers for agent supervisor hook
 app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host-agent supervision with optional Windows WSL backend
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
@@ -58,6 +59,7 @@ app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
+app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons

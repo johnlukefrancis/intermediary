@@ -5,6 +5,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAgent } from "./use_agent.js";
 import { useConfig } from "./use_config.js";
 import { sendBuildBundle, sendListBundles } from "../lib/agent/messages.js";
+import {
+  computeTransientRetryDelayMs,
+  isTransientWslTransportError,
+} from "../lib/agent/transient_wsl_error.js";
 import type {
   BundleInfo,
   BundleSelection,
@@ -194,6 +198,10 @@ export function useBundleState(
   >(
     new Map()
   );
+  const refreshRetryTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const refreshRetryAttemptsRef = useRef<Map<string, number>>(new Map());
+  const refreshInFlightRef = useRef<Set<string>>(new Set());
+  const refreshEpochRef = useRef(0);
   const PROGRESS_THROTTLE_MS = 500;
 
   // Update selection for a preset
@@ -215,13 +223,36 @@ export function useBundleState(
     persistSelection(repoId, presetId, selection);
   }, [repoId, persistSelection]);
 
+  const clearRefreshRetry = useCallback((presetId: string) => {
+    const timer = refreshRetryTimersRef.current.get(presetId);
+    if (timer) {
+      clearTimeout(timer);
+      refreshRetryTimersRef.current.delete(presetId);
+    }
+    refreshRetryAttemptsRef.current.delete(presetId);
+  }, []);
+
+  const clearAllRefreshRetries = useCallback(() => {
+    for (const timer of refreshRetryTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    refreshRetryTimersRef.current.clear();
+    refreshRetryAttemptsRef.current.clear();
+    refreshInFlightRef.current.clear();
+  }, []);
+
   // Refresh bundle list for a preset
   const refreshBundles = useCallback(
     async (presetId: string) => {
       if (!client || connectionState.status !== "connected") return;
+      if (refreshInFlightRef.current.has(presetId)) return;
+      refreshInFlightRef.current.add(presetId);
+      const refreshEpoch = refreshEpochRef.current;
 
       try {
         const result = await sendListBundles(client, repoId, presetId);
+        if (refreshEpoch !== refreshEpochRef.current) return;
+        clearRefreshRetry(presetId);
         setPresets((prev) => {
           const next = new Map(prev);
           const preset = next.get(presetId);
@@ -236,10 +267,27 @@ export function useBundleState(
           return next;
         });
       } catch (err) {
+        if (refreshEpoch !== refreshEpochRef.current) return;
+        if (isTransientWslTransportError(err)) {
+          const attempts = refreshRetryAttemptsRef.current.get(presetId) ?? 0;
+          const delay = computeTransientRetryDelayMs(attempts);
+          refreshRetryAttemptsRef.current.set(presetId, attempts + 1);
+          const priorTimer = refreshRetryTimersRef.current.get(presetId);
+          if (priorTimer) clearTimeout(priorTimer);
+          const timer = setTimeout(() => {
+            if (refreshEpoch !== refreshEpochRef.current) return;
+            void refreshBundles(presetId);
+          }, delay);
+          refreshRetryTimersRef.current.set(presetId, timer);
+          return;
+        }
+        clearRefreshRetry(presetId);
         console.error("[useBundleState] refreshBundles failed:", err);
+      } finally {
+        refreshInFlightRef.current.delete(presetId);
       }
     },
-    [client, connectionState.status, repoId]
+    [clearRefreshRetry, client, connectionState.status, repoId]
   );
 
   // Build bundle for a preset
@@ -397,6 +445,17 @@ export function useBundleState(
     const unsubscribe = subscribe(handleEvent);
     return unsubscribe;
   }, [subscribe, handleEvent]);
+
+  useEffect(() => {
+    refreshEpochRef.current += 1;
+    clearAllRefreshRetries();
+  }, [repoId, connectionState.status, helloState.lastHelloAt, clearAllRefreshRetries]);
+
+  useEffect(() => {
+    return () => {
+      clearAllRefreshRetries();
+    };
+  }, [clearAllRefreshRetries]);
 
   // Reset state when repoId changes
   useEffect(() => {

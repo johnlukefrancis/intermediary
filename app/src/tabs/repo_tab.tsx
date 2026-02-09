@@ -47,6 +47,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     recentCode,
     stagedByPath,
     isLoading,
+    hydrationStatus,
     topLevelDirs,
     topLevelSubdirs,
     registerStaged,
@@ -73,11 +74,14 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   );
 
   const isConnected = connectionState.status === "connected";
-  const recentEmptyMessage = !isConnected
-    ? "Waiting for agent..."
-    : isLoading
-      ? "Loading..."
-      : "No recent files";
+  const recentEmptyMessage =
+    !isConnected || hydrationStatus === "waiting_for_agent"
+      ? "Waiting for agent..."
+      : hydrationStatus === "hydrating" || hydrationStatus === "retrying" || isLoading
+        ? "Loading..."
+        : hydrationStatus === "error"
+          ? "Unable to load files"
+          : "No recent files";
 
   // Build file lists based on view
   const docsFiles =

@@ -14,12 +14,24 @@ import {
   sendRefresh,
   sendWatchRepo,
 } from "../lib/agent/messages.js";
+import {
+  computeTransientRetryDelayMs,
+  isTransientWslTransportError,
+} from "../lib/agent/transient_wsl_error.js";
+
+export type RepoHydrationStatus =
+  | "waiting_for_agent"
+  | "hydrating"
+  | "retrying"
+  | "ready"
+  | "error";
 
 export interface RepoState {
   recentDocs: FileEntry[];
   recentCode: FileEntry[];
   stagedByPath: Map<string, StagedInfo>;
   isLoading: boolean;
+  hydrationStatus: RepoHydrationStatus;
   topLevelDirs: string[];
   topLevelFiles: string[];
   /** Subdirectories within each top-level dir (depth-2) */
@@ -54,11 +66,15 @@ export function useRepoState(repoId: string): RepoState {
     () => new Map()
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [hydrationStatus, setHydrationStatus] = useState<RepoHydrationStatus>(
+    "waiting_for_agent"
+  );
   const [topLevelDirs, setTopLevelDirs] = useState<string[]>([]);
   const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
   const [topLevelSubdirs, setTopLevelSubdirs] = useState<Record<string, string[]>>({});
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
   const refreshInFlightKeyRef = useRef<string | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const registerStaged = useCallback((relativePath: string, stagedInfo: StagedInfo) => {
     setStagedByPath((prev) => {
@@ -84,6 +100,7 @@ export function useRepoState(repoId: string): RepoState {
         setRecentCode(code);
         setStagedByPath(new Map());
         setIsLoading(false);
+        setHydrationStatus("ready");
       } else if (event.type === "fileChanged" && event.repoId === repoId) {
         const entry: FileEntry = {
           path: event.path,
@@ -119,11 +136,16 @@ export function useRepoState(repoId: string): RepoState {
     setRecentCode([]);
     setStagedByPath(new Map());
     setIsLoading(true);
+    setHydrationStatus("waiting_for_agent");
     setTopLevelDirs([]);
     setTopLevelFiles([]);
     setTopLevelSubdirs({});
     lastHelloRefreshKeyRef.current = null;
     refreshInFlightKeyRef.current = null;
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
   }, [repoId]);
 
   useEffect(() => {
@@ -138,10 +160,14 @@ export function useRepoState(repoId: string): RepoState {
       helloState.status !== "ok" ||
       helloState.lastHelloAt === null
     ) {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+      refreshInFlightKeyRef.current = null;
+      setHydrationStatus("waiting_for_agent");
+      setIsLoading(true);
       return;
-    }
-    if (!helloState.watchedRepoIds.includes(repoId)) {
-      // Continue: we can recover by watching this repo on demand below.
     }
 
     const refreshKey = `${repoId}:${helloState.lastHelloAt}`;
@@ -151,16 +177,23 @@ export function useRepoState(repoId: string): RepoState {
     if (refreshInFlightKeyRef.current === refreshKey) {
       return;
     }
-    refreshInFlightKeyRef.current = refreshKey;
-
-    setIsLoading(true);
-    const isStale = (): boolean => refreshInFlightKeyRef.current !== refreshKey;
-    void (async () => {
+    let cancelled = false;
+    let retryAttempt = 0;
+    const clearRetryTimeout = (): void => {
+      if (!retryTimeoutRef.current) return;
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    };
+    const isStale = (): boolean =>
+      cancelled || refreshInFlightKeyRef.current !== refreshKey;
+    const runHydration = async (): Promise<void> => {
+      refreshInFlightKeyRef.current = refreshKey;
+      setHydrationStatus(retryAttempt === 0 ? "hydrating" : "retrying");
+      setIsLoading(true);
       try {
         if (!helloState.watchedRepoIds.includes(repoId)) {
           await sendWatchRepo(client, repoId);
         }
-
         if (isStale()) return;
         await sendRefresh(client, repoId);
         if (isStale()) return;
@@ -170,19 +203,38 @@ export function useRepoState(repoId: string): RepoState {
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});
         lastHelloRefreshKeyRef.current = refreshKey;
+        clearRetryTimeout();
+        setHydrationStatus("ready");
         setIsLoading(false);
       } catch (err: unknown) {
         if (isStale()) return;
+        if (isTransientWslTransportError(err)) {
+          const delay = computeTransientRetryDelayMs(retryAttempt);
+          retryAttempt += 1;
+          clearRetryTimeout();
+          setHydrationStatus("retrying");
+          setIsLoading(true);
+          retryTimeoutRef.current = setTimeout(() => {
+            if (cancelled) return;
+            void runHydration();
+          }, delay);
+          return;
+        }
         console.error("[useRepoState] repo hydration failed:", err);
+        clearRetryTimeout();
+        setHydrationStatus("error");
         setIsLoading(false);
       } finally {
         if (refreshInFlightKeyRef.current === refreshKey) {
           refreshInFlightKeyRef.current = null;
         }
       }
-    })();
+    };
+    void runHydration();
 
     return () => {
+      cancelled = true;
+      clearRetryTimeout();
       if (refreshInFlightKeyRef.current === refreshKey) {
         refreshInFlightKeyRef.current = null;
       }
@@ -201,6 +253,7 @@ export function useRepoState(repoId: string): RepoState {
     recentCode,
     stagedByPath,
     isLoading,
+    hydrationStatus,
     topLevelDirs,
     topLevelFiles,
     topLevelSubdirs,
