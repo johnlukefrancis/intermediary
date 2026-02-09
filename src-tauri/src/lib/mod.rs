@@ -17,6 +17,7 @@ use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
 use commands::reset::reset_app_state;
+use commands::startup::startup_ready;
 use obs::logging;
 use tauri::{Manager, RunEvent};
 
@@ -49,7 +50,8 @@ pub fn run() {
             open_in_file_manager,
             reveal_in_file_manager,
             open_file,
-            open_files
+            open_files,
+            startup_ready
         ])
         .build(tauri::generate_context!())
         .expect("error building tauri application");

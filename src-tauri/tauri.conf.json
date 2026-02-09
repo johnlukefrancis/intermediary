@@ -12,12 +12,28 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Intermediary",
+        "url": "index.html",
         "width": 1200,
         "height": 800,
         "resizable": true,
         "fullscreen": false,
         "dragDropEnabled": false,
+        "visible": false,
+        "backgroundColor": "#050508"
+      },
+      {
+        "label": "splashscreen",
+        "title": "Intermediary",
+        "url": "splashscreen.html",
+        "width": 1200,
+        "height": 800,
+        "visible": true,
+        "resizable": false,
+        "decorations": false,
+        "skipTaskbar": true,
+        "center": true,
         "backgroundColor": "#050508"
       }
     ],

@@ -62,6 +62,7 @@ Intermediary uses a **host-routed architecture**:
 - **Stack:** Tauri + React/TypeScript
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
+  - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
   - Three-column layout per repo: Docs, Code, Zip Bundles
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`

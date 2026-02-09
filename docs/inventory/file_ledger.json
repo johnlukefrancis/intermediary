@@ -6,6 +6,10 @@
       "summary": "index module"
     },
     {
+      "path": "app/splashscreen.html",
+      "summary": "Static splashscreen page shown before main window is ready"
+    },
+    {
       "path": "app/src/app.tsx",
       "summary": "Root component with config-driven tab state management"
     },
@@ -204,6 +208,10 @@
     {
       "path": "app/src/hooks/use_starred_files.ts",
       "summary": "Hook exposing starred file state and actions for a repo"
+    },
+    {
+      "path": "app/src/hooks/use_startup_ready.ts",
+      "summary": "One-shot startup handshake to reveal main window after config load"
     },
     {
       "path": "app/src/hooks/use_tab_bar_scroll.ts",
@@ -856,6 +864,10 @@
     {
       "path": "src-tauri/src/lib/commands/reset.rs",
       "summary": "Tauri command to clear staging artifacts and caches"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/startup.rs",
+      "summary": "Startup readiness command for splashscreen -> main transition"
     },
     {
       "path": "src-tauri/src/lib/config/generated_code_globs.rs",

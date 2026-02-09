@@ -8,3 +8,4 @@ pub mod file_manager;
 pub mod file_opener;
 pub mod paths;
 pub mod reset;
+pub mod startup;
