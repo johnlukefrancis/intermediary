@@ -178,3 +178,13 @@
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
+
+/* ===== SELECTED STATE ===== */
+.file-row[data-selected]::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
+}
+
+.file-row[data-selected] {
+  background: var(--color-bg-elevated);
+}

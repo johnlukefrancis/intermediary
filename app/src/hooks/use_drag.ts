@@ -7,6 +7,11 @@ import { useAgent } from "./use_agent.js";
 import { sendStageFile } from "../lib/agent/messages.js";
 import type { StagedInfo } from "../shared/protocol.js";
 
+export interface FileForDrag {
+  path: string;
+  stagedInfo: StagedInfo | undefined;
+}
+
 export interface DragState {
   isDragging: boolean;
   isStaging: boolean;
@@ -29,6 +34,10 @@ export interface UseDragResult {
     repoId: string,
     relativePath: string,
     stagedInfo: StagedInfo | undefined
+  ) => Promise<void>;
+  handleMultiDragStart: (
+    repoId: string,
+    files: FileForDrag[]
   ) => Promise<void>;
   clearError: () => void;
 }
@@ -88,9 +97,64 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
     [client, appPaths, onStaged]
   );
 
+  const handleMultiDragStart = useCallback(
+    async (repoId: string, files: FileForDrag[]): Promise<void> => {
+      if (!client || !appPaths) {
+        setDragState({ isDragging: false, isStaging: false, error: "Not connected" });
+        return;
+      }
+      if (files.length === 0) return;
+
+      setDragState({ isDragging: true, isStaging: true, error: null });
+
+      try {
+        const results = await Promise.allSettled(
+          files.map(async (f) => {
+            if (f.stagedInfo?.hostPath) return { path: f.path, hostPath: f.stagedInfo.hostPath };
+            const result = await sendStageFile(client, repoId, f.path);
+            const stagedResult: StagedInfo = {
+              hostPath: result.hostPath,
+              wslPath: result.wslPath,
+              bytesCopied: result.bytesCopied,
+              mtimeMs: result.mtimeMs,
+            };
+            onStaged?.(f.path, stagedResult);
+            return { path: f.path, hostPath: stagedResult.hostPath };
+          })
+        );
+
+        const hostPaths: string[] = [];
+        for (const r of results) {
+          if (r.status === "fulfilled") {
+            hostPaths.push(r.value.hostPath);
+          } else {
+            console.warn("[useDrag] staging failed for a file:", r.reason);
+          }
+        }
+
+        if (hostPaths.length === 0) {
+          setDragState({ isDragging: false, isStaging: false, error: "All files failed to stage" });
+          return;
+        }
+
+        await startDrag({
+          item: hostPaths,
+          icon: appPaths.dragIconHostPath,
+        });
+
+        setDragState(INITIAL_DRAG_STATE);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Multi-drag failed";
+        setDragState({ isDragging: false, isStaging: false, error: message });
+      }
+    },
+    [client, appPaths, onStaged]
+  );
+
   return {
     dragState,
     handleDragStart,
+    handleMultiDragStart,
     clearError,
   };
 }

@@ -2,7 +2,7 @@
 // Description: Generic repo tab component with 3-column layout
 
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { FileListColumn } from "../components/file_list_column.js";
@@ -13,6 +13,7 @@ import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
+import { useFileSelection } from "../hooks/use_file_selection.js";
 import type { FileEntry } from "../shared/protocol.js";
 
 type PaneView = "recent" | "starred";
@@ -51,7 +52,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     registerStaged,
   } = useRepoState(repoId);
   const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs);
-  const { dragState, handleDragStart, clearError } = useDrag({
+  const { dragState, handleDragStart, handleMultiDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
   const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
@@ -88,6 +89,72 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       ? buildStarredEntries(starredCodePaths, recentCode, "code")
       : recentCode;
 
+  // Selection hooks — must be after file lists are computed
+  const docsSelection = useFileSelection(docsFiles);
+  const codeSelection = useFileSelection(codeFiles);
+
+  // Per-pane drag handlers: multi-drag if file is in multi-selection, else single
+  const handleDocsDrag = useCallback(
+    (path: string) => {
+      if (docsSelection.isSelected(path) && docsSelection.selectionCount > 1) {
+        const files = [...docsSelection.selectedPaths].map((p) => ({
+          path: p,
+          stagedInfo: stagedByPath.get(p),
+        }));
+        void handleMultiDragStart(repoId, files);
+      } else {
+        docsSelection.clearSelection();
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }
+    },
+    [repoId, docsSelection, stagedByPath, handleDragStart, handleMultiDragStart]
+  );
+
+  const handleCodeDrag = useCallback(
+    (path: string) => {
+      if (codeSelection.isSelected(path) && codeSelection.selectionCount > 1) {
+        const files = [...codeSelection.selectedPaths].map((p) => ({
+          path: p,
+          stagedInfo: stagedByPath.get(p),
+        }));
+        void handleMultiDragStart(repoId, files);
+      } else {
+        codeSelection.clearSelection();
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }
+    },
+    [repoId, codeSelection, stagedByPath, handleDragStart, handleMultiDragStart]
+  );
+
+  // View-switch handlers: clear selection when switching views
+  const handleDocsViewChange = useCallback(
+    (view: PaneView) => {
+      setDocsView(view);
+      docsSelection.clearSelection();
+    },
+    [docsSelection]
+  );
+
+  const handleCodeViewChange = useCallback(
+    (view: PaneView) => {
+      setCodeView(view);
+      codeSelection.clearSelection();
+    },
+    [codeSelection]
+  );
+
+  // Escape to clear all selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        docsSelection.clearSelection();
+        codeSelection.clearSelection();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); };
+  }, [docsSelection, codeSelection]);
+
   // Empty messages per view
   const docsEmptyMessage =
     docsView === "starred" ? "No starred files" : recentEmptyMessage;
@@ -99,7 +166,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-title-button${docsView === "starred" ? " panel-title-button--dimmed" : ""}`}
-      onClick={() => { setDocsView("recent"); }}
+      onClick={() => { handleDocsViewChange("recent"); }}
       title="Show recent docs"
     >
       Docs
@@ -109,7 +176,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { setDocsView(docsView === "starred" ? "recent" : "starred"); }}
+      onClick={() => { handleDocsViewChange(docsView === "starred" ? "recent" : "starred"); }}
       title={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
       aria-label={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
       aria-pressed={docsView === "starred"}
@@ -123,7 +190,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-title-button${codeView === "starred" ? " panel-title-button--dimmed" : ""}`}
-      onClick={() => { setCodeView("recent"); }}
+      onClick={() => { handleCodeViewChange("recent"); }}
       title="Show recent files"
     >
       Code
@@ -133,7 +200,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     <button
       type="button"
       className={`panel-header-icon${codeView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { setCodeView(codeView === "starred" ? "recent" : "starred"); }}
+      onClick={() => { handleCodeViewChange(codeView === "starred" ? "recent" : "starred"); }}
       title={codeView === "starred" ? "Show recent files" : "Show favourited files"}
       aria-label={codeView === "starred" ? "Show recent files" : "Show favourited files"}
       aria-pressed={codeView === "starred"}
@@ -153,11 +220,12 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
         docsContent={
           <FileListColumn
             files={docsFiles}
-            stagedByPath={stagedByPath}
             repoId={repoId}
             kind="docs"
             emptyMessage={docsEmptyMessage}
-            onDragStart={handleDragStart}
+            selectedPaths={docsSelection.selectedPaths}
+            onSelect={docsSelection.handleSelect}
+            onDragStart={handleDocsDrag}
           />
         }
         codeHeaderLeft={codeHeaderLeft}
@@ -165,11 +233,12 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
         codeContent={
           <FileListColumn
             files={codeFiles}
-            stagedByPath={stagedByPath}
             repoId={repoId}
             kind="code"
             emptyMessage={codeEmptyMessage}
-            onDragStart={handleDragStart}
+            selectedPaths={codeSelection.selectedPaths}
+            onSelect={codeSelection.handleSelect}
+            onDragStart={handleCodeDrag}
           />
         }
         zipsContent={

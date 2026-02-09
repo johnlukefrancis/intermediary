@@ -17,7 +17,7 @@ app/src/components/context_menu.tsx - Generic reusable right-click context menu 
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components with context menu
-app/src/components/file_row.tsx - Draggable file row with file-type icon, click-to-copy, and star toggle
+app/src/components/file_row.tsx - Draggable file row with file-type icon, context menu, and star toggle
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
@@ -49,6 +49,7 @@ app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
+app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo

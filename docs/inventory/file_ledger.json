@@ -59,7 +59,7 @@
     },
     {
       "path": "app/src/components/file_row.tsx",
-      "summary": "Draggable file row with file-type icon, click-to-copy, and star toggle"
+      "summary": "Draggable file row with file-type icon, context menu, and star toggle"
     },
     {
       "path": "app/src/components/group_remove_button.tsx",
@@ -184,6 +184,10 @@
     {
       "path": "app/src/hooks/use_file_actions.ts",
       "summary": "Hook for OS-level file operations (reveal in file manager, open file)"
+    },
+    {
+      "path": "app/src/hooks/use_file_selection.ts",
+      "summary": "Multi-file selection state hook with shift-range and ctrl/cmd-toggle support"
     },
     {
       "path": "app/src/hooks/use_motion_governor.ts",

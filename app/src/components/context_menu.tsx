@@ -9,6 +9,7 @@ import "../styles/context_menu.css";
 export interface ContextMenuItem {
   label: string;
   onClick: () => void;
+  disabled?: boolean;
 }
 
 interface ContextMenuProps {
@@ -71,8 +72,9 @@ export function ContextMenu({
           <button
             key={item.label}
             type="button"
-            className="context-menu-item"
+            className={`context-menu-item${item.disabled ? " context-menu-item--disabled" : ""}`}
             role="menuitem"
+            disabled={item.disabled}
             onClick={() => { handleItemClick(item.onClick); }}
           >
             {item.label}

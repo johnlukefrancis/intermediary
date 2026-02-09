@@ -3,20 +3,16 @@
 
 import type React from "react";
 import { useCallback } from "react";
-import type { FileEntry, StagedInfo } from "../shared/protocol.js";
+import type { FileEntry } from "../shared/protocol.js";
 import { getFileFamily, FileIcon } from "../lib/icons/index.js";
 import "../styles/file_row.css";
 
 interface FileRowProps {
   file: FileEntry;
-  repoId: string;
-  stagedInfo: StagedInfo | undefined;
   isStarred: boolean;
-  onDragStart: (
-    repoId: string,
-    relativePath: string,
-    stagedInfo: StagedInfo | undefined
-  ) => void | Promise<void>;
+  isSelected: boolean;
+  onDragStart: (path: string, event: React.MouseEvent) => void | Promise<void>;
+  onSelect: (path: string, event: React.MouseEvent) => void;
   onToggleStar: () => void;
   onContextMenu: (e: React.MouseEvent, file: FileEntry) => void;
 }
@@ -53,21 +49,27 @@ function getDirectory(path: string): string {
 
 export function FileRow({
   file,
-  repoId,
-  stagedInfo,
   isStarred,
+  isSelected,
   onDragStart,
+  onSelect,
   onToggleStar,
   onContextMenu,
 }: FileRowProps): React.JSX.Element {
-  // MouseDown on row -> trigger drag (skip if target is a button)
+  // MouseDown on row — modifier keys = selection, no modifier = drag
   const handleRowMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest("button")) return;
-      void onDragStart(repoId, file.path, stagedInfo);
+
+      if (e.shiftKey || e.metaKey || e.ctrlKey) {
+        e.preventDefault(); // Prevent text selection from shift-click
+        onSelect(file.path, e);
+      } else {
+        void onDragStart(file.path, e);
+      }
     },
-    [repoId, file.path, stagedInfo, onDragStart]
+    [file.path, onDragStart, onSelect]
   );
 
   // Star button click -> toggle starred (no copy, no drag)
@@ -96,6 +98,7 @@ export function FileRow({
     <div
       className="file-row"
       data-change-type={file.changeType}
+      data-selected={isSelected || undefined}
       onMouseDown={handleRowMouseDown}
       onContextMenu={handleContextMenu}
       title="Right-click for file actions"

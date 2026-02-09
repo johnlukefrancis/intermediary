@@ -56,3 +56,9 @@
   outline: 2px solid var(--color-accent);
   outline-offset: -2px;
 }
+
+.context-menu-item--disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+  pointer-events: none;
+}
