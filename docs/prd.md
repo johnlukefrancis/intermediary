@@ -1,12 +1,12 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-02-06
+Updated on: 2026-02-09
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
 ## 1. Product overview
 
 **Product name:** Intermediary
-**Platform:** Windows 10/11 (macOS optional later)
+**Platform:** Windows 10/11, macOS, Linux
 **Problem:** High-friction file/context handoff between local repos (often in WSL) and ChatGPT/browser-based workflows.
 **Outcome:** A single-window “handoff console” that surfaces recently changed files and generates standardized zip bundles that can be dragged directly into ChatGPT (or anywhere).
 
@@ -163,12 +163,20 @@ Each repo has:
 
 ### 7.3 Staging system
 
-* All draggables originate from a **staging directory** on the Windows filesystem:
+* All draggables originate from a **staging directory** on the host filesystem:
 
-  * **Default root:** `%LOCALAPPDATA%\Intermediary\staging`
-  * **Custom root:** Users can set an `outputWindowsRoot` override in config. When set, staging uses that path as the root.
-  * Files: `staging\files\<repoId>\...`
-  * Bundles: `staging\bundles\<repoId>\<presetId>\...`
+  * **Default root:** `<app_local_data>/staging` (resolved by Tauri per platform)
+
+    | Platform | Default app local data |
+    |----------|----------------------|
+    | Windows  | `%LOCALAPPDATA%\Intermediary` |
+    | macOS    | `~/Library/Application Support/Intermediary` |
+    | Linux    | `~/.local/share/intermediary` (or `$XDG_DATA_HOME`) |
+
+  * **Custom root:** Users can set an `outputWindowsRoot` override in config. When set, staging uses that path as the root. (Name is a legacy holdover; accepts any host-native absolute path.)
+  * **WSL mirror root (Windows only):** When running on Windows, a WSL-equivalent path (`/mnt/<drive>/...`) is derived automatically for WSL backend access.
+  * Files: `staging/files/<repoId>/...`
+  * Bundles: `staging/bundles/<repoId>/<presetId>/...`
 * Staging rules:
 
   * **Auto-stage on change is the default behavior** (reduces drag latency at cost of disk churn).
@@ -249,7 +257,7 @@ So:
 
 ### 9.2 Components
 
-#### A) Windows UI app (Tauri recommended)
+#### A) UI app (Tauri)
 
 * Frontend: React/TS (or Svelte if you prefer)
 * Backend: Rust commands (config, staging ops, IPC glue)
@@ -314,10 +322,10 @@ UI → Host agent commands:
 ### 9.4 Staging path translation
 
 * Host agent and WSL backend both write staged outputs under the same app staging roots.
-* WSL backend writes via `/mnt/<drive>/Users/<you>/AppData/Local/Intermediary/staging/...`
-* UI references the same file via Windows path:
-
-  * `C:\Users\<you>\AppData\Local\Intermediary\staging\...`
+* On Windows, the WSL backend writes via the WSL mount of the host staging root:
+  * WSL path: `/mnt/<drive>/Users/<you>/AppData/Local/Intermediary/staging/...`
+  * Host path: `C:\Users\<you>\AppData\Local\Intermediary\staging\...`
+* On macOS and Linux, there is no WSL backend; all staging is host-native.
 
 ---
 

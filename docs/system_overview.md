@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-06
+Updated on: 2026-02-09
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -14,7 +14,7 @@ Intermediary uses a **host-routed architecture**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Host OS (Windows/macOS)               │
+│                  Host OS (Windows / macOS / Linux)          │
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │              Tauri App (Host UI)                    │    │
 │  │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │    │
@@ -139,7 +139,15 @@ Layout under the staging root:
 
 ### Config Persistence
 
-User preferences are persisted to `%LOCALAPPDATA%\Intermediary\config.json`:
+User preferences are persisted to `<app_local_data>/config.json`:
+
+| Platform | Default config location |
+|----------|----------------------|
+| Windows  | `%LOCALAPPDATA%\Intermediary\config.json` |
+| macOS    | `~/Library/Application Support/Intermediary/config.json` |
+| Linux    | `~/.local/share/intermediary/config.json` (or `$XDG_DATA_HOME`) |
+
+Contents:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
 - **Classifier config:** Global classification excludes (parallel to bundle excludes)
 - **UI state:** Last active repo (by repoId) + last active worktree per group
