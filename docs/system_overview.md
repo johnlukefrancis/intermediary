@@ -133,6 +133,10 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - File-row context-menu actions are executed through Tauri commands.
 - Command inputs are `root` (`{ kind: "wsl" | "host", path }`) + `relativePath` (repo-relative slash path), not frontend-built absolute paths.
 - The backend validates relative paths, resolves host-visible paths (including Windows WSL conversion), and launches native file-manager/open handlers per OS.
+- `Open File` and `Open All Files` are text-editor first on host OSes:
+  - Windows text files open in Notepad.
+  - macOS text files open in TextEdit.
+  - Non-text files (or text-editor launch failure) fall back to OS default app open behavior.
 
 ### Staging System
 

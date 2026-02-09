@@ -8,11 +8,7 @@ import type { RepoRoot } from "../shared/config/repo_root.js";
 interface FileActions {
   revealInFileManager: (root: RepoRoot, relativePath: string) => Promise<void>;
   openFile: (root: RepoRoot, relativePath: string) => Promise<void>;
-  openFiles: (
-    root: RepoRoot,
-    relativePaths: readonly string[],
-    options?: { preferVsCode?: boolean }
-  ) => Promise<void>;
+  openFiles: (root: RepoRoot, relativePaths: readonly string[]) => Promise<void>;
 }
 
 export function useFileActions(): FileActions {
@@ -39,18 +35,13 @@ export function useFileActions(): FileActions {
   );
 
   const openFiles = useCallback(
-    async (
-      root: RepoRoot,
-      relativePaths: readonly string[],
-      options?: { preferVsCode?: boolean }
-    ): Promise<void> => {
+    async (root: RepoRoot, relativePaths: readonly string[]): Promise<void> => {
       if (relativePaths.length === 0) return;
 
       try {
         await invoke("open_files", {
           root,
           relativePaths,
-          preferVscode: options?.preferVsCode ?? true,
         });
       } catch (err) {
         console.error("open_files failed:", err);

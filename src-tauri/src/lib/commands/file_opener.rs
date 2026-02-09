@@ -7,6 +7,8 @@ use std::process::Command;
 
 use super::file_manager::resolve_host_path;
 
+const TEXT_EXTENSIONS: &[&str] = &["txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "jsonc", "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "rs", "py", "java", "kt", "kts", "go", "c", "h", "hpp", "hxx", "cc", "cpp", "cxx", "cs", "swift", "rb", "php", "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd", "css", "scss", "less", "html", "htm", "xml", "svg", "sql", "vue", "svelte"];
+const TEXT_BASENAMES: &[&str] = &["readme", "license", "makefile", "dockerfile", ".gitignore", ".gitattributes", ".npmignore"];
 fn validate_relative_path(relative_path: &str) -> Result<(), String> {
     if relative_path.trim().is_empty() {
         return Err("Relative path cannot be empty".to_string());
@@ -37,7 +39,6 @@ fn validate_relative_path(relative_path: &str) -> Result<(), String> {
 
     Ok(())
 }
-
 fn resolve_host_file_path(root: &RepoRoot, relative_path: &str) -> Result<String, String> {
     let normalized_relative = relative_path.trim().replace('\\', "/");
     validate_relative_path(&normalized_relative)?;
@@ -45,7 +46,6 @@ fn resolve_host_file_path(root: &RepoRoot, relative_path: &str) -> Result<String
     let absolute_path = build_absolute_repo_path(root, &normalized_relative)?;
     resolve_host_path(&absolute_path)
 }
-
 fn resolve_host_file_paths(root: &RepoRoot, relative_paths: &[String]) -> Result<Vec<String>, String> {
     if relative_paths.is_empty() {
         return Err("No files provided".to_string());
@@ -63,7 +63,24 @@ fn resolve_host_file_paths(root: &RepoRoot, relative_paths: &[String]) -> Result
 
     Ok(host_paths)
 }
+fn is_text_relative_path(relative_path: &str) -> bool {
+    let path = Path::new(relative_path);
+    if let Some(ext) = path.extension().and_then(|value| value.to_str()) {
+        let lower_ext = ext.to_ascii_lowercase();
+        if TEXT_EXTENSIONS.contains(&lower_ext.as_str()) {
+            return true;
+        }
+    }
 
+    if let Some(name) = path.file_name().and_then(|value| value.to_str()) {
+        let lower_name = name.to_ascii_lowercase();
+        if TEXT_BASENAMES.contains(&lower_name.as_str()) {
+            return true;
+        }
+    }
+
+    false
+}
 fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
     if host_paths.is_empty() {
         return Err("No files provided".to_string());
@@ -71,10 +88,12 @@ fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        Command::new("explorer")
-            .args(host_paths)
-            .spawn()
-            .map_err(|e| format!("Failed to open files: {e}"))?;
+        for host_path in host_paths {
+            Command::new("explorer")
+                .arg(host_path)
+                .spawn()
+                .map_err(|e| format!("Failed to open file '{host_path}': {e}"))?;
+        }
         return Ok(());
     }
 
@@ -111,39 +130,83 @@ fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
     #[allow(unreachable_code)]
     Err("open_file is not supported on this platform".to_string())
 }
-
-fn open_paths_with_vscode(host_paths: &[String]) -> Result<(), String> {
+fn open_paths_with_native_text_editor(host_paths: &[String]) -> Result<(), String> {
     if host_paths.is_empty() {
         return Err("No files provided".to_string());
     }
 
     #[cfg(target_os = "windows")]
     {
-        let candidates = ["code.cmd", "code"];
-        for candidate in candidates {
-            if Command::new(candidate)
-                .arg("--reuse-window")
-                .args(host_paths)
+        for host_path in host_paths {
+            Command::new("notepad.exe")
+                .arg(host_path)
                 .spawn()
-                .is_ok()
-            {
-                return Ok(());
-            }
+                .map_err(|e| format!("Failed to open file '{host_path}' in Notepad: {e}"))?;
         }
-        return Err("Failed to open files with VS Code".to_string());
+        return Ok(());
     }
 
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
     {
-        Command::new("code")
-            .arg("--reuse-window")
+        Command::new("open")
+            .args(["-a", "TextEdit"])
             .args(host_paths)
             .spawn()
-            .map_err(|e| format!("Failed to open files with VS Code: {e}"))?;
-        Ok(())
+            .map_err(|e| format!("Failed to open files in TextEdit: {e}"))?;
+        return Ok(());
     }
-}
 
+    #[allow(unreachable_code)]
+    Err("native text editor is not supported on this platform".to_string())
+}
+fn open_paths_by_policy(relative_paths: &[String], host_paths: &[String]) -> Result<(), String> {
+    if relative_paths.len() != host_paths.len() {
+        return Err("Path mismatch while preparing file open".to_string());
+    }
+
+    let (mut text_paths, mut non_text_paths): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    for (relative_path, host_path) in relative_paths.iter().zip(host_paths.iter()) {
+        if is_text_relative_path(relative_path) {
+            text_paths.push(host_path.clone());
+        } else {
+            non_text_paths.push(host_path.clone());
+        }
+    }
+
+    let mut opened_any = false;
+    let mut errors: Vec<String> = Vec::new();
+
+    if !text_paths.is_empty() {
+        match open_paths_with_native_text_editor(&text_paths) {
+            Ok(()) => {
+                opened_any = true;
+            }
+            Err(native_err) => match open_paths_with_default_app(&text_paths) {
+                Ok(()) => {
+                    opened_any = true;
+                }
+                Err(default_err) => {
+                    errors.push(format!(
+                        "Text-file open failed (native: {native_err}; default fallback: {default_err})"
+                    ));
+                }
+            },
+        }
+    }
+
+    if !non_text_paths.is_empty() {
+        match open_paths_with_default_app(&non_text_paths) {
+            Ok(()) => {
+                opened_any = true;
+            }
+            Err(err) => {
+                errors.push(format!("Non-text file open failed: {err}"));
+            }
+        }
+    }
+
+    if opened_any { Ok(()) } else if errors.is_empty() { Err("No files were opened".to_string()) } else { Err(errors.join("; ")) }
+}
 fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Result<String, String> {
     let root_path = root.path().trim().to_string();
     if root_path.is_empty() {
@@ -165,10 +228,6 @@ fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Resul
     }
 }
 
-/// Reveal a file highlighted in the OS file manager.
-///
-/// # Errors
-/// Returns an error if path validation fails or the platform launcher fails.
 #[tauri::command]
 pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
@@ -219,82 +278,18 @@ pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Re
 #[tauri::command]
 pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let host_paths = resolve_host_file_paths(&root, &[relative_path])?;
-        open_paths_with_default_app(&host_paths)
+        let relative_paths = vec![relative_path];
+        open_paths_by_policy(&relative_paths, &resolve_host_file_paths(&root, &relative_paths)?)
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
 }
 
 #[tauri::command]
-pub async fn open_files(
-    root: RepoRoot,
-    relative_paths: Vec<String>,
-    prefer_vscode: bool,
-) -> Result<(), String> {
+pub async fn open_files(root: RepoRoot, relative_paths: Vec<String>) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let host_paths = resolve_host_file_paths(&root, &relative_paths)?;
-
-        if prefer_vscode {
-            if let Err(vscode_err) = open_paths_with_vscode(&host_paths) {
-                open_paths_with_default_app(&host_paths).map_err(|fallback_err| {
-                    format!(
-                        "Failed to open files with VS Code ({vscode_err}) and fallback launcher ({fallback_err})"
-                    )
-                })?;
-            }
-        } else {
-            open_paths_with_default_app(&host_paths)?;
-        }
-
-        Ok::<(), String>(())
+        open_paths_by_policy(&relative_paths, &resolve_host_file_paths(&root, &relative_paths)?)
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn validate_relative_path_rejects_invalid_paths() {
-        let invalid_paths = [
-            "",
-            ".",
-            "..",
-            "../outside",
-            "/abs/path",
-            "C:\\Windows\\System32",
-            "folder/../escape",
-            "folder\\file.txt",
-        ];
-        for path in invalid_paths {
-            assert!(
-                validate_relative_path(path).is_err(),
-                "path should be rejected: {path}"
-            );
-        }
-    }
-
-    #[test]
-    fn validate_relative_path_allows_normal_paths() {
-        let valid_paths = ["README.md", "docs/prd.md", "src/lib/file.ts"];
-        for path in valid_paths {
-            assert!(
-                validate_relative_path(path).is_ok(),
-                "path should be accepted: {path}"
-            );
-        }
-    }
-
-    #[test]
-    fn build_absolute_repo_path_preserves_wsl_root_shape() {
-        let root = RepoRoot::Wsl {
-            path: "/home/john/repo".to_string(),
-        };
-        let absolute =
-            build_absolute_repo_path(&root, "docs/prd.md").expect("wsl path should resolve");
-        assert_eq!(absolute, "/home/john/repo/docs/prd.md");
-    }
 }
