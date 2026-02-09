@@ -41,6 +41,7 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-02-09: Installer builds could intermittently show `NOT CONFIGURED: Staging not configured` while agent status appeared connected. Fixed by gating staging-dependent actions on successful `clientHello`, adding one-shot `clientHello` re-sync + retry on staging-not-configured errors, and isolating dev channel identity/default agent port from installer defaults.
 - 2026-02-09: Windows installer startup could briefly show empty Docs/Code panes and transient `WSL backend is not available` before WSL repos hydrated. Fixed by adding a supervisor startup gate before first agent connect for WSL-required sessions, plus bounded backoff retries for repo and bundle hydration on transient WSL transport failures.
 - 2026-02-08: macOS parity hardening (prompt 1/2 path) introduced repo hydration regressions (tab switch could drop snapshots) and bundle completion stalls (build UI could remain stuck at final stage). Fixed by restoring eager watcher startup during `clientHello`, removing bundle refresh gating on `watchedRepoIds`, and tightening host-runtime routing/error handling for unsupported roots.
 - 2026-02-06: Narrow code classifier coverage could miss language families (for example `*.cpp`) in Docs/Code panes. Fixed by generated broad-language extension coverage, default-only codeGlobs migration, and a separate classification-excludes model in Options.

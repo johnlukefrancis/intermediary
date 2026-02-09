@@ -60,6 +60,7 @@ app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/connection_state.ts - Agent connection status types
+app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution

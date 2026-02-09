@@ -16,7 +16,7 @@ import {
   createAgentClient,
   type AgentClient,
 } from "../lib/agent/agent_client.js";
-import { sendSetOptions } from "../lib/agent/messages.js";
+import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
 import { useClientHello, type HelloState } from "./use_client_hello.js";
 import { extractAppConfig, type AppConfig } from "../shared/config.js";
 import {
@@ -56,6 +56,7 @@ interface AgentContextValue {
   appPaths: AppPaths | null;
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
+  resyncClientHello: () => Promise<boolean>;
   restartAgent: () => void;
   subscribe: (handler: EventHandler) => () => void;
 }
@@ -94,6 +95,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
+  const helloSyncInFlightRef = useRef<Promise<boolean> | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const outputHostRootRef = useRef(persistedConfig.outputWindowsRoot);
@@ -249,6 +251,41 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     [client, connectionState.status, setAutoStageGlobal]
   );
 
+  const resyncClientHello = useCallback(async (): Promise<boolean> => {
+    if (
+      !client ||
+      !appPaths ||
+      connectionState.status !== "connected"
+    ) {
+      return false;
+    }
+
+    if (helloSyncInFlightRef.current) {
+      return helloSyncInFlightRef.current;
+    }
+
+    const syncPromise = sendClientHello(
+      client,
+      config,
+      appPaths.stagingHostRoot,
+      appPaths.stagingWslRoot,
+      autoStageOnChange
+    )
+      .then(() => {
+        return true;
+      })
+      .catch((err: unknown) => {
+        console.error("[AgentProvider] clientHello re-sync failed:", err);
+        return false;
+      })
+      .finally(() => {
+        helloSyncInFlightRef.current = null;
+      });
+
+    helloSyncInFlightRef.current = syncPromise;
+    return syncPromise;
+  }, [appPaths, autoStageOnChange, client, config, connectionState.status]);
+
   const value: AgentContextValue = {
     client,
     connectionState,
@@ -280,6 +317,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     appPaths,
     autoStageOnChange,
     setAutoStageOnChange,
+    resyncClientHello,
     restartAgent,
     subscribe,
   };

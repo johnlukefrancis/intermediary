@@ -230,6 +230,10 @@
       "summary": "Agent connection status types"
     },
     {
+      "path": "app/src/lib/agent/error_codes.ts",
+      "summary": "Parse backend response error codes from agent_client error messages"
+    },
+    {
       "path": "app/src/lib/agent/messages.ts",
       "summary": "Typed helper functions for sending agent commands"
     },

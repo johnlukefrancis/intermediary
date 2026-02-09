@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { useAgent } from "./use_agent.js";
 import { sendStageFile } from "../lib/agent/messages.js";
+import { isStagingNotConfiguredError } from "../lib/agent/error_codes.js";
 import type { StagedInfo } from "../shared/protocol.js";
 
 export interface FileForDrag {
@@ -43,7 +44,7 @@ export interface UseDragResult {
 }
 
 export function useDrag(options?: UseDragOptions): UseDragResult {
-  const { client, appPaths } = useAgent();
+  const { client, appPaths, helloState, resyncClientHello } = useAgent();
   const [dragState, setDragState] = useState<DragState>(INITIAL_DRAG_STATE);
   const onStaged = options?.onStaged;
 
@@ -61,6 +62,14 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
         setDragState({ isDragging: false, isStaging: false, error: "Not connected" });
         return;
       }
+      if (helloState.status !== "ok") {
+        setDragState({
+          isDragging: false,
+          isStaging: false,
+          error: "Agent session initializing; retry in a moment.",
+        });
+        return;
+      }
 
       setDragState({ isDragging: true, isStaging: false, error: null });
 
@@ -72,7 +81,19 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
         } else {
           // Need to stage the file first
           setDragState({ isDragging: true, isStaging: true, error: null });
-          const result = await sendStageFile(client, repoId, relativePath);
+          let result;
+          try {
+            result = await sendStageFile(client, repoId, relativePath);
+          } catch (err) {
+            if (!isStagingNotConfiguredError(err)) {
+              throw err;
+            }
+            const resynced = await resyncClientHello();
+            if (!resynced) {
+              throw err;
+            }
+            result = await sendStageFile(client, repoId, relativePath);
+          }
           const stagedResult: StagedInfo = {
             hostPath: result.hostPath,
             wslPath: result.wslPath,
@@ -94,13 +115,21 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
         setDragState({ isDragging: false, isStaging: false, error: message });
       }
     },
-    [client, appPaths, onStaged]
+    [appPaths, client, helloState.status, onStaged, resyncClientHello]
   );
 
   const handleMultiDragStart = useCallback(
     async (repoId: string, files: FileForDrag[]): Promise<void> => {
       if (!client || !appPaths) {
         setDragState({ isDragging: false, isStaging: false, error: "Not connected" });
+        return;
+      }
+      if (helloState.status !== "ok") {
+        setDragState({
+          isDragging: false,
+          isStaging: false,
+          error: "Agent session initializing; retry in a moment.",
+        });
         return;
       }
       if (files.length === 0) return;
@@ -111,7 +140,19 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
         const results = await Promise.allSettled(
           files.map(async (f) => {
             if (f.stagedInfo?.hostPath) return { path: f.path, hostPath: f.stagedInfo.hostPath };
-            const result = await sendStageFile(client, repoId, f.path);
+            let result;
+            try {
+              result = await sendStageFile(client, repoId, f.path);
+            } catch (err) {
+              if (!isStagingNotConfiguredError(err)) {
+                throw err;
+              }
+              const resynced = await resyncClientHello();
+              if (!resynced) {
+                throw err;
+              }
+              result = await sendStageFile(client, repoId, f.path);
+            }
             const stagedResult: StagedInfo = {
               hostPath: result.hostPath,
               wslPath: result.wslPath,
@@ -148,7 +189,7 @@ export function useDrag(options?: UseDragOptions): UseDragResult {
         setDragState({ isDragging: false, isStaging: false, error: message });
       }
     },
-    [client, appPaths, onStaged]
+    [appPaths, client, helloState.status, onStaged, resyncClientHello]
   );
 
   return {

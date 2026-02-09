@@ -85,7 +85,12 @@ export const PersistedConfigSchema = z.object({
   /** Agent host */
   agentHost: z.string().min(1).default("127.0.0.1"),
   /** Agent port */
-  agentPort: z.number().int().min(1024).max(65535).default(3141),
+  agentPort: z
+    .number()
+    .int()
+    .min(1024)
+    .max(65535)
+    .default(DEFAULT_APP_CONFIG.agentPort),
   /** Auto-start the WSL agent when the app launches */
   agentAutoStart: z.boolean().default(true),
   /** Optional WSL distro override for agent launch */

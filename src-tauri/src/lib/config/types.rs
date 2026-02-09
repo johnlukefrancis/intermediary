@@ -62,7 +62,7 @@ impl Default for PersistedConfig {
         Self {
             config_version: CONFIG_VERSION,
             agent_host: "127.0.0.1".to_string(),
-            agent_port: 3141,
+            agent_port: default_agent_port(),
             agent_auto_start: default_agent_auto_start(),
             agent_distro: None,
             auto_stage_global: true,
@@ -251,6 +251,10 @@ fn default_repos() -> Vec<RepoConfig> {
 
 fn default_agent_auto_start() -> bool {
     true
+}
+
+fn default_agent_port() -> u16 {
+    3141
 }
 
 fn default_recent_files_limit() -> u32 {

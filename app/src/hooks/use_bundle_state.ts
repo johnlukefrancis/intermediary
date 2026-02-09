@@ -9,6 +9,7 @@ import {
   computeTransientRetryDelayMs,
   isTransientWslTransportError,
 } from "../lib/agent/transient_wsl_error.js";
+import { isStagingNotConfiguredError } from "../lib/agent/error_codes.js";
 import type {
   BundleInfo,
   BundleSelection,
@@ -166,7 +167,14 @@ export function useBundleState(
   topLevelDirs: string[],
   topLevelSubdirs: Record<string, string[]>
 ): BundleState {
-  const { subscribe, client, connectionState, helloState, config } = useAgent();
+  const {
+    subscribe,
+    client,
+    connectionState,
+    helloState,
+    config,
+    resyncClientHello,
+  } = useAgent();
   const { config: persistedConfig, setBundleSelection: persistSelection } = useConfig();
 
   // Get saved selections for this repo
@@ -244,7 +252,13 @@ export function useBundleState(
   // Refresh bundle list for a preset
   const refreshBundles = useCallback(
     async (presetId: string) => {
-      if (!client || connectionState.status !== "connected") return;
+      if (
+        !client ||
+        connectionState.status !== "connected" ||
+        helloState.status !== "ok"
+      ) {
+        return;
+      }
       if (refreshInFlightRef.current.has(presetId)) return;
       refreshInFlightRef.current.add(presetId);
       const refreshEpoch = refreshEpochRef.current;
@@ -268,7 +282,37 @@ export function useBundleState(
         });
       } catch (err) {
         if (refreshEpoch !== refreshEpochRef.current) return;
-        if (isTransientWslTransportError(err)) {
+        let errorForHandling: unknown = err;
+        if (isStagingNotConfiguredError(err)) {
+          const resynced = await resyncClientHello();
+          if (refreshEpoch !== refreshEpochRef.current) return;
+          if (resynced) {
+            try {
+              const retry = await sendListBundles(client, repoId, presetId);
+              if (refreshEpoch !== refreshEpochRef.current) return;
+              setPresets((prev) => {
+                const next = new Map(prev);
+                const preset = next.get(presetId);
+                if (preset) {
+                  next.set(presetId, {
+                    ...preset,
+                    bundles: retry.bundles,
+                    isBuilding: false,
+                    buildProgress: null,
+                    lastBuildError: null,
+                  });
+                }
+                return next;
+              });
+              clearRefreshRetry(presetId);
+              return;
+            } catch (retryErr) {
+              if (refreshEpoch !== refreshEpochRef.current) return;
+              errorForHandling = retryErr;
+            }
+          }
+        }
+        if (isTransientWslTransportError(errorForHandling)) {
           const attempts = refreshRetryAttemptsRef.current.get(presetId) ?? 0;
           const delay = computeTransientRetryDelayMs(attempts);
           refreshRetryAttemptsRef.current.set(presetId, attempts + 1);
@@ -282,12 +326,19 @@ export function useBundleState(
           return;
         }
         clearRefreshRetry(presetId);
-        console.error("[useBundleState] refreshBundles failed:", err);
+        console.error("[useBundleState] refreshBundles failed:", errorForHandling);
       } finally {
         refreshInFlightRef.current.delete(presetId);
       }
     },
-    [clearRefreshRetry, client, connectionState.status, repoId]
+    [
+      clearRefreshRetry,
+      client,
+      connectionState.status,
+      helloState.status,
+      repoId,
+      resyncClientHello,
+    ]
   );
 
   // Build bundle for a preset
@@ -297,6 +348,22 @@ export function useBundleState(
 
       const preset = presets.get(presetId);
       if (!preset || preset.isBuilding) return;
+      if (helloState.status !== "ok") {
+        setPresets((prev) => {
+          const next = new Map(prev);
+          const p = next.get(presetId);
+          if (p) {
+            next.set(presetId, {
+              ...p,
+              isBuilding: false,
+              buildProgress: null,
+              lastBuildError: "Agent session initializing; retry in a moment.",
+            });
+          }
+          return next;
+        });
+        return;
+      }
 
       // Mark as building
       setPresets((prev) => {
@@ -320,7 +387,18 @@ export function useBundleState(
       try {
         // Pass global excludes from persisted config
         const globalExcludes = persistedConfig.globalExcludes;
-        await sendBuildBundle(client, repoId, presetId, preset.selection, globalExcludes);
+        try {
+          await sendBuildBundle(client, repoId, presetId, preset.selection, globalExcludes);
+        } catch (err) {
+          if (!isStagingNotConfiguredError(err)) {
+            throw err;
+          }
+          const resynced = await resyncClientHello();
+          if (!resynced) {
+            throw err;
+          }
+          await sendBuildBundle(client, repoId, presetId, preset.selection, globalExcludes);
+        }
         setPresets((prev) => {
           const next = new Map(prev);
           const p = next.get(presetId);
@@ -353,7 +431,16 @@ export function useBundleState(
         });
       }
     },
-    [client, connectionState.status, presets, repoId, persistedConfig.globalExcludes, refreshBundles]
+    [
+      client,
+      connectionState.status,
+      helloState.status,
+      persistedConfig.globalExcludes,
+      presets,
+      refreshBundles,
+      repoId,
+      resyncClientHello,
+    ]
   );
 
   // Handle agent events

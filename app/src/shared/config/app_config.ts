@@ -14,6 +14,8 @@ import {
   type GlobalExcludes,
 } from "../global_excludes.js";
 
+const DEFAULT_AGENT_PORT = import.meta.env.DEV ? 3241 : 3141;
+
 /**
  * Global application configuration
  */
@@ -21,7 +23,7 @@ export const AppConfigSchema = z.object({
   /** Hostname for the agent WebSocket server */
   agentHost: z.string().min(1).default("127.0.0.1"),
   /** Port the agent WebSocket server listens on */
-  agentPort: z.number().int().min(1024).max(65535).default(3141),
+  agentPort: z.number().int().min(1024).max(65535).default(DEFAULT_AGENT_PORT),
   /** Global default for auto-staging */
   autoStageGlobal: z.boolean().default(true),
   /** Configured repositories */
@@ -45,7 +47,7 @@ export type AppConfig = z.infer<typeof AppConfigSchema>;
 
 export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
   agentHost: "127.0.0.1",
-  agentPort: 3141,
+  agentPort: DEFAULT_AGENT_PORT,
   autoStageGlobal: true,
   repos: [], // Empty by default - users add repos via the UI
   recentFilesLimit: 40,
