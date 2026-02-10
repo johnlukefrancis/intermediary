@@ -1,10 +1,11 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with 3-column layout
+// Description: Generic repo tab component with conditional layout (3-column or handset)
 
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
+import { HandsetDeck } from "../components/layout/handset_deck.js";
 import { FileListColumn } from "../components/file_list_column.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
@@ -14,6 +15,7 @@ import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
+import { useConfig } from "../hooks/use_config.js";
 import type { FileEntry } from "../shared/protocol.js";
 
 type PaneView = "recent" | "starred";
@@ -41,6 +43,7 @@ function buildStarredEntries(
 }
 
 export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
+  const { config } = useConfig();
   const { connectionState, appPaths } = useAgent();
   const {
     recentDocs,
@@ -213,47 +216,64 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     </button>
   );
 
+  // Content blocks — shared between layouts
+  const docsContent = (
+    <FileListColumn
+      files={docsFiles}
+      repoId={repoId}
+      kind="docs"
+      emptyMessage={docsEmptyMessage}
+      selectedPaths={docsSelection.selectedPaths}
+      onSelect={docsSelection.handleSelect}
+      onDragStart={handleDocsDrag}
+    />
+  );
+  const codeContent = (
+    <FileListColumn
+      files={codeFiles}
+      repoId={repoId}
+      kind="code"
+      emptyMessage={codeEmptyMessage}
+      selectedPaths={codeSelection.selectedPaths}
+      onSelect={codeSelection.handleSelect}
+      onDragStart={handleCodeDrag}
+    />
+  );
+  const zipsContent = (
+    <BundleColumn
+      repoId={repoId}
+      bundleState={bundleState}
+      onDragStart={handleBundleDragStart}
+      emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
+    />
+  );
+
+  const isHandset = config.uiMode === "handset";
+
   return (
     <div className="tab repo-tab">
       {dragState.error && (
         <DragErrorNotice message={dragState.error} onDismiss={clearError} />
       )}
-      <ThreeColumn
-        docsHeaderLeft={docsHeaderLeft}
-        docsHeaderRight={docsHeaderRight}
-        docsContent={
-          <FileListColumn
-            files={docsFiles}
-            repoId={repoId}
-            kind="docs"
-            emptyMessage={docsEmptyMessage}
-            selectedPaths={docsSelection.selectedPaths}
-            onSelect={docsSelection.handleSelect}
-            onDragStart={handleDocsDrag}
-          />
-        }
-        codeHeaderLeft={codeHeaderLeft}
-        codeHeaderRight={codeHeaderRight}
-        codeContent={
-          <FileListColumn
-            files={codeFiles}
-            repoId={repoId}
-            kind="code"
-            emptyMessage={codeEmptyMessage}
-            selectedPaths={codeSelection.selectedPaths}
-            onSelect={codeSelection.handleSelect}
-            onDragStart={handleCodeDrag}
-          />
-        }
-        zipsContent={
-          <BundleColumn
-            repoId={repoId}
-            bundleState={bundleState}
-            onDragStart={handleBundleDragStart}
-            emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
-          />
-        }
-      />
+      {isHandset ? (
+        <HandsetDeck
+          docsHeaderRight={docsHeaderRight}
+          codeHeaderRight={codeHeaderRight}
+          docsContent={docsContent}
+          codeContent={codeContent}
+          zipsContent={zipsContent}
+        />
+      ) : (
+        <ThreeColumn
+          docsHeaderLeft={docsHeaderLeft}
+          docsHeaderRight={docsHeaderRight}
+          docsContent={docsContent}
+          codeHeaderLeft={codeHeaderLeft}
+          codeHeaderRight={codeHeaderRight}
+          codeContent={codeContent}
+          zipsContent={zipsContent}
+        />
+      )}
     </div>
   );
 }

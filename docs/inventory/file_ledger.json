@@ -70,6 +70,14 @@
       "summary": "Remove button for grouped repos with confirmation"
     },
     {
+      "path": "app/src/components/layout/handset_deck.tsx",
+      "summary": "Single-panel vertical deck layout for handset mode with section switching"
+    },
+    {
+      "path": "app/src/components/layout/handset_section_switcher.tsx",
+      "summary": "Bracketed tab switcher for handset mode sections (Docs | Code | Zips)"
+    },
+    {
       "path": "app/src/components/layout/three_column.tsx",
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },
@@ -386,6 +394,10 @@
       "summary": "File row with file-type icon, bottom change glow, and full-row drag"
     },
     {
+      "path": "app/src/styles/handset_deck.css",
+      "summary": "Handset mode single-panel vertical deck layout and section switcher"
+    },
+    {
       "path": "app/src/styles/main.css",
       "summary": "Global layout reset and base structure"
     },
@@ -455,7 +467,7 @@
     },
     {
       "path": "app/src/tabs/repo_tab.tsx",
-      "summary": "Generic repo tab component with 3-column layout"
+      "summary": "Generic repo tab component with conditional layout (3-column or handset)"
     },
     {
       "path": "app/src/types/agent_supervisor.ts",

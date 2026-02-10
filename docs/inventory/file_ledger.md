@@ -20,6 +20,8 @@ app/src/components/empty_repo_state.tsx - Empty state UI when no repos are confi
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components with context menu
 app/src/components/file_row.tsx - Draggable file row with file-type icon, context menu, and star toggle
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
+app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with section switching
+app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Docs | Code | Zips)
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
@@ -99,6 +101,7 @@ app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/file_row.css - File row with file-type icon, bottom change glow, and full-row drag
+app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
@@ -116,7 +119,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/repo_tab.tsx - Generic repo tab component with 3-column layout
+app/src/tabs/repo_tab.tsx - Generic repo tab component with conditional layout (3-column or handset)
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
