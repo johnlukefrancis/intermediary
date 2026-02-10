@@ -14,7 +14,6 @@ export const MAX_WINDOW_HEIGHT = 8192;
 
 export const MODE_WINDOW_DEFAULT_BOUNDS: Readonly<Record<UiMode, UiWindowBounds>> = {
   standard: { width: 1200, height: 800 },
-  compact: { width: 1200, height: 800 },
   handset: { width: 420, height: 660 },
 };
 

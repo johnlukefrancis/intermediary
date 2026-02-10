@@ -62,7 +62,11 @@ pub fn load_from_disk(path: &Path) -> Result<LoadResult, ConfigError> {
     let mut raw: Value =
         serde_json::from_str(&contents).map_err(|e| ConfigError::ParseFailed { source: e })?;
 
+    let uses_legacy_compact_mode = raw.get("uiMode").and_then(Value::as_str) == Some("compact");
     let mut migration_applied = migrate_legacy_repo_roots(&mut raw);
+    if uses_legacy_compact_mode {
+        migration_applied = true;
+    }
     let mut config: PersistedConfig =
         serde_json::from_value(raw).map_err(|e| ConfigError::ParseFailed { source: e })?;
 
@@ -75,6 +79,8 @@ pub fn load_from_disk(path: &Path) -> Result<LoadResult, ConfigError> {
 
     if config.config_version < CONFIG_VERSION {
         config = migrate_config(config);
+        migration_applied = true;
+    } else if migrate_compact_mode(&mut config) {
         migration_applied = true;
     }
 
@@ -148,9 +154,47 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Structural conversion is handled in migrate_legacy_repo_roots().
     // Version 18 -> 19: Add ui_mode (serde default handles missing field).
     // Version 19 -> 20: Add ui_state.window_bounds_by_mode (serde default handles missing field).
+    // Version 20 -> 21: Remove compact ui_mode and fold compact bounds into standard.
+    if config.config_version < 21 {
+        migrate_compact_mode(&mut config);
+    }
 
     config.config_version = CONFIG_VERSION;
     config
+}
+
+fn migrate_compact_mode(config: &mut PersistedConfig) -> bool {
+    let compact_bounds = config
+        .ui_state
+        .window_bounds_by_mode
+        .get("compact")
+        .copied();
+    let mut changed = false;
+
+    if let Some(bounds) = compact_bounds {
+        if !config
+            .ui_state
+            .window_bounds_by_mode
+            .contains_key("standard")
+        {
+            config
+                .ui_state
+                .window_bounds_by_mode
+                .insert("standard".to_string(), bounds);
+            changed = true;
+        }
+    }
+
+    if config
+        .ui_state
+        .window_bounds_by_mode
+        .remove("compact")
+        .is_some()
+    {
+        changed = true;
+    }
+
+    changed
 }
 
 const CODE_ROOT_GLOBS: &[&str] = &["src/**", "app/**", "crates/**", "src-tauri/**"];

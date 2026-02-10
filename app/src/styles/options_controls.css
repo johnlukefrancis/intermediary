@@ -155,10 +155,10 @@
   color: var(--color-text-muted);
 }
 
-/* ===== TRI-STATE ROCKER ===== */
+/* ===== ROCKER CONTROL ===== */
 .tri-state-rocker {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--rocker-columns, 3), minmax(0, 1fr));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-sm);
   background: var(--color-bg-elevated);

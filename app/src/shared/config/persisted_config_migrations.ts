@@ -55,6 +55,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v17 -> v18: Rename repo root authority kind windows -> host.
   // Migration: v18 -> v19: Add uiMode (schema default handles missing field).
   // Migration: v19 -> v20: Add uiState.windowBoundsByMode (schema default handles missing field).
+  // Migration: v20 -> v21: Remove compact uiMode and fold compact bounds into standard.
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }
@@ -64,6 +65,47 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   }
 
   return { ...next, configVersion: CONFIG_VERSION };
+}
+
+/**
+ * Normalize legacy compact mode from raw input before schema parsing.
+ * - uiMode "compact" becomes "standard"
+ * - uiState.windowBoundsByMode.compact is folded into standard when standard is absent
+ * - compact bounds key is removed
+ */
+export function normalizeLegacyUiModeAndBounds(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return input;
+  }
+
+  const config = { ...(input as Record<string, unknown>) };
+  if (config.uiMode === "compact") {
+    config.uiMode = "standard";
+  }
+
+  const uiStateRaw = config.uiState;
+  if (!uiStateRaw || typeof uiStateRaw !== "object" || Array.isArray(uiStateRaw)) {
+    return config;
+  }
+
+  const uiState = { ...(uiStateRaw as Record<string, unknown>) };
+  const boundsRaw = uiState.windowBoundsByMode;
+  if (!boundsRaw || typeof boundsRaw !== "object" || Array.isArray(boundsRaw)) {
+    config.uiState = uiState;
+    return config;
+  }
+
+  const bounds = { ...(boundsRaw as Record<string, unknown>) };
+  if (bounds.standard === undefined && bounds.compact !== undefined) {
+    bounds.standard = bounds.compact;
+  }
+  if ("compact" in bounds) {
+    delete bounds.compact;
+  }
+
+  uiState.windowBoundsByMode = bounds;
+  config.uiState = uiState;
+  return config;
 }
 
 function migrateLoopbackAgentHost(config: PersistedConfig): PersistedConfig {

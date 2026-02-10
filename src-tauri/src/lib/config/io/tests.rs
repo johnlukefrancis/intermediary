@@ -76,6 +76,58 @@ fn test_unknown_ui_mode_coerces_to_standard() {
 }
 
 #[test]
+fn test_compact_ui_mode_coerces_to_standard() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(20_u64.into());
+    config_json["uiMode"] = Value::String("compact".to_string());
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.ui_mode, UiMode::Standard);
+}
+
+#[test]
+fn test_compact_window_bounds_migrate_to_standard_when_missing() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(20_u64.into());
+    config_json["uiState"]["windowBoundsByMode"] = json!({
+        "compact": {
+            "width": 1111,
+            "height": 777
+        }
+    });
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.ui_mode, UiMode::Standard);
+    let standard_bounds = result
+        .config
+        .ui_state
+        .window_bounds_by_mode
+        .get("standard")
+        .expect("standard bounds should be populated from legacy compact bounds");
+    assert_eq!(standard_bounds.width, 1111);
+    assert_eq!(standard_bounds.height, 777);
+    assert!(!result
+        .config
+        .ui_state
+        .window_bounds_by_mode
+        .contains_key("compact"));
+}
+
+#[test]
 fn test_unknown_window_bounds_mode_keys_are_ignored_at_runtime_resolution() {
     let mut config = PersistedConfig::default();
     config.ui_mode = UiMode::Handset;

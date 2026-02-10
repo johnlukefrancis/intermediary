@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 20;
+pub const CONFIG_VERSION: u32 = 21;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ pub struct PersistedConfig {
     /// Global theme mode (dark/warm)
     #[serde(default)]
     pub theme_mode: ThemeMode,
-    /// UI density mode (standard/compact/handset)
+    /// UI density mode (standard/handset)
     #[serde(default, deserialize_with = "deserialize_ui_mode_or_default")]
     pub ui_mode: UiMode,
 }
@@ -93,7 +93,7 @@ pub struct UiState {
     /// Last active repo per group (groupId -> repoId)
     #[serde(default)]
     pub last_active_group_repo_ids: HashMap<String, String>,
-    /// Remembered window bounds by mode key (standard/compact/handset)
+    /// Remembered window bounds by mode key (standard/handset)
     #[serde(default)]
     pub window_bounds_by_mode: HashMap<String, UiWindowBounds>,
 }
@@ -183,7 +183,6 @@ pub enum ThemeMode {
 pub enum UiMode {
     #[default]
     Standard,
-    Compact,
     Handset,
 }
 
@@ -191,7 +190,6 @@ impl UiMode {
     pub fn as_key(self) -> &'static str {
         match self {
             UiMode::Standard => "standard",
-            UiMode::Compact => "compact",
             UiMode::Handset => "handset",
         }
     }
@@ -211,7 +209,7 @@ pub fn clamp_window_bounds(bounds: UiWindowBounds) -> UiWindowBounds {
 
 pub fn default_window_bounds_for_mode(mode: UiMode) -> UiWindowBounds {
     match mode {
-        UiMode::Standard | UiMode::Compact => UiWindowBounds {
+        UiMode::Standard => UiWindowBounds {
             width: 1200,
             height: 800,
         },
@@ -240,7 +238,7 @@ where
     let raw = Option::<String>::deserialize(deserializer)?;
     Ok(match raw.as_deref() {
         Some("standard") => UiMode::Standard,
-        Some("compact") => UiMode::Compact,
+        Some("compact") => UiMode::Standard,
         Some("handset") => UiMode::Handset,
         _ => UiMode::Standard,
     })

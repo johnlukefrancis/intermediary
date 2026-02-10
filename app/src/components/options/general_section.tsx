@@ -25,18 +25,6 @@ const STANDARD_ICON = (
   </svg>
 );
 
-const COMPACT_ICON = (
-  <svg
-    viewBox="0 0 24 16"
-    className="mode-silhouette"
-    aria-hidden="true"
-    fill="none"
-  >
-    <rect x="4" y="2.5" width="16" height="11" rx="1.5" stroke="currentColor" />
-    <path d="M7 6.5h10M7 9.5h6" stroke="currentColor" strokeLinecap="round" />
-  </svg>
-);
-
 const HANDSET_ICON = (
   <svg
     viewBox="0 0 24 16"
@@ -57,12 +45,6 @@ const UI_MODES: ReadonlyArray<TriStateOption<UiMode>> = [
     label: "STANDARD",
     icon: STANDARD_ICON,
     title: "Standard layout",
-  },
-  {
-    value: "compact",
-    label: "COMPACT",
-    icon: COMPACT_ICON,
-    title: "Compact layout",
   },
   {
     value: "handset",

@@ -102,7 +102,7 @@ interface ConfigContextValue {
   ) => void;
   /** Set global theme mode (dark/warm) */
   setThemeMode: (mode: ThemeMode) => void;
-  /** Set UI density mode (standard/compact/handset) */
+  /** Set UI density mode (standard/handset) */
   setUiMode: (mode: UiMode) => void;
   /** Persist remembered window bounds for a mode */
   setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void;

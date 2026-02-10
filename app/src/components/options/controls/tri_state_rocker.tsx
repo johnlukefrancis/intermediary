@@ -1,5 +1,5 @@
 // Path: app/src/components/options/controls/tri_state_rocker.tsx
-// Description: Reusable three-state hardware-style rocker control for options
+// Description: Reusable hardware-style rocker control for options
 
 import type React from "react";
 
@@ -36,9 +36,17 @@ export function TriStateRocker<T extends string>({
   const rootClassName = className
     ? `tri-state-rocker ${className}`
     : "tri-state-rocker";
+  const rockerStyle = {
+    "--rocker-columns": Math.max(options.length, 1),
+  } as React.CSSProperties;
 
   return (
-    <div className={rootClassName} role="radiogroup" aria-label={ariaLabel}>
+    <div
+      className={rootClassName}
+      role="radiogroup"
+      aria-label={ariaLabel}
+      style={rockerStyle}
+    >
       {options.map((option) => {
         const isActive = option.value === value;
         const optionClassName = isActive

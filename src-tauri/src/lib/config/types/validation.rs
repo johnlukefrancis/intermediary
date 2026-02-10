@@ -6,8 +6,8 @@ use regex::Regex;
 use std::collections::HashSet;
 
 use super::{
-    PersistedConfig, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH,
-    CONFIG_VERSION,
+    PersistedConfig, CONFIG_VERSION, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
+    MIN_WINDOW_WIDTH,
 };
 
 /// Validate config invariants before saving
@@ -68,7 +68,7 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
     }
 
     for (mode_key, bounds) in &config.ui_state.window_bounds_by_mode {
-        if mode_key != "standard" && mode_key != "compact" && mode_key != "handset" {
+        if mode_key != "standard" && mode_key != "handset" {
             return Err(format!(
                 "ui_state.window_bounds_by_mode has invalid mode key: {mode_key}"
             ));

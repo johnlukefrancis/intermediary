@@ -18,6 +18,7 @@ import {
   migrateConfig,
   normalizeLegacyCodeGlobs,
   normalizeLegacyGlobalExcludes,
+  normalizeLegacyUiModeAndBounds,
   normalizeLegacyRepoRoots,
 } from "./persisted_config_migrations.js";
 
@@ -32,7 +33,6 @@ export type UiWindowBounds = z.infer<typeof UiWindowBoundsSchema>;
 /** Optional per-mode window bounds */
 export const UiWindowBoundsByModeSchema = z.object({
   standard: UiWindowBoundsSchema.optional(),
-  compact: UiWindowBoundsSchema.optional(),
   handset: UiWindowBoundsSchema.optional(),
 });
 
@@ -84,7 +84,7 @@ export type ThemeMode = z.infer<typeof ThemeModeSchema>;
 
 /** UI density mode — corrupt/unknown values coerce to "standard" */
 export const UiModeSchema = z
-  .enum(["standard", "compact", "handset"])
+  .enum(["standard", "handset"])
   .catch("standard");
 
 export type UiMode = z.infer<typeof UiModeSchema>;
@@ -169,7 +169,7 @@ export const PersistedConfigSchema = z.object({
   starredFiles: StarredFilesSchema.default({}),
   /** Global theme mode (dark/warm) */
   themeMode: ThemeModeSchema.default("dark"),
-  /** UI density mode (standard/compact/handset) */
+  /** UI density mode (standard/handset) */
   uiMode: UiModeSchema.default("standard"),
 });
 
@@ -188,8 +188,9 @@ export interface LoadConfigResult {
 export function parsePersistedConfig(input: unknown): PersistedConfig {
   const normalizedRoots = normalizeLegacyRepoRoots(input);
   const normalizedCodeGlobs = normalizeLegacyCodeGlobs(normalizedRoots);
-  const normalized = normalizeLegacyGlobalExcludes(normalizedCodeGlobs);
-  const parsed = PersistedConfigSchema.parse(normalized);
+  const normalizedExcludes = normalizeLegacyGlobalExcludes(normalizedCodeGlobs);
+  const normalizedUiMode = normalizeLegacyUiModeAndBounds(normalizedExcludes);
+  const parsed = PersistedConfigSchema.parse(normalizedUiMode);
   return migrateConfig(parsed);
 }
 
