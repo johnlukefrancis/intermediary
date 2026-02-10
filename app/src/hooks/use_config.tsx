@@ -9,6 +9,7 @@ import {
   type GlobalExcludes,
   type ThemeMode,
   type UiMode,
+  type UiWindowBounds,
 } from "../shared/config.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
@@ -28,6 +29,7 @@ import {
 import {
   useSetThemeMode,
   useSetUiMode,
+  useSetWindowBoundsForMode,
   useSetOutputWindowsRoot,
   useSetAgentAutoStart,
   useSetAgentDistro,
@@ -102,6 +104,8 @@ interface ConfigContextValue {
   setThemeMode: (mode: ThemeMode) => void;
   /** Set UI density mode (standard/compact/handset) */
   setUiMode: (mode: UiMode) => void;
+  /** Persist remembered window bounds for a mode */
+  setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void;
   /** Reset all settings to defaults */
   resetConfig: () => void;
 }
@@ -155,6 +159,10 @@ export function ConfigProvider({
   const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
   const setThemeMode = useSetThemeMode(setConfig, saveConfig);
   const setUiMode = useSetUiMode(setConfig, saveConfig);
+  const setWindowBoundsForMode = useSetWindowBoundsForMode(
+    setConfig,
+    saveConfig
+  );
 
   const value: ConfigContextValue = {
     config,
@@ -183,6 +191,7 @@ export function ConfigProvider({
     toggleStarredFile,
     setThemeMode,
     setUiMode,
+    setWindowBoundsForMode,
     resetConfig,
   };
 

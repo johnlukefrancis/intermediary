@@ -147,6 +147,7 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 17 -> 18: Rename repo root authority kind windows -> host.
     // Structural conversion is handled in migrate_legacy_repo_roots().
     // Version 18 -> 19: Add ui_mode (serde default handles missing field).
+    // Version 19 -> 20: Add ui_state.window_bounds_by_mode (serde default handles missing field).
 
     config.config_version = CONFIG_VERSION;
     config

@@ -5,7 +5,10 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashSet;
 
-use super::{PersistedConfig, CONFIG_VERSION};
+use super::{
+    PersistedConfig, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH,
+    CONFIG_VERSION,
+};
 
 /// Validate config invariants before saving
 pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
@@ -61,6 +64,26 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
                     "tabTheme texture_id for {tab_key} must not be empty when provided"
                 ));
             }
+        }
+    }
+
+    for (mode_key, bounds) in &config.ui_state.window_bounds_by_mode {
+        if mode_key != "standard" && mode_key != "compact" && mode_key != "handset" {
+            return Err(format!(
+                "ui_state.window_bounds_by_mode has invalid mode key: {mode_key}"
+            ));
+        }
+        if bounds.width < MIN_WINDOW_WIDTH || bounds.width > MAX_WINDOW_WIDTH {
+            return Err(format!(
+                "ui_state.window_bounds_by_mode[{mode_key}].width must be {MIN_WINDOW_WIDTH}-{MAX_WINDOW_WIDTH}, got {}",
+                bounds.width
+            ));
+        }
+        if bounds.height < MIN_WINDOW_HEIGHT || bounds.height > MAX_WINDOW_HEIGHT {
+            return Err(format!(
+                "ui_state.window_bounds_by_mode[{mode_key}].height must be {MIN_WINDOW_HEIGHT}-{MAX_WINDOW_HEIGHT}, got {}",
+                bounds.height
+            ));
         }
     }
 

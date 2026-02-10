@@ -2,7 +2,7 @@
 // Description: Unit tests for config I/O and migration behavior
 
 use super::*;
-use crate::config::types::{RepoRoot, UiMode};
+use crate::config::types::{resolve_window_bounds_for_mode, RepoRoot, UiMode, UiWindowBounds};
 use std::io::Write;
 use tempfile::tempdir;
 
@@ -73,6 +73,30 @@ fn test_unknown_ui_mode_coerces_to_standard() {
 
     let result = load_from_disk(&path).unwrap();
     assert_eq!(result.config.ui_mode, UiMode::Standard);
+}
+
+#[test]
+fn test_unknown_window_bounds_mode_keys_are_ignored_at_runtime_resolution() {
+    let mut config = PersistedConfig::default();
+    config.ui_mode = UiMode::Handset;
+    config.ui_state.window_bounds_by_mode.insert(
+        "handset".to_string(),
+        UiWindowBounds {
+            width: 440,
+            height: 680,
+        },
+    );
+    config.ui_state.window_bounds_by_mode.insert(
+        "experimental".to_string(),
+        UiWindowBounds {
+            width: 900,
+            height: 900,
+        },
+    );
+
+    let resolved = resolve_window_bounds_for_mode(&config, UiMode::Handset);
+    assert_eq!(resolved.width, 440);
+    assert_eq!(resolved.height, 680);
 }
 
 #[test]

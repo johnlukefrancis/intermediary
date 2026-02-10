@@ -1,9 +1,11 @@
 // Path: src-tauri/src/lib/commands/config.rs
 // Description: Tauri commands for config persistence
 
-use crate::config::{io, types::LoadConfigResult, validate_config, PersistedConfig};
+use crate::config::{
+    io, resolve_config_path, types::LoadConfigResult, validate_config, PersistedConfig,
+};
 use crate::obs::logging;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 /// Load configuration from disk
 ///
@@ -65,17 +67,4 @@ pub async fn save_config(app: AppHandle, config: PersistedConfig) -> Result<(), 
             logging::log("error", "config", "save_failed", &message);
             message
         })
-}
-
-fn resolve_config_path(app: &AppHandle) -> Result<std::path::PathBuf, String> {
-    let app_local_data = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|_| "Could not resolve app local data directory")?;
-
-    // Ensure directory exists
-    std::fs::create_dir_all(&app_local_data)
-        .map_err(|e| format!("Failed to create config directory: {e}"))?;
-
-    Ok(app_local_data.join("config.json"))
 }

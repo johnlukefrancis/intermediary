@@ -102,6 +102,26 @@
         }
       }
 
+      /* Handset-ish widths: keep splash proportions tighter */
+      @media (max-width: 520px) {
+        .splash {
+          gap: 10px;
+        }
+
+        .mark {
+          font-size: 9px;
+        }
+
+        .title {
+          font-size: 20px;
+          letter-spacing: 0.04em;
+        }
+
+        .loader {
+          width: 128px;
+        }
+      }
+
       /* Reduced motion: static bar, no scan */
       @media (prefers-reduced-motion: reduce) {
         .loader::after {

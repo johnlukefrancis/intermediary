@@ -7,7 +7,9 @@ import {
   type StarredFilesEntry,
   type ThemeMode,
   type UiMode,
+  type UiWindowBounds,
 } from "../shared/config.js";
+import { clampWindowBounds } from "../lib/window/mode_window_bounds.js";
 import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 
 type SetConfig = Dispatch<SetStateAction<PersistedConfig>>;
@@ -42,6 +44,41 @@ export function useSetUiMode(
         const next: PersistedConfig = {
           ...prev,
           uiMode: mode,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
+export function useSetWindowBoundsForMode(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (mode: UiMode, bounds: UiWindowBounds) => void {
+  return useCallback(
+    (mode: UiMode, bounds: UiWindowBounds) => {
+      const clamped = clampWindowBounds(bounds);
+      setConfig((prev) => {
+        const current = prev.uiState.windowBoundsByMode[mode];
+        if (
+          current &&
+          current.width === clamped.width &&
+          current.height === clamped.height
+        ) {
+          return prev;
+        }
+
+        const next: PersistedConfig = {
+          ...prev,
+          uiState: {
+            ...prev.uiState,
+            windowBoundsByMode: {
+              ...prev.uiState.windowBoundsByMode,
+              [mode]: clamped,
+            },
+          },
         };
         saveConfig(next);
         return next;

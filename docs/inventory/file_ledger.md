@@ -54,7 +54,8 @@ app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
-app/src/hooks/use_handset_window_snap.ts - Snap main window geometry when toggling handset mode and restore on exit
+app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
+app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
@@ -72,6 +73,7 @@ app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon co
 app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
+app/src/lib/window/mode_window_bounds.ts - Shared per-mode window bounds defaults, clamping, and resolution helpers
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - Shared config barrel exports
 app/src/shared/config/app_config.ts - AppConfig schema, types, and defaults
@@ -230,6 +232,7 @@ src-tauri/src/lib/config/generated_code_globs.rs - Generated default code globs 
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
 src-tauri/src/lib/config/io/tests.rs - Unit tests for config I/O and migration behavior
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
+src-tauri/src/lib/config/path.rs - Resolve persisted config file location for app commands and setup
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants

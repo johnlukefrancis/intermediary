@@ -17,7 +17,7 @@ use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
 use commands::reset::reset_app_state;
-use commands::startup::startup_ready;
+use commands::startup::{apply_launch_window_bounds, startup_ready};
 use obs::logging;
 use tauri::{Manager, RunEvent};
 
@@ -32,6 +32,8 @@ pub fn run() {
                 logging::init(&log_dir);
                 logging::log("info", "app", "startup", "Intermediary initialized");
             }
+
+            apply_launch_window_bounds(app.handle());
             app.manage(AgentSupervisor::new());
             Ok(())
         })

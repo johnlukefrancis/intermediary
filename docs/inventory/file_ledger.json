@@ -206,8 +206,12 @@
       "summary": "Multi-file selection state hook with shift-range and ctrl/cmd-toggle support"
     },
     {
-      "path": "app/src/hooks/use_handset_window_snap.ts",
-      "summary": "Snap main window geometry when toggling handset mode and restore on exit"
+      "path": "app/src/hooks/use_mode_window_bounds_persistence.ts",
+      "summary": "Persists window bounds per mode from live resize events"
+    },
+    {
+      "path": "app/src/hooks/use_mode_window_snap.ts",
+      "summary": "Applies per-mode window bounds when the active UI mode changes"
     },
     {
       "path": "app/src/hooks/use_motion_governor.ts",
@@ -276,6 +280,10 @@
     {
       "path": "app/src/lib/theme/texture_catalog.ts",
       "summary": "Build-time texture catalog for theme substrate/dither selection"
+    },
+    {
+      "path": "app/src/lib/window/mode_window_bounds.ts",
+      "summary": "Shared per-mode window bounds defaults, clamping, and resolution helpers"
     },
     {
       "path": "app/src/main.tsx",
@@ -908,6 +916,10 @@
     {
       "path": "src-tauri/src/lib/config/mod.rs",
       "summary": "Configuration persistence module"
+    },
+    {
+      "path": "src-tauri/src/lib/config/path.rs",
+      "summary": "Resolve persisted config file location for app commands and setup"
     },
     {
       "path": "src-tauri/src/lib/config/types.rs",

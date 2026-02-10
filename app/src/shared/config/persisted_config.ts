@@ -21,12 +21,31 @@ import {
   normalizeLegacyRepoRoots,
 } from "./persisted_config_migrations.js";
 
+/** Window bounds persisted for a specific UI mode */
+export const UiWindowBoundsSchema = z.object({
+  width: z.number().int().min(1),
+  height: z.number().int().min(1),
+});
+
+export type UiWindowBounds = z.infer<typeof UiWindowBoundsSchema>;
+
+/** Optional per-mode window bounds */
+export const UiWindowBoundsByModeSchema = z.object({
+  standard: UiWindowBoundsSchema.optional(),
+  compact: UiWindowBoundsSchema.optional(),
+  handset: UiWindowBoundsSchema.optional(),
+});
+
+export type UiWindowBoundsByMode = z.infer<typeof UiWindowBoundsByModeSchema>;
+
 /** Remembered UI state */
 export const UiStateSchema = z.object({
   /** Last active repo (by repoId) */
   lastActiveTabId: z.string().nullable().default(null),
   /** Last active repo per group (groupId -> repoId) */
   lastActiveGroupRepoIds: z.record(z.string(), z.string()).default({}),
+  /** Remembered window bounds by UI mode */
+  windowBoundsByMode: UiWindowBoundsByModeSchema.default({}),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -184,6 +203,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     uiState: {
       lastActiveTabId: null,
       lastActiveGroupRepoIds: {},
+      windowBoundsByMode: {},
     },
     bundleSelections: {},
     globalExcludes: {

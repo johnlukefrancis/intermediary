@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 19;
+pub const CONFIG_VERSION: u32 = 20;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +93,17 @@ pub struct UiState {
     /// Last active repo per group (groupId -> repoId)
     #[serde(default)]
     pub last_active_group_repo_ids: HashMap<String, String>,
+    /// Remembered window bounds by mode key (standard/compact/handset)
+    #[serde(default)]
+    pub window_bounds_by_mode: HashMap<String, UiWindowBounds>,
+}
+
+/// Window bounds persisted for a specific mode
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiWindowBounds {
+    pub width: u32,
+    pub height: u32,
 }
 
 /// Global excludes for bundle building (not per-repo, not per-preset)
@@ -174,6 +185,52 @@ pub enum UiMode {
     Standard,
     Compact,
     Handset,
+}
+
+impl UiMode {
+    pub fn as_key(self) -> &'static str {
+        match self {
+            UiMode::Standard => "standard",
+            UiMode::Compact => "compact",
+            UiMode::Handset => "handset",
+        }
+    }
+}
+
+pub const MIN_WINDOW_WIDTH: u32 = 360;
+pub const MIN_WINDOW_HEIGHT: u32 = 500;
+pub const MAX_WINDOW_WIDTH: u32 = 8192;
+pub const MAX_WINDOW_HEIGHT: u32 = 8192;
+
+pub fn clamp_window_bounds(bounds: UiWindowBounds) -> UiWindowBounds {
+    UiWindowBounds {
+        width: bounds.width.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH),
+        height: bounds.height.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT),
+    }
+}
+
+pub fn default_window_bounds_for_mode(mode: UiMode) -> UiWindowBounds {
+    match mode {
+        UiMode::Standard | UiMode::Compact => UiWindowBounds {
+            width: 1200,
+            height: 800,
+        },
+        UiMode::Handset => UiWindowBounds {
+            width: 420,
+            height: 660,
+        },
+    }
+}
+
+pub fn resolve_window_bounds_for_mode(config: &PersistedConfig, mode: UiMode) -> UiWindowBounds {
+    let mode_key = mode.as_key();
+    let bounds = config
+        .ui_state
+        .window_bounds_by_mode
+        .get(mode_key)
+        .copied()
+        .unwrap_or_else(|| default_window_bounds_for_mode(mode));
+    clamp_window_bounds(bounds)
 }
 
 fn deserialize_ui_mode_or_default<'de, D>(deserializer: D) -> Result<UiMode, D::Error>
