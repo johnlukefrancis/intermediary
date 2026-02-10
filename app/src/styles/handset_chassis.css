@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/handset_chassis.css
- * Description: Handset v2 chassis frame, speaker grill, and section transitions
+ * Description: Handset v2 chassis frame, glow capsule accents, and section transitions
  */
 
 /* ===== CHASSIS WRAPPER (device bezel) ===== */
@@ -13,23 +13,24 @@
   width: min(100%, 460px);
   min-width: min(360px, 100%);
   max-width: 460px;
-  /* Double frame: outer bezel + inner highlight + reflection + drop shadow */
+  /* Double frame: outer bezel + inner highlight + reflection + drop shadow + accent haze */
   border: var(--deck-stroke-thin) solid var(--deck-frame-outer);
   border-radius: var(--radius-deck-md);
   box-shadow:
     inset 0 0 0 var(--deck-stroke-hairline) var(--deck-frame-inner),
     inset 0 1px 0 0 var(--glass-vintage-reflection),
-    var(--shadow-drop-md);
+    var(--shadow-drop-md),
+    0 0 20px -4px var(--color-accent-glow);
   overflow: hidden;
 }
 
-/* ===== SPEAKER GRILL (slit pattern at top) ===== */
+/* ===== TOP GRILL CAPSULE (slits inside glowing pill) ===== */
 .app[data-ui-mode="handset"] .handset-chassis::before {
   content: "";
   display: block;
-  height: var(--space-3);
+  height: var(--space-2);
   flex-shrink: 0;
-  /* Thin vertical slits — uses muted text color for dark-mode visibility */
+  /* Slit pattern inside the capsule */
   background: repeating-linear-gradient(
     to right,
     var(--color-text-muted) 0px,
@@ -37,8 +38,26 @@
     transparent 2px,
     transparent 6px
   );
-  margin: var(--space-1) var(--space-8);
-  opacity: 0.35;
+  margin: var(--space-2) var(--space-8);
+  /* Glowing pill border */
+  border: 1px solid var(--color-accent-glow);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 10px 2px var(--color-accent-glow);
+  opacity: 0.5;
+}
+
+/* ===== BOTTOM ACCENT CAPSULE (matching glow, matching slits) ===== */
+.app[data-ui-mode="handset"] .handset-chassis::after {
+  content: "";
+  display: block;
+  height: var(--space-2);
+  flex-shrink: 0;
+  margin: var(--space-2) var(--space-8);
+  background: repeating-linear-gradient(to right, var(--color-text-muted) 0px, var(--color-text-muted) 2px, transparent 2px, transparent 6px);
+  border: 1px solid var(--color-accent-glow);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 10px 2px var(--color-accent-glow);
+  opacity: 0.5;
 }
 
 /* ===== SECTION ENTRY ANIMATION ===== */
