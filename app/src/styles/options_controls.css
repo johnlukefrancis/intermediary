@@ -234,15 +234,30 @@
 }
 
 .tri-state-rocker--mode .tri-state-rocker__icon {
+  min-height: 0;
+  flex: 0 0 auto;
   color: var(--color-text-muted);
 }
 
 .tri-state-rocker--mode .tri-state-rocker__option {
   min-height: 44px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
 }
 
 .tri-state-rocker--mode .tri-state-rocker__label {
+  font-size: var(--text-sm);
   letter-spacing: 0.03em;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.tri-state-rocker--mode .tri-state-rocker__icon svg {
+  width: 16px;
+  height: 10px;
 }
 
 .tri-state-rocker--mode .tri-state-rocker__option--active .tri-state-rocker__icon {
@@ -270,16 +285,17 @@ html[data-ui-mode="handset"] .tri-state-rocker__option {
 
 html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__option {
   min-height: 42px;
-  padding: var(--space-1) 2px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
 }
 
 html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__icon svg {
-  width: 16px;
-  height: 11px;
+  width: 14px;
+  height: 10px;
 }
 
 html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__label {
-  font-size: 9px;
+  font-size: var(--text-xs);
   letter-spacing: 0.02em;
 }
 
