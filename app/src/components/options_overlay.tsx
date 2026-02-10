@@ -229,7 +229,7 @@ export function OptionsOverlay({
             <ExcludesSection
               title="Bundle Excludes"
               hint="Files and folders excluded from ZIP bundles"
-              recommendedLabel="Recommended bundle excludes"
+              recommendedLabel="Recommended bundle excludes (always applied)"
               excludes={globalExcludes}
               setExcludes={setGlobalExcludes}
             />

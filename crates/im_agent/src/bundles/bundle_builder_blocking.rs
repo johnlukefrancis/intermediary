@@ -146,16 +146,26 @@ fn build_plan(
 }
 
 fn map_global_excludes(excludes: Option<&GlobalExcludes>) -> im_bundle::plan::GlobalExcludes {
+    let defaults = im_bundle::plan::GlobalExcludes::default();
     match excludes {
         Some(excludes) => im_bundle::plan::GlobalExcludes {
-            dir_names: excludes.dir_names.clone(),
-            dir_suffixes: excludes.dir_suffixes.clone(),
-            file_names: excludes.file_names.clone(),
-            extensions: excludes.extensions.clone(),
-            patterns: excludes.patterns.clone(),
+            dir_names: merge_exclude_values(defaults.dir_names, &excludes.dir_names),
+            dir_suffixes: merge_exclude_values(defaults.dir_suffixes, &excludes.dir_suffixes),
+            file_names: merge_exclude_values(defaults.file_names, &excludes.file_names),
+            extensions: merge_exclude_values(defaults.extensions, &excludes.extensions),
+            patterns: merge_exclude_values(defaults.patterns, &excludes.patterns),
         },
-        None => im_bundle::plan::GlobalExcludes::default(),
+        None => defaults,
     }
+}
+
+fn merge_exclude_values(mut baseline: Vec<String>, user: &[String]) -> Vec<String> {
+    for item in user {
+        if !baseline.contains(item) {
+            baseline.push(item.clone());
+        }
+    }
+    baseline
 }
 
 fn temp_path_for(path: &Path) -> PathBuf {
@@ -180,5 +190,44 @@ mod tests {
         let excludes = map_global_excludes(None);
         assert!(excludes.dir_names.iter().any(|name| name == "node_modules"));
         assert!(excludes.dir_names.iter().any(|name| name == "target"));
+    }
+
+    #[test]
+    fn enforces_recommended_excludes_when_user_sends_empty() {
+        let empty = GlobalExcludes {
+            dir_names: vec![],
+            dir_suffixes: vec![],
+            file_names: vec![],
+            extensions: vec![],
+            patterns: vec![],
+        };
+        let excludes = map_global_excludes(Some(&empty));
+        assert!(excludes.dir_names.iter().any(|name| name == "target"));
+        assert!(excludes.dir_names.iter().any(|name| name == "node_modules"));
+        assert!(excludes.dir_names.iter().any(|name| name == ".git"));
+        assert!(excludes.file_names.iter().any(|name| name == ".ds_store"));
+        assert!(!excludes.extensions.is_empty());
+        assert!(!excludes.patterns.is_empty());
+    }
+
+    #[test]
+    fn merges_user_excludes_with_recommended_baseline() {
+        let custom = GlobalExcludes {
+            dir_names: vec!["my_custom_dir".to_string(), "target".to_string()],
+            dir_suffixes: vec![],
+            file_names: vec![],
+            extensions: vec![".custom_ext".to_string()],
+            patterns: vec![],
+        };
+        let excludes = map_global_excludes(Some(&custom));
+        // Recommended are present
+        assert!(excludes.dir_names.iter().any(|name| name == "target"));
+        assert!(excludes.dir_names.iter().any(|name| name == "node_modules"));
+        // User custom is merged
+        assert!(excludes.dir_names.iter().any(|name| name == "my_custom_dir"));
+        assert!(excludes.extensions.iter().any(|ext| ext == ".custom_ext"));
+        // No duplicates for "target" (appears in both user and recommended)
+        let target_count = excludes.dir_names.iter().filter(|n| *n == "target").count();
+        assert_eq!(target_count, 1);
     }
 }
