@@ -184,16 +184,7 @@ export function OptionsOverlay({
 
   return createPortal(
     <div className="options-overlay" onClick={handleBackdropClick}>
-      <div className="options-panel">
-        <button
-          type="button"
-          className="options-close-button"
-          onClick={handleClose}
-          aria-label="Close options"
-        >
-          ×
-        </button>
-
+      <div className="options-panel" id="options-overlay-panel" role="dialog" aria-modal="false">
         <div className="options-body">
           <div className="options-column-primary">
             <ThemeSection

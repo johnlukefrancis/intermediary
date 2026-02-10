@@ -107,12 +107,16 @@ export function StatusBar(): React.JSX.Element {
         <div className="status-right">
           <button
             type="button"
-            className="options-button"
+            className={`options-button${optionsOpen ? " options-button--active" : ""}`}
             onClick={() => {
-              setOptionsOpen(true);
+              setOptionsOpen((previous) => !previous);
             }}
+            aria-haspopup="dialog"
+            aria-expanded={optionsOpen}
+            aria-controls="options-overlay-panel"
+            aria-label={optionsOpen ? "Close options" : "Open options"}
           >
-            Options
+            {optionsOpen ? "CLOSE [x]" : "OPTIONS"}
           </button>
         </div>
       </div>

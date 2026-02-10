@@ -145,6 +145,8 @@
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: center;
+  min-width: 88px;
   color: var(--color-text-secondary);
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
@@ -160,6 +162,14 @@
   background: var(--color-bg-hover);
   border-color: var(--color-accent);
   color: var(--color-text-primary);
+}
+
+.options-button--active,
+.options-button--active:hover {
+  background: var(--color-bg-active);
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-inset-subtle), 0 0 6px 0 var(--color-accent-glow);
 }
 
 .options-button:focus {
