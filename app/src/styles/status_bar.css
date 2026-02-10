@@ -167,9 +167,9 @@
 .options-button--active,
 .options-button--active:hover {
   background: var(--color-bg-active);
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-soft);
   color: var(--color-text-primary);
-  box-shadow: var(--shadow-inset-subtle), 0 0 6px 0 var(--color-accent-glow);
+  box-shadow: var(--shadow-inset-subtle), 0 0 0 1px var(--color-accent-soft);
 }
 
 .options-button:focus {
