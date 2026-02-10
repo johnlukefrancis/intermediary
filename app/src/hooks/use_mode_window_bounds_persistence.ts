@@ -18,55 +18,65 @@ export function useModeWindowBoundsPersistence(
   uiMode: UiMode,
   setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void
 ): void {
+  const appWindowRef = useRef<ReturnType<typeof getCurrentWindow> | null>(null);
+  const activeModeRef = useRef<UiMode>(uiMode);
+  const mountedRef = useRef(false);
+  const setWindowBoundsForModeRef = useRef(setWindowBoundsForMode);
   const saveTimeoutRef = useRef<number | null>(null);
-  const lastSavedRef = useRef<UiWindowBounds | null>(null);
+  const lastSavedByModeRef = useRef<Partial<Record<UiMode, UiWindowBounds>>>({});
 
-  useEffect(() => {
-    let mounted = true;
-    let unlistenResize: (() => void) | null = null;
+  setWindowBoundsForModeRef.current = setWindowBoundsForMode;
 
-    const scheduleSave = (bounds: UiWindowBounds): void => {
-      if (saveTimeoutRef.current !== null) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+  const scheduleSave = (mode: UiMode, bounds: UiWindowBounds): void => {
+    if (saveTimeoutRef.current !== null) {
+      clearTimeout(saveTimeoutRef.current);
+    }
 
-      saveTimeoutRef.current = window.setTimeout(() => {
-        if (!mounted) return;
-        if (lastSavedRef.current && areWindowBoundsEqual(lastSavedRef.current, bounds)) {
-          return;
-        }
-        setWindowBoundsForMode(uiMode, bounds);
-        lastSavedRef.current = bounds;
-      }, SAVE_DEBOUNCE_MS);
-    };
-
-    const persistCurrentBounds = async (): Promise<void> => {
-      const appWindow = getCurrentWindow();
-      const fullscreen = await appWindow.isFullscreen();
-      const maximized = await appWindow.isMaximized();
-      if (fullscreen || maximized) {
+    saveTimeoutRef.current = window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      const lastSavedForMode = lastSavedByModeRef.current[mode];
+      if (lastSavedForMode && areWindowBoundsEqual(lastSavedForMode, bounds)) {
         return;
       }
+      setWindowBoundsForModeRef.current(mode, bounds);
+      lastSavedByModeRef.current[mode] = bounds;
+    }, SAVE_DEBOUNCE_MS);
+  };
 
-      const size = await appWindow.innerSize();
-      const scaleFactor = await appWindow.scaleFactor();
-      const logicalSize = size.toLogical(scaleFactor);
-      const bounds = clampWindowBounds({
-        width: logicalSize.width,
-        height: logicalSize.height,
-      });
-      scheduleSave(bounds);
-    };
+  const persistCurrentBounds = async (mode: UiMode): Promise<void> => {
+    const appWindow = appWindowRef.current ?? getCurrentWindow();
+    appWindowRef.current = appWindow;
+
+    const fullscreen = await appWindow.isFullscreen();
+    const maximized = await appWindow.isMaximized();
+    if (fullscreen || maximized) {
+      return;
+    }
+
+    const size = await appWindow.innerSize();
+    const scaleFactor = await appWindow.scaleFactor();
+    const logicalSize = size.toLogical(scaleFactor);
+    const bounds = clampWindowBounds({
+      width: logicalSize.width,
+      height: logicalSize.height,
+    });
+    scheduleSave(mode, bounds);
+  };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    let unlistenResize: (() => void) | null = null;
 
     const setup = async (): Promise<void> => {
       try {
-        const appWindow = getCurrentWindow();
+        const appWindow = appWindowRef.current ?? getCurrentWindow();
+        appWindowRef.current = appWindow;
         const unlisten = await appWindow.onResized(() => {
-          void persistCurrentBounds().catch((error: unknown) => {
+          void persistCurrentBounds(activeModeRef.current).catch((error: unknown) => {
             console.warn("[useModeWindowBoundsPersistence] resize persistence skipped:", error);
           });
         });
-        if (!mounted) {
+        if (!mountedRef.current) {
           unlisten();
           return;
         }
@@ -80,11 +90,19 @@ export function useModeWindowBoundsPersistence(
     void setup();
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       if (saveTimeoutRef.current !== null) {
         clearTimeout(saveTimeoutRef.current);
       }
       unlistenResize?.();
+      appWindowRef.current = null;
     };
-  }, [uiMode, setWindowBoundsForMode]);
+  }, []);
+
+  useEffect(() => {
+    activeModeRef.current = uiMode;
+    void persistCurrentBounds(uiMode).catch((error: unknown) => {
+      console.warn("[useModeWindowBoundsPersistence] mode-change persistence skipped:", error);
+    });
+  }, [uiMode]);
 }

@@ -17,13 +17,14 @@ import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
-import { useConfig } from "../hooks/use_config.js";
+import type { UiMode } from "../shared/config.js";
 import type { FileEntry } from "../shared/protocol.js";
 
 type PaneView = "recent" | "starred" | "notes";
 
 interface RepoTabProps {
   repoId: string;
+  uiMode: UiMode;
 }
 
 /**
@@ -44,8 +45,7 @@ function buildStarredEntries(
   });
 }
 
-export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
-  const { config } = useConfig();
+export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
   const {
     recentDocs,
@@ -171,7 +171,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const codeEmptyMessage =
     codeView === "starred" ? "No starred files" : recentEmptyMessage;
 
-  const isHandset = config.uiMode === "handset";
+  const isHandset = uiMode === "handset";
 
   // Track which docs sub-view was active before switching to notes
   // so clicking DOCS returns to recent (not starred)

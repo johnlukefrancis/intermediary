@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-02-02 (Config-driven themes)
+Updated on: 2026-02-10 (Config-driven themes + responsive handset override)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -289,6 +289,30 @@ Substrate animations (`substrate-breathe`, `substrate-drift`) are automatically 
 - **CSS gate:** `[data-motion="paused"]` on `.app` element
 - **Behavior:** Animations pause in place (`animation-play-state: paused`) and resume seamlessly when the window becomes visible
 - **Implementation:** `app/src/hooks/use_motion_governor.ts`
+
+---
+
+## Responsive Handset Override
+
+UI mode now has two runtime layers:
+
+- **Preferred mode**: persisted `config.uiMode` (`standard` or `handset`) selected by the user in Options.
+- **Effective mode**: runtime render mode used by layout/CSS datasets.
+
+When preferred mode is `handset`, the app temporarily renders `standard` mode when window geometry is desktop-like:
+
+- **Always standard while maximized**
+- **Width hysteresis**:
+  - Enter standard at `>= 980px`
+  - Return to handset at `<= 860px`
+
+This avoids gutter-heavy handset framing on maximized or wide windows while preserving user intent in config.
+
+Implementation anchors:
+
+- Policy: `app/src/lib/window/effective_ui_mode_policy.ts`
+- Runtime hook: `app/src/hooks/use_effective_ui_mode.ts`
+- Render switch: `app/src/app.tsx` + `app/src/tabs/repo_tab.tsx`
 
 ---
 

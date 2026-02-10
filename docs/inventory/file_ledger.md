@@ -55,6 +55,7 @@ app/src/hooks/use_config_actions.ts - Core config action factory functions for r
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
+app/src/hooks/use_effective_ui_mode.ts - Derives runtime effective UI mode from preferred mode and live window state
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
@@ -77,6 +78,7 @@ app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon co
 app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
+app/src/lib/window/effective_ui_mode_policy.ts - Resolves runtime effective UI mode from preferred mode and window state
 app/src/lib/window/mode_window_bounds.ts - Shared per-mode window bounds defaults, clamping, and resolution helpers
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - Shared config barrel exports

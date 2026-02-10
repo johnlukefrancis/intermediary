@@ -8,6 +8,7 @@ import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
+import { useEffectiveUiMode } from "./hooks/use_effective_ui_mode.js";
 import { useModeWindowSnap } from "./hooks/use_mode_window_snap.js";
 import { useModeWindowBoundsPersistence } from "./hooks/use_mode_window_bounds_persistence.js";
 import { useMotionGovernor } from "./hooks/use_motion_governor.js";
@@ -84,20 +85,21 @@ export function App(): React.JSX.Element {
     setWindowBoundsForMode,
   } = useConfig();
   const { motionPaused } = useMotionGovernor();
+  const effectiveUiMode = useEffectiveUiMode(config.uiMode, isLoaded);
 
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
-  useModeWindowBoundsPersistence(config.uiMode, setWindowBoundsForMode);
+  useModeWindowBoundsPersistence(effectiveUiMode, setWindowBoundsForMode);
   useStartupReady(isLoaded);
 
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.themeMode = config.themeMode;
-    root.dataset.uiMode = config.uiMode;
+    root.dataset.uiMode = effectiveUiMode;
     return () => {
       delete root.dataset.themeMode;
       delete root.dataset.uiMode;
     };
-  }, [config.themeMode, config.uiMode]);
+  }, [config.themeMode, effectiveUiMode]);
 
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);
@@ -233,7 +235,7 @@ export function App(): React.JSX.Element {
         className="app"
         data-motion={motionPaused ? "paused" : undefined}
         data-theme-mode={config.themeMode}
-        data-ui-mode={config.uiMode}
+        data-ui-mode={effectiveUiMode}
         style={themeStyle}
       >
         <header ref={headerRef} className="header-stack glass-surface">
@@ -254,7 +256,7 @@ export function App(): React.JSX.Element {
       data-active-tab={activeRepoId}
       data-motion={motionPaused ? "paused" : undefined}
       data-theme-mode={config.themeMode}
-      data-ui-mode={config.uiMode}
+      data-ui-mode={effectiveUiMode}
       style={themeStyle}
     >
       <header ref={headerRef} className="header-stack glass-surface">
@@ -270,7 +272,7 @@ export function App(): React.JSX.Element {
         <StatusBar />
       </header>
       <main className="tab-content">
-        {activeRepoId && <RepoTab repoId={activeRepoId} />}
+        {activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} />}
       </main>
     </div>
   );

@@ -210,6 +210,10 @@
       "summary": "Drag-out logic with on-demand staging"
     },
     {
+      "path": "app/src/hooks/use_effective_ui_mode.ts",
+      "summary": "Derives runtime effective UI mode from preferred mode and live window state"
+    },
+    {
       "path": "app/src/hooks/use_file_actions.ts",
       "summary": "Hook for OS-level file operations (reveal in file manager, open file)"
     },
@@ -296,6 +300,10 @@
     {
       "path": "app/src/lib/theme/texture_catalog.ts",
       "summary": "Build-time texture catalog for theme substrate/dither selection"
+    },
+    {
+      "path": "app/src/lib/window/effective_ui_mode_policy.ts",
+      "summary": "Resolves runtime effective UI mode from preferred mode and window state"
     },
     {
       "path": "app/src/lib/window/mode_window_bounds.ts",
