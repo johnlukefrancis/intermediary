@@ -90,6 +90,10 @@
       "summary": "Options panel controls for host + WSL agent lifecycle"
     },
     {
+      "path": "app/src/components/options/controls/tri_state_rocker.tsx",
+      "summary": "Reusable three-state hardware-style rocker control for options"
+    },
+    {
       "path": "app/src/components/options/excludes_section.tsx",
       "summary": "Excludes configuration section for the options panel"
     },
@@ -116,6 +120,10 @@
     {
       "path": "app/src/components/options/general_section.tsx",
       "summary": "Options panel section for general app settings"
+    },
+    {
+      "path": "app/src/components/options/layout/options_field_row.tsx",
+      "summary": "Shared label/control row primitive for responsive options fields"
     },
     {
       "path": "app/src/components/options/output_folder_section.tsx",

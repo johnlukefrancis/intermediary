@@ -3,11 +3,31 @@
 
 import type React from "react";
 import type { UiMode } from "../../shared/config.js";
+import {
+  TriStateRocker,
+  type TriStateOption,
+} from "./controls/tri_state_rocker.js";
+import { OptionsFieldRow } from "./layout/options_field_row.js";
 
-const UI_MODES: ReadonlyArray<{ value: UiMode; label: string }> = [
-  { value: "standard", label: "STANDARD" },
-  { value: "compact", label: "COMPACT" },
-  { value: "handset", label: "HANDSET" },
+const UI_MODES: ReadonlyArray<TriStateOption<UiMode>> = [
+  {
+    value: "standard",
+    label: "STD",
+    icon: "[|||]",
+    title: "Standard layout",
+  },
+  {
+    value: "compact",
+    label: "CMP",
+    icon: "[|| ]",
+    title: "Compact layout",
+  },
+  {
+    value: "handset",
+    label: "HND",
+    icon: "[|  ]",
+    title: "Handset layout",
+  },
 ];
 
 interface GeneralSectionProps {
@@ -30,88 +50,56 @@ export function GeneralSection({
   return (
     <div className="options-section">
       <div className="options-section-title">General</div>
-      <div className="options-row" title="Layout density for the UI">
-        <span className="options-row-label">Mode</span>
-        <div role="radiogroup" className="segmented-switcher" aria-label="UI mode">
-          {UI_MODES.map(({ value, label }, index) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={uiMode === value}
-              tabIndex={uiMode === value ? 0 : -1}
-              data-ui-mode-option={value}
-              className={`segmented-option${uiMode === value ? " active" : ""}`}
-              onClick={() => {
-                setUiMode(value);
-              }}
-              onKeyDown={(event) => {
-                let nextMode: UiMode | null = null;
-                if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-                  const next = UI_MODES[(index + 1) % UI_MODES.length];
-                  nextMode = next?.value ?? null;
-                } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-                  const prev = UI_MODES[(index - 1 + UI_MODES.length) % UI_MODES.length];
-                  nextMode = prev?.value ?? null;
-                } else if (event.key === "Home") {
-                  nextMode = UI_MODES[0]?.value ?? null;
-                } else if (event.key === "End") {
-                  nextMode = UI_MODES[UI_MODES.length - 1]?.value ?? null;
-                }
-
-                if (!nextMode) {
-                  return;
-                }
-
-                event.preventDefault();
-                setUiMode(nextMode);
-                const container = event.currentTarget.parentElement;
-                const nextButton = container?.querySelector<HTMLButtonElement>(
-                  `[data-ui-mode-option="${nextMode}"]`
-                );
-                nextButton?.focus();
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div
-        className="options-row"
+      <OptionsFieldRow
+        label="Mode"
+        title="Layout density for the UI"
+        controlAlign="stretch"
+        control={(
+          <TriStateRocker
+            value={uiMode}
+            options={UI_MODES}
+            onChange={setUiMode}
+            ariaLabel="UI mode"
+            className="tri-state-rocker--mode"
+          />
+        )}
+      />
+      <OptionsFieldRow
+        label="Auto-stage"
         title="When enabled, changed files are instantly copied to the staging folder so they're ready for drag-and-drop"
-      >
-        <span className="options-row-label">Auto-stage</span>
-        <label className="vintage-toggle">
+        control={(
+          <label className="vintage-toggle">
+            <input
+              type="checkbox"
+              checked={autoStageOnChange}
+              onChange={(event) => {
+                setAutoStageOnChange(event.target.checked);
+              }}
+            />
+            <span className="vintage-toggle-track" aria-hidden="true" />
+          </label>
+        )}
+      />
+      <OptionsFieldRow
+        label="Recent files limit"
+        title="Higher values may impact UI performance"
+        controlAlign="stretch"
+        control={(
           <input
-            type="checkbox"
-            checked={autoStageOnChange}
+            type="number"
+            className="options-number-input"
+            value={recentFilesLimit}
+            min={25}
+            max={2000}
             onChange={(event) => {
-              setAutoStageOnChange(event.target.checked);
+              const parsed = parseInt(event.target.value, 10);
+              if (!Number.isNaN(parsed)) {
+                setRecentFilesLimit(parsed);
+              }
             }}
           />
-          <span className="vintage-toggle-track" aria-hidden="true" />
-        </label>
-      </div>
-      <div
-        className="options-row"
-        title="Higher values may impact UI performance"
-      >
-        <span className="options-row-label">Recent files limit</span>
-        <input
-          type="number"
-          className="options-number-input"
-          value={recentFilesLimit}
-          min={25}
-          max={2000}
-          onChange={(event) => {
-            const parsed = parseInt(event.target.value, 10);
-            if (!Number.isNaN(parsed)) {
-              setRecentFilesLimit(parsed);
-            }
-          }}
-        />
-      </div>
+        )}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher 
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
+app/src/components/options/controls/tri_state_rocker.tsx - Reusable three-state hardware-style rocker control for options
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
 app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
 app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
@@ -32,6 +33,7 @@ app/src/components/options/excludes/excludes_recommendations.ts - Helpers for re
 app/src/components/options/excludes/excludes_updates.ts - Pure update helpers for global excludes toggles
 app/src/components/options/excludes/use_excludes_state.ts - State and handlers for the excludes section UI
 app/src/components/options/general_section.tsx - Options panel section for general app settings
+app/src/components/options/layout/options_field_row.tsx - Shared label/control row primitive for responsive options fields
 app/src/components/options/output_folder_section.tsx - Options panel controls for staging output folder
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection

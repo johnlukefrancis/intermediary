@@ -3,6 +3,7 @@
 
 import type React from "react";
 import type { AppPaths } from "../../types/app_paths.js";
+import { OptionsFieldRow } from "./layout/options_field_row.js";
 
 interface OutputFolderSectionProps {
   appPaths: AppPaths | null;
@@ -23,36 +24,43 @@ export function OutputFolderSection({
       >
         Output Folder
       </div>
-      <div className="options-row stacked">
-        <span
-          className={`options-path-display ${!appPaths ? "muted" : ""}`}
-          title={appPaths?.stagingHostRoot ?? "Loading..."}
-        >
-          {appPaths?.stagingHostRoot ?? "Loading..."}
-        </span>
-        <div className="options-button-row">
-          <button
-            type="button"
-            className="options-button"
-            onClick={() => {
-              onChooseOutputFolder();
-            }}
-            disabled={!appPaths}
-          >
-            Choose output folder
-          </button>
-          <button
-            type="button"
-            className="options-button"
-            onClick={() => {
-              onOpenOutputFolder();
-            }}
-            disabled={!appPaths}
-          >
-            Open output folder
-          </button>
-        </div>
-      </div>
+      <OptionsFieldRow
+        label="Staging path"
+        title="Where bundled ZIP files are saved on disk"
+        controlAlign="stretch"
+        control={(
+          <div className="options-path-stack">
+            <span
+              className={`options-path-display ${!appPaths ? "muted" : ""}`}
+              title={appPaths?.stagingHostRoot ?? "Loading..."}
+            >
+              {appPaths?.stagingHostRoot ?? "Loading..."}
+            </span>
+            <div className="options-button-row">
+              <button
+                type="button"
+                className="options-button"
+                onClick={() => {
+                  onChooseOutputFolder();
+                }}
+                disabled={!appPaths}
+              >
+                Choose output folder
+              </button>
+              <button
+                type="button"
+                className="options-button"
+                onClick={() => {
+                  onOpenOutputFolder();
+                }}
+                disabled={!appPaths}
+              >
+                Open output folder
+              </button>
+            </div>
+          </div>
+        )}
+      />
     </div>
   );
 }

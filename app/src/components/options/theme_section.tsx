@@ -10,6 +10,11 @@ import {
   getTextureOptions,
 } from "../../lib/theme/texture_catalog.js";
 import { TexturePicker } from "./texture_picker.js";
+import {
+  TriStateRocker,
+  type TriStateOption,
+} from "./controls/tri_state_rocker.js";
+import { OptionsFieldRow } from "./layout/options_field_row.js";
 
 interface ThemeEntry {
   tabKey: string;
@@ -29,6 +34,12 @@ interface ThemeSectionProps {
   renameRepoLabel: (repoId: string, label: string) => void;
   renameGroupLabel: (groupId: string, label: string) => void;
 }
+
+const THEME_MODES: ReadonlyArray<TriStateOption<ThemeMode>> = [
+  { value: "dark", label: "DARK" },
+  { value: "light", label: "LIGHT" },
+  { value: "warm", label: "WARM" },
+];
 
 export function ThemeSection({
   entries,
@@ -77,144 +88,135 @@ export function ThemeSection({
 
   return (
     <div className="options-section">
-      <div className="options-row" title="Global color scheme">
-        <span className="options-row-label">Theme</span>
-        <div
-          className="theme-mode-switcher"
-          role="radiogroup"
-          aria-label="Theme mode"
-        >
-          {(["dark", "light", "warm"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              role="radio"
-              aria-checked={themeMode === mode}
-              className={`theme-mode-option${themeMode === mode ? " active" : ""}`}
-              onClick={() => {
-                setThemeMode(mode);
-              }}
-            >
-              {mode.charAt(0).toUpperCase() + mode.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
+      <OptionsFieldRow
+        label="Theme"
+        title="Global color scheme"
+        controlAlign="stretch"
+        control={(
+          <TriStateRocker
+            value={themeMode}
+            options={THEME_MODES}
+            onChange={setThemeMode}
+            ariaLabel="Theme mode"
+            className="tri-state-rocker--theme"
+          />
+        )}
+      />
       {entries.length === 0 ? null : (
         <div className="options-theme-list">
-        {entries.map((entry) => {
-          const theme = tabThemes[entry.tabKey];
-          const currentHex = theme?.accentHex ?? DEFAULT_ACCENT_HEX;
-          const currentTexture = theme?.textureId ?? DEFAULT_TEXTURE_ID;
-          const resolvedTexture =
-            textureOptions.find((option) => option.id === currentTexture) ??
-            textureOptions.find((option) => option.id === DEFAULT_TEXTURE_ID) ??
-            textureOptions[0];
-          const selectedTextureId = resolvedTexture?.id ?? DEFAULT_TEXTURE_ID;
-          const hasCustomTheme = entry.tabKey in tabThemes;
-          const isEditing = editingKey === entry.tabKey;
+          {entries.map((entry) => {
+            const theme = tabThemes[entry.tabKey];
+            const currentHex = theme?.accentHex ?? DEFAULT_ACCENT_HEX;
+            const currentTexture = theme?.textureId ?? DEFAULT_TEXTURE_ID;
+            const resolvedTexture =
+              textureOptions.find((option) => option.id === currentTexture) ??
+              textureOptions.find((option) => option.id === DEFAULT_TEXTURE_ID) ??
+              textureOptions[0];
+            const selectedTextureId = resolvedTexture?.id ?? DEFAULT_TEXTURE_ID;
+            const hasCustomTheme = entry.tabKey in tabThemes;
+            const isEditing = editingKey === entry.tabKey;
 
-          return (
-            <div key={entry.tabKey} className="options-theme-row">
-              <div className="options-theme-label-row">
-                {isEditing ? (
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={draftLabel}
-                    onChange={(event) => {
-                      setDraftLabel(event.target.value);
-                    }}
-                    onBlur={() => {
-                      commitRename(entry);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
+            return (
+              <div key={entry.tabKey} className="options-theme-row">
+                <div className="options-theme-label-row">
+                  {isEditing ? (
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={draftLabel}
+                      onChange={(event) => {
+                        setDraftLabel(event.target.value);
+                      }}
+                      onBlur={() => {
                         commitRename(entry);
-                      }
-                      if (event.key === "Escape") {
-                        event.preventDefault();
-                        cancelCommitRef.current = true;
-                        setEditingKey(null);
-                        setDraftLabel("");
-                      }
-                    }}
-                    className="options-theme-input"
-                    aria-label={`Rename ${entry.label}`}
-                  />
-                ) : (
-                  <span className="options-theme-label" title={entry.label}>
-                    {entry.label}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className="options-theme-rename"
-                  onClick={() => {
-                    setEditingKey(entry.tabKey);
-                    setDraftLabel(entry.label);
-                  }}
-                  aria-label={`Rename ${entry.label}`}
-                  title={`Rename ${entry.label}`}
-                >
-                  <svg
-                    className="options-theme-rename-icon"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M4 20h4l10-10-4-4L4 16v4Z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinejoin="round"
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitRename(entry);
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          cancelCommitRef.current = true;
+                          setEditingKey(null);
+                          setDraftLabel("");
+                        }
+                      }}
+                      className="options-theme-input"
+                      aria-label={`Rename ${entry.label}`}
                     />
-                    <path
-                      d="m14 6 4 4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div className="options-theme-controls">
-                <TexturePicker
-                  options={textureOptions}
-                  selectedId={selectedTextureId}
-                  onSelect={(textureId) => {
-                    setTabThemeTexture(entry.tabKey, textureId);
-                  }}
-                />
-                <input
-                  type="color"
-                  value={currentHex}
-                  onChange={(e) => {
-                    setTabThemeAccent(entry.tabKey, e.target.value);
-                  }}
-                  className="options-color-input"
-                  title="Choose accent color"
-                />
-                {hasCustomTheme && (
+                  ) : (
+                    <span className="options-theme-label" title={entry.label}>
+                      {entry.label}
+                    </span>
+                  )}
                   <button
                     type="button"
-                    className="options-reset-button"
+                    className="options-theme-rename"
                     onClick={() => {
-                      clearTabTheme(entry.tabKey);
+                      setEditingKey(entry.tabKey);
+                      setDraftLabel(entry.label);
                     }}
-                    title="Reset to default"
+                    aria-label={`Rename ${entry.label}`}
+                    title={`Rename ${entry.label}`}
                   >
-                    ×
+                    <svg
+                      className="options-theme-rename-icon"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M4 20h4l10-10-4-4L4 16v4Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="m14 6 4 4"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
                   </button>
-                )}
+                </div>
+                <div className="options-theme-controls">
+                  <TexturePicker
+                    options={textureOptions}
+                    selectedId={selectedTextureId}
+                    onSelect={(textureId) => {
+                      setTabThemeTexture(entry.tabKey, textureId);
+                    }}
+                  />
+                  <input
+                    type="color"
+                    value={currentHex}
+                    onChange={(e) => {
+                      setTabThemeAccent(entry.tabKey, e.target.value);
+                    }}
+                    className="options-color-input"
+                    title="Choose accent color"
+                  />
+                  {hasCustomTheme && (
+                    <button
+                      type="button"
+                      className="options-reset-button"
+                      onClick={() => {
+                        clearTabTheme(entry.tabKey);
+                      }}
+                      title="Reset to default"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
     </div>
