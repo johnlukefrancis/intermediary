@@ -8,6 +8,7 @@ import {
   type RepoConfig,
   type GlobalExcludes,
   type ThemeMode,
+  type UiMode,
 } from "../shared/config.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
@@ -26,6 +27,7 @@ import {
 } from "./use_config_actions.js";
 import {
   useSetThemeMode,
+  useSetUiMode,
   useSetOutputWindowsRoot,
   useSetAgentAutoStart,
   useSetAgentDistro,
@@ -98,6 +100,8 @@ interface ConfigContextValue {
   ) => void;
   /** Set global theme mode (dark/warm) */
   setThemeMode: (mode: ThemeMode) => void;
+  /** Set UI density mode (standard/compact/handset) */
+  setUiMode: (mode: UiMode) => void;
   /** Reset all settings to defaults */
   resetConfig: () => void;
 }
@@ -150,6 +154,7 @@ export function ConfigProvider({
   const setRecentFilesLimit = useSetRecentFilesLimit(setConfig, saveConfig);
   const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
   const setThemeMode = useSetThemeMode(setConfig, saveConfig);
+  const setUiMode = useSetUiMode(setConfig, saveConfig);
 
   const value: ConfigContextValue = {
     config,
@@ -177,6 +182,7 @@ export function ConfigProvider({
     setRecentFilesLimit,
     toggleStarredFile,
     setThemeMode,
+    setUiMode,
     resetConfig,
   };
 

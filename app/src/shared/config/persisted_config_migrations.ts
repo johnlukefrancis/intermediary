@@ -53,6 +53,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v14 -> v15: Add uiState.lastActiveGroupRepoIds.
   // Migration: v15 -> v16: Replace repo.wslPath with path-native repo.root.
   // Migration: v17 -> v18: Rename repo root authority kind windows -> host.
+  // Migration: v18 -> v19: Add uiMode (schema default handles missing field).
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }

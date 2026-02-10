@@ -46,6 +46,7 @@ export {
   StarredFilesSchema,
   TabThemeSchema,
   ThemeModeSchema,
+  UiModeSchema,
   UiStateSchema,
   getDefaultPersistedConfig,
   parsePersistedConfig,
@@ -59,5 +60,6 @@ export type {
   StarredFilesEntry,
   TabTheme,
   ThemeMode,
+  UiMode,
   UiState,
 } from "./config/persisted_config.js";

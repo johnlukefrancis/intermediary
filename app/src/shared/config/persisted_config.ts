@@ -63,6 +63,13 @@ export const ThemeModeSchema = z.enum(["dark", "light", "warm"]);
 
 export type ThemeMode = z.infer<typeof ThemeModeSchema>;
 
+/** UI density mode — corrupt/unknown values coerce to "standard" */
+export const UiModeSchema = z
+  .enum(["standard", "compact", "handset"])
+  .catch("standard");
+
+export type UiMode = z.infer<typeof UiModeSchema>;
+
 /** Starred files for a single repo */
 export const StarredFilesEntrySchema = z.object({
   docs: z.array(z.string()).default([]),
@@ -143,6 +150,8 @@ export const PersistedConfigSchema = z.object({
   starredFiles: StarredFilesSchema.default({}),
   /** Global theme mode (dark/warm) */
   themeMode: ThemeModeSchema.default("dark"),
+  /** UI density mode (standard/compact/handset) */
+  uiMode: UiModeSchema.default("standard"),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -203,5 +212,6 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     tabThemes: {},
     starredFiles: {},
     themeMode: "dark",
+    uiMode: "standard",
   };
 }

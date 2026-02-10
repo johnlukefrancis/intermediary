@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { GlobalExcludes } from "../shared/global_excludes.js";
-import type { RepoConfig, TabTheme, ThemeMode } from "../shared/config.js";
+import type { RepoConfig, TabTheme, ThemeMode, UiMode } from "../shared/config.js";
 import type { AppPaths } from "../types/app_paths.js";
 import { AgentSection } from "./options/agent_section.js";
 import { ExcludesSection } from "./options/excludes_section.js";
@@ -42,6 +42,8 @@ interface OptionsOverlayProps {
   tabThemes: Record<string, TabTheme>;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
+  uiMode: UiMode;
+  setUiMode: (mode: UiMode) => void;
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
@@ -79,6 +81,8 @@ export function OptionsOverlay({
   tabThemes,
   themeMode,
   setThemeMode,
+  uiMode,
+  setUiMode,
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
@@ -205,6 +209,8 @@ export function OptionsOverlay({
             />
 
             <GeneralSection
+              uiMode={uiMode}
+              setUiMode={setUiMode}
               autoStageOnChange={autoStageOnChange}
               setAutoStageOnChange={setAutoStageOnChange}
               recentFilesLimit={recentFilesLimit}

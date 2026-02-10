@@ -226,6 +226,7 @@ export function App(): React.JSX.Element {
         className="app"
         data-motion={motionPaused ? "paused" : undefined}
         data-theme-mode={config.themeMode}
+        data-ui-mode={config.uiMode}
         style={themeStyle}
       >
         <header ref={headerRef} className="header-stack glass-surface">
@@ -246,6 +247,7 @@ export function App(): React.JSX.Element {
       data-active-tab={activeRepoId}
       data-motion={motionPaused ? "paused" : undefined}
       data-theme-mode={config.themeMode}
+      data-ui-mode={config.uiMode}
       style={themeStyle}
     >
       <header ref={headerRef} className="header-stack glass-surface">

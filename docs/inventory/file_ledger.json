@@ -898,6 +898,10 @@
       "summary": "Persisted configuration types for Intermediary"
     },
     {
+      "path": "src-tauri/src/lib/config/types/tests.rs",
+      "summary": "Tests for persisted configuration types"
+    },
+    {
       "path": "src-tauri/src/lib/config/types/validation.rs",
       "summary": "Persisted configuration validation rules and invariants"
     },

@@ -2,7 +2,7 @@
 // Description: Unit tests for config I/O and migration behavior
 
 use super::*;
-use crate::config::types::RepoRoot;
+use crate::config::types::{RepoRoot, UiMode};
 use std::io::Write;
 use tempfile::tempdir;
 
@@ -58,6 +58,21 @@ fn test_future_version_rejected() {
 
     let result = load_from_disk(&path);
     assert!(matches!(result, Err(ConfigError::FutureVersion { .. })));
+}
+
+#[test]
+fn test_unknown_ui_mode_coerces_to_standard() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["uiMode"] = Value::String("deckplus".to_string());
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert_eq!(result.config.ui_mode, UiMode::Standard);
 }
 
 #[test]

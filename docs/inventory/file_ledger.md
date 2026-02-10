@@ -227,6 +227,7 @@ src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error ha
 src-tauri/src/lib/config/io/tests.rs - Unit tests for config I/O and migration behavior
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
+src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt

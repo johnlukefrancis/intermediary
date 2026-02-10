@@ -1,14 +1,14 @@
 // Path: src-tauri/src/lib/config/types.rs
 // Description: Persisted configuration types for Intermediary
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
 mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 18;
+pub const CONFIG_VERSION: u32 = 19;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,6 +55,9 @@ pub struct PersistedConfig {
     /// Global theme mode (dark/warm)
     #[serde(default)]
     pub theme_mode: ThemeMode,
+    /// UI density mode (standard/compact/handset)
+    #[serde(default, deserialize_with = "deserialize_ui_mode_or_default")]
+    pub ui_mode: UiMode,
 }
 
 impl Default for PersistedConfig {
@@ -76,6 +79,7 @@ impl Default for PersistedConfig {
             tab_themes: HashMap::new(),
             starred_files: HashMap::new(),
             theme_mode: ThemeMode::default(),
+            ui_mode: UiMode::default(),
         }
     }
 }
@@ -160,6 +164,29 @@ pub enum ThemeMode {
     Light,
     /// Blue-light filter mode with amber/sepia undertones
     Warm,
+}
+
+/// UI density mode
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum UiMode {
+    #[default]
+    Standard,
+    Compact,
+    Handset,
+}
+
+fn deserialize_ui_mode_or_default<'de, D>(deserializer: D) -> Result<UiMode, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?;
+    Ok(match raw.as_deref() {
+        Some("standard") => UiMode::Standard,
+        Some("compact") => UiMode::Compact,
+        Some("handset") => UiMode::Handset,
+        _ => UiMode::Standard,
+    })
 }
 
 /// Starred files for a single repo
@@ -262,26 +289,4 @@ fn default_recent_files_limit() -> u32 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::CONFIG_VERSION;
-    use regex::Regex;
-
-    #[test]
-    fn ts_config_version_matches_rust() {
-        let contents = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../app/src/shared/config/version.ts"
-        ));
-        let regex = Regex::new(r"CONFIG_VERSION\s*=\s*(\d+)").expect("valid regex");
-        let caps = regex
-            .captures(contents)
-            .expect("CONFIG_VERSION not found in version.ts");
-        let ts_version: u32 = caps[1]
-            .parse()
-            .expect("CONFIG_VERSION in version.ts must be a number");
-        assert_eq!(
-            ts_version, CONFIG_VERSION,
-            "TS CONFIG_VERSION {ts_version} must match Rust CONFIG_VERSION {CONFIG_VERSION}"
-        );
-    }
-}
+mod tests;

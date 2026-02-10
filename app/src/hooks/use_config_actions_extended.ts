@@ -6,6 +6,7 @@ import {
   type PersistedConfig,
   type StarredFilesEntry,
   type ThemeMode,
+  type UiMode,
 } from "../shared/config.js";
 import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
 
@@ -22,6 +23,25 @@ export function useSetThemeMode(
         const next: PersistedConfig = {
           ...prev,
           themeMode: mode,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
+export function useSetUiMode(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (mode: UiMode) => void {
+  return useCallback(
+    (mode: UiMode) => {
+      setConfig((prev) => {
+        const next: PersistedConfig = {
+          ...prev,
+          uiMode: mode,
         };
         saveConfig(next);
         return next;
