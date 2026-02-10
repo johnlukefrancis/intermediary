@@ -85,7 +85,7 @@ export function App(): React.JSX.Element {
   } = useConfig();
   const { motionPaused } = useMotionGovernor();
 
-  useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode);
+  useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
   useModeWindowBoundsPersistence(config.uiMode, setWindowBoundsForMode);
   useStartupReady(isLoaded);
 

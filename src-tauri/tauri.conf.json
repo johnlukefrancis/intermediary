@@ -29,11 +29,10 @@
         "url": "splashscreen.html",
         "width": 1200,
         "height": 800,
-        "visible": true,
+        "visible": false,
         "resizable": false,
         "decorations": false,
         "skipTaskbar": true,
-        "center": true,
         "backgroundColor": "#050508"
       }
     ],

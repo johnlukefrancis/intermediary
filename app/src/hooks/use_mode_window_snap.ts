@@ -9,15 +9,27 @@ import { resolveModeWindowBounds } from "../lib/window/mode_window_bounds.js";
 
 /**
  * Best-effort window geometry management by UI mode.
- * Applies configured/default bounds when mode changes (including initial mount).
+ * Applies configured/default bounds only after startup, when mode actually changes.
  */
 export function useModeWindowSnap(
   uiMode: UiMode,
-  windowBoundsByMode: UiWindowBoundsByMode
+  windowBoundsByMode: UiWindowBoundsByMode,
+  isLoaded: boolean
 ): void {
   const previousModeRef = useRef<UiMode | null>(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      previousModeRef.current = uiMode;
+      return;
+    }
+
     const previousMode = previousModeRef.current;
     previousModeRef.current = uiMode;
 
@@ -48,5 +60,5 @@ export function useModeWindowSnap(
     };
 
     void run();
-  }, [uiMode, windowBoundsByMode]);
+  }, [isLoaded, uiMode, windowBoundsByMode]);
 }
