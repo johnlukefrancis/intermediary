@@ -20,12 +20,12 @@ app/src/components/empty_repo_state.tsx - Empty state UI when no repos are confi
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components with context menu
 app/src/components/file_row.tsx - Draggable file row with file-type icon, context menu, and star toggle
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
-app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with section switching
+app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with chassis framing and soft-key nav
 app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Docs | Code | Zips)
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
-app/src/components/options/controls/tri_state_rocker.tsx - Reusable three-state hardware-style rocker control for options
+app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
 app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
 app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
@@ -106,13 +106,14 @@ app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/file_row.css - File row with file-type icon, bottom change glow, and full-row drag
+app/src/styles/handset_chassis.css - Handset v2 chassis frame, speaker grill, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
 app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and advanced grid/groups for excludes
 app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
-app/src/styles/options_overlay.css - Overlay backdrop, panel shell, close button, and keyframe animations
+app/src/styles/options_overlay.css - Overlay backdrop, panel shell, and keyframe animations
 app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints

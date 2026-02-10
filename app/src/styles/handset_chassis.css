@@ -1,0 +1,61 @@
+/*
+ * Path: app/src/styles/handset_chassis.css
+ * Description: Handset v2 chassis frame, speaker grill, and section transitions
+ */
+
+/* ===== CHASSIS WRAPPER (device bezel) ===== */
+.app[data-ui-mode="handset"] .handset-chassis {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: min(100%, 460px);
+  min-width: min(360px, 100%);
+  max-width: 460px;
+  /* Double frame: outer bezel + inner highlight + reflection + drop shadow */
+  border: var(--deck-stroke-thin) solid var(--deck-frame-outer);
+  border-radius: var(--radius-deck-md);
+  box-shadow:
+    inset 0 0 0 var(--deck-stroke-hairline) var(--deck-frame-inner),
+    inset 0 1px 0 0 var(--glass-vintage-reflection),
+    var(--shadow-drop-md);
+  overflow: hidden;
+}
+
+/* ===== SPEAKER GRILL (slit pattern at top) ===== */
+.app[data-ui-mode="handset"] .handset-chassis::before {
+  content: "";
+  display: block;
+  height: var(--space-3);
+  flex-shrink: 0;
+  /* Thin vertical slits — uses muted text color for dark-mode visibility */
+  background: repeating-linear-gradient(
+    to right,
+    var(--color-text-muted) 0px,
+    var(--color-text-muted) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  margin: var(--space-1) var(--space-8);
+  opacity: 0.35;
+}
+
+/* ===== SECTION ENTRY ANIMATION ===== */
+@keyframes handset-section-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Only animate when user has no reduced-motion preference */
+@media (prefers-reduced-motion: no-preference) {
+  .app[data-ui-mode="handset"] .handset-deck__panel > .panel-content {
+    animation: handset-section-enter var(--duration-slow) var(--ease-out) both;
+  }
+}

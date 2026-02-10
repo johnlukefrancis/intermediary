@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/handset_deck.tsx
-// Description: Single-panel vertical deck layout for handset mode with section switching
+// Description: Single-panel vertical deck layout for handset mode with chassis framing
 
 import type React from "react";
 import { useState, useCallback } from "react";
@@ -8,6 +8,7 @@ import {
   type HandsetSection,
 } from "./handset_section_switcher.js";
 import "../../styles/handset_deck.css";
+import "../../styles/handset_chassis.css";
 
 interface HandsetDeckProps {
   /** Star toggle for docs pane */
@@ -57,23 +58,26 @@ export function HandsetDeck({
 
   return (
     <div className="handset-deck">
-      <section className="panel handset-deck__panel">
-        <header className="panel-header handset-header">
-          <HandsetSectionSwitcher
-            active={activeSection}
-            onChange={handleSectionChange}
-          />
-          {headerRight}
-        </header>
-        <div
-          className="panel-content"
-          role="tabpanel"
-          id="handset-panel"
-          aria-labelledby={`handset-tab-${activeSection}`}
-        >
-          {content}
-        </div>
-      </section>
+      <div className="handset-chassis">
+        <section className="panel handset-deck__panel">
+          <header className="panel-header handset-header">
+            <HandsetSectionSwitcher
+              active={activeSection}
+              onChange={handleSectionChange}
+            />
+            {headerRight}
+          </header>
+          <div
+            key={activeSection}
+            className="panel-content"
+            role="tabpanel"
+            id="handset-panel"
+            aria-labelledby={`handset-tab-${activeSection}`}
+          >
+            {content}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@
     },
     {
       "path": "app/src/components/layout/handset_deck.tsx",
-      "summary": "Single-panel vertical deck layout for handset mode with section switching"
+      "summary": "Single-panel vertical deck layout for handset mode with chassis framing and soft-key nav"
     },
     {
       "path": "app/src/components/layout/handset_section_switcher.tsx",
@@ -91,7 +91,7 @@
     },
     {
       "path": "app/src/components/options/controls/tri_state_rocker.tsx",
-      "summary": "Reusable three-state hardware-style rocker control for options"
+      "summary": "Reusable hardware-style rocker control for options"
     },
     {
       "path": "app/src/components/options/excludes_section.tsx",
@@ -414,6 +414,10 @@
       "summary": "File row with file-type icon, bottom change glow, and full-row drag"
     },
     {
+      "path": "app/src/styles/handset_chassis.css",
+      "summary": "Handset v2 chassis frame, speaker grill, and section transitions"
+    },
+    {
       "path": "app/src/styles/handset_deck.css",
       "summary": "Handset mode single-panel vertical deck layout and section switcher"
     },
@@ -439,7 +443,7 @@
     },
     {
       "path": "app/src/styles/options_overlay.css",
-      "summary": "Overlay backdrop, panel shell, close button, and keyframe animations"
+      "summary": "Overlay backdrop, panel shell, and keyframe animations"
     },
     {
       "path": "app/src/styles/options_theme.css",

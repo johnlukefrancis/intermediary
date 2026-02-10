@@ -12,11 +12,8 @@
   min-height: 0;
 }
 
-/* Single panel — phone-width, fills available height */
+/* Single panel — fills chassis height */
 .app[data-ui-mode="handset"] .handset-deck__panel {
-  width: min(100%, 460px);
-  min-width: min(360px, 100%);
-  max-width: 460px;
   flex: 1;
   min-height: 0;
   display: flex;
