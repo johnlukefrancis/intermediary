@@ -87,20 +87,69 @@ function normalizeTopLevelDirs(dirs: string[], available: string[] = []): string
   return unique.filter((dir) => allowed.has(dir)).sort();
 }
 
+function computeDefaultExcludedSubdirs(
+  selectedDirs: string[],
+  topLevelSubdirs: Record<string, string[]>,
+  defaultExcluded: string[]
+): string[] {
+  if (defaultExcluded.length === 0) return [];
+  const excludedSet = new Set(defaultExcluded);
+  const result: string[] = [];
+  for (const dir of selectedDirs) {
+    const subs = topLevelSubdirs[dir];
+    if (!subs) continue;
+    for (const sub of subs) {
+      if (excludedSet.has(sub)) {
+        result.push(`${dir}/${sub}`);
+      }
+    }
+  }
+  return result.sort();
+}
+
+function mergeExcludedSubdirs(existing: string[], autoExcluded: string[]): string[] {
+  if (autoExcluded.length === 0) {
+    return existing;
+  }
+  const merged = new Set(existing);
+  for (const path of autoExcluded) {
+    merged.add(path);
+  }
+  if (merged.size === existing.length) {
+    return existing;
+  }
+  return Array.from(merged).sort();
+}
+
 function createPresetState(
   preset: BundlePreset,
   topLevelDirs: string[] = [],
-  savedSelection?: BundleSelection
+  savedSelection?: BundleSelection,
+  defaultExcluded: string[] = [],
+  topLevelSubdirs: Record<string, string[]> = {}
 ): BundlePresetState {
-  // If we have a saved selection, use it
+  const excludedSet = new Set(defaultExcluded);
+
+  // If we have a saved selection, use it — but auto-add default-excluded subdirs
   if (savedSelection) {
+    const normalizedDirs = normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs);
+    const autoExcludedSubs = computeDefaultExcludedSubdirs(
+      normalizedDirs, topLevelSubdirs, defaultExcluded
+    );
+    const existingExcluded = new Set(savedSelection.excludedSubdirs);
+    const mergedExcluded = [...savedSelection.excludedSubdirs];
+    for (const sub of autoExcludedSubs) {
+      if (!existingExcluded.has(sub)) {
+        mergedExcluded.push(sub);
+      }
+    }
     return {
       presetId: preset.presetId,
       presetName: preset.presetName,
       selection: {
         includeRoot: savedSelection.includeRoot,
-        topLevelDirs: normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs),
-        excludedSubdirs: savedSelection.excludedSubdirs,
+        topLevelDirs: normalizedDirs,
+        excludedSubdirs: mergedExcluded.sort(),
       },
       isSelectionInitialized: true,
       isBuilding: false,
@@ -111,15 +160,20 @@ function createPresetState(
     };
   }
 
-  // If preset has explicit dirs, use those
+  // If preset has explicit dirs, use those — filter default-excluded from selection
   if (preset.topLevelDirs.length > 0) {
+    const normalizedDirs = normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs);
+    const selectedDirs = normalizedDirs.filter((d) => !excludedSet.has(d));
+    const autoExcludedSubs = computeDefaultExcludedSubdirs(
+      selectedDirs, topLevelSubdirs, defaultExcluded
+    );
     return {
       presetId: preset.presetId,
       presetName: preset.presetName,
       selection: {
         includeRoot: preset.includeRoot,
-        topLevelDirs: normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs),
-        excludedSubdirs: [],
+        topLevelDirs: selectedDirs,
+        excludedSubdirs: autoExcludedSubs,
       },
       isSelectionInitialized: true,
       isBuilding: false,
@@ -130,14 +184,20 @@ function createPresetState(
     };
   }
 
-  // Default to all available dirs
+  // Default to all available dirs — filter default-excluded from selection
+  const selectedDirs = topLevelDirs.length > 0
+    ? [...topLevelDirs].filter((d) => !excludedSet.has(d)).sort()
+    : [];
+  const autoExcludedSubs = computeDefaultExcludedSubdirs(
+    selectedDirs, topLevelSubdirs, defaultExcluded
+  );
   return {
     presetId: preset.presetId,
     presetName: preset.presetName,
     selection: {
       includeRoot: preset.includeRoot,
-      topLevelDirs: topLevelDirs.length > 0 ? [...topLevelDirs].sort() : [],
-      excludedSubdirs: [],
+      topLevelDirs: selectedDirs,
+      excludedSubdirs: autoExcludedSubs,
     },
     isSelectionInitialized: topLevelDirs.length > 0,
     isBuilding: false,
@@ -165,7 +225,8 @@ function getRepoPresets(presets: BundlePreset[]): BundlePreset[] {
 export function useBundleState(
   repoId: string,
   topLevelDirs: string[],
-  topLevelSubdirs: Record<string, string[]>
+  topLevelSubdirs: Record<string, string[]>,
+  defaultExcluded: string[] = []
 ): BundleState {
   const {
     subscribe,
@@ -192,7 +253,9 @@ export function useBundleState(
     const initial = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
       const saved = savedSelections[preset.presetId];
-      initial.set(preset.presetId, createPresetState(preset, topLevelDirs, saved));
+      initial.set(preset.presetId, createPresetState(
+        preset, topLevelDirs, saved, defaultExcluded, topLevelSubdirs
+      ));
     }
     return initial;
   });
@@ -557,37 +620,62 @@ export function useBundleState(
     const next = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
       const saved = savedSelections[preset.presetId];
-      next.set(preset.presetId, createPresetState(preset, [], saved));
+      next.set(preset.presetId, createPresetState(preset, [], saved, defaultExcluded));
     }
     setPresets(next);
     setActivePresetId(repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId);
     lastRefreshKeyRef.current = null;
-  }, [repoId, repoPresets, savedSelections]);
+  }, [repoId, repoPresets, savedSelections, defaultExcluded]);
 
   useEffect(() => {
     if (topLevelDirs.length === 0) {
       return;
     }
+    const excludedSet = new Set(defaultExcluded);
     setPresets((prev) => {
       let changed = false;
       const next = new Map(prev);
       for (const preset of next.values()) {
         if (!preset.isSelectionInitialized) {
+          const selectedDirs = [...topLevelDirs].filter((d) => !excludedSet.has(d)).sort();
+          const autoExcludedSubs = computeDefaultExcludedSubdirs(
+            selectedDirs, topLevelSubdirs, defaultExcluded
+          );
           next.set(preset.presetId, {
             ...preset,
             selection: {
               includeRoot: preset.selection.includeRoot,
-              topLevelDirs: [...topLevelDirs].sort(),
-              excludedSubdirs: preset.selection.excludedSubdirs,
+              topLevelDirs: selectedDirs,
+              excludedSubdirs: autoExcludedSubs,
             },
             isSelectionInitialized: true,
           });
           changed = true;
+          continue;
         }
+
+        const autoExcludedSubs = computeDefaultExcludedSubdirs(
+          preset.selection.topLevelDirs, topLevelSubdirs, defaultExcluded
+        );
+        const mergedExcluded = mergeExcludedSubdirs(
+          preset.selection.excludedSubdirs,
+          autoExcludedSubs
+        );
+        if (mergedExcluded === preset.selection.excludedSubdirs) {
+          continue;
+        }
+        next.set(preset.presetId, {
+          ...preset,
+          selection: {
+            ...preset.selection,
+            excludedSubdirs: mergedExcluded,
+          },
+        });
+        changed = true;
       }
       return changed ? next : prev;
     });
-  }, [topLevelDirs]);
+  }, [topLevelDirs, defaultExcluded, topLevelSubdirs]);
 
   // Refresh bundles on connect
   useEffect(() => {

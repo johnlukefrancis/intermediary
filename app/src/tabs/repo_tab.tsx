@@ -55,9 +55,10 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     hydrationStatus,
     topLevelDirs,
     topLevelSubdirs,
+    defaultExcluded,
     registerStaged,
   } = useRepoState(repoId);
-  const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs);
+  const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs, defaultExcluded);
   const { dragState, handleDragStart, handleMultiDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });

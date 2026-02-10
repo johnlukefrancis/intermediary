@@ -268,6 +268,8 @@ export const GetRepoTopLevelResultSchema = z.object({
   files: z.array(z.string()),
   /** Subdirectories within each top-level dir (depth-2) */
   subdirs: z.record(z.string(), z.array(z.string())).optional(),
+  /** Dir names that are excluded by default (e.g. node_modules, .git, target) */
+  defaultExcluded: z.array(z.string()).default([]),
 });
 
 /** Info about a single bundle file */

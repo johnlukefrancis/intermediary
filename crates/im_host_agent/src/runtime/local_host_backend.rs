@@ -179,6 +179,7 @@ impl LocalHostBackend {
             dirs: result.dirs,
             files: result.files,
             subdirs: Some(result.subdirs),
+            default_excluded: result.default_excluded,
         })
     }
 

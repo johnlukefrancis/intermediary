@@ -20,6 +20,10 @@ const IGNORE_DIRS: &[&str] = &[
 
 const IGNORE_FILES: &[&str] = &[".DS_Store", "Thumbs.db", ".env", ".env.local"];
 
+pub fn default_excluded_dir_names() -> &'static [&'static str] {
+    IGNORE_DIRS
+}
+
 pub fn should_ignore_entry(name: &str, is_directory: bool) -> bool {
     if is_directory {
         return IGNORE_DIRS.iter().any(|entry| entry == &name);

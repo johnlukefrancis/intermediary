@@ -68,6 +68,8 @@ pub struct GetRepoTopLevelResult {
     pub files: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subdirs: Option<std::collections::HashMap<String, Vec<String>>>,
+    #[serde(default)]
+    pub default_excluded: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

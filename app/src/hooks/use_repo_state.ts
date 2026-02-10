@@ -36,6 +36,8 @@ export interface RepoState {
   topLevelFiles: string[];
   /** Subdirectories within each top-level dir (depth-2) */
   topLevelSubdirs: Record<string, string[]>;
+  /** Dir names excluded by default (e.g. node_modules, .git, target) */
+  defaultExcluded: string[];
   registerStaged: (relativePath: string, stagedInfo: StagedInfo) => void;
 }
 
@@ -72,6 +74,7 @@ export function useRepoState(repoId: string): RepoState {
   const [topLevelDirs, setTopLevelDirs] = useState<string[]>([]);
   const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
   const [topLevelSubdirs, setTopLevelSubdirs] = useState<Record<string, string[]>>({});
+  const [defaultExcluded, setDefaultExcluded] = useState<string[]>([]);
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
   const refreshInFlightKeyRef = useRef<string | null>(null);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -140,6 +143,7 @@ export function useRepoState(repoId: string): RepoState {
     setTopLevelDirs([]);
     setTopLevelFiles([]);
     setTopLevelSubdirs({});
+    setDefaultExcluded([]);
     lastHelloRefreshKeyRef.current = null;
     refreshInFlightKeyRef.current = null;
     if (retryTimeoutRef.current) {
@@ -202,6 +206,7 @@ export function useRepoState(repoId: string): RepoState {
         setTopLevelDirs(result.dirs);
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});
+        setDefaultExcluded(result.defaultExcluded);
         lastHelloRefreshKeyRef.current = refreshKey;
         clearRetryTimeout();
         setHydrationStatus("ready");
@@ -257,6 +262,7 @@ export function useRepoState(repoId: string): RepoState {
     topLevelDirs,
     topLevelFiles,
     topLevelSubdirs,
+    defaultExcluded,
     registerStaged,
   };
 }

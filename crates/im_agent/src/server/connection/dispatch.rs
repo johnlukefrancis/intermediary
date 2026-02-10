@@ -164,6 +164,7 @@ pub async fn dispatch_command(
                     dirs: result.dirs,
                     files: result.files,
                     subdirs: Some(result.subdirs),
+                    default_excluded: result.default_excluded,
                 },
             ))
         }
