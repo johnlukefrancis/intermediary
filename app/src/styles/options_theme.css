@@ -139,7 +139,7 @@
   padding: 2px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-deck-xs);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-elevated);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -172,10 +172,14 @@
   grid-template-columns: repeat(4, 32px);
   gap: var(--space-2);
   padding: var(--space-2);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  background: var(--glass-vintage-content);
+  border: 1px solid var(--glass-vintage-edge);
   border-radius: var(--radius-deck-sm);
-  box-shadow: var(--shadow-drop-sm);
+  box-shadow: var(--shadow-inset-subtle), var(--shadow-drop-md);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+  max-width: calc(100vw - var(--space-2) - var(--space-2));
+  overflow: hidden;
   z-index: 110;
   transition: opacity var(--duration-fast) var(--ease-out);
 }
@@ -270,4 +274,8 @@ html[data-ui-mode="handset"] .options-theme-controls {
   width: 100%;
   justify-content: flex-start;
   flex-wrap: wrap;
+}
+
+html[data-ui-mode="handset"] .options-texture-menu {
+  max-width: calc(100vw - var(--space-3) - var(--space-3));
 }

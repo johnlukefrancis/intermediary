@@ -20,6 +20,7 @@ interface MenuPosition {
 
 const MENU_GAP_PX = 8;
 const VIEWPORT_PADDING_PX = 8;
+const HANDSET_UI_MODE = "handset";
 
 export function TexturePicker({
   options,
@@ -101,11 +102,20 @@ export function TexturePicker({
 
       const buttonRect = button.getBoundingClientRect();
       const menuRect = menu.getBoundingClientRect();
+      const isHandsetMode = document.documentElement.dataset.uiMode === HANDSET_UI_MODE;
 
       const maxLeft = window.innerWidth - menuRect.width - VIEWPORT_PADDING_PX;
       const maxTop = window.innerHeight - menuRect.height - VIEWPORT_PADDING_PX;
-      const desiredLeft = buttonRect.right + MENU_GAP_PX;
-      const desiredTop = buttonRect.bottom - menuRect.height;
+      const rightAnchoredLeft = buttonRect.right + MENU_GAP_PX;
+      const leftAnchoredLeft = buttonRect.left - menuRect.width - MENU_GAP_PX;
+      const rightSideFits =
+        rightAnchoredLeft + menuRect.width <= window.innerWidth - VIEWPORT_PADDING_PX;
+      const leftSideFits = leftAnchoredLeft >= VIEWPORT_PADDING_PX;
+
+      // In handset mode the trigger sits on the left, so we intentionally bias right.
+      const desiredLeft =
+        isHandsetMode || rightSideFits || !leftSideFits ? rightAnchoredLeft : leftAnchoredLeft;
+      const desiredTop = isHandsetMode ? buttonRect.top : buttonRect.bottom - menuRect.height;
 
       const clampedLeft = Math.max(VIEWPORT_PADDING_PX, Math.min(maxLeft, desiredLeft));
       const clampedTop = Math.max(VIEWPORT_PADDING_PX, Math.min(maxTop, desiredTop));
