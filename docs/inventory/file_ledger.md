@@ -20,9 +20,10 @@ app/src/components/empty_repo_state.tsx - Empty state UI when no repos are confi
 app/src/components/file_list_column.tsx - Column wrapper that renders a list of FileRow components with context menu
 app/src/components/file_row.tsx - Draggable file row with file-type icon, context menu, and star toggle
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
-app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with chassis framing and soft-key nav
+app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with chassis framing
 app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Docs | Code | Zips)
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
+app/src/components/note_panel.tsx - Plain-text monospace note editor panel content
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
@@ -59,6 +60,7 @@ app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
 app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
+app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
@@ -106,10 +108,11 @@ app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/file_row.css - File row with file-type icon, bottom change glow, and full-row drag
-app/src/styles/handset_chassis.css - Handset v2 chassis frame, speaker grill, and section transitions
+app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
+app/src/styles/note_panel.css - Monospace textarea and DOCS|NOTES header toggle styles
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
 app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and advanced grid/groups for excludes
 app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
@@ -228,6 +231,7 @@ src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in the host OS file manager
 src-tauri/src/lib/commands/file_opener.rs - Reveal files in file manager or open with default application
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
+src-tauri/src/lib/commands/notes.rs - Tauri commands for per-repo plain-text notes persistence
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches
 src-tauri/src/lib/commands/startup.rs - Startup readiness command for splashscreen -> main transition

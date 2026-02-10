@@ -13,6 +13,7 @@ use commands::agent_probe::probe_agent_port;
 use commands::config::{load_config, save_config};
 use commands::file_manager::open_in_file_manager;
 use commands::file_opener::{open_file, open_files, reveal_in_file_manager};
+use commands::notes::{delete_note, load_note, save_note};
 use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
@@ -53,7 +54,10 @@ pub fn run() {
             reveal_in_file_manager,
             open_file,
             open_files,
-            startup_ready
+            startup_ready,
+            load_note,
+            save_note,
+            delete_note
         ])
         .build(tauri::generate_context!())
         .expect("error building tauri application");

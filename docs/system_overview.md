@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-09
+Updated on: 2026-02-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -64,6 +64,7 @@ Intermediary uses a **host-routed architecture**:
 - **Key features:**
   - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
   - Three-column layout per repo: Docs, Code, Zip Bundles
+  - Docs panel includes a per-repo plain-text Notes view (saved under app-local data)
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
@@ -166,7 +167,9 @@ Contents:
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
-The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles plus recent-file caches without deleting repository files.
+The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles, recent-file caches, and local notes without deleting repository files.
+
+Per-repo notes are stored outside config under `<app_local_data>/notes/`, keyed by a collision-safe repoId-derived filename. Removing a repo or group triggers best-effort note deletion for removed repoIds.
 
 ## File Classification
 

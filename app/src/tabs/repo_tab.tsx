@@ -8,6 +8,7 @@ import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
 import { FileListColumn } from "../components/file_list_column.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
+import { NotePanel } from "../components/note_panel.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
@@ -15,10 +16,11 @@ import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
+import { useNotes } from "../hooks/use_notes.js";
 import { useConfig } from "../hooks/use_config.js";
 import type { FileEntry } from "../shared/protocol.js";
 
-type PaneView = "recent" | "starred";
+type PaneView = "recent" | "starred" | "notes";
 
 interface RepoTabProps {
   repoId: string;
@@ -60,6 +62,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
     onStaged: registerStaged,
   });
   const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
+  const noteState = useNotes(repoId);
 
   // View state for docs and code panes
   const [docsView, setDocsView] = useState<PaneView>("recent");
@@ -86,7 +89,7 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
           ? "Unable to load files"
           : "No recent files";
 
-  // Build file lists based on view
+  // Build file lists based on view (only needed when not in notes view)
   const docsFiles =
     docsView === "starred"
       ? buildStarredEntries(starredDocsPaths, recentDocs, "docs")
@@ -168,28 +171,63 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   const codeEmptyMessage =
     codeView === "starred" ? "No starred files" : recentEmptyMessage;
 
-  // Header components for docs pane
+  const isHandset = config.uiMode === "handset";
+
+  // Track which docs sub-view was active before switching to notes
+  // so clicking DOCS returns to recent (not starred)
+  const isDocsFileView = docsView === "recent" || docsView === "starred";
+
+  // Header left: DOCS | NOTES toggle
   const docsHeaderLeft = (
-    <button
-      type="button"
-      className={`panel-title-button${docsView === "starred" ? " panel-title-button--dimmed" : ""}`}
-      onClick={() => { handleDocsViewChange("recent"); }}
-      title="Show recent docs"
-    >
-      Docs
-    </button>
+    <div className="docs-notes-toggle">
+      <button
+        type="button"
+        className={`docs-notes-toggle__btn${isDocsFileView ? " docs-notes-toggle__btn--active" : ""}`}
+        onClick={() => { handleDocsViewChange("recent"); }}
+        title="Show docs"
+      >
+        Docs
+      </button>
+      <span className="docs-notes-toggle__sep" aria-hidden="true">|</span>
+      <button
+        type="button"
+        className={`docs-notes-toggle__btn${docsView === "notes" ? " docs-notes-toggle__btn--active" : ""}`}
+        onClick={() => { handleDocsViewChange("notes"); }}
+        title="Show notes"
+      >
+        Notes
+      </button>
+    </div>
   );
+
+  // Header right: optional handset notes toggle + star toggle
   const docsHeaderRight = (
-    <button
-      type="button"
-      className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { handleDocsViewChange(docsView === "starred" ? "recent" : "starred"); }}
-      title={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
-      aria-label={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
-      aria-pressed={docsView === "starred"}
-    >
-      ★
-    </button>
+    <div className="panel-header-icons">
+      {isHandset && (
+        <button
+          type="button"
+          className={`panel-header-icon${docsView === "notes" ? " panel-header-icon--active" : ""}`}
+          onClick={() => { handleDocsViewChange(docsView === "notes" ? "recent" : "notes"); }}
+          title={docsView === "notes" ? "Show docs" : "Show notes"}
+          aria-label={docsView === "notes" ? "Show docs" : "Show notes"}
+          aria-pressed={docsView === "notes"}
+        >
+          ✎
+        </button>
+      )}
+      {docsView !== "notes" && (
+        <button
+          type="button"
+          className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
+          onClick={() => { handleDocsViewChange(docsView === "starred" ? "recent" : "starred"); }}
+          title={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
+          aria-label={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
+          aria-pressed={docsView === "starred"}
+        >
+          ★
+        </button>
+      )}
+    </div>
   );
 
   // Header components for code pane
@@ -217,17 +255,19 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
   );
 
   // Content blocks — shared between layouts
-  const docsContent = (
-    <FileListColumn
-      files={docsFiles}
-      repoId={repoId}
-      kind="docs"
-      emptyMessage={docsEmptyMessage}
-      selectedPaths={docsSelection.selectedPaths}
-      onSelect={docsSelection.handleSelect}
-      onDragStart={handleDocsDrag}
-    />
-  );
+  const docsContent = docsView === "notes"
+    ? <NotePanel noteState={noteState} />
+    : (
+      <FileListColumn
+        files={docsFiles}
+        repoId={repoId}
+        kind="docs"
+        emptyMessage={docsEmptyMessage}
+        selectedPaths={docsSelection.selectedPaths}
+        onSelect={docsSelection.handleSelect}
+        onDragStart={handleDocsDrag}
+      />
+    );
   const codeContent = (
     <FileListColumn
       files={codeFiles}
@@ -247,8 +287,6 @@ export function RepoTab({ repoId }: RepoTabProps): React.JSX.Element {
       emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
     />
   );
-
-  const isHandset = config.uiMode === "handset";
 
   return (
     <div className="tab repo-tab">

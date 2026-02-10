@@ -10,9 +10,14 @@ use tauri::{AppHandle, Manager};
 const STAGING_SUBDIRS: [&str; 3] = ["files", "bundles", "state"];
 
 /// Reset application state stored on disk.
-/// Clears staging artifacts and caches without touching repository files.
+/// Clears staging artifacts, caches, and per-repo notes without touching repository files.
 #[tauri::command]
 pub fn reset_app_state(app: AppHandle, output_host_root: Option<String>) -> Result<(), String> {
+    let app_local_data = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|_| "Could not resolve app local data directory".to_string())?;
+
     let default_root = resolve_default_staging_root(&app).map_err(|err| {
         logging::log("error", "config", "reset_failed", &err);
         err
@@ -29,6 +34,16 @@ pub fn reset_app_state(app: AppHandle, output_host_root: Option<String>) -> Resu
         if override_path != default_root {
             clear_staging_subdirs(&override_path)?;
         }
+    }
+
+    // Clear per-repo notes
+    let notes_dir = app_local_data.join("notes");
+    if notes_dir.exists() {
+        fs::remove_dir_all(&notes_dir).map_err(|e| {
+            let message = format!("Failed to clear notes: {e}");
+            logging::log("error", "config", "reset_failed", &message);
+            message
+        })?;
     }
 
     Ok(())

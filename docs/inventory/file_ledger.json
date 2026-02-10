@@ -71,7 +71,7 @@
     },
     {
       "path": "app/src/components/layout/handset_deck.tsx",
-      "summary": "Single-panel vertical deck layout for handset mode with chassis framing and soft-key nav"
+      "summary": "Single-panel vertical deck layout for handset mode with chassis framing"
     },
     {
       "path": "app/src/components/layout/handset_section_switcher.tsx",
@@ -80,6 +80,10 @@
     {
       "path": "app/src/components/layout/three_column.tsx",
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
+    },
+    {
+      "path": "app/src/components/note_panel.tsx",
+      "summary": "Plain-text monospace note editor panel content"
     },
     {
       "path": "app/src/components/options_overlay.tsx",
@@ -224,6 +228,10 @@
     {
       "path": "app/src/hooks/use_motion_governor.ts",
       "summary": "Pauses motion when window is hidden/minimized to save GPU"
+    },
+    {
+      "path": "app/src/hooks/use_notes.ts",
+      "summary": "Per-repo note content hook with debounced save via Tauri commands"
     },
     {
       "path": "app/src/hooks/use_repo_state.ts",
@@ -415,7 +423,7 @@
     },
     {
       "path": "app/src/styles/handset_chassis.css",
-      "summary": "Handset v2 chassis frame, speaker grill, and section transitions"
+      "summary": "Handset v2 chassis frame, glow capsule accents, and section transitions"
     },
     {
       "path": "app/src/styles/handset_deck.css",
@@ -428,6 +436,10 @@
     {
       "path": "app/src/styles/motion.css",
       "summary": "Motion utilities, transition presets, and reduced-motion support"
+    },
+    {
+      "path": "app/src/styles/note_panel.css",
+      "summary": "Monospace textarea and DOCS|NOTES header toggle styles"
     },
     {
       "path": "app/src/styles/options_controls.css",
@@ -900,6 +912,10 @@
     {
       "path": "src-tauri/src/lib/commands/mod.rs",
       "summary": "Tauri command exports"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/notes.rs",
+      "summary": "Tauri commands for per-repo plain-text notes persistence"
     },
     {
       "path": "src-tauri/src/lib/commands/paths.rs",
