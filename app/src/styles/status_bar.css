@@ -42,21 +42,66 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .status-right {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: 0 0 auto;
+  margin-left: var(--space-2);
 }
 
-.status-error {
+.status-error-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.status-error-viewport {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
   font-size: var(--text-sm);
   color: var(--color-error);
-  max-width: 250px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.status-error-marquee {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--status-error-marquee-gap, 32px);
   white-space: nowrap;
+}
+
+.status-error-marquee--scrolling {
+  animation: status-error-marquee var(--status-error-scroll-duration, 9000ms) linear infinite;
+  will-change: transform;
+}
+
+.status-error-segment {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@keyframes status-error-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-1 * var(--status-error-scroll-distance, 0px)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-error-marquee--scrolling {
+    animation: none;
+  }
 }
 
 /* LED connection indicator */
@@ -64,6 +109,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  flex: 0 0 auto;
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -147,6 +193,7 @@
   letter-spacing: 0.05em;
   text-align: center;
   min-width: 88px;
+  flex-shrink: 0;
   color: var(--color-text-secondary);
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
