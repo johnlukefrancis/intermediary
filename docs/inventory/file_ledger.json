@@ -206,6 +206,10 @@
       "summary": "Multi-file selection state hook with shift-range and ctrl/cmd-toggle support"
     },
     {
+      "path": "app/src/hooks/use_handset_window_snap.ts",
+      "summary": "Snap main window geometry when toggling handset mode and restore on exit"
+    },
+    {
       "path": "app/src/hooks/use_motion_governor.ts",
       "summary": "Pauses motion when window is hidden/minimized to save GPU"
     },

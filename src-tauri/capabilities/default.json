@@ -3,5 +3,12 @@
   "identifier": "default",
   "description": "Default capability for Intermediary",
   "windows": ["main"],
-  "permissions": ["core:default", "drag:default", "dialog:allow-open"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "drag:default",
+    "dialog:allow-open"
+  ]
 }

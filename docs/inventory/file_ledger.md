@@ -54,6 +54,7 @@ app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
+app/src/hooks/use_handset_window_snap.ts - Snap main window geometry when toggling handset mode and restore on exit
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo

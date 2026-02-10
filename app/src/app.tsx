@@ -8,6 +8,7 @@ import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { useConfig } from "./hooks/use_config.js";
+import { useHandsetWindowSnap } from "./hooks/use_handset_window_snap.js";
 import { useMotionGovernor } from "./hooks/use_motion_governor.js";
 import { useStartupReady } from "./hooks/use_startup_ready.js";
 import type { RepoConfig, RepoRoot } from "./shared/config.js";
@@ -82,6 +83,7 @@ export function App(): React.JSX.Element {
   } = useConfig();
   const { motionPaused } = useMotionGovernor();
 
+  useHandsetWindowSnap(config.uiMode);
   useStartupReady(isLoaded);
 
   useEffect(() => {
