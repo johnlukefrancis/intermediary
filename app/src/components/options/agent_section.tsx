@@ -27,6 +27,7 @@ export function AgentSection({
       <OptionsFieldRow
         label="Auto-start agent backend"
         title="Automatically launch the agent backend when the app starts"
+        controlAlign="start"
         control={(
           <label className="vintage-toggle">
             <input

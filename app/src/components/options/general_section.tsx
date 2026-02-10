@@ -91,6 +91,7 @@ export function GeneralSection({
       <OptionsFieldRow
         label="Auto-stage"
         title="When enabled, changed files are instantly copied to the staging folder so they're ready for drag-and-drop"
+        controlAlign="start"
         control={(
           <label className="vintage-toggle">
             <input
