@@ -9,23 +9,65 @@ import {
 } from "./controls/tri_state_rocker.js";
 import { OptionsFieldRow } from "./layout/options_field_row.js";
 
+const STANDARD_ICON = (
+  <svg
+    viewBox="0 0 24 16"
+    className="mode-silhouette"
+    aria-hidden="true"
+    fill="none"
+  >
+    <rect x="1.5" y="2" width="21" height="12" rx="1.5" stroke="currentColor" />
+    <path
+      d="M5 6h5M14 6h5M5 10h5M14 10h5"
+      stroke="currentColor"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+const COMPACT_ICON = (
+  <svg
+    viewBox="0 0 24 16"
+    className="mode-silhouette"
+    aria-hidden="true"
+    fill="none"
+  >
+    <rect x="4" y="2.5" width="16" height="11" rx="1.5" stroke="currentColor" />
+    <path d="M7 6.5h10M7 9.5h6" stroke="currentColor" strokeLinecap="round" />
+  </svg>
+);
+
+const HANDSET_ICON = (
+  <svg
+    viewBox="0 0 24 16"
+    className="mode-silhouette"
+    aria-hidden="true"
+    fill="none"
+  >
+    <rect x="8" y="1.5" width="8" height="13" rx="2" stroke="currentColor" />
+    <path d="M10 4h4" stroke="currentColor" strokeLinecap="round" />
+    <path d="M10 8h4M10 10h4" stroke="currentColor" strokeLinecap="round" />
+    <circle cx="12" cy="12.5" r="0.8" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 const UI_MODES: ReadonlyArray<TriStateOption<UiMode>> = [
   {
     value: "standard",
-    label: "STD",
-    icon: "[|||]",
+    label: "STANDARD",
+    icon: STANDARD_ICON,
     title: "Standard layout",
   },
   {
     value: "compact",
-    label: "CMP",
-    icon: "[|| ]",
+    label: "COMPACT",
+    icon: COMPACT_ICON,
     title: "Compact layout",
   },
   {
     value: "handset",
-    label: "HND",
-    icon: "[|  ]",
+    label: "HANDSET",
+    icon: HANDSET_ICON,
     title: "Handset layout",
   },
 ];

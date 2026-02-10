@@ -210,17 +210,39 @@
 }
 
 .tri-state-rocker__icon {
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
+  min-height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.tri-state-rocker__icon svg {
+  display: block;
+  width: 18px;
+  height: 12px;
+  stroke-width: 1.4;
 }
 
 .tri-state-rocker__label {
   font-size: var(--text-xs);
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tri-state-rocker--mode .tri-state-rocker__icon {
   color: var(--color-text-muted);
+}
+
+.tri-state-rocker--mode .tri-state-rocker__option {
+  min-height: 44px;
+}
+
+.tri-state-rocker--mode .tri-state-rocker__label {
+  letter-spacing: 0.03em;
 }
 
 .tri-state-rocker--mode .tri-state-rocker__option--active .tri-state-rocker__icon {
@@ -244,6 +266,21 @@ html[data-ui-mode="handset"] .tri-state-rocker {
 html[data-ui-mode="handset"] .tri-state-rocker__option {
   min-width: 0;
   padding: var(--space-1) var(--space-2);
+}
+
+html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__option {
+  min-height: 42px;
+  padding: var(--space-1) 2px;
+}
+
+html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__icon svg {
+  width: 16px;
+  height: 11px;
+}
+
+html[data-ui-mode="handset"] .tri-state-rocker--mode .tri-state-rocker__label {
+  font-size: 9px;
+  letter-spacing: 0.02em;
 }
 
 html[data-ui-mode="handset"] .options-number-input {

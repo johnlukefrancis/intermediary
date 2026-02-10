@@ -6,7 +6,7 @@ import type React from "react";
 export interface TriStateOption<T extends string> {
   value: T;
   label: string;
-  icon?: string;
+  icon?: React.ReactNode;
   title?: string;
 }
 
