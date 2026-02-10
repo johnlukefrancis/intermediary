@@ -92,10 +92,12 @@ export function App(): React.JSX.Element {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.themeMode = config.themeMode;
+    root.dataset.uiMode = config.uiMode;
     return () => {
       delete root.dataset.themeMode;
+      delete root.dataset.uiMode;
     };
-  }, [config.themeMode]);
+  }, [config.themeMode, config.uiMode]);
 
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);

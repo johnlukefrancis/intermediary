@@ -99,3 +99,24 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* ===== HANDSET MODE ===== */
+html[data-ui-mode="handset"] .options-overlay {
+  padding-top: calc(var(--header-stack-height, 80px) + var(--space-3));
+  padding-bottom: var(--space-3);
+  padding-inline: var(--space-3);
+}
+
+html[data-ui-mode="handset"] .options-panel {
+  width: min(100%, 460px);
+  max-width: 460px;
+  padding: var(--space-4);
+  padding-top: 52px;
+  max-height: calc(100vh - var(--header-stack-height, 80px) - var(--space-3) - var(--space-3));
+  overflow-x: hidden;
+}
+
+html[data-ui-mode="handset"] .options-close-button {
+  top: var(--space-3);
+  right: var(--space-3);
+}

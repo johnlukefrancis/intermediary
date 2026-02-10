@@ -287,3 +287,45 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* ===== HANDSET MODE ===== */
+html[data-ui-mode="handset"] .theme-mode-switcher {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+html[data-ui-mode="handset"] .theme-mode-option {
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+}
+
+html[data-ui-mode="handset"] .options-theme-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+html[data-ui-mode="handset"] .options-theme-label-row {
+  justify-content: space-between;
+  width: 100%;
+}
+
+html[data-ui-mode="handset"] .options-theme-label {
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+html[data-ui-mode="handset"] .options-theme-input {
+  width: 100%;
+  max-width: none;
+}
+
+html[data-ui-mode="handset"] .options-theme-controls {
+  width: 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}

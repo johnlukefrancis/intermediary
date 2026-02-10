@@ -112,3 +112,9 @@
   outline-offset: 2px;
   border-radius: var(--radius-deck-sm);
 }
+
+/* ===== HANDSET MODE ===== */
+html[data-ui-mode="handset"] .options-advanced-grid {
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
