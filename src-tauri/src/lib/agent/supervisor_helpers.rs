@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/agent/supervisor_helpers.rs
 // Description: Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
 
+use super::wsl_process_control::WslLaunchTarget;
 use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::process::Child;
@@ -11,6 +12,9 @@ use tauri::{AppHandle, Manager};
 pub(super) const KILL_WAIT_TIMEOUT: Duration = Duration::from_secs(5);
 pub(super) const KILL_WAIT_POLL: Duration = Duration::from_millis(50);
 pub(super) const PROBE_TIMEOUT: Duration = Duration::from_millis(750);
+pub(super) const WSL_TERMINATE_TERM_GRACE: Duration = Duration::from_millis(750);
+pub(super) const WSL_TERMINATE_POLL: Duration = Duration::from_millis(50);
+pub(super) const WSL_STALE_RETRY_BACKOFF: Duration = Duration::from_millis(300);
 const WS_AUTH_PROBE_ATTEMPTS: usize = 3;
 const WS_AUTH_PROBE_RETRY_DELAY: Duration = Duration::from_millis(100);
 
@@ -46,6 +50,7 @@ pub(super) struct ManagedProcessState {
 pub(super) struct AgentSupervisorState {
     pub host: ManagedProcessState,
     pub wsl: ManagedProcessState,
+    pub wsl_launch_target: Option<WslLaunchTarget>,
     pub last_error: Option<String>,
 }
 

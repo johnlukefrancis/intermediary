@@ -3,10 +3,9 @@
 
 use super::install::AgentBundlePaths;
 use crate::commands::agent_probe::probe_port_blocking;
-use crate::paths::wsl_convert::windows_to_wsl_path;
 use std::io::Read;
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
 use std::time::{Duration, Instant};
 
 #[cfg(unix)]
@@ -59,65 +58,6 @@ pub fn spawn_host_agent_process(
         .map_err(|err| format_host_spawn_error(&bundle.host_agent_binary_host, err))
 }
 
-pub fn spawn_wsl_agent_process(
-    bundle: &AgentBundlePaths,
-    distro: Option<&str>,
-    wsl_port: u16,
-    wsl_ws_token: &str,
-) -> Result<Child, String> {
-    if !cfg!(target_os = "windows") {
-        return Err("WSL agent launch is only supported on Windows hosts".to_string());
-    }
-
-    let wsl_agent_binary = bundle
-        .wsl_agent_binary_host
-        .as_ref()
-        .ok_or_else(|| "WSL agent binary is not available for this platform".to_string())?;
-    if !wsl_agent_binary.is_file() {
-        return Err(format!(
-            "WSL agent binary is missing: {}",
-            wsl_agent_binary.display()
-        ));
-    }
-    let agent_dir_host = path_to_string(&bundle.agent_dir_host)?;
-    let log_dir_host = path_to_string(&bundle.log_dir_host)?;
-    let agent_dir_wsl = windows_to_wsl_path(&agent_dir_host).ok_or_else(|| {
-        format!("Failed to convert host agent directory to WSL path: {agent_dir_host}")
-    })?;
-    let log_dir_wsl = windows_to_wsl_path(&log_dir_host).ok_or_else(|| {
-        format!("Failed to convert host log directory to WSL path: {log_dir_host}")
-    })?;
-
-    let mut command = Command::new("wsl.exe");
-    #[cfg(windows)]
-    {
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-    if let Some(name) = distro {
-        let trimmed = name.trim();
-        if !trimmed.is_empty() {
-            command.args(["-d", trimmed]);
-        }
-    }
-
-    let env_port = wsl_port.to_string();
-    let env_version = quote_bash(&bundle.version);
-    let env_log = quote_bash(&log_dir_wsl);
-    let env_wsl_ws_token = quote_bash(wsl_ws_token);
-    let agent_dir = quote_bash(&agent_dir_wsl);
-    let command_line = format!(
-        "cd {agent_dir} && chmod +x ./im_agent && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_WSL_WS_TOKEN={env_wsl_ws_token} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} ./im_agent"
-    );
-
-    command
-        .args(["--", "bash", "-lc", &command_line])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|err| format_wsl_spawn_error(err, distro))
-}
-
 pub fn wait_for_agent_ready(
     child: &mut Child,
     port: u16,
@@ -161,14 +101,6 @@ pub fn wait_for_agent_ready(
     ))
 }
 
-fn quote_bash(value: &str) -> String {
-    if value.is_empty() {
-        return "''".to_string();
-    }
-    let escaped = value.replace('\'', "'\"'\"'");
-    format!("'{escaped}'")
-}
-
 fn path_to_string(path: &Path) -> Result<String, String> {
     path.to_str()
         .ok_or_else(|| "Path contains invalid UTF-8".to_string())
@@ -188,25 +120,6 @@ fn format_host_spawn_error(binary_path: &Path, err: std::io::Error) -> String {
         "Failed to spawn host agent (binary: {}): {err}",
         binary_path.display()
     )
-}
-
-fn format_wsl_spawn_error(err: std::io::Error, distro: Option<&str>) -> String {
-    let distro_name = distro
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .unwrap_or("<default>");
-
-    match err.kind() {
-        std::io::ErrorKind::NotFound => format!(
-            "Failed to spawn WSL agent: wsl.exe was not found. Ensure WSL is installed and available on PATH (distro={distro_name}). Original error: {err}"
-        ),
-        std::io::ErrorKind::PermissionDenied => format!(
-            "Failed to spawn WSL agent: permission denied while starting wsl.exe (distro={distro_name}). Original error: {err}"
-        ),
-        _ => format!(
-            "Failed to spawn WSL agent (distro={distro_name}): {err}"
-        ),
-    }
 }
 
 fn format_early_exit_error(label: &str, status: String, detail: Option<String>) -> String {

@@ -95,3 +95,21 @@ Use Restart Agent when:
 - WSL transport remains offline.
 - Reconnect loops persist after sleep/wake.
 - Bundle requests repeatedly timeout in a way that does not self-recover.
+
+## 7) Stale WSL agent holding backend port (auto-remediated)
+
+Observed behavior:
+- WSL backend port is listening, but websocket auth probe rejects (`wrong token` / stale backend).
+- This can happen when a previous WSL `im_agent` process survives while the supervisor only has a stale `wsl.exe` wrapper handle.
+
+Automatic remediation now:
+- Supervisor tracks the absolute WSL binary path (`<agent_dir_in_wsl>/im_agent`) for the launched backend.
+- On **Stop Agent**, **Restart Agent**, and WSL auth-mismatch readiness failures, supervisor runs in-distro termination:
+  - `pgrep -f '<agent_bin_wsl>' | xargs -r kill -TERM`
+  - waits a short grace window
+  - escalates to `kill -KILL` for the same matched process only if needed
+- If the port is still occupied after remediation, supervisor performs one bounded retry with backoff, then returns a clear stale-port error.
+
+Safety constraints:
+- Termination is path-targeted to the configured agent binary and distro; it does not use global `pkill im_agent`.
+- Host backend remains independent; this remediation only affects the WSL backend process match.

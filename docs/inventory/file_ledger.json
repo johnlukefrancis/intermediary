@@ -930,8 +930,20 @@
       "summary": "Process lifecycle helpers for host/WSL supervisor tasks"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl.rs",
+      "summary": "WSL backend lifecycle helpers, including stale-port remediation and in-WSL termination"
+    },
+    {
       "path": "src-tauri/src/lib/agent/types.rs",
       "summary": "Types for supervising host agent lifecycle with optional Windows WSL backend"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_process_control_commands.rs",
+      "summary": "Shared command-line builders and quoting helpers for WSL process control"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_process_control.rs",
+      "summary": "WSL agent launch target resolution, spawning, and in-WSL termination helpers"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_control.rs",

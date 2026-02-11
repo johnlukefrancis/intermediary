@@ -235,7 +235,10 @@ src-tauri/src/lib/agent/supervisor_helpers.rs - Shared state and helper utilitie
 src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 src-tauri/src/lib/agent/supervisor/processes.rs - Process lifecycle helpers for host/WSL supervisor tasks
+src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend lifecycle helpers, including stale-port remediation and in-WSL termination
 src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
+src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
+src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution, spawning, and in-WSL termination helpers
 src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence

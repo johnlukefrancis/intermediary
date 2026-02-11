@@ -2,9 +2,7 @@
 // Description: Process lifecycle helpers for host/WSL supervisor tasks
 
 use super::{AgentSupervisor, EnsureProcessResult, SPAWN_BACKOFF};
-use crate::agent::process_control::{
-    spawn_host_agent_process, spawn_wsl_agent_process, wait_for_agent_ready,
-};
+use crate::agent::process_control::{spawn_host_agent_process, wait_for_agent_ready};
 use crate::agent::supervisor_helpers::{
     kill_and_wait, probe_websocket_auth_blocking, process_state, process_state_mut,
     KillAndWaitOutcome, ProcessKind,
@@ -94,87 +92,6 @@ impl AgentSupervisor {
         }
     }
 
-    pub(super) async fn ensure_wsl_running(
-        &self,
-        bundle: &crate::agent::install::AgentBundlePaths,
-        distro: Option<&str>,
-        wsl_port: u16,
-        auth: &AgentWebSocketAuth,
-        force: bool,
-    ) -> Result<EnsureProcessResult, String> {
-        if self.probe_listening(wsl_port).await? {
-            if self
-                .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
-                .await?
-            {
-                return Ok(EnsureProcessResult::AlreadyRunning);
-            }
-            self.reconcile_recorded_child(ProcessKind::Wsl, "auth_probe_failed")
-                .await?;
-            if self.probe_listening(wsl_port).await? {
-                return Err(format!(
-                    "WSL agent port {wsl_port} is occupied by a process that rejected the current websocket token"
-                ));
-            }
-        }
-        self.reconcile_recorded_child(ProcessKind::Wsl, "port_probe_failed")
-            .await?;
-        if !force && self.is_in_backoff(ProcessKind::Wsl)? {
-            return Ok(EnsureProcessResult::Backoff);
-        }
-
-        let distro_value = distro
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .unwrap_or("default");
-        logging::log(
-            "info",
-            "agent",
-            "spawn_start",
-            &format!("kind=wsl port={wsl_port} distro={distro_value}"),
-        );
-        let bundle_for_spawn = bundle.clone();
-        let distro = distro.map(str::to_string);
-        let wsl_ws_token = auth.wsl_ws_token.clone();
-        let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-            let mut child = spawn_wsl_agent_process(
-                &bundle_for_spawn,
-                distro.as_deref(),
-                wsl_port,
-                &wsl_ws_token,
-            )?;
-            wait_for_agent_ready(&mut child, wsl_port, ProcessKind::Wsl.label(), true)?;
-            Ok(child)
-        })
-        .await
-        .map_err(|err| format!("WSL agent spawn task failed: {err}"))?;
-
-        match spawned {
-            Ok(child) => {
-                let pid = child.id();
-                self.replace_child(ProcessKind::Wsl, child).await?;
-                self.update_last_spawn(ProcessKind::Wsl)?;
-                logging::log(
-                    "info",
-                    "agent",
-                    "spawn_ready",
-                    &format!("kind=wsl port={wsl_port} pid={pid}"),
-                );
-                Ok(EnsureProcessResult::Started)
-            }
-            Err(err) => {
-                logging::log(
-                    "error",
-                    "agent",
-                    "spawn_exit_early",
-                    &format!("kind=wsl port={wsl_port} error={err}"),
-                );
-                self.set_last_error(Some(err.clone()))?;
-                Err(err)
-            }
-        }
-    }
-
     pub(super) async fn probe_listening(&self, port: u16) -> Result<bool, String> {
         tauri::async_runtime::spawn_blocking(move || probe_port_blocking(port).listening)
             .await
@@ -193,10 +110,38 @@ impl AgentSupervisor {
     }
 
     pub(super) async fn stop_process(&self, kind: ProcessKind) -> Result<(), String> {
-        self.reconcile_recorded_child(kind, "stop").await
+        let mut errors: Vec<String> = Vec::new();
+
+        if matches!(kind, ProcessKind::Wsl) {
+            if let Err(err) = self.terminate_wsl_backend_for_reason("stop").await {
+                logging::log(
+                    "warn",
+                    "agent",
+                    "stop_cleanup",
+                    &format!("kind=wsl phase=in_distro_terminate outcome=failed error={err}"),
+                );
+                errors.push(format!("WSL in-distro terminate failed during stop: {err}"));
+            }
+        }
+
+        if let Err(err) = self.reconcile_recorded_child(kind, "stop").await {
+            errors.push(err);
+        }
+
+        if matches!(kind, ProcessKind::Wsl) {
+            if let Err(err) = self.set_wsl_launch_target(None) {
+                errors.push(format!("Failed to clear WSL launch target: {err}"));
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("; "))
+        }
     }
 
-    fn is_in_backoff(&self, kind: ProcessKind) -> Result<bool, String> {
+    pub(super) fn is_in_backoff(&self, kind: ProcessKind) -> Result<bool, String> {
         let state = self
             .state
             .lock()
@@ -207,7 +152,7 @@ impl AgentSupervisor {
         }
     }
 
-    fn update_last_spawn(&self, kind: ProcessKind) -> Result<(), String> {
+    pub(super) fn update_last_spawn(&self, kind: ProcessKind) -> Result<(), String> {
         let mut state = self
             .state
             .lock()
@@ -216,12 +161,16 @@ impl AgentSupervisor {
         Ok(())
     }
 
-    async fn replace_child(&self, kind: ProcessKind, child: Child) -> Result<(), String> {
+    pub(super) async fn replace_child(
+        &self,
+        kind: ProcessKind,
+        child: Child,
+    ) -> Result<(), String> {
         self.reconcile_recorded_child(kind, "replace_child").await?;
         self.store_child(kind, child)
     }
 
-    async fn reconcile_recorded_child(
+    pub(super) async fn reconcile_recorded_child(
         &self,
         kind: ProcessKind,
         reason: &str,
