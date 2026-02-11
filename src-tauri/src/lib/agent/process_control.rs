@@ -4,8 +4,9 @@
 use super::install::AgentBundlePaths;
 use crate::commands::agent_probe::probe_port_blocking;
 use crate::paths::wsl_convert::windows_to_wsl_path;
+use std::io::Read;
 use std::path::Path;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
 #[cfg(unix)]
@@ -16,6 +17,7 @@ use std::os::windows::process::CommandExt;
 
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const READY_POLL: Duration = Duration::from_millis(250);
+const EARLY_EXIT_STREAM_LIMIT_BYTES: usize = 8 * 1024;
 
 pub fn spawn_host_agent_process(
     bundle: &AgentBundlePaths,
@@ -100,11 +102,18 @@ pub fn spawn_wsl_agent_process(
 
     command
         .args(["--", "bash", "-lc", &command_line])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
-        .map_err(|err| format!("Failed to spawn WSL agent: {err}"))
+        .map_err(|err| format_wsl_spawn_error(err, distro))
 }
 
-pub fn wait_for_agent_ready(child: &mut Child, port: u16, label: &str) -> Result<(), String> {
+pub fn wait_for_agent_ready(
+    child: &mut Child,
+    port: u16,
+    label: &str,
+    capture_output_on_early_exit: bool,
+) -> Result<(), String> {
     let start = Instant::now();
     let mut last_error: Option<String> = None;
 
@@ -113,7 +122,12 @@ pub fn wait_for_agent_ready(child: &mut Child, port: u16, label: &str) -> Result
             .try_wait()
             .map_err(|err| format!("Failed to poll {label} process: {err}"))?
         {
-            return Err(format!("{label} exited early: {status}"));
+            let detail = if capture_output_on_early_exit {
+                format_early_exit_output(child)
+            } else {
+                None
+            };
+            return Err(format_early_exit_error(label, status.to_string(), detail));
         }
 
         let probe = probe_port_blocking(port);
@@ -164,4 +178,93 @@ fn format_host_spawn_error(binary_path: &Path, err: std::io::Error) -> String {
         "Failed to spawn host agent (binary: {}): {err}",
         binary_path.display()
     )
+}
+
+fn format_wsl_spawn_error(err: std::io::Error, distro: Option<&str>) -> String {
+    let distro_name = distro
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("<default>");
+
+    match err.kind() {
+        std::io::ErrorKind::NotFound => format!(
+            "Failed to spawn WSL agent: wsl.exe was not found. Ensure WSL is installed and available on PATH (distro={distro_name}). Original error: {err}"
+        ),
+        std::io::ErrorKind::PermissionDenied => format!(
+            "Failed to spawn WSL agent: permission denied while starting wsl.exe (distro={distro_name}). Original error: {err}"
+        ),
+        _ => format!(
+            "Failed to spawn WSL agent (distro={distro_name}): {err}"
+        ),
+    }
+}
+
+fn format_early_exit_error(label: &str, status: String, detail: Option<String>) -> String {
+    match detail {
+        Some(detail) => format!("{label} exited early: {status}. {detail}"),
+        None => format!("{label} exited early: {status}"),
+    }
+}
+
+fn format_early_exit_output(child: &mut Child) -> Option<String> {
+    let stderr = read_stream_limited(child.stderr.take(), EARLY_EXIT_STREAM_LIMIT_BYTES);
+    let stdout = read_stream_limited(child.stdout.take(), EARLY_EXIT_STREAM_LIMIT_BYTES);
+
+    let mut sections: Vec<String> = Vec::new();
+    if let Some(stderr) = stderr {
+        sections.push(format_stream("stderr", stderr));
+    }
+    if let Some(stdout) = stdout {
+        sections.push(format_stream("stdout", stdout));
+    }
+
+    if sections.is_empty() {
+        None
+    } else {
+        Some(sections.join("; "))
+    }
+}
+
+#[derive(Debug)]
+struct StreamSnippet {
+    text: String,
+    truncated: bool,
+}
+
+fn read_stream_limited<R: Read>(stream: Option<R>, limit: usize) -> Option<StreamSnippet> {
+    let stream = stream?;
+    let mut reader = stream.take((limit + 1) as u64);
+    let mut bytes: Vec<u8> = Vec::new();
+    if reader.read_to_end(&mut bytes).is_err() {
+        return Some(StreamSnippet {
+            text: "<failed to read stream>".to_string(),
+            truncated: false,
+        });
+    }
+
+    let truncated = bytes.len() > limit;
+    if truncated {
+        bytes.truncate(limit);
+    }
+
+    let text = sanitize_stream_text(&String::from_utf8_lossy(&bytes));
+    if text.is_empty() {
+        return None;
+    }
+
+    Some(StreamSnippet { text, truncated })
+}
+
+fn sanitize_stream_text(text: &str) -> String {
+    text.trim()
+        .replace('\r', "")
+        .replace('\n', "\\n")
+        .replace('\t', "\\t")
+}
+
+fn format_stream(label: &str, snippet: StreamSnippet) -> String {
+    if snippet.truncated {
+        return format!("{label}=\"{}\" (truncated)", snippet.text);
+    }
+    format!("{label}=\"{}\"", snippet.text)
 }

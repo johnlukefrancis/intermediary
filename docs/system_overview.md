@@ -81,7 +81,7 @@ Intermediary uses a **host-routed architecture**:
   - On Windows only: launches the WSL backend agent on `agentPort + 1` when any configured repo has `root.kind = "wsl"`
   - Auto-start toggle with optional distro override (Windows-only control)
   - Restart command and diagnostics surfaced in the UI
-  - Stops agent processes on app exit to avoid orphans
+  - Reconciles tracked host/WSL child processes on restart and stops them on app exit to avoid orphans
 
 ### Host Agent
 

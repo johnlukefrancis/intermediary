@@ -2,8 +2,12 @@
 // Description: Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
 
 use std::process::Child;
-use std::time::Instant;
+use std::thread;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
+
+pub(super) const KILL_WAIT_TIMEOUT: Duration = Duration::from_secs(5);
+pub(super) const KILL_WAIT_POLL: Duration = Duration::from_millis(50);
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum ProcessKind {
@@ -16,6 +20,13 @@ impl ProcessKind {
         match self {
             Self::Host => "Host agent",
             Self::Wsl => "WSL agent",
+        }
+    }
+
+    pub(super) fn log_key(self) -> &'static str {
+        match self {
+            Self::Host => "host",
+            Self::Wsl => "wsl",
         }
     }
 }
@@ -78,6 +89,48 @@ pub(super) fn resolve_expected_dirs(app: &AppHandle) -> Result<(String, String),
 
 pub(super) fn should_prefer_installed_bundle(host_listening: bool, wsl_listening: bool) -> bool {
     host_listening || wsl_listening
+}
+
+pub(super) enum KillAndWaitOutcome {
+    Exited(String),
+    Failed(Child, String),
+}
+
+pub(super) fn kill_and_wait(mut child: Child) -> KillAndWaitOutcome {
+    if let Err(err) = child.kill() {
+        match child.try_wait() {
+            Ok(Some(status)) => return KillAndWaitOutcome::Exited(status.to_string()),
+            Ok(None) => {
+                return KillAndWaitOutcome::Failed(child, format!("kill signal failed: {err}"));
+            }
+            Err(wait_err) => {
+                return KillAndWaitOutcome::Failed(
+                    child,
+                    format!("kill signal failed: {err}; poll failed: {wait_err}"),
+                );
+            }
+        }
+    }
+
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return KillAndWaitOutcome::Exited(status.to_string()),
+            Ok(None) => {
+                if start.elapsed() >= KILL_WAIT_TIMEOUT {
+                    return KillAndWaitOutcome::Failed(
+                        child,
+                        format!(
+                            "process did not exit within {}ms after kill",
+                            KILL_WAIT_TIMEOUT.as_millis()
+                        ),
+                    );
+                }
+                thread::sleep(KILL_WAIT_POLL);
+            }
+            Err(err) => return KillAndWaitOutcome::Failed(child, err.to_string()),
+        }
+    }
 }
 
 #[cfg(test)]
