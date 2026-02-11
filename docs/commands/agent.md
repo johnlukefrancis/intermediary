@@ -1,5 +1,5 @@
 # Agent Commands
-Updated on: 2026-02-06
+Updated on: 2026-02-11
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -10,10 +10,13 @@ Commands for running and developing the WSL backend agent.
 Start the agent in dev mode:
 
 ```bash
-INTERMEDIARY_AGENT_PORT=3142 INTERMEDIARY_WSL_WS_TOKEN=im_dev_wsl_token cargo run -p im_agent --bin im_agent
+pnpm run agent:dev
 ```
 
 Use `3142` when running as the backend under the host-agent model (`hostPort + 1`).
+When `INTERMEDIARY_WSL_WS_TOKEN` is unset, the launcher resolves `wslWsToken`
+from app-local `ws_auth.json` under the active Windows `%LOCALAPPDATA%` profile
+before falling back to `im_dev_wsl_token`.
 
 ## Type Check
 
@@ -36,7 +39,7 @@ pnpm run lint
 Connect to the running agent with wscat (optional):
 
 ```bash
-wscat -c "ws://127.0.0.1:3142/?token=im_dev_wsl_token"
+wscat -c "ws://127.0.0.1:3142/?token=<wslWsToken-from-ws_auth.json>"
 ```
 
 Send a clientHello to configure the agent:

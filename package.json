@@ -16,7 +16,7 @@
     "tauri": "tauri",
     "lint": "eslint \"app/src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "agent:dev": "INTERMEDIARY_AGENT_PORT=3142 INTERMEDIARY_WSL_WS_TOKEN=im_dev_wsl_token cargo run -p im_agent --bin im_agent",
+    "agent:dev": "bash ./scripts/dev/run_wsl_agent_dev.sh",
     "agent:bundle": "node scripts/build/build_agent_bundle.mjs",
     "gen:classification": "node scripts/classification/generate_code_classification_artifacts.mjs",
     "headers:list": "node scripts/fileledger/add_file_headers.mjs --list",

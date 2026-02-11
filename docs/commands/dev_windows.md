@@ -10,6 +10,7 @@ Commands for running Intermediary in Windows with WSL source files.
 The project includes VS Code tasks that handle sync and build automatically.
 
 Note: Installed builds auto-start the host agent (`3141`) and conditionally start the WSL backend (`3142`) when WSL repos are configured. During development these tasks launch the WSL backend from source on `3142`; the host remains app-managed on `3141`.
+When `INTERMEDIARY_WSL_WS_TOKEN` is not explicitly set, the WSL dev launcher resolves `wslWsToken` from the app auth file (`ws_auth.json`) under app local data so backend token auth matches the running app by default.
 
 Important:
 - For repos rooted on mounted Windows paths (`/mnt/<drive>/...`), prefer the Windows tasks in this document.
@@ -78,6 +79,11 @@ In a separate WSL terminal:
 ```bash
 pnpm run agent:dev
 ```
+
+The launcher resolves `INTERMEDIARY_WSL_WS_TOKEN` in this order:
+1. Explicit `INTERMEDIARY_WSL_WS_TOKEN` environment variable
+2. `wslWsToken` from `ws_auth.json` under the active Windows `%LOCALAPPDATA%` profile (`com.johnf.intermediary/agent/` then legacy `Intermediary/agent/`)
+3. Fallback dev token (`im_dev_wsl_token`) with a warning
 
 ## Environment Variables
 

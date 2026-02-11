@@ -105,22 +105,33 @@ pub fn terminate_wsl_agent_process(
         return Ok(WslTerminateOutcome::NoMatch);
     }
 
+    let mut signal_errors: Vec<String> = Vec::new();
+
     let term_command = build_wsl_signal_command_line(&target.agent_bin_wsl, "TERM");
-    run_wsl_bash_checked(target.distro.as_deref(), &term_command, "TERM")?;
+    if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &term_command, "TERM")? {
+        signal_errors.push(error);
+    }
     if wait_for_wsl_agent_exit(target, term_grace, poll)? {
         return Ok(WslTerminateOutcome::TerminatedWithTerm);
     }
 
     let kill_command = build_wsl_signal_command_line(&target.agent_bin_wsl, "KILL");
-    run_wsl_bash_checked(target.distro.as_deref(), &kill_command, "KILL")?;
+    if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &kill_command, "KILL")? {
+        signal_errors.push(error);
+    }
     if wait_for_wsl_agent_exit(target, term_grace, poll)? {
         return Ok(WslTerminateOutcome::TerminatedWithKill);
     }
 
-    Err(format!(
+    let mut error = format!(
         "WSL agent process matched by {} did not exit after TERM/KILL",
         target.agent_bin_wsl
-    ))
+    );
+    if !signal_errors.is_empty() {
+        error = format!("{error}. {}", signal_errors.join("; "));
+    }
+
+    Err(error)
 }
 
 pub fn format_wsl_target(target: &WslLaunchTarget) -> String {
@@ -167,26 +178,42 @@ fn probe_wsl_agent_running(target: &WslLaunchTarget) -> Result<bool, String> {
     ))
 }
 
-fn run_wsl_bash_checked(
+fn run_wsl_signal_command(
     distro: Option<&str>,
     command_line: &str,
     stage: &str,
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     let output = run_wsl_bash(distro, command_line)?;
     if output.status.success() {
-        return Ok(());
+        return Ok(None);
     }
 
-    let status = output
-        .status
-        .code()
+    let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
+    Ok(Some(format_wsl_signal_command_error(
+        stage,
+        distro,
+        output.status.code(),
+        &stderr,
+    )))
+}
+
+fn format_wsl_signal_command_error(
+    stage: &str,
+    distro: Option<&str>,
+    status: Option<i32>,
+    stderr: &str,
+) -> String {
+    let status = status
         .map(|value| value.to_string())
         .unwrap_or_else(|| "signal".to_string());
-    let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-    Err(format!(
-        "WSL agent {stage} command failed (exit={status}, distro={}): {stderr}",
+    let prefix = format!(
+        "WSL agent {stage} command failed (exit={status}, distro={})",
         distro_label(distro)
-    ))
+    );
+    if stderr.is_empty() {
+        return prefix;
+    }
+    format!("{prefix}: {stderr}")
 }
 
 fn run_wsl_bash(distro: Option<&str>, command_line: &str) -> Result<Output, String> {
@@ -272,4 +299,28 @@ fn sanitize_stream_text(text: &str) -> String {
         .replace('\r', "")
         .replace('\n', "\\n")
         .replace('\t', "\\t")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_wsl_signal_command_error;
+
+    #[test]
+    fn format_wsl_signal_command_error_omits_empty_stderr_suffix() {
+        let error = format_wsl_signal_command_error("TERM", Some("Ubuntu"), Some(15), "");
+        assert_eq!(
+            error,
+            "WSL agent TERM command failed (exit=15, distro=Ubuntu)"
+        );
+    }
+
+    #[test]
+    fn format_wsl_signal_command_error_includes_sanitized_stderr() {
+        let error =
+            format_wsl_signal_command_error("KILL", None, Some(2), "kill: failed to parse pid");
+        assert_eq!(
+            error,
+            "WSL agent KILL command failed (exit=2, distro=default): kill: failed to parse pid"
+        );
+    }
 }

@@ -39,7 +39,7 @@ pub(super) fn build_wsl_probe_command_line(agent_bin_wsl: &str) -> String {
 
 pub(super) fn build_wsl_signal_command_line(agent_bin_wsl: &str, signal: &str) -> String {
     format!(
-        "pgrep -f {} | xargs -r kill -{signal}",
+        "pgrep -f {} | awk -v self=$$ '$1 != self' | xargs -r kill -{signal}",
         quote_bash(agent_bin_wsl)
     )
 }
@@ -91,7 +91,7 @@ mod tests {
         );
         assert_eq!(
             command,
-            "pgrep -f '/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent' | xargs -r kill -TERM"
+            "pgrep -f '/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent' | awk -v self=$$ '$1 != self' | xargs -r kill -TERM"
         );
     }
 
