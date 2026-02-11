@@ -202,6 +202,7 @@ pub struct BundleBuildProgressEvent {
 pub enum AgentErrorCode {
     WatcherInotifyLimit,
     WatcherFdLimit,
+    WatcherMountedWindowsPathRisk,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

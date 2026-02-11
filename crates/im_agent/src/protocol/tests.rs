@@ -478,3 +478,32 @@ fn wsl_backend_status_event_roundtrip() {
         _ => panic!("expected WslBackendStatus"),
     }
 }
+
+#[test]
+fn watcher_mounted_windows_path_risk_error_code_roundtrip() {
+    let json = json!({
+        "type": "error",
+        "scope": "watcher",
+        "message": "Repo watcher is running on a mounted Windows path and may miss changes.",
+        "details": {
+            "code": "watcher_mounted_windows_path_risk",
+            "docPath": "docs/usage/agent_wsl_bruised_states.md",
+            "repoId": "screenshots",
+            "rawCode": "MOUNTED_WINDOWS_PATH_RISK",
+            "rawMessage": "Mounted Windows path: /mnt/c/Users/john/Pictures"
+        }
+    });
+
+    let event: AgentEvent = serde_json::from_value(json).expect("parse watcher warning");
+    match event {
+        AgentEvent::Error(result) => {
+            let details = result.details.expect("details");
+            assert_eq!(
+                details.code,
+                Some(crate::protocol::AgentErrorCode::WatcherMountedWindowsPathRisk)
+            );
+            assert_eq!(details.repo_id.as_deref(), Some("screenshots"));
+        }
+        _ => panic!("expected Error"),
+    }
+}

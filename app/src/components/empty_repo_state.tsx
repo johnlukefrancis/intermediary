@@ -48,6 +48,7 @@ export function EmptyRepoState({
           <AddRepoButton
             {...(onRepoAdded ? { onRepoAdded } : {})}
             className="empty-repo-state__button"
+            variant="empty_state"
           />
         </div>
       </div>

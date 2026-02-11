@@ -1,7 +1,7 @@
 // Path: crates/im_agent/src/runtime/state.rs
 // Description: Agent runtime state and option handlers
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -26,6 +26,7 @@ pub struct AgentRuntime {
     pub repo_configs: HashMap<String, RepoConfig>,
     pub recent_files_store: Option<RecentFilesStore>,
     pub watchers: HashMap<String, RepoWatcher>,
+    pub mounted_windows_path_warned_repos: HashSet<String>,
     pub auto_stage_on_change: bool,
     pub recent_files_limit: usize,
 }
@@ -44,6 +45,7 @@ impl AgentRuntime {
             repo_configs: HashMap::new(),
             recent_files_store: None,
             watchers: HashMap::new(),
+            mounted_windows_path_warned_repos: HashSet::new(),
             auto_stage_on_change: true,
             recent_files_limit: 40,
         }

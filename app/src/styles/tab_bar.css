@@ -439,7 +439,7 @@
 }
 
 /* Tunnel-entrance fade: tabs slide behind the + button */
-.tab-add-button::before {
+.tab-add-button--tab::before {
   content: "";
   position: absolute;
   top: 0;

@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-02-06
+Updated on: 2026-02-11
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -10,6 +10,10 @@ Commands for running Intermediary in Windows with WSL source files.
 The project includes VS Code tasks that handle sync and build automatically.
 
 Note: Installed builds auto-start the host agent (`3141`) and conditionally start the WSL backend (`3142`) when WSL repos are configured. During development these tasks launch the WSL backend from source on `3142`; the host remains app-managed on `3141`.
+
+Important:
+- For repos rooted on mounted Windows paths (`/mnt/<drive>/...`), prefer the Windows tasks in this document.
+- Running Linux-target Tauri directly from WSL for those roots can produce degraded watch reliability; Intermediary now warns when this mode is detected.
 
 ### Tauri: dev (Windows)
 

@@ -23,11 +23,13 @@ import {
 interface AddRepoButtonProps {
   onRepoAdded?: (repoId: string) => void;
   className?: string;
+  variant?: "tab" | "empty_state";
 }
 
 export function AddRepoButton({
   onRepoAdded,
   className = "",
+  variant = "tab",
 }: AddRepoButtonProps): React.JSX.Element {
   const { config, addRepo } = useConfig();
   const [isAdding, setIsAdding] = useState(false);
@@ -85,13 +87,13 @@ export function AddRepoButton({
   return (
     <button
       type="button"
-      className={`tab-add-button ${className}`}
+      className={`tab-add-button ${variant === "tab" ? "tab-add-button--tab" : "tab-add-button--empty-state"} ${className}`}
       onClick={onClick}
       disabled={isAdding}
       aria-label="Add repository"
       title="Add repository"
     >
-      +
+      {variant === "tab" ? "+" : "+ Add Repository"}
     </button>
   );
 }

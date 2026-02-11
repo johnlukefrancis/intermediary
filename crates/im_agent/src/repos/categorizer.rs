@@ -8,6 +8,9 @@ use crate::error::AgentError;
 use crate::protocol::FileKind;
 
 const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
+const DOC_IMAGE_EXTENSIONS: &[&str] = &[
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".heic", ".heif", ".tiff", ".tif",
+];
 
 const DOC_DIRS: &[&str] = &["docs", "doc", "documentation", "wiki"];
 
@@ -91,6 +94,9 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
         if DOC_EXTENSIONS.contains(&ext.as_str()) {
             return FileKind::Docs;
         }
+        if DOC_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+            return FileKind::Docs;
+        }
         if GENERATED_CODE_EXTENSIONS.contains(&ext.as_str()) {
             return FileKind::Code;
         }
@@ -123,5 +129,12 @@ mod tests {
     fn fallback_keeps_docs_priority() {
         assert_eq!(fallback_categorize("docs/notes.txt"), FileKind::Docs);
         assert_eq!(fallback_categorize("README.md"), FileKind::Docs);
+    }
+
+    #[test]
+    fn fallback_classifies_images_as_docs() {
+        assert_eq!(fallback_categorize("Screenshots/Capture.png"), FileKind::Docs);
+        assert_eq!(fallback_categorize("captures/IMG_0001.JPG"), FileKind::Docs);
+        assert_eq!(fallback_categorize("notes/snip.webp"), FileKind::Docs);
     }
 }

@@ -3,12 +3,15 @@
 
 use crate::error::AgentError;
 use crate::logging::Logger;
-use crate::repos::{RepoWatcher, RepoWatcherConfig};
+use crate::protocol::AgentEvent;
+use crate::repos::{
+    build_mounted_windows_path_warning_event, RepoWatcher, RepoWatcherConfig,
+};
 use crate::server::EventBus;
 use serde_json::json;
 
 use super::state::AgentRuntime;
-use super::RepoConfig;
+use super::{RepoConfig, RepoRootKind};
 
 impl AgentRuntime {
     pub async fn reset_watchers(&mut self) {
@@ -57,6 +60,22 @@ impl AgentRuntime {
                     ),
                 )
             })?;
+
+        let repo_uses_mounted_windows_path =
+            is_mounted_windows_path_watch_risk(self.supported_root_kind, repo_root);
+        if repo_uses_mounted_windows_path
+            && self
+                .mounted_windows_path_warned_repos
+                .insert(repo.repo_id.clone())
+        {
+            logger.warn(
+                "Watcher running on mounted Windows path in Linux runtime",
+                Some(json!({ "repoId": repo.repo_id, "repoRoot": repo_root })),
+            );
+            event_bus.broadcast_event(AgentEvent::Error(
+                build_mounted_windows_path_warning_event(&repo.repo_id, repo_root),
+            ));
+        }
 
         let initial_entries = store.load(&repo.repo_id, repo_root).await;
         let classification_ignore_globs = self
@@ -112,5 +131,59 @@ impl AgentRuntime {
         }
 
         self.start_repo_watcher(repo, event_bus, logger).await
+    }
+}
+
+fn is_mounted_windows_path_watch_risk(runtime_root_kind: RepoRootKind, repo_root: &str) -> bool {
+    if runtime_root_kind != RepoRootKind::Host || !cfg!(target_os = "linux") {
+        return false;
+    }
+
+    let normalized = repo_root.trim().replace('\\', "/");
+    let stripped = match normalized.strip_prefix("/mnt/") {
+        Some(value) => value,
+        None => return false,
+    };
+
+    let drive = stripped.split('/').next().unwrap_or_default();
+    drive.len() == 1 && drive.chars().all(|ch| ch.is_ascii_alphabetic())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_mounted_windows_path_watch_risk;
+    use crate::runtime::RepoRootKind;
+
+    #[test]
+    fn mounted_windows_path_detection_matches_platform_contract() {
+        let lowercase_drive = is_mounted_windows_path_watch_risk(
+            RepoRootKind::Host,
+            "/mnt/c/Users/johnf/Pictures",
+        );
+        let uppercase_drive =
+            is_mounted_windows_path_watch_risk(RepoRootKind::Host, "/mnt/D/dev/repo");
+        let drive_root = is_mounted_windows_path_watch_risk(RepoRootKind::Host, "/mnt/e");
+
+        if cfg!(target_os = "linux") {
+            assert!(lowercase_drive);
+            assert!(uppercase_drive);
+            assert!(drive_root);
+        } else {
+            assert!(!lowercase_drive);
+            assert!(!uppercase_drive);
+            assert!(!drive_root);
+        }
+    }
+
+    #[test]
+    fn non_mounted_or_wsl_runtime_paths_are_not_detected() {
+        assert!(!is_mounted_windows_path_watch_risk(
+            RepoRootKind::Host,
+            "/home/johnf/code/intermediary"
+        ));
+        assert!(!is_mounted_windows_path_watch_risk(
+            RepoRootKind::Wsl,
+            "/mnt/c/Users/johnf/Pictures"
+        ));
     }
 }

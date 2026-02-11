@@ -16,3 +16,4 @@ pub use mru_index::MruIndex;
 pub use recent_files_store::RecentFilesStore;
 pub use repo_top_level::{get_repo_top_level, is_valid_repo_root, TopLevelResult};
 pub use repo_watcher::{RepoWatcher, RepoWatcherConfig};
+pub use watcher_error::build_mounted_windows_path_warning_event;

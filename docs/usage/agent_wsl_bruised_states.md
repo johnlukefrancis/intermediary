@@ -48,7 +48,21 @@ What to do:
 - Retry build once backend is online/stable.
 - If repeated timeout persists, use **Restart Agent** and rebuild.
 
-## 4) Log locations
+## 4) Mounted Windows paths in Linux/WSL runtime (warn-only)
+
+Observed behavior:
+- If a repo root resolves to `/mnt/<drive>/...` in a Linux/WSL runtime, Intermediary emits a watcher warning in the status bar.
+- The watcher still starts, but change detection can be degraded on large or busy trees.
+
+Why this is expected:
+- Linux/WSL filesystem watch reliability is lower for mounted Windows paths than for native Linux paths.
+- Intermediary keeps this mode available for flexibility, but warns explicitly instead of silently failing.
+
+What to do:
+- Prefer `Tauri: dev (Windows)` or `Tauri: dev (Windows, watch + sync)` for Windows-root repos.
+- Keep Linux/WSL runtime usage for native Linux roots (for example `/home/<user>/...`).
+
+## 5) Log locations
 
 Default runtime logs are under the app local-data `logs` directory:
 
@@ -63,7 +77,7 @@ Notes:
 - `agent_latest.log` is host/WSL agent JSONL logging.
 - Dev workflows may override log directory (for example via `INTERMEDIARY_LOG_DIR`).
 
-## 5) Restart Agent: what it resets
+## 6) Restart Agent: what it resets
 
 `Restart Agent` performs supervisor stop + start for managed host/WSL agent processes.
 

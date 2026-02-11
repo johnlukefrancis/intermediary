@@ -63,6 +63,7 @@
     },
     {
       "label": "Tauri: dev (WSL)",
+      "detail": "Linux-target dev task. For /mnt/<drive> repo roots, prefer Tauri: dev (Windows) for watcher reliability.",
       "type": "shell",
       "command": "pnpm tauri dev",
       "options": {

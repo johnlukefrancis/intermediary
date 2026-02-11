@@ -94,7 +94,11 @@ export const BundleBuildProgressEventSchema = z.object({
 });
 export type BundleBuildProgressEvent = z.infer<typeof BundleBuildProgressEventSchema>;
 
-export const AgentErrorCodeSchema = z.enum(["watcher_inotify_limit", "watcher_fd_limit"]);
+export const AgentErrorCodeSchema = z.enum([
+  "watcher_inotify_limit",
+  "watcher_fd_limit",
+  "watcher_mounted_windows_path_risk",
+]);
 export type AgentErrorCode = z.infer<typeof AgentErrorCodeSchema>;
 
 export const ErrorEventSchema = z.object({

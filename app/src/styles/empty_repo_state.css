@@ -46,41 +46,33 @@
 }
 
 /* Override AddRepoButton styles in empty state context */
-.empty-repo-state__button.tab-add-button {
+.empty-repo-state__button.tab-add-button--empty-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: auto;
   height: auto;
   margin-top: var(--space-2);
   margin-left: 0;
   padding: var(--space-2) var(--space-4);
+  line-height: 1.2;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
   color: var(--color-accent);
   background: transparent;
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-deck-sm);
 }
 
-.empty-repo-state__button.tab-add-button::before {
-  content: "+ Add Repository";
-}
-
-/* Hide the default "+" content */
-.empty-repo-state__button.tab-add-button {
-  font-size: 0;
-}
-
-.empty-repo-state__button.tab-add-button::before {
-  font-size: var(--text-sm);
-}
-
-.empty-repo-state__button.tab-add-button:hover {
+.empty-repo-state__button.tab-add-button--empty-state:hover {
   background: var(--color-accent);
   color: var(--color-bg-base);
 }
 
-.empty-repo-state__button.tab-add-button:focus-visible {
+.empty-repo-state__button.tab-add-button--empty-state:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
