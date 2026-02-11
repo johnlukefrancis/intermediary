@@ -207,6 +207,7 @@ mod tests {
         let logger = Logger::init(LogConfig {
             log_dir: unique_log_dir(),
             min_level: LogLevel::Error,
+            emit_stdio: false,
         })
         .await
         .expect("logger init");

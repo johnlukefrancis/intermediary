@@ -26,9 +26,10 @@ pub(super) fn build_wsl_spawn_command_line(
     let env_version = quote_bash(version);
     let env_log = quote_bash(log_dir_wsl);
     let env_wsl_ws_token = quote_bash(wsl_ws_token);
+    let env_stdio_logging = quote_bash("0");
     let agent_bin = quote_bash(agent_bin_wsl);
     format!(
-        "chmod +x {agent_bin} && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_WSL_WS_TOKEN={env_wsl_ws_token} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} {agent_bin}"
+        "chmod +x {agent_bin} && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_WSL_WS_TOKEN={env_wsl_ws_token} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} INTERMEDIARY_AGENT_STDIO_LOGGING={env_stdio_logging} {agent_bin}"
     )
 }
 
@@ -107,6 +108,7 @@ mod tests {
         assert!(command
             .contains("chmod +x '/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent'"));
         assert!(!command.contains("./im_agent"));
+        assert!(command.contains("INTERMEDIARY_AGENT_STDIO_LOGGING='0'"));
         assert!(command.ends_with("'/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent'"));
     }
 

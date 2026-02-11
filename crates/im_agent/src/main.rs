@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use im_agent::logging::{resolve_log_dir, LogConfig, LogLevel, Logger};
+use im_agent::logging::{resolve_log_dir, resolve_stdio_logging, LogConfig, LogLevel, Logger};
 use im_agent::runtime::AgentRuntime;
 use im_agent::server::{run_server, ServerConfig};
 
@@ -24,10 +24,12 @@ async fn main() {
 
     let log_dir = resolve_log_dir(env::var("INTERMEDIARY_AGENT_LOG_DIR").ok());
     let log_level = resolve_log_level(env::var("INTERMEDIARY_AGENT_LOG_LEVEL").ok());
+    let emit_stdio = resolve_stdio_logging(env::var("INTERMEDIARY_AGENT_STDIO_LOGGING").ok());
 
     let logger = match Logger::init(LogConfig {
         log_dir,
         min_level: log_level,
+        emit_stdio,
     })
     .await
     {

@@ -14,6 +14,7 @@ A single-window "handoff console" that:
 - Auto-switches between standard and handset layouts by window size (hysteresis-based)
 - Generates zip bundles with provenance manifests
 - Enables drag-and-drop of files/bundles directly into browser upload zones
+- Uses file-based agent diagnostics (`agent_latest.log`) for supervised processes instead of stdout/stderr pipe capture
 
 ## Architecture
 

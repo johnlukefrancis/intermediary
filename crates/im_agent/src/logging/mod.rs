@@ -3,4 +3,4 @@
 
 mod json_logger;
 
-pub use json_logger::{resolve_log_dir, LogConfig, LogLevel, Logger};
+pub use json_logger::{resolve_log_dir, resolve_stdio_logging, LogConfig, LogLevel, Logger};

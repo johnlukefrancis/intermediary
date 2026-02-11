@@ -76,6 +76,7 @@ Default runtime logs are under the app local-data `logs` directory:
 Notes:
 - `run_latest.txt` is app/supervisor-side logging.
 - `agent_latest.log` is host/WSL agent JSONL logging.
+- Supervised app launches diagnose agent early exits from bounded `agent_latest.log` tails; they do not depend on draining child stdout/stderr pipes.
 - Dev workflows may override log directory (for example via `INTERMEDIARY_LOG_DIR`).
 
 ## 6) Restart Agent: what it resets

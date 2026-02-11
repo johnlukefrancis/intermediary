@@ -86,8 +86,8 @@ pub fn spawn_wsl_agent_process(
     let mut command = build_wsl_bash_command(target.distro.as_deref(), &command_line);
 
     command
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()
         .map_err(|err| format_wsl_spawn_error(err, target.distro.as_deref()))
 }

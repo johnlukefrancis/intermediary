@@ -2,7 +2,9 @@
 // Description: Process lifecycle helpers for host/WSL supervisor tasks
 
 use super::{AgentSupervisor, EnsureProcessResult, SPAWN_BACKOFF};
-use crate::agent::process_control::{spawn_host_agent_process, wait_for_agent_ready};
+use crate::agent::process_control::{
+    capture_log_cursor, spawn_host_agent_process, wait_for_agent_ready,
+};
 use crate::agent::supervisor_helpers::{
     kill_and_wait, probe_websocket_auth_blocking, process_state, process_state_mut,
     KillAndWaitOutcome, ProcessKind,
@@ -52,6 +54,8 @@ impl AgentSupervisor {
         let bundle_for_spawn = bundle.clone();
         let auth = auth.clone();
         let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
+            let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
+            let log_offset = capture_log_cursor(&log_file);
             let mut child = spawn_host_agent_process(
                 &bundle_for_spawn,
                 host_port,
@@ -60,7 +64,13 @@ impl AgentSupervisor {
                 &auth.wsl_ws_token,
                 &auth.host_allowed_origins,
             )?;
-            wait_for_agent_ready(&mut child, host_port, ProcessKind::Host.label(), false)?;
+            wait_for_agent_ready(
+                &mut child,
+                host_port,
+                ProcessKind::Host.label(),
+                &log_file,
+                log_offset,
+            )?;
             Ok(child)
         })
         .await

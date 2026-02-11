@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/logging/json_logger.rs
-// Description: JSONL logger that writes to agent_latest.log and stdout/stderr
+// Description: JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -67,6 +67,7 @@ struct LogEntry {
 
 struct LoggerInner {
     min_level: AtomicU8,
+    emit_stdio: bool,
     sender: UnboundedSender<LogEntry>,
 }
 
@@ -78,6 +79,7 @@ pub struct Logger {
 pub struct LogConfig {
     pub log_dir: PathBuf,
     pub min_level: LogLevel,
+    pub emit_stdio: bool,
 }
 
 impl Logger {
@@ -86,12 +88,18 @@ impl Logger {
         let logger = Logger {
             inner: Arc::new(LoggerInner {
                 min_level: AtomicU8::new(config.min_level.priority()),
+                emit_stdio: config.emit_stdio,
                 sender,
             }),
         };
 
         let log_file = config.log_dir.join("agent_latest.log");
-        tokio::spawn(run_writer(config.log_dir, log_file, receiver));
+        tokio::spawn(run_writer(
+            config.log_dir,
+            log_file,
+            receiver,
+            config.emit_stdio,
+        ));
 
         Ok(logger)
     }
@@ -132,7 +140,9 @@ impl Logger {
 
         if self.inner.sender.send(entry).is_err() {
             let fallback = format!("{{\"level\":\"error\",\"msg\":\"Log channel closed\"}}");
-            eprintln!("{fallback}");
+            if self.inner.emit_stdio {
+                eprintln!("{fallback}");
+            }
         }
     }
 }
@@ -141,13 +151,14 @@ async fn run_writer(
     log_dir: PathBuf,
     log_file: PathBuf,
     mut receiver: UnboundedReceiver<LogEntry>,
+    emit_stdio: bool,
 ) {
     if let Err(err) = fs::create_dir_all(&log_dir).await {
         let fallback = format!(
             "{{\"level\":\"error\",\"msg\":\"Failed to create log dir\",\"error\":\"{}\"}}",
             err
         );
-        eprintln!("{fallback}");
+        emit_stdio_fallback(emit_stdio, &fallback);
         return;
     }
 
@@ -163,7 +174,7 @@ async fn run_writer(
                 "{{\"level\":\"error\",\"msg\":\"Failed to open log file\",\"error\":\"{}\"}}",
                 err
             );
-            eprintln!("{fallback}");
+            emit_stdio_fallback(emit_stdio, &fallback);
             return;
         }
     };
@@ -176,7 +187,7 @@ async fn run_writer(
                     "{{\"level\":\"error\",\"msg\":\"Failed to serialize log entry\",\"error\":\"{}\"}}",
                     err
                 );
-                eprintln!("{fallback}");
+                emit_stdio_fallback(emit_stdio, &fallback);
                 continue;
             }
         };
@@ -186,14 +197,38 @@ async fn run_writer(
                 "{{\"level\":\"error\",\"msg\":\"Failed to write log entry\",\"error\":\"{}\"}}",
                 err
             );
-            eprintln!("{fallback}");
+            emit_stdio_fallback(emit_stdio, &fallback);
         }
 
-        if entry.level == "error" {
-            eprintln!("{line}");
-        } else {
-            println!("{line}");
+        match resolve_stdio_target(emit_stdio, &entry.level) {
+            StdioTarget::Stdout => println!("{line}"),
+            StdioTarget::Stderr => eprintln!("{line}"),
+            StdioTarget::None => {}
         }
+    }
+}
+
+fn emit_stdio_fallback(emit_stdio: bool, line: &str) {
+    if emit_stdio {
+        eprintln!("{line}");
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StdioTarget {
+    Stdout,
+    Stderr,
+    None,
+}
+
+fn resolve_stdio_target(emit_stdio: bool, level: &str) -> StdioTarget {
+    if !emit_stdio {
+        return StdioTarget::None;
+    }
+    if level == "error" {
+        StdioTarget::Stderr
+    } else {
+        StdioTarget::Stdout
     }
 }
 
@@ -210,9 +245,67 @@ pub fn resolve_log_dir(raw: Option<String>) -> PathBuf {
     }
 }
 
+pub fn resolve_stdio_logging(raw: Option<String>) -> bool {
+    match raw {
+        Some(value) => parse_stdio_logging(&value).unwrap_or(true),
+        None => true,
+    }
+}
+
+fn parse_stdio_logging(raw: &str) -> Option<bool> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "1" | "true" | "yes" | "on" => Some(true),
+        "0" | "false" | "no" | "off" => Some(false),
+        _ => None,
+    }
+}
+
 fn default_log_dir() -> PathBuf {
     match std::env::current_dir() {
         Ok(dir) => dir.join("logs"),
         Err(_) => Path::new("logs").to_path_buf(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{resolve_stdio_logging, resolve_stdio_target, StdioTarget};
+
+    #[test]
+    fn stdio_logging_defaults_to_enabled() {
+        assert!(resolve_stdio_logging(None));
+    }
+
+    #[test]
+    fn stdio_logging_supports_disable_values() {
+        assert!(!resolve_stdio_logging(Some("0".to_string())));
+        assert!(!resolve_stdio_logging(Some("false".to_string())));
+        assert!(!resolve_stdio_logging(Some("NO".to_string())));
+        assert!(!resolve_stdio_logging(Some("off".to_string())));
+    }
+
+    #[test]
+    fn stdio_logging_supports_enable_values() {
+        assert!(resolve_stdio_logging(Some("1".to_string())));
+        assert!(resolve_stdio_logging(Some("true".to_string())));
+        assert!(resolve_stdio_logging(Some("YES".to_string())));
+        assert!(resolve_stdio_logging(Some("on".to_string())));
+    }
+
+    #[test]
+    fn stdio_logging_invalid_value_falls_back_to_enabled() {
+        assert!(resolve_stdio_logging(Some("definitely".to_string())));
+    }
+
+    #[test]
+    fn disabled_stdio_suppresses_all_entry_output() {
+        assert_eq!(resolve_stdio_target(false, "info"), StdioTarget::None);
+        assert_eq!(resolve_stdio_target(false, "error"), StdioTarget::None);
+    }
+
+    #[test]
+    fn enabled_stdio_routes_errors_to_stderr() {
+        assert_eq!(resolve_stdio_target(true, "error"), StdioTarget::Stderr);
+        assert_eq!(resolve_stdio_target(true, "info"), StdioTarget::Stdout);
     }
 }
