@@ -3,6 +3,7 @@
 
 mod connection;
 mod event_bus;
+mod handshake_auth;
 mod ws_server;
 
 pub use event_bus::EventBus;

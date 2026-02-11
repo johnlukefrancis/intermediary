@@ -177,6 +177,7 @@ crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
+crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
@@ -211,6 +212,7 @@ crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-ag
 crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs - Caches and fingerprints latest WSL clientHello payload for resilient bootstrap replay
 crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSocket handling and response serialization
 crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
+crates/im_host_agent/src/server/handshake_auth.rs - Host-agent websocket handshake token and origin validation utilities
 crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
 crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports

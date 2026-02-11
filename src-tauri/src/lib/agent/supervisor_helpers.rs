@@ -1,6 +1,8 @@
 // Path: src-tauri/src/lib/agent/supervisor_helpers.rs
 // Description: Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
 
+use std::io::{Read, Write};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::process::Child;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -8,6 +10,9 @@ use tauri::{AppHandle, Manager};
 
 pub(super) const KILL_WAIT_TIMEOUT: Duration = Duration::from_secs(5);
 pub(super) const KILL_WAIT_POLL: Duration = Duration::from_millis(50);
+pub(super) const PROBE_TIMEOUT: Duration = Duration::from_millis(750);
+const WS_AUTH_PROBE_ATTEMPTS: usize = 3;
+const WS_AUTH_PROBE_RETRY_DELAY: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum ProcessKind {
@@ -91,6 +96,75 @@ pub(super) fn should_prefer_installed_bundle(host_listening: bool, wsl_listening
     host_listening || wsl_listening
 }
 
+pub(super) fn probe_websocket_auth_blocking(port: u16, token: &str) -> bool {
+    if port == 0 || token.trim().is_empty() {
+        return false;
+    }
+
+    for attempt in 0..WS_AUTH_PROBE_ATTEMPTS {
+        match probe_websocket_auth_once(port, token) {
+            WebSocketAuthProbe::Authenticated => return true,
+            WebSocketAuthProbe::Rejected => return false,
+            WebSocketAuthProbe::Retryable => {
+                if attempt + 1 < WS_AUTH_PROBE_ATTEMPTS {
+                    thread::sleep(WS_AUTH_PROBE_RETRY_DELAY);
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn probe_websocket_auth_once(port: u16, token: &str) -> WebSocketAuthProbe {
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+    let mut stream = match TcpStream::connect_timeout(&addr, PROBE_TIMEOUT) {
+        Ok(stream) => stream,
+        Err(_) => return WebSocketAuthProbe::Retryable,
+    };
+
+    let _ = stream.set_read_timeout(Some(PROBE_TIMEOUT));
+    let _ = stream.set_write_timeout(Some(PROBE_TIMEOUT));
+
+    let request = format!(
+        "GET /?token={token} HTTP/1.1\r\n\
+         Host: 127.0.0.1:{port}\r\n\
+         Upgrade: websocket\r\n\
+         Connection: Upgrade\r\n\
+         Sec-WebSocket-Version: 13\r\n\
+         Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\
+         \r\n"
+    );
+
+    if stream.write_all(request.as_bytes()).is_err() {
+        return WebSocketAuthProbe::Retryable;
+    }
+
+    let mut buffer = [0_u8; 256];
+    let bytes = match stream.read(&mut buffer) {
+        Ok(bytes) if bytes > 0 => bytes,
+        _ => return WebSocketAuthProbe::Retryable,
+    };
+
+    let response = String::from_utf8_lossy(&buffer[..bytes]);
+    match response_status_code(&response) {
+        Some(101) => WebSocketAuthProbe::Authenticated,
+        Some(401) | Some(403) => WebSocketAuthProbe::Rejected,
+        _ => WebSocketAuthProbe::Retryable,
+    }
+}
+
+fn response_status_code(response: &str) -> Option<u16> {
+    let status_line = response.lines().next()?;
+    status_line.split_whitespace().nth(1)?.parse::<u16>().ok()
+}
+
+enum WebSocketAuthProbe {
+    Authenticated,
+    Rejected,
+    Retryable,
+}
+
 pub(super) enum KillAndWaitOutcome {
     Exited(String),
     Failed(Child, String),
@@ -135,7 +209,7 @@ pub(super) fn kill_and_wait(mut child: Child) -> KillAndWaitOutcome {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_wsl_port, should_prefer_installed_bundle};
+    use super::{resolve_wsl_port, response_status_code, should_prefer_installed_bundle};
 
     #[test]
     fn resolve_wsl_port_for_wsl_repos_uses_next_port() {
@@ -162,5 +236,18 @@ mod tests {
         assert!(should_prefer_installed_bundle(false, true));
         assert!(should_prefer_installed_bundle(true, true));
         assert!(!should_prefer_installed_bundle(false, false));
+    }
+
+    #[test]
+    fn parses_websocket_upgrade_status_line() {
+        assert_eq!(
+            response_status_code("HTTP/1.1 101 Switching Protocols\r\n"),
+            Some(101)
+        );
+        assert_eq!(
+            response_status_code("HTTP/1.1 401 Unauthorized\r\n"),
+            Some(401)
+        );
+        assert_eq!(response_status_code("invalid"), None);
     }
 }

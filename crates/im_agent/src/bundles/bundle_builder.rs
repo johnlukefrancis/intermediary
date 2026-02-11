@@ -170,8 +170,8 @@ mod tests {
     #[test]
     fn distinct_ids_with_delimiter_do_not_collide() {
         let first = acquire_build_lock("a", "b::c").expect("first lock");
-        let second = acquire_build_lock("a::b", "c")
-            .expect("distinct repo/preset pair should not collide");
+        let second =
+            acquire_build_lock("a::b", "c").expect("distinct repo/preset pair should not collide");
         drop(second);
         drop(first);
     }

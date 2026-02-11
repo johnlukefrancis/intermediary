@@ -79,8 +79,7 @@ fn failed_build_keeps_last_good_bundle() {
             branch: None,
         },
         progress_tx,
-    )
-    {
+    ) {
         Ok(_) => panic!("build should fail with missing top-level directory"),
         Err(err) => err,
     };

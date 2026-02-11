@@ -23,6 +23,9 @@ pub fn spawn_host_agent_process(
     bundle: &AgentBundlePaths,
     host_port: u16,
     wsl_port: u16,
+    host_ws_token: &str,
+    wsl_ws_token: &str,
+    host_ws_allowed_origins: &[String],
 ) -> Result<Child, String> {
     if !bundle.host_agent_binary_host.is_file() {
         return Err(format!(
@@ -38,10 +41,15 @@ pub fn spawn_host_agent_process(
         command.creation_flags(CREATE_NO_WINDOW);
     }
 
+    let host_allowed_origins = host_ws_allowed_origins.join(",");
+
     command
         .current_dir(&bundle.agent_dir_host)
         .env("INTERMEDIARY_AGENT_PORT", host_port.to_string())
         .env("INTERMEDIARY_WSL_AGENT_PORT", wsl_port.to_string())
+        .env("INTERMEDIARY_HOST_WS_TOKEN", host_ws_token)
+        .env("INTERMEDIARY_WSL_WS_TOKEN", wsl_ws_token)
+        .env("INTERMEDIARY_HOST_WS_ALLOWED_ORIGINS", host_allowed_origins)
         .env("INTERMEDIARY_AGENT_VERSION", &bundle.version)
         .env(
             "INTERMEDIARY_AGENT_LOG_DIR",
@@ -55,6 +63,7 @@ pub fn spawn_wsl_agent_process(
     bundle: &AgentBundlePaths,
     distro: Option<&str>,
     wsl_port: u16,
+    wsl_ws_token: &str,
 ) -> Result<Child, String> {
     if !cfg!(target_os = "windows") {
         return Err("WSL agent launch is only supported on Windows hosts".to_string());
@@ -95,9 +104,10 @@ pub fn spawn_wsl_agent_process(
     let env_port = wsl_port.to_string();
     let env_version = quote_bash(&bundle.version);
     let env_log = quote_bash(&log_dir_wsl);
+    let env_wsl_ws_token = quote_bash(wsl_ws_token);
     let agent_dir = quote_bash(&agent_dir_wsl);
     let command_line = format!(
-        "cd {agent_dir} && chmod +x ./im_agent && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} ./im_agent"
+        "cd {agent_dir} && chmod +x ./im_agent && INTERMEDIARY_AGENT_PORT={env_port} INTERMEDIARY_WSL_WS_TOKEN={env_wsl_ws_token} INTERMEDIARY_AGENT_VERSION={env_version} INTERMEDIARY_AGENT_LOG_DIR={env_log} ./im_agent"
     );
 
     command

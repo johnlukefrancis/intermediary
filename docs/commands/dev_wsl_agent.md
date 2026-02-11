@@ -14,7 +14,7 @@ The agent runs inside WSL and requires the Rust toolchain available in WSL.
 Run from the repo root in WSL:
 
 ```bash
-INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent
+INTERMEDIARY_AGENT_PORT=3142 INTERMEDIARY_WSL_WS_TOKEN=im_dev_wsl_token cargo run -p im_agent --bin im_agent
 ```
 
 ## Log Output
@@ -27,4 +27,4 @@ The agent logs to the terminal and to:
 
 If the host agent shows WSL backend unavailable, confirm the backend is running and listening on:
 
-- `ws://localhost:3142`
+- `ws://localhost:3142/?token=im_dev_wsl_token`

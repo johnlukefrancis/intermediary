@@ -1,17 +1,25 @@
 // Path: src-tauri/src/lib/commands/paths.rs
 // Description: get_app_paths command implementation and path conversion utilities
 
+use crate::agent::AgentWebSocketAuthState;
 use crate::config::types::RepoRoot;
 use crate::paths::app_paths::AppPaths;
 use crate::paths::repo_root_resolver::{resolve_repo_root_from_input, RepoRootKind};
 use crate::paths::wsl_convert::{run_wslpath, windows_to_wsl_path, wsl_to_windows_path};
-use tauri::AppHandle;
+use tauri::{AppHandle, State};
 
 /// Returns resolved application paths for staging, logging, etc.
 /// If `output_host_root` is provided, uses it as the staging root.
 #[tauri::command]
-pub fn get_app_paths(app: AppHandle, output_host_root: Option<String>) -> Result<AppPaths, String> {
-    AppPaths::resolve(&app, output_host_root.as_deref()).map_err(|e| e.to_string())
+pub fn get_app_paths(
+    app: AppHandle,
+    auth_state: State<'_, AgentWebSocketAuthState>,
+    output_host_root: Option<String>,
+) -> Result<AppPaths, String> {
+    let mut paths =
+        AppPaths::resolve(&app, output_host_root.as_deref()).map_err(|e| e.to_string())?;
+    paths.agent_ws_token = auth_state.host_ws_token().to_string();
+    Ok(paths)
 }
 
 /// Convert a Windows path to WSL path format.

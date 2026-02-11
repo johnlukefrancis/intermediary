@@ -17,4 +17,6 @@ export interface AppPaths {
   logDir: string;
   /** Path to drag icon PNG */
   dragIconHostPath: string;
+  /** Ephemeral WebSocket token for UI -> host-agent authentication */
+  agentWsToken: string;
 }

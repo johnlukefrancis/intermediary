@@ -8,4 +8,4 @@ mod supervisor_helpers;
 pub mod types;
 
 pub use supervisor::AgentSupervisor;
-pub use types::{AgentSupervisorConfig, AgentSupervisorResult};
+pub use types::{AgentSupervisorConfig, AgentSupervisorResult, AgentWebSocketAuthState};

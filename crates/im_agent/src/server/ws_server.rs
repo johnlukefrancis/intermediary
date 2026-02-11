@@ -14,12 +14,14 @@ use crate::runtime::AgentRuntime;
 
 use super::connection::{handle_connection, ConnectionContext};
 use super::event_bus::EventBus;
+use super::handshake_auth::ConnectionHandshakeAuth;
 
 const DEFAULT_PORT: u16 = 3141;
 
 pub struct ServerConfig {
     pub port: Option<u16>,
     pub agent_version: String,
+    pub ws_auth_token: String,
     pub runtime: Arc<RwLock<AgentRuntime>>,
     pub logger: Logger,
 }
@@ -33,6 +35,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
         .map_err(|err| AgentError::new("BIND_FAILED", format!("Failed to bind: {err}")))?;
 
     let event_bus = EventBus::new(128);
+    let handshake_auth = ConnectionHandshakeAuth::new(config.ws_auth_token);
 
     config
         .logger
@@ -51,6 +54,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                             logger: config.logger.clone(),
                             agent_version: config.agent_version.clone(),
                             event_bus: event_bus.clone(),
+                            handshake_auth: handshake_auth.clone(),
                         };
                         tokio::spawn(handle_connection(stream, peer, ctx));
                     }

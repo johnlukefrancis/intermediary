@@ -28,6 +28,12 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 4) **No silent widening**
 - Broadening CSP or asset scope requires an ADR update and explicit justification.
 
+5) **Local WebSocket IPC is authenticated**
+- Localhost WebSocket IPC endpoints must require app-scoped authentication data.
+- For browser-facing sockets, validate a shared secret token (required) and enforce an origin allowlist when an `Origin` header is present.
+- Internal backend sockets (for example host→WSL) must use a separate secret not exposed to the frontend.
+- Tokens must not be written to logs or persisted in app config.
+
 ---
 
 ## Invariants
@@ -35,6 +41,7 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - I10.2: Dev-only CSP relaxations are not present in release builds.
 - I10.3: Local file access is limited to asset protocol scope; `file://` is disallowed.
 - I10.4: Asset protocol scope is minimal and documented.
+- I10.5: Local WebSocket IPC handshakes are gated by app-scoped auth and do not accept unauthenticated drive-by connections.
 
 ---
 
@@ -42,6 +49,7 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - `csp: null` in a release build.
 - Allowing `file://` navigation from the webview.
 - Asset protocol scoped to `**` without explicit documentation.
+- Localhost WebSocket server accepting unauthenticated upgrades from arbitrary origins/pages.
 
 ---
 

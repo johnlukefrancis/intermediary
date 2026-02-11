@@ -9,6 +9,7 @@ use crate::agent::supervisor_helpers::{
 use crate::agent::types::{
     AgentSupervisorConfig, AgentSupervisorResult, AgentSupervisorStatus, AgentSupervisorWslStatus,
 };
+use crate::agent::AgentWebSocketAuthState;
 use crate::obs::logging;
 use tauri::{AppHandle, Manager};
 
@@ -54,6 +55,7 @@ impl AgentSupervisor {
         let requested_wsl = config.wsl.as_ref().is_some_and(|wsl| wsl.required);
         let requires_wsl = supports_wsl && requested_wsl;
         let wsl_port = resolve_wsl_port(config.port, requires_wsl)?;
+        let websocket_auth = app.state::<AgentWebSocketAuthState>().snapshot();
         let wsl_status = wsl_supervisor_status(supports_wsl, requires_wsl, wsl_port);
         let unsupported_wsl_message = requested_wsl
             .then_some("WSL backend launch is only supported on Windows hosts".to_string())
@@ -81,8 +83,20 @@ impl AgentSupervisor {
         } else {
             false
         };
+        let host_auth_ok = if host_listening {
+            self.probe_websocket_auth(config.port, &websocket_auth.host_ws_token)
+                .await?
+        } else {
+            false
+        };
+        let wsl_auth_ok = if requires_wsl && wsl_listening {
+            self.probe_websocket_auth(wsl_port, &websocket_auth.wsl_ws_token)
+                .await?
+        } else {
+            false
+        };
 
-        if host_listening && !requires_wsl {
+        if host_auth_ok && !requires_wsl {
             self.stop_process(ProcessKind::Wsl).await?;
             self.set_last_error(None)?;
             return Ok(build_result(
@@ -95,7 +109,7 @@ impl AgentSupervisor {
                 unsupported_wsl_message.clone(),
             ));
         }
-        if host_listening && wsl_listening {
+        if host_auth_ok && requires_wsl && wsl_auth_ok {
             self.set_last_error(None)?;
             return Ok(build_result(
                 AgentSupervisorStatus::AlreadyRunning,
@@ -125,7 +139,7 @@ impl AgentSupervisor {
         .map_err(|err| format!("Agent bundle install task failed: {err}"))??;
 
         let host_result = self
-            .ensure_host_running(&bundle, config.port, wsl_port, force)
+            .ensure_host_running(&bundle, config.port, wsl_port, &websocket_auth, force)
             .await?;
         if host_result == EnsureProcessResult::Backoff {
             return Ok(build_result(
@@ -146,7 +160,7 @@ impl AgentSupervisor {
         if requires_wsl {
             let distro = config.wsl.as_ref().and_then(|wsl| wsl.distro.as_deref());
             wsl_result = self
-                .ensure_wsl_running(&bundle, distro, wsl_port, force)
+                .ensure_wsl_running(&bundle, distro, wsl_port, &websocket_auth, force)
                 .await?;
             if wsl_result == EnsureProcessResult::Backoff {
                 return Ok(build_result(

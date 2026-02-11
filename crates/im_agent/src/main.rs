@@ -12,6 +12,7 @@ use im_agent::runtime::AgentRuntime;
 use im_agent::server::{run_server, ServerConfig};
 
 const DEFAULT_PORT: u16 = 3141;
+const WSL_WS_TOKEN_ENV: &str = "INTERMEDIARY_WSL_WS_TOKEN";
 
 #[tokio::main]
 async fn main() {
@@ -41,12 +42,23 @@ async fn main() {
     };
 
     let port = resolve_port(env::var("INTERMEDIARY_AGENT_PORT").ok(), &logger);
+    let ws_auth_token = match resolve_ws_auth_token() {
+        Ok(token) => token,
+        Err(err) => {
+            logger.error(
+                "Agent startup failed due to invalid websocket auth configuration",
+                Some(serde_json::json!({"error": err})),
+            );
+            process::exit(1);
+        }
+    };
     let runtime = Arc::new(RwLock::new(AgentRuntime::new()));
     let agent_version = resolve_agent_version();
 
     if let Err(err) = run_server(ServerConfig {
         port,
         agent_version,
+        ws_auth_token,
         runtime,
         logger: logger.clone(),
     })
@@ -95,4 +107,16 @@ fn resolve_port(raw: Option<String>, logger: &Logger) -> Option<u16> {
     }
 
     Some(parsed)
+}
+
+fn resolve_ws_auth_token() -> Result<String, String> {
+    let value = env::var(WSL_WS_TOKEN_ENV)
+        .map_err(|_| format!("Missing required environment variable: {WSL_WS_TOKEN_ENV}"))?;
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(format!(
+            "Required environment variable {WSL_WS_TOKEN_ENV} must not be empty"
+        ));
+    }
+    Ok(trimmed.to_string())
 }

@@ -88,7 +88,12 @@ impl HostRuntime {
             return client.clone();
         }
 
-        let client = WslBackendClient::new(self.wsl_port, event_bus.clone(), self.logger.clone());
+        let client = WslBackendClient::new(
+            self.wsl_port,
+            self.wsl_ws_token.clone(),
+            event_bus.clone(),
+            self.logger.clone(),
+        );
         self.wsl_client = Some(client.clone());
         client
     }

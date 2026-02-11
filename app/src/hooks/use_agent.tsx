@@ -188,6 +188,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
         agentClient = createAgentClient({
           host: config.agentHost,
           port: config.agentPort,
+          authToken: paths.agentWsToken,
           onConnectionChange: (state) => {
             if (mounted) setConnectionState(state);
           },

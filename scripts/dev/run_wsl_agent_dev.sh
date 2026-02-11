@@ -6,6 +6,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 port="${INTERMEDIARY_AGENT_PORT:-3142}"
+ws_token="${INTERMEDIARY_WSL_WS_TOKEN:-im_dev_wsl_token}"
 
 is_port_listening() {
   if (echo >"/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1; then
@@ -24,4 +25,4 @@ if is_port_listening; then
 fi
 
 cd "${repo_root}"
-cargo run -p im_agent --bin im_agent
+INTERMEDIARY_WSL_WS_TOKEN="${ws_token}" cargo run -p im_agent --bin im_agent

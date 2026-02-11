@@ -39,15 +39,27 @@ async fn main() {
         }
     };
 
-    let config = resolve_host_agent_config(&logger);
+    let config = match resolve_host_agent_config(&logger) {
+        Ok(config) => config,
+        Err(err) => {
+            logger.error(
+                "Failed to resolve host-agent configuration",
+                Some(serde_json::json!({"error": err})),
+            );
+            process::exit(1);
+        }
+    };
     let runtime = Arc::new(RwLock::new(HostRuntime::new(
         config.wsl_port,
+        config.wsl_ws_token.clone(),
         logger.clone(),
     )));
 
     if let Err(err) = run_server(ServerConfig {
         port: config.host_port,
         agent_version: config.agent_version,
+        host_ws_token: config.host_ws_token,
+        host_ws_allowed_origins: config.host_ws_allowed_origins,
         runtime,
         logger: logger.clone(),
     })

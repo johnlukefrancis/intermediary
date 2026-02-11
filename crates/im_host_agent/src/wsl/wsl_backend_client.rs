@@ -46,13 +46,15 @@ struct ForwardRequest {
     response_tx: oneshot::Sender<Result<UiResponse, AgentError>>,
 }
 impl WslBackendClient {
-    pub fn new(wsl_port: u16, event_bus: EventBus, logger: Logger) -> Self {
+    pub fn new(wsl_port: u16, wsl_ws_token: String, event_bus: EventBus, logger: Logger) -> Self {
         let (request_tx, request_rx) = mpsc::unbounded_channel();
-        let endpoint = format!("ws://127.0.0.1:{wsl_port}");
+        let endpoint_log = format!("ws://127.0.0.1:{wsl_port}");
+        let endpoint_connect = format!("{endpoint_log}/?token={wsl_ws_token}");
         let connection_generation = Arc::new(AtomicU64::new(0));
 
         tokio::spawn(run_client_loop(
-            endpoint,
+            endpoint_connect,
+            endpoint_log,
             request_rx,
             event_bus,
             logger,
@@ -128,7 +130,8 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
 }
 
 async fn run_client_loop(
-    endpoint: String,
+    endpoint_connect: String,
+    endpoint_log: String,
     mut request_rx: mpsc::UnboundedReceiver<RequestLoopMessage>,
     event_bus: EventBus,
     logger: Logger,
@@ -137,19 +140,19 @@ async fn run_client_loop(
     let mut logged_offline_connect_failure = false;
     let mut offline_emitted_generation: Option<u64> = None;
     loop {
-        match connect_async(endpoint.as_str()).await {
+        match connect_async(endpoint_connect.as_str()).await {
             Ok((stream, _)) => {
                 let generation = connection_generation.fetch_add(1, Ordering::SeqCst) + 1;
                 logged_offline_connect_failure = false;
                 logger.info(
                     "Connected to WSL backend",
-                    Some(serde_json::json!({"endpoint": endpoint, "generation": generation})),
+                    Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),
                 );
                 emit_wsl_backend_status(&event_bus, WslBackendConnectionStatus::Online, generation);
                 run_connected(stream, &mut request_rx, &event_bus, &logger).await;
                 logger.warn(
                     "Disconnected from WSL backend",
-                    Some(serde_json::json!({"endpoint": endpoint, "generation": generation})),
+                    Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),
                 );
                 if offline_emitted_generation != Some(generation) {
                     emit_wsl_backend_status(
@@ -164,7 +167,7 @@ async fn run_client_loop(
                 if !logged_offline_connect_failure {
                     logger.warn(
                         "Failed to connect to WSL backend",
-                        Some(serde_json::json!({"endpoint": endpoint, "error": err.to_string()})),
+                        Some(serde_json::json!({"endpoint": &endpoint_log, "error": err.to_string()})),
                     );
                     logged_offline_connect_failure = true;
                 }

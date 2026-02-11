@@ -10,7 +10,7 @@ Commands for running and developing the WSL backend agent.
 Start the agent in dev mode:
 
 ```bash
-INTERMEDIARY_AGENT_PORT=3142 cargo run -p im_agent --bin im_agent
+INTERMEDIARY_AGENT_PORT=3142 INTERMEDIARY_WSL_WS_TOKEN=im_dev_wsl_token cargo run -p im_agent --bin im_agent
 ```
 
 Use `3142` when running as the backend under the host-agent model (`hostPort + 1`).
@@ -36,7 +36,7 @@ pnpm run lint
 Connect to the running agent with wscat (optional):
 
 ```bash
-wscat -c ws://127.0.0.1:3142
+wscat -c "ws://127.0.0.1:3142/?token=im_dev_wsl_token"
 ```
 
 Send a clientHello to configure the agent:

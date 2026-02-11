@@ -23,6 +23,8 @@ pub struct AppPaths {
     pub log_dir: String,
     /// Path to drag icon PNG
     pub drag_icon_host_path: String,
+    /// Ephemeral WebSocket token for UI -> host-agent authentication
+    pub agent_ws_token: String,
 }
 
 impl AppPaths {
@@ -64,6 +66,7 @@ impl AppPaths {
             staging_wsl_root,
             log_dir: log_dir_str,
             drag_icon_host_path,
+            agent_ws_token: String::new(),
         })
     }
 }

@@ -7,7 +7,7 @@ pub mod config;
 pub mod obs;
 pub mod paths;
 
-use agent::AgentSupervisor;
+use agent::{AgentSupervisor, AgentWebSocketAuthState};
 use commands::agent_control::{ensure_agent_running, restart_agent, stop_agent};
 use commands::agent_probe::probe_agent_port;
 use commands::config::{load_config, save_config};
@@ -20,6 +20,7 @@ use commands::paths::{
 use commands::reset::reset_app_state;
 use commands::startup::{apply_launch_window_bounds, startup_ready};
 use obs::logging;
+use std::io::Error;
 use tauri::{Manager, RunEvent};
 
 /// Run the Tauri application
@@ -36,6 +37,9 @@ pub fn run() {
 
             apply_launch_window_bounds(app.handle());
             app.manage(AgentSupervisor::new());
+            let auth_state =
+                AgentWebSocketAuthState::from_app(app.handle()).map_err(Error::other)?;
+            app.manage(auth_state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

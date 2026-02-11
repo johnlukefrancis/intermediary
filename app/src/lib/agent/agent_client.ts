@@ -21,6 +21,7 @@ const RECONNECT_MAX_MS = 30_000;
 export interface AgentClientConfig {
   host: string;
   port: number;
+  authToken: string;
   onConnectionChange: (state: ConnectionState) => void;
   onEvent: (event: AgentEvent) => void;
 }
@@ -160,8 +161,9 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
     });
 
     const resolvedHost = config.host === "localhost" ? "127.0.0.1" : config.host;
-    const url = `ws://${resolvedHost}:${config.port}`;
-    ws = new WebSocket(url);
+    const url = new URL(`ws://${resolvedHost}:${config.port}`);
+    url.searchParams.set("token", config.authToken);
+    ws = new WebSocket(url.toString());
 
     ws.onopen = handleOpen;
     ws.onclose = handleClose;

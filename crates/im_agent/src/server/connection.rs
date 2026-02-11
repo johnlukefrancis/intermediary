@@ -2,13 +2,14 @@
 // Description: Per-connection WebSocket handling and request routing
 
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, RwLock};
-use tokio_tungstenite::accept_async;
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{Request, Response};
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::error::to_response_error;
@@ -18,28 +19,54 @@ use crate::runtime::AgentRuntime;
 use crate::server::EventBus;
 
 mod dispatch;
+use crate::server::handshake_auth::{
+    unauthorized_handshake_response, ConnectionHandshakeAuth, HandshakeRejectReason,
+};
 
 pub struct ConnectionContext {
     pub runtime: Arc<RwLock<AgentRuntime>>,
     pub logger: Logger,
     pub agent_version: String,
     pub event_bus: EventBus,
+    pub handshake_auth: ConnectionHandshakeAuth,
 }
 
 pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: ConnectionContext) {
-    let ws_stream = match accept_async(stream).await {
+    let handshake_reject_reason = Arc::new(Mutex::new(None::<HandshakeRejectReason>));
+    let reject_reason_for_callback = Arc::clone(&handshake_reject_reason);
+    let handshake_auth = ctx.handshake_auth.clone();
+    let ws_stream = match accept_hdr_async(stream, move |request: &Request, response: Response| {
+        match handshake_auth.validate_request(request) {
+            Ok(()) => Ok(response),
+            Err(reason) => {
+                if let Ok(mut slot) = reject_reason_for_callback.lock() {
+                    *slot = Some(reason);
+                }
+                Err(unauthorized_handshake_response())
+            }
+        }
+    })
+    .await
+    {
         Ok(stream) => stream,
         Err(err) => {
             let error_text = err.to_string();
             if is_expected_probe_handshake_error(&error_text) {
                 ctx.logger.debug(
                     "Probe connection closed before websocket upgrade",
-                    Some(json!({"peer": peer.to_string(), "error": error_text})),
+                    Some(json!({"peer": peer.to_string()})),
+                );
+            } else if let Some(reason) =
+                handshake_reject_reason.lock().ok().and_then(|value| *value)
+            {
+                ctx.logger.warn(
+                    "WebSocket handshake rejected",
+                    Some(json!({"peer": peer.to_string(), "reason": reason.as_log_reason()})),
                 );
             } else {
                 ctx.logger.warn(
                     "WebSocket handshake failed",
-                    Some(json!({"peer": peer.to_string(), "error": error_text})),
+                    Some(json!({"peer": peer.to_string()})),
                 );
             }
             return;

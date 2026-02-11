@@ -1657,6 +1657,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-drag",
  "tempfile",
+ "uuid",
 ]
 
 [[package]]

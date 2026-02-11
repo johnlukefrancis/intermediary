@@ -108,6 +108,9 @@ Intermediary uses a **host-routed architecture**:
 ### IPC Protocol
 
 UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, with request/response envelopes and event envelopes:
+- The handshake requires an app-scoped query token loaded from app-local auth state (`ws://127.0.0.1:<hostPort>/?token=...`).
+- Host-agent validates token for every upgrade and applies an origin allowlist when an `Origin` header is present.
+- Host→WSL backend forwarding uses a separate internal token not exposed to the UI.
 - Request: `{ kind: "request", requestId, payload }`
 - Response: `{ kind: "response", requestId, status, payload|error }`
 - Event: `{ kind: "event", eventId, payload }`

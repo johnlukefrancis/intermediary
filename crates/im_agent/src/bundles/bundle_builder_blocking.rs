@@ -81,7 +81,12 @@ pub(crate) fn build_bundle_blocking(
         )));
     }
 
-    cleanup_older_bundles(&output_dir, &options.repo_id, &options.preset_id, &final_path);
+    cleanup_older_bundles(
+        &output_dir,
+        &options.repo_id,
+        &options.preset_id,
+        &final_path,
+    );
 
     let bundle_paths = layout.path_views_for_runtime_path(&final_path)?;
 

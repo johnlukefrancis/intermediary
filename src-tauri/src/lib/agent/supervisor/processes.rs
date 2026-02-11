@@ -6,8 +6,10 @@ use crate::agent::process_control::{
     spawn_host_agent_process, spawn_wsl_agent_process, wait_for_agent_ready,
 };
 use crate::agent::supervisor_helpers::{
-    kill_and_wait, process_state, process_state_mut, KillAndWaitOutcome, ProcessKind,
+    kill_and_wait, probe_websocket_auth_blocking, process_state, process_state_mut,
+    KillAndWaitOutcome, ProcessKind,
 };
+use crate::agent::types::AgentWebSocketAuth;
 use crate::commands::agent_probe::probe_port_blocking;
 use crate::obs::logging;
 use std::process::Child;
@@ -19,10 +21,23 @@ impl AgentSupervisor {
         bundle: &crate::agent::install::AgentBundlePaths,
         host_port: u16,
         wsl_port: u16,
+        auth: &AgentWebSocketAuth,
         force: bool,
     ) -> Result<EnsureProcessResult, String> {
         if self.probe_listening(host_port).await? {
-            return Ok(EnsureProcessResult::AlreadyRunning);
+            if self
+                .probe_websocket_auth(host_port, &auth.host_ws_token)
+                .await?
+            {
+                return Ok(EnsureProcessResult::AlreadyRunning);
+            }
+            self.reconcile_recorded_child(ProcessKind::Host, "auth_probe_failed")
+                .await?;
+            if self.probe_listening(host_port).await? {
+                return Err(format!(
+                    "Host agent port {host_port} is occupied by a process that rejected the current websocket token"
+                ));
+            }
         }
         self.reconcile_recorded_child(ProcessKind::Host, "port_probe_failed")
             .await?;
@@ -37,14 +52,17 @@ impl AgentSupervisor {
             &format!("kind=host port={host_port}"),
         );
         let bundle_for_spawn = bundle.clone();
+        let auth = auth.clone();
         let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-            let mut child = spawn_host_agent_process(&bundle_for_spawn, host_port, wsl_port)?;
-            wait_for_agent_ready(
-                &mut child,
+            let mut child = spawn_host_agent_process(
+                &bundle_for_spawn,
                 host_port,
-                ProcessKind::Host.label(),
-                false,
+                wsl_port,
+                &auth.host_ws_token,
+                &auth.wsl_ws_token,
+                &auth.host_allowed_origins,
             )?;
+            wait_for_agent_ready(&mut child, host_port, ProcessKind::Host.label(), false)?;
             Ok(child)
         })
         .await
@@ -81,10 +99,23 @@ impl AgentSupervisor {
         bundle: &crate::agent::install::AgentBundlePaths,
         distro: Option<&str>,
         wsl_port: u16,
+        auth: &AgentWebSocketAuth,
         force: bool,
     ) -> Result<EnsureProcessResult, String> {
         if self.probe_listening(wsl_port).await? {
-            return Ok(EnsureProcessResult::AlreadyRunning);
+            if self
+                .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
+                .await?
+            {
+                return Ok(EnsureProcessResult::AlreadyRunning);
+            }
+            self.reconcile_recorded_child(ProcessKind::Wsl, "auth_probe_failed")
+                .await?;
+            if self.probe_listening(wsl_port).await? {
+                return Err(format!(
+                    "WSL agent port {wsl_port} is occupied by a process that rejected the current websocket token"
+                ));
+            }
         }
         self.reconcile_recorded_child(ProcessKind::Wsl, "port_probe_failed")
             .await?;
@@ -104,9 +135,14 @@ impl AgentSupervisor {
         );
         let bundle_for_spawn = bundle.clone();
         let distro = distro.map(str::to_string);
+        let wsl_ws_token = auth.wsl_ws_token.clone();
         let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-            let mut child =
-                spawn_wsl_agent_process(&bundle_for_spawn, distro.as_deref(), wsl_port)?;
+            let mut child = spawn_wsl_agent_process(
+                &bundle_for_spawn,
+                distro.as_deref(),
+                wsl_port,
+                &wsl_ws_token,
+            )?;
             wait_for_agent_ready(&mut child, wsl_port, ProcessKind::Wsl.label(), true)?;
             Ok(child)
         })
@@ -145,6 +181,17 @@ impl AgentSupervisor {
             .map_err(|err| format!("Agent probe task failed: {err}"))
     }
 
+    pub(super) async fn probe_websocket_auth(
+        &self,
+        port: u16,
+        token: &str,
+    ) -> Result<bool, String> {
+        let token = token.to_string();
+        tauri::async_runtime::spawn_blocking(move || probe_websocket_auth_blocking(port, &token))
+            .await
+            .map_err(|err| format!("Agent websocket auth probe task failed: {err}"))
+    }
+
     pub(super) async fn stop_process(&self, kind: ProcessKind) -> Result<(), String> {
         self.reconcile_recorded_child(kind, "stop").await
     }
@@ -174,7 +221,11 @@ impl AgentSupervisor {
         self.store_child(kind, child)
     }
 
-    async fn reconcile_recorded_child(&self, kind: ProcessKind, reason: &str) -> Result<(), String> {
+    async fn reconcile_recorded_child(
+        &self,
+        kind: ProcessKind,
+        reason: &str,
+    ) -> Result<(), String> {
         let Some(mut child) = self.take_child(kind)? else {
             return Ok(());
         };
@@ -267,14 +318,11 @@ impl AgentSupervisor {
     }
 
     fn store_child(&self, kind: ProcessKind, mut child: Child) -> Result<(), String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| {
-                let _ = child.kill();
-                let _ = child.wait();
-                "Agent supervisor lock poisoned".to_string()
-            })?;
+        let mut state = self.state.lock().map_err(|_| {
+            let _ = child.kill();
+            let _ = child.wait();
+            "Agent supervisor lock poisoned".to_string()
+        })?;
         let slot = &mut process_state_mut(&mut state, kind).child;
         if slot.is_some() {
             let _ = child.kill();

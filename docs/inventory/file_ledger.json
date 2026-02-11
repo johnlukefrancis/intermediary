@@ -698,6 +698,10 @@
       "summary": "Broadcast agent events to connected WebSocket clients"
     },
     {
+      "path": "crates/im_agent/src/server/handshake_auth.rs",
+      "summary": "WSL-agent websocket handshake token validation utilities"
+    },
+    {
       "path": "crates/im_agent/src/server/mod.rs",
       "summary": "WebSocket server module exports"
     },
@@ -832,6 +836,10 @@
     {
       "path": "crates/im_host_agent/src/server/dispatch.rs",
       "summary": "Host-agent command dispatch over routed runtime backends"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/handshake_auth.rs",
+      "summary": "Host-agent websocket handshake token and origin validation utilities"
     },
     {
       "path": "crates/im_host_agent/src/server/mod.rs",

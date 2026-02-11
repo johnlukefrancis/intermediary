@@ -35,11 +35,12 @@ pub struct HostRuntime {
     wsl_client: Option<WslBackendClient>,
     wsl_transport_state: WslTransportEpochState,
     wsl_port: u16,
+    wsl_ws_token: String,
     logger: Logger,
 }
 
 impl HostRuntime {
-    pub fn new(wsl_port: u16, logger: Logger) -> Self {
+    pub fn new(wsl_port: u16, wsl_ws_token: String, logger: Logger) -> Self {
         Self {
             local_backend: LocalHostBackend::new(),
             repo_backends: HashMap::new(),
@@ -47,6 +48,7 @@ impl HostRuntime {
             wsl_client: None,
             wsl_transport_state: WslTransportEpochState::default(),
             wsl_port,
+            wsl_ws_token,
             logger,
         }
     }
