@@ -56,6 +56,8 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v18 -> v19: Add uiMode (schema default handles missing field).
   // Migration: v19 -> v20: Add uiState.windowBoundsByMode (schema default handles missing field).
   // Migration: v20 -> v21: Remove compact uiMode and fold compact bounds into standard.
+  // Migration: v21 -> v22: Add windowOpacityPercent (schema default handles missing field).
+  // Migration: v22 -> v23: Add textureIntensityPercent (schema default handles missing field).
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }

@@ -8,11 +8,11 @@
 
   /* ===== BACKGROUND PALETTE ===== */
   /* Instrument deck: aggressive dark with blue undertones */
-  --theme-bg-base: #050508;
-  --theme-bg-surface: #0a0a10;
-  --theme-bg-elevated: #0f0f18;
-  --theme-bg-hover: #151520;
-  --theme-bg-active: #1a1a28;
+  --theme-bg-base: rgb(5 5 8 / var(--window-opacity-alpha));
+  --theme-bg-surface: rgb(10 10 16 / var(--window-opacity-alpha));
+  --theme-bg-elevated: rgb(15 15 24 / var(--window-opacity-alpha));
+  --theme-bg-hover: rgb(21 21 32 / var(--window-opacity-alpha));
+  --theme-bg-active: rgb(26 26 40 / var(--window-opacity-alpha));
 
   /* ===== TEXT PALETTE ===== */
   --theme-text-primary: #e8e8ec;
@@ -46,20 +46,20 @@
   --theme-info-muted: #23324d;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(10, 10, 16, 0.85);
+  --theme-glass-bg: rgb(10 10 16 / calc(0.85 * var(--window-opacity-alpha)));
   --theme-glass-border: rgba(255, 255, 255, 0.05);
 
   /* ===== VINTAGE GLASS (More opaque to reduce blobby blur) ===== */
-  --theme-glass-vintage-bg: rgba(8, 8, 14, 0.6);
-  --theme-glass-vintage-header: rgba(10, 10, 18, 0.65);
-  --theme-glass-vintage-content: rgba(6, 6, 12, 0.70);
+  --theme-glass-vintage-bg: rgb(8 8 14 / calc(0.6 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-header: rgb(10 10 18 / calc(0.65 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-content: rgb(6 6 12 / calc(0.7 * var(--window-opacity-alpha)));
   --theme-glass-vintage-reflection: rgba(255, 255, 255, 0.03);
   --theme-glass-vintage-edge: rgba(255, 255, 255, 0.08);
   --theme-glass-vintage-dither: 0.12;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(20, 20, 35, 0.5);
-  --theme-gradient-bottom: #030305;
+  --theme-gradient-top: rgb(20 20 35 / calc(0.5 * var(--window-opacity-alpha)));
+  --theme-gradient-bottom: rgb(3 3 5 / var(--window-opacity-alpha));
   --theme-bg-hover-subtle: rgba(255, 255, 255, 0.02);
   --theme-scanline: rgba(0, 0, 0, 0.03);
 

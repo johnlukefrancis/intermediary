@@ -76,6 +76,12 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
+  /* ===== WINDOW OPACITY ===== */
+  --window-opacity-percent: 100;
+  --window-opacity-alpha: calc(var(--window-opacity-percent) / 100);
+  --texture-intensity-percent: 100;
+  --texture-intensity-alpha: calc(var(--texture-intensity-percent) / 100);
+
   /* ===== SEMANTIC COLOR SLOTS (theme fills these) ===== */
   /* Backgrounds */
   --color-bg-base: var(--theme-bg-base);

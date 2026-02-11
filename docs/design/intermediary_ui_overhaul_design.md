@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-02-11 (Config-driven themes + responsive handset override)
+Updated on: 2026-02-11 (Config-driven themes + responsive handset override + global opacity + texture intensity)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -48,6 +48,32 @@ main.css          → Layout reset and base structure
 | `effects.css` | Deck chassis frame, substrate (grid + grain at z:0), vignette, glass/glow utilities | ~80 |
 | `boot.css` | Boot phase opacity gate for splash-to-main fade-in transition | ~10 |
 | `main.css` | Reset, document sizing, app shell layout | ~90 |
+
+### Global Window Opacity
+
+Intermediary now exposes a global window opacity control in Options -> General:
+
+- **Range:** `0-100`
+- **Default:** `100`
+- **Storage:** `config.windowOpacityPercent`
+- **Runtime vars (set in `app.tsx`):**
+  - `--window-opacity-percent`
+  - `--window-opacity-alpha` (`percent / 100`)
+
+Theme background and glass tokens consume `--window-opacity-alpha` so opacity applies consistently to deck surfaces while preserving the existing token system.
+
+### Global Texture Intensity
+
+Intermediary also exposes a global substrate texture-intensity control in Options -> General:
+
+- **Range:** `0-100`
+- **Default:** `100`
+- **Storage:** `config.textureIntensityPercent`
+- **Runtime vars (set in `app.tsx`/tokens):**
+  - `--texture-intensity-percent`
+  - `--texture-intensity-alpha` (`percent / 100`)
+
+Texture intensity is independent from window opacity. The substrate breathe keyframes now compute opacity directly from `--texture-intensity-alpha` so the slider is always authoritative.
 
 ---
 

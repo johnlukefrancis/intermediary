@@ -19,9 +19,9 @@
         "height": 800,
         "resizable": true,
         "fullscreen": false,
+        "transparent": true,
         "dragDropEnabled": false,
-        "visible": false,
-        "backgroundColor": "#050508"
+        "visible": false
       },
       {
         "label": "splashscreen",

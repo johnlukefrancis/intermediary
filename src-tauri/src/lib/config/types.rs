@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 21;
+pub const CONFIG_VERSION: u32 = 23;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +58,12 @@ pub struct PersistedConfig {
     /// UI density mode (standard/handset)
     #[serde(default, deserialize_with = "deserialize_ui_mode_or_default")]
     pub ui_mode: UiMode,
+    /// Global window surface opacity percent (0-100)
+    #[serde(default = "default_window_opacity_percent")]
+    pub window_opacity_percent: u8,
+    /// Global substrate texture intensity percent (0-100)
+    #[serde(default = "default_texture_intensity_percent")]
+    pub texture_intensity_percent: u8,
 }
 
 impl Default for PersistedConfig {
@@ -80,6 +86,8 @@ impl Default for PersistedConfig {
             starred_files: HashMap::new(),
             theme_mode: ThemeMode::default(),
             ui_mode: UiMode::default(),
+            window_opacity_percent: default_window_opacity_percent(),
+            texture_intensity_percent: default_texture_intensity_percent(),
         }
     }
 }
@@ -341,6 +349,14 @@ fn default_agent_port() -> u16 {
 
 fn default_recent_files_limit() -> u32 {
     40
+}
+
+fn default_window_opacity_percent() -> u8 {
+    100
+}
+
+fn default_texture_intensity_percent() -> u8 {
+    100
 }
 
 #[cfg(test)]

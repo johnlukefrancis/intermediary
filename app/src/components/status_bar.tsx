@@ -56,6 +56,8 @@ export function StatusBar(): React.JSX.Element {
     setRecentFilesLimit,
     setThemeMode,
     setUiMode,
+    setWindowOpacityPercent,
+    setTextureIntensityPercent,
     loadError,
     saveError,
     persistenceLocked,
@@ -258,6 +260,10 @@ export function StatusBar(): React.JSX.Element {
           setThemeMode={setThemeMode}
           uiMode={config.uiMode}
           setUiMode={setUiMode}
+          windowOpacityPercent={config.windowOpacityPercent}
+          setWindowOpacityPercent={setWindowOpacityPercent}
+          textureIntensityPercent={config.textureIntensityPercent}
+          setTextureIntensityPercent={setTextureIntensityPercent}
           setTabThemeAccent={setTabThemeAccent}
           setTabThemeTexture={setTabThemeTexture}
           clearTabTheme={clearTabTheme}

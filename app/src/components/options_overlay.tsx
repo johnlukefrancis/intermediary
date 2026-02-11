@@ -44,6 +44,10 @@ interface OptionsOverlayProps {
   setThemeMode: (mode: ThemeMode) => void;
   uiMode: UiMode;
   setUiMode: (mode: UiMode) => void;
+  windowOpacityPercent: number;
+  setWindowOpacityPercent: (value: number) => void;
+  textureIntensityPercent: number;
+  setTextureIntensityPercent: (value: number) => void;
   setTabThemeAccent: (tabKey: string, accentHex: string) => void;
   setTabThemeTexture: (tabKey: string, textureId: string) => void;
   clearTabTheme: (tabKey: string) => void;
@@ -83,6 +87,10 @@ export function OptionsOverlay({
   setThemeMode,
   uiMode,
   setUiMode,
+  windowOpacityPercent,
+  setWindowOpacityPercent,
+  textureIntensityPercent,
+  setTextureIntensityPercent,
   setTabThemeAccent,
   setTabThemeTexture,
   clearTabTheme,
@@ -203,6 +211,10 @@ export function OptionsOverlay({
             <GeneralSection
               uiMode={uiMode}
               setUiMode={setUiMode}
+              windowOpacityPercent={windowOpacityPercent}
+              setWindowOpacityPercent={setWindowOpacityPercent}
+              textureIntensityPercent={textureIntensityPercent}
+              setTextureIntensityPercent={setTextureIntensityPercent}
               autoStageOnChange={autoStageOnChange}
               setAutoStageOnChange={setAutoStageOnChange}
               recentFilesLimit={recentFilesLimit}

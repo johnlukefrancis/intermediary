@@ -29,6 +29,8 @@ import {
 import {
   useSetThemeMode,
   useSetUiMode,
+  useSetTextureIntensityPercent,
+  useSetWindowOpacityPercent,
   useSetWindowBoundsForMode,
   useSetOutputWindowsRoot,
   useSetAgentAutoStart,
@@ -108,6 +110,10 @@ interface ConfigContextValue {
   setThemeMode: (mode: ThemeMode) => void;
   /** Set UI density mode (standard/handset) */
   setUiMode: (mode: UiMode) => void;
+  /** Set global window surface opacity percent (0-100) */
+  setWindowOpacityPercent: (value: number) => void;
+  /** Set global substrate texture intensity percent (0-100) */
+  setTextureIntensityPercent: (value: number) => void;
   /** Persist remembered window bounds for a mode */
   setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void;
   /** Reset all settings to defaults */
@@ -165,6 +171,14 @@ export function ConfigProvider({
   const toggleStarredFile = useToggleStarredFile(setConfig, saveConfig);
   const setThemeMode = useSetThemeMode(setConfig, saveConfig);
   const setUiMode = useSetUiMode(setConfig, saveConfig);
+  const setWindowOpacityPercent = useSetWindowOpacityPercent(
+    setConfig,
+    saveConfig
+  );
+  const setTextureIntensityPercent = useSetTextureIntensityPercent(
+    setConfig,
+    saveConfig
+  );
   const setWindowBoundsForMode = useSetWindowBoundsForMode(
     setConfig,
     saveConfig
@@ -199,6 +213,8 @@ export function ConfigProvider({
     toggleStarredFile,
     setThemeMode,
     setUiMode,
+    setWindowOpacityPercent,
+    setTextureIntensityPercent,
     setWindowBoundsForMode,
     resetConfig,
   };

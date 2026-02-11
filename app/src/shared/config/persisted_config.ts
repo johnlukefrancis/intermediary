@@ -171,6 +171,10 @@ export const PersistedConfigSchema = z.object({
   themeMode: ThemeModeSchema.default("dark"),
   /** UI density mode (standard/handset) */
   uiMode: UiModeSchema.default("standard"),
+  /** Global window surface opacity percent (0-100) */
+  windowOpacityPercent: z.number().int().min(0).max(100).default(100),
+  /** Global substrate texture intensity percent (0-100) */
+  textureIntensityPercent: z.number().int().min(0).max(100).default(100),
 });
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
@@ -234,5 +238,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     starredFiles: {},
     themeMode: "dark",
     uiMode: "standard",
+    windowOpacityPercent: 100,
+    textureIntensityPercent: 100,
   };
 }

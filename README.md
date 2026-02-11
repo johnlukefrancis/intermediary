@@ -12,6 +12,8 @@ A single-window "handoff console" that:
 - Watches repos for file changes (works reliably with WSL Linux filesystem)
 - Shows recently changed docs and code in separate columns
 - Auto-switches between standard and handset layouts by window size (hysteresis-based)
+- Provides a global window opacity slider (0-100, default 100) for a terminal-style transparency vibe
+- Provides an independent global texture-intensity slider (0-100, default 100)
 - Generates zip bundles with provenance manifests
 - Enables drag-and-drop of files/bundles directly into browser upload zones
 - Uses file-based agent diagnostics (`agent_latest.log`) for supervised processes instead of stdout/stderr pipe capture

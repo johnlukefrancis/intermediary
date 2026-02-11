@@ -32,8 +32,12 @@
 }
 
 @keyframes substrate-breathe {
-  0%, 100% { opacity: var(--deck-grain-opacity-min); }
-  50%      { opacity: var(--deck-grain-opacity-max); }
+  0%, 100% {
+    opacity: calc(var(--texture-intensity-alpha) * var(--deck-grain-opacity-min));
+  }
+  50% {
+    opacity: calc(var(--texture-intensity-alpha) * var(--deck-grain-opacity-max));
+  }
 }
 
 .app::before {
@@ -51,7 +55,7 @@
   filter: blur(1.5px);
   mix-blend-mode: luminosity;
 
-  opacity: var(--deck-grain-opacity);
+  opacity: calc(var(--texture-intensity-alpha) * var(--deck-grain-opacity-max));
   animation:
     substrate-breathe 12s ease-in-out infinite,
     substrate-drift 180s linear infinite;
@@ -71,7 +75,7 @@
     transparent 40%,
     var(--deck-vignette-tint) 100%
   );
-  opacity: var(--deck-vignette-strength);
+  opacity: calc(var(--deck-vignette-strength) * var(--window-opacity-alpha));
 }
 
 /* ===== GLASS SURFACE UTILITY ===== */

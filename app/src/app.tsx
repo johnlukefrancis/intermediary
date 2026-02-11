@@ -92,16 +92,38 @@ export function App(): React.JSX.Element {
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
   useModeWindowBoundsPersistence(effectiveUiMode, setWindowBoundsForMode);
   useStartupReady(isLoaded);
+  const windowOpacityAlpha = useMemo(
+    (): number => Math.max(0, Math.min(100, config.windowOpacityPercent)) / 100,
+    [config.windowOpacityPercent]
+  );
 
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.themeMode = config.themeMode;
     root.dataset.uiMode = effectiveUiMode;
+    root.style.setProperty(
+      "--window-opacity-percent",
+      `${config.windowOpacityPercent}`
+    );
+    root.style.setProperty("--window-opacity-alpha", `${windowOpacityAlpha}`);
+    root.style.setProperty(
+      "--texture-intensity-percent",
+      `${config.textureIntensityPercent}`
+    );
     return () => {
       delete root.dataset.themeMode;
       delete root.dataset.uiMode;
+      root.style.removeProperty("--window-opacity-percent");
+      root.style.removeProperty("--window-opacity-alpha");
+      root.style.removeProperty("--texture-intensity-percent");
     };
-  }, [config.themeMode, effectiveUiMode]);
+  }, [
+    config.themeMode,
+    config.textureIntensityPercent,
+    config.windowOpacityPercent,
+    effectiveUiMode,
+    windowOpacityAlpha,
+  ]);
 
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);
@@ -199,7 +221,6 @@ export function App(): React.JSX.Element {
     if (!activeThemeKey) return resolveTextureUrl(undefined);
     return resolveTextureUrl(config.tabThemes[activeThemeKey]?.textureId);
   }, [activeThemeKey, config.tabThemes]);
-
   const themeStyle = useMemo<React.CSSProperties>(
     () => ({
       ...accentStyle,

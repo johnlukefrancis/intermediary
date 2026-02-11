@@ -65,6 +65,8 @@ Intermediary uses a **host-routed architecture**:
   - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
   - Three-column layout per repo: Docs, Code, Zip Bundles
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
+  - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
+  - Independent global substrate texture-intensity control (0-100, default 100)
   - Docs panel includes a per-repo plain-text Notes view (saved under app-local data)
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`
@@ -176,7 +178,7 @@ User preferences are persisted to `<app_local_data>/config.json`:
 Contents:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
 - **Classifier config:** Global classification excludes (parallel to bundle excludes)
-- **UI state:** Last active repo (by repoId) + last active worktree per group
+- **UI state:** Last active repo (by repoId) + last active worktree per group + persisted window opacity and texture intensity
 - **Bundle selections:** Per-repo, per-preset directory selections
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.

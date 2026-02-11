@@ -15,6 +15,8 @@ fn test_load_missing_returns_default() {
     assert!(result.was_created);
     assert!(!result.migration_applied);
     assert_eq!(result.config.agent_port, 3141);
+    assert_eq!(result.config.window_opacity_percent, 100);
+    assert_eq!(result.config.texture_intensity_percent, 100);
 }
 
 #[test]
@@ -125,6 +127,46 @@ fn test_compact_window_bounds_migrate_to_standard_when_missing() {
         .ui_state
         .window_bounds_by_mode
         .contains_key("compact"));
+}
+
+#[test]
+fn test_v21_config_without_window_opacity_gets_default() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(21_u64.into());
+    if let Value::Object(map) = &mut config_json {
+        map.remove("windowOpacityPercent");
+    }
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert_eq!(result.config.window_opacity_percent, 100);
+}
+
+#[test]
+fn test_v22_config_without_texture_intensity_gets_default() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(22_u64.into());
+    if let Value::Object(map) = &mut config_json {
+        map.remove("textureIntensityPercent");
+    }
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert_eq!(result.config.texture_intensity_percent, 100);
 }
 
 #[test]

@@ -155,6 +155,8 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 18 -> 19: Add ui_mode (serde default handles missing field).
     // Version 19 -> 20: Add ui_state.window_bounds_by_mode (serde default handles missing field).
     // Version 20 -> 21: Remove compact ui_mode and fold compact bounds into standard.
+    // Version 21 -> 22: Add window_opacity_percent (serde default handles missing field).
+    // Version 22 -> 23: Add texture_intensity_percent (serde default handles missing field).
     if config.config_version < 21 {
         migrate_compact_mode(&mut config);
     }

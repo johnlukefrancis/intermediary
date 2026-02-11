@@ -31,7 +31,7 @@
   pointer-events: none;
   background: var(--deck-texture-url);
   background-size: 128px 128px;
-  opacity: var(--glass-vintage-dither);
+  opacity: calc(var(--glass-vintage-dither) * var(--window-opacity-alpha));
   border-radius: inherit;
 }
 

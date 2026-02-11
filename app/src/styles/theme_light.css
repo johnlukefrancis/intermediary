@@ -9,11 +9,11 @@
 
   /* ===== BACKGROUND PALETTE ===== */
   /* Warm parchment — toasty linen with slight yellow-pink warmth */
-  --theme-bg-base: #e8dfd4;
-  --theme-bg-surface: #ded5c8;
-  --theme-bg-elevated: #d4cab8;
-  --theme-bg-hover: #c8bea8;
-  --theme-bg-active: #bfb49c;
+  --theme-bg-base: rgb(232 223 212 / var(--window-opacity-alpha));
+  --theme-bg-surface: rgb(222 213 200 / var(--window-opacity-alpha));
+  --theme-bg-elevated: rgb(212 202 184 / var(--window-opacity-alpha));
+  --theme-bg-hover: rgb(200 190 168 / var(--window-opacity-alpha));
+  --theme-bg-active: rgb(191 180 156 / var(--window-opacity-alpha));
 
   /* ===== TEXT PALETTE ===== */
   /* Warm near-black — brown-grey, NOT pure black */
@@ -45,20 +45,20 @@
   --theme-info-muted: #5888a8;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(232, 223, 212, 0.90);
+  --theme-glass-bg: rgb(232 223 212 / calc(0.9 * var(--window-opacity-alpha)));
   --theme-glass-border: rgba(44, 38, 32, 0.08);
 
   /* ===== VINTAGE GLASS ===== */
-  --theme-glass-vintage-bg: rgba(222, 213, 200, 0.72);
-  --theme-glass-vintage-header: rgba(212, 202, 184, 0.76);
-  --theme-glass-vintage-content: rgba(222, 213, 200, 0.82);
+  --theme-glass-vintage-bg: rgb(222 213 200 / calc(0.72 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-header: rgb(212 202 184 / calc(0.76 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-content: rgb(222 213 200 / calc(0.82 * var(--window-opacity-alpha)));
   --theme-glass-vintage-reflection: rgba(255, 255, 255, 0.12);
   --theme-glass-vintage-edge: rgba(44, 38, 32, 0.10);
   --theme-glass-vintage-dither: 0.06;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(200, 190, 170, 0.4);
-  --theme-gradient-bottom: #d4c8b4;
+  --theme-gradient-top: rgb(200 190 170 / calc(0.4 * var(--window-opacity-alpha)));
+  --theme-gradient-bottom: rgb(212 200 180 / var(--window-opacity-alpha));
   --theme-bg-hover-subtle: rgba(44, 38, 32, 0.04);
   --theme-scanline: rgba(0, 0, 0, 0.015);
 
@@ -122,15 +122,15 @@
 
 /* Chrome areas: warm down and add tuned inset shadows for light backgrounds */
 [data-theme-mode="light"] .status-bar {
-  background: #d9d0c2;
+  background: rgb(217 208 194 / calc(0.82 * var(--window-opacity-alpha)));
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
     inset 0 -1px 2px 0 rgba(0, 0, 0, 0.03);
 }
 
 [data-theme-mode="light"] .tab-bar {
-  background: #dcd3c6;
-  --tab-bar-bg: #dcd3c6;
+  background: rgb(220 211 198 / calc(0.82 * var(--window-opacity-alpha)));
+  --tab-bar-bg: rgb(220 211 198 / calc(0.82 * var(--window-opacity-alpha)));
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
     inset 0 -1px 2px 0 rgba(0, 0, 0, 0.04);

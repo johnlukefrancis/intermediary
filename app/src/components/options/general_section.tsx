@@ -57,6 +57,10 @@ const UI_MODES: ReadonlyArray<TriStateOption<UiMode>> = [
 interface GeneralSectionProps {
   uiMode: UiMode;
   setUiMode: (mode: UiMode) => void;
+  windowOpacityPercent: number;
+  setWindowOpacityPercent: (value: number) => void;
+  textureIntensityPercent: number;
+  setTextureIntensityPercent: (value: number) => void;
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
   recentFilesLimit: number;
@@ -66,6 +70,10 @@ interface GeneralSectionProps {
 export function GeneralSection({
   uiMode,
   setUiMode,
+  windowOpacityPercent,
+  setWindowOpacityPercent,
+  textureIntensityPercent,
+  setTextureIntensityPercent,
   autoStageOnChange,
   setAutoStageOnChange,
   recentFilesLimit,
@@ -86,6 +94,60 @@ export function GeneralSection({
             ariaLabel="UI mode"
             className="tri-state-rocker--mode"
           />
+        )}
+      />
+      <OptionsFieldRow
+        label="Window opacity"
+        title="Global window surface transparency. Lower values increase desktop show-through for a terminal-like overlay effect"
+        hint={`${windowOpacityPercent}%`}
+        controlAlign="stretch"
+        control={(
+          <div className="options-range-control">
+            <input
+              type="range"
+              className="options-range-input"
+              min={0}
+              max={100}
+              step={1}
+              value={windowOpacityPercent}
+              onChange={(event) => {
+                const parsed = parseInt(event.target.value, 10);
+                if (!Number.isNaN(parsed)) {
+                  setWindowOpacityPercent(parsed);
+                }
+              }}
+            />
+            <span className="options-range-value" aria-live="polite">
+              {windowOpacityPercent}%
+            </span>
+          </div>
+        )}
+      />
+      <OptionsFieldRow
+        label="Texture intensity"
+        title="Global substrate texture strength. Independent from window opacity"
+        hint={`${textureIntensityPercent}%`}
+        controlAlign="stretch"
+        control={(
+          <div className="options-range-control">
+            <input
+              type="range"
+              className="options-range-input"
+              min={0}
+              max={100}
+              step={1}
+              value={textureIntensityPercent}
+              onChange={(event) => {
+                const parsed = parseInt(event.target.value, 10);
+                if (!Number.isNaN(parsed)) {
+                  setTextureIntensityPercent(parsed);
+                }
+              }}
+            />
+            <span className="options-range-value" aria-live="polite">
+              {textureIntensityPercent}%
+            </span>
+          </div>
         )}
       />
       <OptionsFieldRow

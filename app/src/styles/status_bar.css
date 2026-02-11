@@ -35,7 +35,7 @@
     ),
     var(--deck-texture-url);
   background-size: auto, 128px 128px;
-  opacity: var(--glass-vintage-dither);
+  opacity: calc(var(--glass-vintage-dither) * var(--window-opacity-alpha));
 }
 
 .status-left {

@@ -68,6 +68,35 @@
   -moz-appearance: textfield;
 }
 
+/* ===== RANGE INPUTS ===== */
+.options-range-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.options-range-input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.options-range-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-deck-xs);
+}
+
+.options-range-value {
+  min-width: 52px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
 /* ===== BUTTONS ===== */
 .options-button-row {
   display: flex;

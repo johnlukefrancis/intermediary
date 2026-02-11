@@ -53,6 +53,58 @@ export function useSetUiMode(
   );
 }
 
+export function useSetWindowOpacityPercent(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (value: number) => void {
+  return useCallback(
+    (value: number) => {
+      if (!Number.isFinite(value)) {
+        return;
+      }
+      const clamped = Math.max(0, Math.min(100, Math.round(value)));
+      setConfig((prev) => {
+        if (prev.windowOpacityPercent === clamped) {
+          return prev;
+        }
+        const next: PersistedConfig = {
+          ...prev,
+          windowOpacityPercent: clamped,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
+export function useSetTextureIntensityPercent(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (value: number) => void {
+  return useCallback(
+    (value: number) => {
+      if (!Number.isFinite(value)) {
+        return;
+      }
+      const clamped = Math.max(0, Math.min(100, Math.round(value)));
+      setConfig((prev) => {
+        if (prev.textureIntensityPercent === clamped) {
+          return prev;
+        }
+        const next: PersistedConfig = {
+          ...prev,
+          textureIntensityPercent: clamped,
+        };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useSetWindowBoundsForMode(
   setConfig: SetConfig,
   saveConfig: SaveConfig

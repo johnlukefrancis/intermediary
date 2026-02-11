@@ -17,7 +17,7 @@
   padding-top: var(--space-6);
   padding-bottom: var(--space-6);
   padding-inline: var(--space-6);
-  background: rgba(0, 0, 0, 0.7);
+  background: rgb(0 0 0 / calc(0.7 * var(--window-opacity-alpha)));
   backdrop-filter: blur(var(--blur-sm));
   -webkit-backdrop-filter: blur(var(--blur-sm));
   overflow: hidden;

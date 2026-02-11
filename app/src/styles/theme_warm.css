@@ -9,11 +9,11 @@
 
   /* ===== BACKGROUND PALETTE ===== */
   /* Golden hour yellow — warm honey/wheat tones */
-  --theme-bg-base: #6a5420;
-  --theme-bg-surface: #7c6428;
-  --theme-bg-elevated: #8e7432;
-  --theme-bg-hover: #a0843c;
-  --theme-bg-active: #b29448;
+  --theme-bg-base: rgb(106 84 32 / var(--window-opacity-alpha));
+  --theme-bg-surface: rgb(124 100 40 / var(--window-opacity-alpha));
+  --theme-bg-elevated: rgb(142 116 50 / var(--window-opacity-alpha));
+  --theme-bg-hover: rgb(160 132 60 / var(--window-opacity-alpha));
+  --theme-bg-active: rgb(178 148 72 / var(--window-opacity-alpha));
 
   /* ===== TEXT PALETTE ===== */
   /* Golden cream — yellow-shifted for honey warmth */
@@ -45,20 +45,20 @@
   --theme-info-muted: #608098;
 
   /* ===== GLASS SURFACE ===== */
-  --theme-glass-bg: rgba(106, 68, 32, 0.90);
+  --theme-glass-bg: rgb(106 68 32 / calc(0.9 * var(--window-opacity-alpha)));
   --theme-glass-border: rgba(248, 220, 160, 0.16);
 
   /* ===== VINTAGE GLASS ===== */
-  --theme-glass-vintage-bg: rgba(96, 60, 28, 0.68);
-  --theme-glass-vintage-header: rgba(106, 68, 32, 0.72);
-  --theme-glass-vintage-content: rgba(88, 54, 24, 0.78);
+  --theme-glass-vintage-bg: rgb(96 60 28 / calc(0.68 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-header: rgb(106 68 32 / calc(0.72 * var(--window-opacity-alpha)));
+  --theme-glass-vintage-content: rgb(88 54 24 / calc(0.78 * var(--window-opacity-alpha)));
   --theme-glass-vintage-reflection: rgba(248, 220, 160, 0.08);
   --theme-glass-vintage-edge: rgba(248, 220, 160, 0.18);
   --theme-glass-vintage-dither: 0.08;
 
   /* ===== EFFECT COLORS ===== */
-  --theme-gradient-top: rgba(140, 100, 50, 0.5);
-  --theme-gradient-bottom: #3a2410;
+  --theme-gradient-top: rgb(140 100 50 / calc(0.5 * var(--window-opacity-alpha)));
+  --theme-gradient-bottom: rgb(58 36 16 / var(--window-opacity-alpha));
   --theme-bg-hover-subtle: rgba(248, 220, 160, 0.08);
   --theme-scanline: rgba(0, 0, 0, 0.03);
 
