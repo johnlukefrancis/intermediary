@@ -17,61 +17,32 @@ import {
   type AgentClient,
 } from "../lib/agent/agent_client.js";
 import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
-import { useClientHello, type HelloState } from "./use_client_hello.js";
-import { extractAppConfig, type AppConfig } from "../shared/config.js";
+import { useClientHello } from "./use_client_hello.js";
+import { extractAppConfig } from "../shared/config.js";
 import {
   type ConnectionState,
   INITIAL_CONNECTION_STATE,
 } from "../lib/agent/connection_state.js";
 import type { AgentErrorEvent, AgentEvent } from "../shared/protocol.js";
 import type { AppPaths } from "../types/app_paths.js";
-import type { AgentSupervisorResult } from "../types/agent_supervisor.js";
 import { useConfig } from "./use_config.js";
+import {
+  buildAgentDiagnostics,
+  hostSupportsWsl,
+} from "./agent/agent_diagnostics.js";
+import {
+  type AgentContextValue,
+  type EventHandler,
+} from "./agent/agent_context_types.js";
 import { useAgentProbe } from "./agent/use_agent_probe.js";
 import { useAgentShutdown } from "./agent/use_agent_shutdown.js";
 import { useAgentSupervisor } from "./agent/use_agent_supervisor.js";
-
-type EventHandler = (event: AgentEvent) => void;
-
-interface AgentDiagnostics {
-  expectedUrl: string;
-  probeListening: boolean | null;
-  probeError: string | null;
-  lastError: string | null;
-  configuredHost: string;
-  port: number;
-  autoStartEnabled: boolean;
-  supervisorStatus: AgentSupervisorResult["status"] | null;
-  supervisorError: string | null;
-}
-
-interface AgentContextValue {
-  client: AgentClient | null;
-  connectionState: ConnectionState;
-  helloState: HelloState;
-  agentError: AgentErrorEvent | null;
-  agentDiagnostics: AgentDiagnostics | null;
-  platformSupportsWsl: boolean;
-  config: AppConfig;
-  appPaths: AppPaths | null;
-  autoStageOnChange: boolean;
-  setAutoStageOnChange: (value: boolean) => void;
-  resyncClientHello: () => Promise<boolean>;
-  restartAgent: () => void;
-  subscribe: (handler: EventHandler) => () => void;
-}
+import { nextAgentError } from "./agent/wsl_transport_errors.js";
 
 const AgentContext = createContext<AgentContextValue | null>(null);
 
 interface AgentProviderProps {
   children: ReactNode;
-}
-
-function hostSupportsWsl(): boolean {
-  if (typeof navigator === "undefined") {
-    return false;
-  }
-  return /Windows/i.test(navigator.userAgent);
 }
 
 export function AgentProvider({ children }: AgentProviderProps): React.JSX.Element {
@@ -121,8 +92,8 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   }, []);
 
   const handleEvent = useCallback((event: AgentEvent) => {
-    if (event.type === "error") {
-      setAgentError(event);
+    if (event.type === "error" || event.type === "wslBackendStatus") {
+      setAgentError((current) => nextAgentError(current, event));
     }
     for (const handler of handlersRef.current) {
       handler(event);
@@ -252,11 +223,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   );
 
   const resyncClientHello = useCallback(async (): Promise<boolean> => {
-    if (
-      !client ||
-      !appPaths ||
-      connectionState.status !== "connected"
-    ) {
+    if (!client || !appPaths || connectionState.status !== "connected") {
       return false;
     }
 
@@ -286,32 +253,27 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     return syncPromise;
   }, [appPaths, autoStageOnChange, client, config, connectionState.status]);
 
+  const agentDiagnostics = buildAgentDiagnostics({
+    connectionState,
+    expectedUrl,
+    probeListening: agentProbe?.listening ?? null,
+    probeError: agentProbe?.error ?? null,
+    configuredHost: config.agentHost,
+    port: config.agentPort,
+    autoStartEnabled,
+    supervisorStatus: supervisorResult?.status ?? null,
+    supervisorError,
+    startupGateRequired,
+    startupEnsureState,
+    startupEnsureError,
+  });
+
   const value: AgentContextValue = {
     client,
     connectionState,
     helloState,
     agentError,
-    agentDiagnostics:
-      connectionState.status !== "connected" &&
-      (connectionState.reconnectAttempts > 0 ||
-        connectionState.lastError ||
-        supervisorError)
-        ? {
-            expectedUrl,
-            probeListening: agentProbe?.listening ?? null,
-            probeError: agentProbe?.error ?? null,
-            lastError: connectionState.lastError,
-            configuredHost: config.agentHost,
-            port: config.agentPort,
-            autoStartEnabled,
-            supervisorStatus: supervisorResult?.status ?? null,
-            supervisorError:
-              supervisorError ??
-              (startupGateRequired && startupEnsureState === "failed"
-                ? startupEnsureError
-                : null),
-          }
-        : null,
+    agentDiagnostics,
     platformSupportsWsl,
     config,
     appPaths,

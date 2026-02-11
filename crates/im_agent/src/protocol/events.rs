@@ -228,6 +228,20 @@ pub struct AgentErrorEvent {
     pub details: Option<AgentErrorDetails>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WslBackendConnectionStatus {
+    Online,
+    Offline,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WslBackendStatusEvent {
+    pub status: WslBackendConnectionStatus,
+    pub generation: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AgentEvent {
@@ -241,6 +255,8 @@ pub enum AgentEvent {
     BundleBuildProgress(BundleBuildProgressEvent),
     #[serde(rename = "error")]
     Error(AgentErrorEvent),
+    #[serde(rename = "wslBackendStatus")]
+    WslBackendStatus(WslBackendStatusEvent),
 }
 
 impl FileChangedEvent {

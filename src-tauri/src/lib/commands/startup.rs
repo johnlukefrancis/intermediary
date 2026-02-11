@@ -2,8 +2,7 @@
 // Description: Startup readiness command for splashscreen -> main transition
 
 use crate::config::{
-    load_from_disk,
-    resolve_config_path,
+    load_from_disk, resolve_config_path,
     types::{resolve_window_bounds_for_mode, UiWindowBounds},
 };
 use crate::obs::logging;

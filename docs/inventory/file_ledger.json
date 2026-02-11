@@ -162,6 +162,14 @@
       "summary": "\"x\" button for removing repos with confirmation"
     },
     {
+      "path": "app/src/hooks/agent/agent_context_types.ts",
+      "summary": "Shared context and event handler types for the agent provider hook"
+    },
+    {
+      "path": "app/src/hooks/agent/agent_diagnostics.ts",
+      "summary": "Agent diagnostics model and helpers for connection-state-driven status bar details"
+    },
+    {
       "path": "app/src/hooks/agent/use_agent_probe.ts",
       "summary": "Probe the agent port when disconnected for diagnostics"
     },
@@ -176,6 +184,10 @@
     {
       "path": "app/src/hooks/agent/use_agent_supervisor.ts",
       "summary": "Manage auto-start and restart of host-agent supervision with optional Windows WSL backend"
+    },
+    {
+      "path": "app/src/hooks/agent/wsl_transport_errors.ts",
+      "summary": "Classifies WSL transport errors and clears stale errors on explicit backend recovery events"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -368,6 +380,10 @@
     {
       "path": "app/src/shared/global_excludes.ts",
       "summary": "Global bundle exclude schema and UI options"
+    },
+    {
+      "path": "app/src/shared/protocol_events.ts",
+      "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
     {
       "path": "app/src/shared/protocol.ts",
@@ -774,8 +790,16 @@
       "summary": "Host-runtime helper functions for config parsing and repo-command metadata"
     },
     {
-      "path": "crates/im_host_agent/src/runtime/host_runtime.rs",
-      "summary": "Host runtime that routes protocol commands to host-local or WSL backend"
+      "path": "crates/im_host_agent/src/runtime/host_runtime/mod.rs",
+      "summary": "Host runtime command routing and clientHello orchestration for host and WSL backends"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs",
+      "summary": "WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs",
+      "summary": "Tracks WSL transport error emission by backend connection generation for de-noised offline transitions"
     },
     {
       "path": "crates/im_host_agent/src/runtime/local_host_backend.rs",

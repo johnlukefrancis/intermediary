@@ -224,7 +224,10 @@ mod tests {
         assert!(excludes.dir_names.iter().any(|name| name == "target"));
         assert!(excludes.dir_names.iter().any(|name| name == "node_modules"));
         // User custom is merged
-        assert!(excludes.dir_names.iter().any(|name| name == "my_custom_dir"));
+        assert!(excludes
+            .dir_names
+            .iter()
+            .any(|name| name == "my_custom_dir"));
         assert!(excludes.extensions.iter().any(|ext| ext == ".custom_ext"));
         // No duplicates for "target" (appears in both user and recommended)
         let target_count = excludes.dir_names.iter().filter(|n| *n == "target").count();

@@ -16,12 +16,14 @@ pub(super) struct CachedWslHello {
 pub(super) struct WslClientHelloCache {
     latest: Option<CachedWslHello>,
     applied_fingerprint: Option<String>,
+    applied_generation: Option<u64>,
 }
 
 impl WslClientHelloCache {
     pub fn clear(&mut self) {
         self.latest = None;
         self.applied_fingerprint = None;
+        self.applied_generation = None;
     }
 
     pub fn update_latest(
@@ -37,15 +39,17 @@ impl WslClientHelloCache {
         Ok(cached)
     }
 
-    pub fn pending(&self) -> Option<CachedWslHello> {
+    pub fn pending(&self, backend_generation: u64) -> Option<CachedWslHello> {
         let latest = self.latest.as_ref()?;
-        if self.applied_fingerprint.as_deref() == Some(latest.fingerprint.as_str()) {
+        if self.applied_fingerprint.as_deref() == Some(latest.fingerprint.as_str())
+            && self.applied_generation == Some(backend_generation)
+        {
             return None;
         }
         Some(latest.clone())
     }
 
-    pub fn mark_applied_if_latest(&mut self, fingerprint: &str) {
+    pub fn mark_applied_if_latest(&mut self, fingerprint: &str, backend_generation: u64) {
         if self
             .latest
             .as_ref()
@@ -55,6 +59,7 @@ impl WslClientHelloCache {
             return;
         }
         self.applied_fingerprint = Some(fingerprint.to_string());
+        self.applied_generation = Some(backend_generation);
     }
 }
 
@@ -80,22 +85,31 @@ mod tests {
         let pending = cache
             .update_latest(hello("repo_a", false))
             .expect("cache latest");
-        assert!(cache.pending().is_some());
+        assert!(cache.pending(1).is_some());
 
-        cache.mark_applied_if_latest(&pending.fingerprint);
-        assert!(cache.pending().is_none());
+        cache.mark_applied_if_latest(&pending.fingerprint, 1);
+        assert!(cache.pending(1).is_none());
     }
 
     #[test]
     fn updated_payload_becomes_pending_again() {
         let mut cache = WslClientHelloCache::default();
         let first = cache.update_latest(hello("repo_a", false)).expect("first");
-        cache.mark_applied_if_latest(&first.fingerprint);
-        assert!(cache.pending().is_none());
+        cache.mark_applied_if_latest(&first.fingerprint, 1);
+        assert!(cache.pending(1).is_none());
 
         let second = cache.update_latest(hello("repo_a", true)).expect("second");
         assert_ne!(first.fingerprint, second.fingerprint);
-        assert!(cache.pending().is_some());
+        assert!(cache.pending(1).is_some());
+    }
+
+    #[test]
+    fn generation_change_marks_cached_hello_pending() {
+        let mut cache = WslClientHelloCache::default();
+        let first = cache.update_latest(hello("repo_a", false)).expect("first");
+        cache.mark_applied_if_latest(&first.fingerprint, 1);
+        assert!(cache.pending(1).is_none());
+        assert!(cache.pending(2).is_some());
     }
 
     #[test]
@@ -104,8 +118,8 @@ mod tests {
         let pending = cache
             .update_latest(hello("repo_a", false))
             .expect("pending");
-        cache.mark_applied_if_latest(&pending.fingerprint);
+        cache.mark_applied_if_latest(&pending.fingerprint, 1);
         cache.clear();
-        assert!(cache.pending().is_none());
+        assert!(cache.pending(1).is_none());
     }
 }

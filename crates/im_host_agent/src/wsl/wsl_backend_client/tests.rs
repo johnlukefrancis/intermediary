@@ -8,6 +8,7 @@ fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> Wsl
     WslBackendClient {
         request_tx,
         request_counter: Arc::new(AtomicU64::new(0)),
+        connection_generation: Arc::new(AtomicU64::new(0)),
     }
 }
 

@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-10
+Updated on: 2026-02-11
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -117,6 +117,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `snapshot { repoId, recent: FileEntry[] }`
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 - `error { scope, message, details? }`
+- `wslBackendStatus { status: "online" | "offline", generation }` emitted on WSL transport transitions; generation increments on each successful reconnect
 - `hello` is defined in protocol types but not emitted in the current agent; handshake uses `clientHello` → `clientHelloResult`.
 
 **UI → Agent commands (request/response):**

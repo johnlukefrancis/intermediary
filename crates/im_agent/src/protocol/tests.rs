@@ -457,3 +457,24 @@ fn legacy_file_changed_staged_windows_path_alias() {
         _ => panic!("expected FileChanged"),
     }
 }
+
+#[test]
+fn wsl_backend_status_event_roundtrip() {
+    let json = json!({
+        "type": "wslBackendStatus",
+        "status": "online",
+        "generation": 4
+    });
+
+    let event: AgentEvent = serde_json::from_value(json).expect("parse wslBackendStatus");
+    match event {
+        AgentEvent::WslBackendStatus(result) => {
+            assert_eq!(
+                result.status,
+                crate::protocol::WslBackendConnectionStatus::Online
+            );
+            assert_eq!(result.generation, 4);
+        }
+        _ => panic!("expected WslBackendStatus"),
+    }
+}

@@ -43,10 +43,13 @@ app/src/components/status_bar.tsx - Status bar with connection status LED, error
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
+app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
+app/src/hooks/agent/agent_diagnostics.ts - Agent diagnostics model and helpers for connection-state-driven status bar details
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
 app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app window is closing
 app/src/hooks/agent/use_agent_supervisor_helpers.ts - Shared parsing and request helpers for agent supervisor hook
 app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host-agent supervision with optional Windows WSL backend
+app/src/hooks/agent/wsl_transport_errors.ts - Classifies WSL transport errors and clears stale errors on explicit backend recovery events
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -95,6 +98,7 @@ app/src/shared/config/repo_config.ts - RepoConfig schema and type
 app/src/shared/config/repo_root.ts - Repo root authority union schema and path normalization helpers
 app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
+app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
@@ -196,7 +200,9 @@ crates/im_host_agent/src/error_codes.rs - Shared host-agent error code constants
 crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent daemon
 crates/im_host_agent/src/main.rs - Host agent daemon entry point
 crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
-crates/im_host_agent/src/runtime/host_runtime.rs - Host runtime that routes protocol commands to host-local or WSL backend
+crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
+crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
+crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing

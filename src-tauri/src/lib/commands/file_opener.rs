@@ -7,8 +7,27 @@ use std::process::Command;
 
 use super::file_manager::resolve_host_path;
 
-const TEXT_EXTENSIONS: &[&str] = &["txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "jsonc", "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "rs", "py", "java", "kt", "kts", "go", "c", "h", "hpp", "hxx", "cc", "cpp", "cxx", "cs", "swift", "rb", "php", "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd", "css", "scss", "less", "html", "htm", "xml", "svg", "sql", "vue", "svelte"];
-const TEXT_BASENAMES: &[&str] = &["readme", "license", "makefile", "dockerfile", "gemfile", "podfile", "rakefile", "brewfile", "justfile", ".gitignore", ".gitattributes", ".npmignore"];
+const TEXT_EXTENSIONS: &[&str] = &[
+    "txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "jsonc",
+    "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "rs", "py", "java", "kt", "kts", "go", "c",
+    "h", "hpp", "hxx", "cc", "cpp", "cxx", "cs", "swift", "rb", "php", "sh", "bash", "zsh", "fish",
+    "ps1", "bat", "cmd", "css", "scss", "less", "html", "htm", "xml", "svg", "sql", "vue",
+    "svelte",
+];
+const TEXT_BASENAMES: &[&str] = &[
+    "readme",
+    "license",
+    "makefile",
+    "dockerfile",
+    "gemfile",
+    "podfile",
+    "rakefile",
+    "brewfile",
+    "justfile",
+    ".gitignore",
+    ".gitattributes",
+    ".npmignore",
+];
 fn validate_relative_path(relative_path: &str) -> Result<(), String> {
     if relative_path.trim().is_empty() {
         return Err("Relative path cannot be empty".to_string());
@@ -46,7 +65,10 @@ fn resolve_host_file_path(root: &RepoRoot, relative_path: &str) -> Result<String
     let absolute_path = build_absolute_repo_path(root, &normalized_relative)?;
     resolve_host_path(&absolute_path)
 }
-fn resolve_host_file_paths(root: &RepoRoot, relative_paths: &[String]) -> Result<Vec<String>, String> {
+fn resolve_host_file_paths(
+    root: &RepoRoot,
+    relative_paths: &[String],
+) -> Result<Vec<String>, String> {
     if relative_paths.is_empty() {
         return Err("No files provided".to_string());
     }
@@ -205,7 +227,13 @@ fn open_paths_by_policy(relative_paths: &[String], host_paths: &[String]) -> Res
         }
     }
 
-    if opened_any { Ok(()) } else if errors.is_empty() { Err("No files were opened".to_string()) } else { Err(errors.join("; ")) }
+    if opened_any {
+        Ok(())
+    } else if errors.is_empty() {
+        Err("No files were opened".to_string())
+    } else {
+        Err(errors.join("; "))
+    }
 }
 fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Result<String, String> {
     let root_path = root.path().trim().to_string();
@@ -279,7 +307,10 @@ pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Re
 pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let relative_paths = vec![relative_path];
-        open_paths_by_policy(&relative_paths, &resolve_host_file_paths(&root, &relative_paths)?)
+        open_paths_by_policy(
+            &relative_paths,
+            &resolve_host_file_paths(&root, &relative_paths)?,
+        )
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
@@ -288,7 +319,10 @@ pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), Stri
 #[tauri::command]
 pub async fn open_files(root: RepoRoot, relative_paths: Vec<String>) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        open_paths_by_policy(&relative_paths, &resolve_host_file_paths(&root, &relative_paths)?)
+        open_paths_by_policy(
+            &relative_paths,
+            &resolve_host_file_paths(&root, &relative_paths)?,
+        )
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?

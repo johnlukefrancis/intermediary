@@ -21,8 +21,7 @@ fn resolve_notes_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .app_local_data_dir()
         .map_err(|_| "Could not resolve app local data directory".to_string())?;
     let notes_dir = app_local_data.join("notes");
-    fs::create_dir_all(&notes_dir)
-        .map_err(|e| format!("Failed to create notes directory: {e}"))?;
+    fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create notes directory: {e}"))?;
     Ok(notes_dir)
 }
 
@@ -123,23 +122,16 @@ fn resolve_note_path(app: &AppHandle, repo_id: &str) -> Result<PathBuf, String> 
 pub async fn load_note(app: AppHandle, repo_id: String) -> Result<String, String> {
     let path = resolve_note_path(&app, &repo_id)?;
 
-    tauri::async_runtime::spawn_blocking(move || {
-        match fs::read_to_string(&path) {
-            Ok(text) => Ok(text),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(String::new()),
-            Err(err) => Err(log_notes_error(
-                "load_failed",
-                format!("Failed to read note: {err}"),
-            )),
-        }
+    tauri::async_runtime::spawn_blocking(move || match fs::read_to_string(&path) {
+        Ok(text) => Ok(text),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(String::new()),
+        Err(err) => Err(log_notes_error(
+            "load_failed",
+            format!("Failed to read note: {err}"),
+        )),
     })
     .await
-    .map_err(|err| {
-        log_notes_error(
-            "load_failed",
-            format!("Note load task failed: {err}"),
-        )
-    })?
+    .map_err(|err| log_notes_error("load_failed", format!("Note load task failed: {err}")))?
 }
 
 /// Save a per-repo note to disk. Atomic write (temp + sync + rename).
@@ -155,12 +147,7 @@ pub async fn save_note(app: AppHandle, repo_id: String, content: String) -> Resu
 
     tauri::async_runtime::spawn_blocking(move || write_note_atomic(&path, &content))
         .await
-        .map_err(|err| {
-            log_notes_error(
-                "save_failed",
-                format!("Note save task failed: {err}"),
-            )
-        })?
+        .map_err(|err| log_notes_error("save_failed", format!("Note save task failed: {err}")))?
 }
 
 /// Delete a per-repo note file (used during repo removal / reset).
@@ -168,23 +155,16 @@ pub async fn save_note(app: AppHandle, repo_id: String, content: String) -> Resu
 pub async fn delete_note(app: AppHandle, repo_id: String) -> Result<(), String> {
     let path = resolve_note_path(&app, &repo_id)?;
 
-    tauri::async_runtime::spawn_blocking(move || {
-        match fs::remove_file(&path) {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
-            Err(err) => Err(log_notes_error(
-                "delete_failed",
-                format!("Failed to delete note: {err}"),
-            )),
-        }
+    tauri::async_runtime::spawn_blocking(move || match fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(log_notes_error(
+            "delete_failed",
+            format!("Failed to delete note: {err}"),
+        )),
     })
     .await
-    .map_err(|err| {
-        log_notes_error(
-            "delete_failed",
-            format!("Note delete task failed: {err}"),
-        )
-    })?
+    .map_err(|err| log_notes_error("delete_failed", format!("Note delete task failed: {err}")))?
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@ pub use envelopes::{
 pub use events::{
     AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, BundleBuildProgressEvent,
     BundleBuiltEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, SnapshotEvent,
-    StagedInfo,
+    StagedInfo, WslBackendConnectionStatus, WslBackendStatusEvent,
 };
 pub use responses::{
     BuildBundleResult, BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult,
