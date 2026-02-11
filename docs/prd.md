@@ -219,7 +219,7 @@ Every generated zip includes:
 Bundles should be self-identifying:
 
 * `{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{gitShort?}.zip`
-* Only the most recent bundle per repo + preset is retained (older bundles deleted before write).
+* Only the most recent bundle per repo + preset is retained (older bundles deleted only after a new bundle finalizes and is atomically renamed into place).
 
 ### 7.7 Error handling
 
@@ -367,7 +367,7 @@ Use `tauri-plugin-drag`-style command to start native drag with absolute file pa
 * Multi-repo tabs
 * Config UI editor (or edit JSON and reload)
 * Bundle manifest injection
-* Single latest bundle per preset (delete prior bundles before write)
+* Single latest bundle per preset (keep last good on failures; prune older bundles only after successful build finalize + rename)
 
 ### Nice-to-have
 

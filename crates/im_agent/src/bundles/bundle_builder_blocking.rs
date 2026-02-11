@@ -30,8 +30,6 @@ pub(crate) struct BuildBundleBlockingOptions {
 }
 
 pub(crate) struct BlockingBundleResult {
-    pub(crate) repo_id: String,
-    pub(crate) preset_id: String,
     pub(crate) host_path: String,
     pub(crate) wsl_path: Option<String>,
     pub(crate) bytes: u64,
@@ -50,8 +48,6 @@ pub(crate) fn build_bundle_blocking(
     let output_dir = layout.bundles_dir(&options.repo_id, &options.preset_id);
     std::fs::create_dir_all(&output_dir)
         .map_err(|err| AgentError::internal(format!("Failed to create bundle directory: {err}")))?;
-
-    cleanup_existing_bundles(&output_dir, &options.repo_id, &options.preset_id);
 
     let base_name = format!("{}_{}_{}", options.repo_id, options.preset_id, timestamp);
     let file_name = match git_info.short_sha.as_deref() {
@@ -85,11 +81,11 @@ pub(crate) fn build_bundle_blocking(
         )));
     }
 
+    cleanup_older_bundles(&output_dir, &options.repo_id, &options.preset_id, &final_path);
+
     let bundle_paths = layout.path_views_for_runtime_path(&final_path)?;
 
     Ok(BlockingBundleResult {
-        repo_id: options.repo_id,
-        preset_id: options.preset_id,
         host_path: bundle_paths.host_path,
         wsl_path: bundle_paths.wsl_path,
         bytes: bundle_result.bytes_written,
@@ -102,7 +98,12 @@ pub(crate) fn format_timestamp(date: DateTime<Utc>) -> String {
     date.format("%Y%m%d_%H%M%S").to_string()
 }
 
-pub(crate) fn cleanup_existing_bundles(bundle_dir: &Path, repo_id: &str, preset_id: &str) {
+pub(crate) fn cleanup_older_bundles(
+    bundle_dir: &Path,
+    repo_id: &str,
+    preset_id: &str,
+    keep_path: &Path,
+) {
     let prefix = format!("{repo_id}_{preset_id}_");
     let entries = match std::fs::read_dir(bundle_dir) {
         Ok(entries) => entries,
@@ -112,6 +113,10 @@ pub(crate) fn cleanup_existing_bundles(bundle_dir: &Path, repo_id: &str, preset_
     for entry in entries.flatten() {
         let file_name = entry.file_name();
         let file_name = file_name.to_string_lossy();
+        let path = entry.path();
+        if path == keep_path {
+            continue;
+        }
         if file_name.starts_with(&prefix) && file_name.ends_with(".zip") {
             let _ = std::fs::remove_file(entry.path());
         }

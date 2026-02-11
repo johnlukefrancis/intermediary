@@ -103,8 +103,15 @@ fn progress_callbacks_follow_phase_order() {
     let phases = phases.lock().unwrap();
     let scanning_index = phases.iter().position(|phase| phase == "scanning").unwrap();
     let zipping_index = phases.iter().position(|phase| phase == "zipping").unwrap();
+    let finalizing_index = phases
+        .iter()
+        .position(|phase| phase == "finalizing")
+        .unwrap();
+    let syncing_index = phases.iter().position(|phase| phase == "syncing").unwrap();
     let done_index = phases.iter().position(|phase| phase == "done").unwrap();
 
     assert!(scanning_index < zipping_index);
-    assert!(zipping_index < done_index);
+    assert!(zipping_index < finalizing_index);
+    assert!(finalizing_index < syncing_index);
+    assert!(syncing_index < done_index);
 }

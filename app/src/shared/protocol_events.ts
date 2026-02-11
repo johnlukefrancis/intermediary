@@ -77,7 +77,7 @@ export const BundleBuiltEventSchema = z.object({
 });
 export type BundleBuiltEvent = z.infer<typeof BundleBuiltEventSchema>;
 
-export const BundleBuildPhaseSchema = z.enum(["scanning", "zipping", "finalizing"]);
+export const BundleBuildPhaseSchema = z.enum(["scanning", "zipping", "finalizing", "syncing"]);
 export type BundleBuildPhase = z.infer<typeof BundleBuildPhaseSchema>;
 
 export const BundleBuildProgressEventSchema = z.object({

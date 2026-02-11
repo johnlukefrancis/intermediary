@@ -519,6 +519,7 @@ export function useBundleState(
               ...preset,
               isBuilding: false,
               buildProgress: null,
+              lastBuildError: null,
               freshlyBuiltAt: Date.now(),
             });
           }

@@ -2,10 +2,12 @@
 // Description: Bundle build orchestration using the im_bundle library
 
 use chrono::Utc;
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
 
 use crate::error::AgentError;
 use crate::logging::Logger;
-use crate::protocol::{AgentEvent, BundleBuildProgressEvent, BundleSelection, GlobalExcludes};
+use crate::protocol::{BundleSelection, GlobalExcludes};
 use crate::server::EventBus;
 use crate::staging::{PathBridgeConfig, StagingRootKind};
 
@@ -35,6 +37,52 @@ pub struct BuildBundleResult {
     pub built_at_iso: String,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct BuildLockKey {
+    repo_id: String,
+    preset_id: String,
+}
+
+static ACTIVE_BUNDLE_BUILDS: OnceLock<Mutex<HashSet<BuildLockKey>>> = OnceLock::new();
+
+struct BuildLockGuard {
+    key: BuildLockKey,
+}
+
+impl Drop for BuildLockGuard {
+    fn drop(&mut self) {
+        if let Ok(mut active) = active_bundle_builds().lock() {
+            active.remove(&self.key);
+        }
+    }
+}
+
+fn active_bundle_builds() -> &'static Mutex<HashSet<BuildLockKey>> {
+    ACTIVE_BUNDLE_BUILDS.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn build_lock_key(repo_id: &str, preset_id: &str) -> BuildLockKey {
+    BuildLockKey {
+        repo_id: repo_id.to_string(),
+        preset_id: preset_id.to_string(),
+    }
+}
+
+fn acquire_build_lock(repo_id: &str, preset_id: &str) -> Result<BuildLockGuard, AgentError> {
+    let key = build_lock_key(repo_id, preset_id);
+    let mut active = active_bundle_builds()
+        .lock()
+        .map_err(|_| AgentError::internal("Bundle build lock state is unavailable"))?;
+    if active.contains(&key) {
+        return Err(AgentError::new(
+            "BUNDLE_BUILD_IN_PROGRESS",
+            format!("Bundle build already in progress for {repo_id}/{preset_id}"),
+        ));
+    }
+    active.insert(key.clone());
+    Ok(BuildLockGuard { key })
+}
+
 impl From<BuildBundleOptions> for BuildBundleBlockingOptions {
     fn from(options: BuildBundleOptions) -> Self {
         Self {
@@ -55,6 +103,7 @@ pub async fn build_bundle(
     event_bus: &EventBus,
     logger: &Logger,
 ) -> Result<BuildBundleResult, AgentError> {
+    let _build_lock = acquire_build_lock(&options.repo_id, &options.preset_id)?;
     let built_at = Utc::now();
     let built_at_iso = built_at.to_rfc3339();
     let timestamp = format_timestamp(built_at);
@@ -92,18 +141,6 @@ pub async fn build_bundle(
 
     let _ = progress_task.await;
 
-    event_bus.broadcast_event(AgentEvent::BundleBuildProgress(BundleBuildProgressEvent {
-        repo_id: build_result.repo_id.clone(),
-        preset_id: build_result.preset_id.clone(),
-        phase: "finalizing".to_string(),
-        files_done: build_result.file_count,
-        files_total: build_result.file_count,
-        current_file: None,
-        current_bytes_done: None,
-        current_bytes_total: None,
-        bytes_done_total_best_effort: None,
-    }));
-
     Ok(BuildBundleResult {
         host_path: build_result.host_path.clone(),
         wsl_path: build_result.wsl_path.clone(),
@@ -112,4 +149,30 @@ pub async fn build_bundle(
         file_count: build_result.file_count,
         built_at_iso: build_result.built_at_iso,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_duplicate_build_lock_for_same_repo_and_preset() {
+        let first = acquire_build_lock("repo_a", "preset_main").expect("first lock");
+        let err = match acquire_build_lock("repo_a", "preset_main") {
+            Ok(_) => panic!("second lock should fail"),
+            Err(err) => err,
+        };
+        assert_eq!(err.code(), "BUNDLE_BUILD_IN_PROGRESS");
+        drop(first);
+        acquire_build_lock("repo_a", "preset_main").expect("lock should release after drop");
+    }
+
+    #[test]
+    fn distinct_ids_with_delimiter_do_not_collide() {
+        let first = acquire_build_lock("a", "b::c").expect("first lock");
+        let second = acquire_build_lock("a::b", "c")
+            .expect("distinct repo/preset pair should not collide");
+        drop(second);
+        drop(first);
+    }
 }

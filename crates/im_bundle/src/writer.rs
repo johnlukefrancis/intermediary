@@ -129,6 +129,7 @@ fn write_zip(
     files_done += 1;
     progress.emit_progress("zipping", files_done, files_total);
 
+    progress.emit_progress("finalizing", files_done, files_total);
     let writer = zip
         .finish()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to finish archive: {e}")))?;
@@ -136,6 +137,7 @@ fn write_zip(
         .into_inner()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to flush buffer: {e}")))?;
 
+    progress.emit_progress("syncing", files_done, files_total);
     file.sync_all()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to sync file: {e}")))?;
 
