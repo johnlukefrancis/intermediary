@@ -23,24 +23,27 @@ Depends on: ADR-000, ADR-007
 
 ## P1 — Major functionality broken
 
-- 2026-01-31: Bundle build can stall during zipping; UI progress may appear stuck around mid-build.
+*None*
 
 ---
 
 ## P2 — Degraded but usable
 
 - 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
+- 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 
 ---
 
 ## P3 — Minor issues
 
 - 2026-02-02: Background GPU usage from substrate animations when minimized. Motion governor implemented; pending verification that GPU drops to near-idle when minimized.
+- 2026-02-11: After sleep/wake, status can briefly show `Reconnecting (...)` while the client reconnects and rehydrates repo state. This is expected during recovery, but can feel noisy on frequent wake cycles.
 
 ---
 
 ## Resolved (recent)
 
+- 2026-02-11: Bundle build no longer requires delete-before-write semantics. Finalization now uses temp-write + atomic rename, then post-finalize pruning, so failed builds keep the last good bundle intact.
 - 2026-02-11: WSL sleep/wake and backend restarts could leave stale `WSL backend is not available` errors in the status bar and skip WSL re-bootstrap when `clientHello` payloads were unchanged. Fixed by generation-aware WSL `clientHello` replay, transition-only WSL transport error emission, and explicit `wslBackendStatus` online/offline events that clear stale WSL transport errors on recovery.
 - 2026-02-09: Installer builds could intermittently show `NOT CONFIGURED: Staging not configured` while agent status appeared connected. Fixed by gating staging-dependent actions on successful `clientHello`, adding one-shot `clientHello` re-sync + retry on staging-not-configured errors, and isolating dev channel identity/default agent port from installer defaults.
 - 2026-02-09: Windows installer startup could briefly show empty Docs/Code panes and transient `WSL backend is not available` before WSL repos hydrated. Fixed by adding a supervisor startup gate before first agent connect for WSL-required sessions, plus bounded backoff retries for repo and bundle hydration on transient WSL transport failures.

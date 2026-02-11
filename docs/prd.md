@@ -219,13 +219,14 @@ Every generated zip includes:
 Bundles should be self-identifying:
 
 * `{repoId}_{presetId}_{YYYYMMDD_HHMMSS}_{gitShort?}.zip`
-* Only the most recent bundle per repo + preset is retained (older bundles deleted only after a new bundle finalizes and is atomically renamed into place).
+* Bundle replace semantics are **atomic replace, not delete-before-write**: build to a temp file, atomically rename to the final name, then prune older bundles for that repo+preset.
+* Only the most recent successful bundle per repo + preset is retained.
 
 ### 7.7 Error handling
 
 * If WSL backend is not reachable: show banner/error event for WSL operations, while Windows-root repos continue to function.
 * If staging copy fails: show per-item error and log.
-* If bundle build fails: show build error output (truncate) and keep last good build.
+* If bundle build fails (including timeout): show build error output (truncate), do not replace the current bundle, and keep the last good build.
 * Reconnects may re-run `clientHello`; the agent treats the handshake as idempotent and safe to call multiple times.
 * File-row context menu actions validate repo-relative input before any OS launch; invalid/traversal paths must fail with an explicit error.
 

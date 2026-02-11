@@ -81,7 +81,7 @@ Intermediary uses a **host-routed architecture**:
   - On Windows only: launches the WSL backend agent on `agentPort + 1` when any configured repo has `root.kind = "wsl"`
   - Auto-start toggle with optional distro override (Windows-only control)
   - Restart command and diagnostics surfaced in the UI
-  - Reconciles tracked host/WSL child processes on restart and stops them on app exit to avoid orphans
+  - Reconciles tracked host/WSL child processes before spawn/replace/stop, and stops tracked children on app exit to enforce a no-orphan-process boundary for supervisor-owned processes
 
 ### Host Agent
 
@@ -92,6 +92,7 @@ Intermediary uses a **host-routed architecture**:
   - Handles host-native roots locally for watch/refresh/stage/build/list/top-level
   - Maintains internal WebSocket client to WSL backend agent
   - Forwards WSL-targeted requests and relays backend events to the UI
+  - Keeps retrying WSL backend transport with bounded reconnect delay and emits explicit online/offline transition events (`wslBackendStatus`) with a reconnect generation counter
   - Emits explicit backend-availability errors without taking down Windows repos
 
 ### WSL Backend Agent
@@ -101,7 +102,7 @@ Intermediary uses a **host-routed architecture**:
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
-  - Bundle building with manifest injection via `im_bundle` (single latest bundle per preset; older bundles deleted)
+  - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; last-good bundle remains on build failure)
   - Atomic file staging for WSL repo operations
   - Auto-stage on change (configurable)
 
@@ -109,7 +110,7 @@ Intermediary uses a **host-routed architecture**:
 
 UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, with request/response envelopes and event envelopes:
 - The handshake requires an app-scoped query token loaded from app-local auth state (`ws://127.0.0.1:<hostPort>/?token=...`).
-- Host-agent validates token for every upgrade and applies an origin allowlist when an `Origin` header is present.
+- Host-agent validates token for every upgrade and enforces origin allowlisting when an `Origin` header is present.
 - Host→WSL backend forwarding uses a separate internal token not exposed to the UI.
 - Request: `{ kind: "request", requestId, payload }`
 - Response: `{ kind: "response", requestId, status, payload|error }`
@@ -133,6 +134,12 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `buildBundle { repoId, presetId, selection } → buildBundleResult`
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
+
+### Lifecycle recovery behavior
+
+- If the WSL backend goes offline, Windows-root repos continue to function; WSL-targeted commands return explicit transport errors and status remains recoverable.
+- On reconnect, host runtime replays cached WSL `clientHello` once per backend connection generation so watchers/state re-bootstrap without requiring manual full app reset.
+- On OS resume (sleep/wake), the UI triggers reconnect + rehydrate flow; users may briefly see `Reconnecting (...)` and then normal status once handshake and hydration complete.
 
 ### Host OS File Actions
 

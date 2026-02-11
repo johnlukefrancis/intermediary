@@ -53,6 +53,7 @@ Workflow and tooling documentation.
 | Document | Purpose |
 |----------|---------|
 | [docs/usage/staging_probe_usage.md](usage/staging_probe_usage.md) | Test doc for staging detection |
+| [docs/usage/agent_wsl_bruised_states.md](usage/agent_wsl_bruised_states.md) | Troubleshooting runbook for recoverable agent/WSL degraded states |
 
 ## Inventory
 
