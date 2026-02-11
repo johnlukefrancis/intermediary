@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/note_panel.css
- * Description: Monospace textarea and DOCS|NOTES header toggle styles
+ * Description: Monospace textarea and notes-related panel header styles
  */
 
 /* When notes view is active, panel-content needs flex layout for textarea fill */
@@ -10,45 +10,7 @@
   padding: 0;
 }
 
-/* DOCS | NOTES toggle in the docs panel header */
-.docs-notes-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.docs-notes-toggle__btn {
-  all: unset;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--color-text-muted);
-  padding: 2px var(--space-1);
-  border-radius: var(--radius-deck-xs);
-  transition: color var(--duration-normal) var(--ease-out),
-              text-shadow var(--duration-normal) var(--ease-out);
-}
-
-.docs-notes-toggle__btn:hover {
-  color: var(--color-text-secondary);
-}
-
-.docs-notes-toggle__btn--active {
-  color: var(--color-accent);
-  text-shadow: 0 0 8px var(--color-accent-glow);
-}
-
-.docs-notes-toggle__sep {
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  user-select: none;
-}
-
-/* Container for multiple header-right icons (handset: notes toggle + star) */
+/* Container for docs header-right icons (favourite + notes toggle) */
 .panel-header-icons {
   display: flex;
   align-items: center;

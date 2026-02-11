@@ -178,44 +178,21 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   // so clicking DOCS returns to recent (not starred)
   const isDocsFileView = docsView === "recent" || docsView === "starred";
 
-  // Header left: DOCS | NOTES toggle
+  // Header left: Docs title button (click returns to recent docs view)
   const docsHeaderLeft = (
-    <div className="docs-notes-toggle">
-      <button
-        type="button"
-        className={`docs-notes-toggle__btn${isDocsFileView ? " docs-notes-toggle__btn--active" : ""}`}
-        onClick={() => { handleDocsViewChange("recent"); }}
-        title="Show docs"
-      >
-        Docs
-      </button>
-      <span className="docs-notes-toggle__sep" aria-hidden="true">|</span>
-      <button
-        type="button"
-        className={`docs-notes-toggle__btn${docsView === "notes" ? " docs-notes-toggle__btn--active" : ""}`}
-        onClick={() => { handleDocsViewChange("notes"); }}
-        title="Show notes"
-      >
-        Notes
-      </button>
-    </div>
+    <button
+      type="button"
+      className={`panel-title-button${isDocsFileView ? "" : " panel-title-button--dimmed"}`}
+      onClick={() => { handleDocsViewChange("recent"); }}
+      title="Show recent docs"
+    >
+      Docs
+    </button>
   );
 
-  // Header right: optional handset notes toggle + star toggle
+  // Header right: docs star and notes toggles (favourite first, then pencil)
   const docsHeaderRight = (
     <div className="panel-header-icons">
-      {isHandset && (
-        <button
-          type="button"
-          className={`panel-header-icon${docsView === "notes" ? " panel-header-icon--active" : ""}`}
-          onClick={() => { handleDocsViewChange(docsView === "notes" ? "recent" : "notes"); }}
-          title={docsView === "notes" ? "Show docs" : "Show notes"}
-          aria-label={docsView === "notes" ? "Show docs" : "Show notes"}
-          aria-pressed={docsView === "notes"}
-        >
-          ✎
-        </button>
-      )}
       {docsView !== "notes" && (
         <button
           type="button"
@@ -228,6 +205,16 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           ★
         </button>
       )}
+      <button
+        type="button"
+        className={`panel-header-icon${docsView === "notes" ? " panel-header-icon--active" : ""}`}
+        onClick={() => { handleDocsViewChange(docsView === "notes" ? "recent" : "notes"); }}
+        title={docsView === "notes" ? "Show docs" : "Show notes"}
+        aria-label={docsView === "notes" ? "Show docs" : "Show notes"}
+        aria-pressed={docsView === "notes"}
+      >
+        ✎
+      </button>
     </div>
   );
 
