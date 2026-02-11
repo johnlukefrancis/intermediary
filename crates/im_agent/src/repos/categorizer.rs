@@ -133,7 +133,10 @@ mod tests {
 
     #[test]
     fn fallback_classifies_images_as_docs() {
-        assert_eq!(fallback_categorize("Screenshots/Capture.png"), FileKind::Docs);
+        assert_eq!(
+            fallback_categorize("Screenshots/Capture.png"),
+            FileKind::Docs
+        );
         assert_eq!(fallback_categorize("captures/IMG_0001.JPG"), FileKind::Docs);
         assert_eq!(fallback_categorize("notes/snip.webp"), FileKind::Docs);
     }

@@ -79,7 +79,8 @@ mod tests {
 
     #[test]
     fn mounted_windows_path_warning_includes_code_and_doc_link() {
-        let event = build_mounted_windows_path_warning_event("screenshots", "/mnt/c/Users/john/Pictures");
+        let event =
+            build_mounted_windows_path_warning_event("screenshots", "/mnt/c/Users/john/Pictures");
         assert_eq!(event.scope, "watcher");
         let details = event.details.expect("details");
         assert_eq!(

@@ -4,9 +4,7 @@
 use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::protocol::AgentEvent;
-use crate::repos::{
-    build_mounted_windows_path_warning_event, RepoWatcher, RepoWatcherConfig,
-};
+use crate::repos::{build_mounted_windows_path_warning_event, RepoWatcher, RepoWatcherConfig};
 use crate::server::EventBus;
 use serde_json::json;
 
@@ -72,9 +70,10 @@ impl AgentRuntime {
                 "Watcher running on mounted Windows path in Linux runtime",
                 Some(json!({ "repoId": repo.repo_id, "repoRoot": repo_root })),
             );
-            event_bus.broadcast_event(AgentEvent::Error(
-                build_mounted_windows_path_warning_event(&repo.repo_id, repo_root),
-            ));
+            event_bus.broadcast_event(AgentEvent::Error(build_mounted_windows_path_warning_event(
+                &repo.repo_id,
+                repo_root,
+            )));
         }
 
         let initial_entries = store.load(&repo.repo_id, repo_root).await;
@@ -156,10 +155,8 @@ mod tests {
 
     #[test]
     fn mounted_windows_path_detection_matches_platform_contract() {
-        let lowercase_drive = is_mounted_windows_path_watch_risk(
-            RepoRootKind::Host,
-            "/mnt/c/Users/johnf/Pictures",
-        );
+        let lowercase_drive =
+            is_mounted_windows_path_watch_risk(RepoRootKind::Host, "/mnt/c/Users/johnf/Pictures");
         let uppercase_drive =
             is_mounted_windows_path_watch_risk(RepoRootKind::Host, "/mnt/D/dev/repo");
         let drive_root = is_mounted_windows_path_watch_risk(RepoRootKind::Host, "/mnt/e");

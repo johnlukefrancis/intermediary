@@ -12,7 +12,7 @@ This runbook covers **degraded but functioning** runtime states where Intermedia
 Observed behavior:
 - Windows/host-root repos continue to watch, stage, and build normally.
 - WSL-root actions return explicit WSL transport errors.
-- UI may show `Agent offline` diagnostics and/or WSL transport error text until backend status returns online.
+- UI may show `Agent offline` diagnostics and/or WSL transport error text while WSL transport is failing.
 
 Why this is expected:
 - Host and WSL backends are split by root authority (`host` vs `wsl`).
@@ -20,6 +20,7 @@ Why this is expected:
 
 What to do:
 - Wait for auto-reconnect if WSL is briefly unavailable.
+- After backend recovery, run any WSL operation (for example refresh/stage/build on a WSL repo); the first successful WSL command emits `wslBackendStatus: online` and clears the offline banner even if the socket never disconnected.
 - Use **Restart Agent** if WSL remains offline.
 
 ## 2) After sleep/wake, app rehydrates
@@ -28,7 +29,7 @@ Expected behavior after resume:
 - Status bar may briefly show `Reconnecting (...)`.
 - UI reconnects the WebSocket session.
 - `clientHello` is replayed as needed and repo/bundle state rehydrates.
-- Stale WSL transport errors should clear after explicit `wslBackendStatus: online`.
+- Stale WSL transport errors clear after explicit `wslBackendStatus: online`, including the recovery signal emitted on the first successful WSL operation after transport recovery.
 
 When to escalate:
 - Reconnecting state does not clear after a reasonable window.
