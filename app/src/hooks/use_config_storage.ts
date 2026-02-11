@@ -18,6 +18,8 @@ interface ConfigStorageState {
   isLoaded: boolean;
   loadError: string | null;
   saveError: string | null;
+  persistenceLocked: boolean;
+  persistenceLockReason: string | null;
   saveConfig: (newConfig: PersistedConfig) => void;
   saveConfigNow: (newConfig: PersistedConfig) => void;
   resetConfig: () => void;
@@ -36,6 +38,8 @@ export function useConfigStorage(): ConfigStorageState {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [persistenceLocked, setPersistenceLocked] = useState(false);
+  const [persistenceLockReason, setPersistenceLockReason] = useState<string | null>(null);
 
   const saveTimeoutRef = useRef<number | null>(null);
   const configRef = useRef(config);
@@ -45,7 +49,17 @@ export function useConfigStorage(): ConfigStorageState {
     configRef.current = config;
   }, [config]);
 
+  const buildPersistenceLockMessage = useCallback((reason: string | null): string => {
+    const detail = reason ?? "Config load failed";
+    return `Config persistence is locked for this session: ${detail}`;
+  }, []);
+
   const saveConfig = useCallback((newConfig: PersistedConfig) => {
+    if (persistenceLocked) {
+      setSaveError(buildPersistenceLockMessage(persistenceLockReason));
+      return;
+    }
+
     if (saveTimeoutRef.current !== null) {
       clearTimeout(saveTimeoutRef.current);
     }
@@ -66,9 +80,14 @@ export function useConfigStorage(): ConfigStorageState {
           setSaveError(message);
         });
     }, SAVE_DEBOUNCE_MS);
-  }, []);
+  }, [buildPersistenceLockMessage, persistenceLockReason, persistenceLocked]);
 
   const saveConfigNow = useCallback((newConfig: PersistedConfig) => {
+    if (persistenceLocked) {
+      setSaveError(buildPersistenceLockMessage(persistenceLockReason));
+      return;
+    }
+
     if (saveTimeoutRef.current !== null) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -84,7 +103,7 @@ export function useConfigStorage(): ConfigStorageState {
         console.error("[ConfigProvider] Failed to save config:", err);
         setSaveError(message);
       });
-  }, []);
+  }, [buildPersistenceLockMessage, persistenceLockReason, persistenceLocked]);
 
   const saveConfigImmediate = useCallback(() => {
     if (!isDirtyRef.current) return;
@@ -92,6 +111,11 @@ export function useConfigStorage(): ConfigStorageState {
   }, [saveConfigNow]);
 
   const resetConfig = useCallback(() => {
+    if (persistenceLocked) {
+      setSaveError(buildPersistenceLockMessage(persistenceLockReason));
+      return;
+    }
+
     const outputHostRoot = configRef.current.outputWindowsRoot;
     const defaults = getDefaultPersistedConfig();
     setConfig(defaults);
@@ -101,7 +125,12 @@ export function useConfigStorage(): ConfigStorageState {
       console.error("[ConfigProvider] Reset failed:", err);
       setSaveError(`Reset failed: ${message}`);
     });
-  }, [saveConfigNow]);
+  }, [
+    buildPersistenceLockMessage,
+    persistenceLockReason,
+    persistenceLocked,
+    saveConfigNow,
+  ]);
 
   useEffect(() => {
     let mounted = true;
@@ -113,7 +142,10 @@ export function useConfigStorage(): ConfigStorageState {
 
         const validConfig = parsePersistedConfig(result.config);
         setConfig(validConfig);
+        setPersistenceLocked(false);
+        setPersistenceLockReason(null);
         setIsLoaded(true);
+        setLoadError(null);
 
         if (result.wasCreated) {
           console.log("[ConfigProvider] Created new config with defaults");
@@ -128,6 +160,14 @@ export function useConfigStorage(): ConfigStorageState {
         const message = getErrorMessage(err, "Failed to load config");
         console.error("[ConfigProvider] Load failed:", err);
         setLoadError(message);
+        setPersistenceLocked(true);
+        setPersistenceLockReason(message);
+        if (saveTimeoutRef.current !== null) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
+        isDirtyRef.current = false;
+        setSaveError(buildPersistenceLockMessage(message));
         setIsLoaded(true);
       }
     }
@@ -137,7 +177,7 @@ export function useConfigStorage(): ConfigStorageState {
     return () => {
       mounted = false;
     };
-  }, [saveConfig]);
+  }, [buildPersistenceLockMessage, saveConfig]);
 
   useEffect(() => {
     const handleBeforeUnload = (): void => {
@@ -164,6 +204,8 @@ export function useConfigStorage(): ConfigStorageState {
     isLoaded,
     loadError,
     saveError,
+    persistenceLocked,
+    persistenceLockReason,
     saveConfig,
     saveConfigNow,
     resetConfig,

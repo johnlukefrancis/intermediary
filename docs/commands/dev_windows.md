@@ -86,7 +86,7 @@ The VS Code tasks set these automatically:
 | `INTERMEDIARY_WSL_DISTRO` | WSL distro for VS Code tasks (sync scripts) | `Ubuntu` |
 | `INTERMEDIARY_LOG_DIR` | Log output directory (WSL UNC path) | `\\wsl$\Ubuntu\home\johnf\code\intermediary\logs` |
 
-**Note:** Native WSL paths (e.g., `/home/...`) are converted to Windows paths automatically via `wslpath` at runtime. No environment variable configuration is needed for most setups; if your repos live in a non-default distro, set `INTERMEDIARY_WSL_DISTRO` so `wslpath` targets that distro.
+**Note:** Native WSL paths (e.g., `/home/...`) are converted to Windows paths automatically via `wslpath` at runtime. Intermediary now uses persisted app config (`agentDistro`) as the primary distro authority for runtime conversion; `INTERMEDIARY_WSL_DISTRO` is mainly for dev scripts/tools and as a fallback when no app override is configured.
 
 ## Watch Sync
 

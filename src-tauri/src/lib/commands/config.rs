@@ -5,7 +5,9 @@ use crate::config::{
     io, resolve_config_path, types::LoadConfigResult, validate_config, PersistedConfig,
 };
 use crate::obs::logging;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
+
+use super::wsl_distro::WslDistroState;
 
 /// Load configuration from disk
 ///
@@ -31,6 +33,10 @@ pub async fn load_config(app: AppHandle) -> Result<LoadConfigResult, String> {
             message
         })?;
 
+    if let Some(wsl_distro_state) = app.try_state::<WslDistroState>() {
+        wsl_distro_state.set(result.config.agent_distro.as_deref());
+    }
+
     Ok(LoadConfigResult {
         config: result.config,
         was_created: result.was_created,
@@ -55,6 +61,7 @@ pub async fn save_config(app: AppHandle, config: PersistedConfig) -> Result<(), 
         message
     })?;
 
+    let distro_for_state = config.agent_distro.clone();
     tauri::async_runtime::spawn_blocking(move || io::save_to_disk(&config_path, &config))
         .await
         .map_err(|e| {
@@ -66,5 +73,10 @@ pub async fn save_config(app: AppHandle, config: PersistedConfig) -> Result<(), 
             let message = format!("Config save failed: {e}");
             logging::log("error", "config", "save_failed", &message);
             message
-        })
+        })?;
+
+    if let Some(wsl_distro_state) = app.try_state::<WslDistroState>() {
+        wsl_distro_state.set(distro_for_state.as_deref());
+    }
+    Ok(())
 }

@@ -5,6 +5,9 @@
 use crate::paths::wsl_convert::{run_wslpath, wsl_to_windows_path};
 use std::path::Path;
 use std::process::Command;
+use tauri::AppHandle;
+
+use super::wsl_distro::resolve_runtime_wsl_distro;
 
 /// Open a folder in the host OS file manager.
 ///
@@ -15,14 +18,19 @@ use std::process::Command;
 /// # Errors
 /// Returns an error if the path is empty or the platform launcher fails.
 #[tauri::command]
-pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
+pub async fn open_in_file_manager(
+    app: AppHandle,
+    folder_path: String,
+    distro_override: Option<String>,
+) -> Result<(), String> {
     let folder_path = folder_path.trim().to_string();
     if folder_path.is_empty() {
         return Err("Folder path cannot be empty".to_string());
     }
 
+    let distro_override = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
     tauri::async_runtime::spawn_blocking(move || {
-        let host_path = resolve_host_path(&folder_path)?;
+        let host_path = resolve_host_path(&folder_path, distro_override.as_deref())?;
         let path = Path::new(&host_path);
         let is_windows_unc = cfg!(target_os = "windows") && host_path.starts_with(r"\\");
         if !is_windows_unc && !path.is_dir() {
@@ -64,7 +72,10 @@ pub async fn open_in_file_manager(folder_path: String) -> Result<(), String> {
 }
 
 #[cfg(target_os = "windows")]
-pub(crate) fn resolve_host_path(folder_path: &str) -> Result<String, String> {
+pub(crate) fn resolve_host_path(
+    folder_path: &str,
+    distro_override: Option<&str>,
+) -> Result<String, String> {
     if !folder_path.starts_with('/') {
         return Ok(folder_path.to_string());
     }
@@ -73,12 +84,15 @@ pub(crate) fn resolve_host_path(folder_path: &str) -> Result<String, String> {
         return Ok(windows_path);
     }
 
-    run_wslpath(folder_path).map_err(|error| {
+    run_wslpath(folder_path, distro_override).map_err(|error| {
         format!("Failed to resolve WSL folder path '{folder_path}' to a Windows path: {error}")
     })
 }
 
 #[cfg(not(target_os = "windows"))]
-pub(crate) fn resolve_host_path(folder_path: &str) -> Result<String, String> {
+pub(crate) fn resolve_host_path(
+    folder_path: &str,
+    _distro_override: Option<&str>,
+) -> Result<String, String> {
     Ok(folder_path.to_string())
 }

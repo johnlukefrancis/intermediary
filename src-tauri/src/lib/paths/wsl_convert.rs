@@ -119,19 +119,15 @@ impl std::error::Error for WslConvertError {}
 ///
 /// Example: `/home/john/code` -> `\\wsl.localhost\<distro>\home\john\code`
 #[cfg(target_os = "windows")]
-pub fn run_wslpath(wsl_path: &str) -> Result<String, WslConvertError> {
+pub fn run_wslpath(
+    wsl_path: &str,
+    distro_override: Option<&str>,
+) -> Result<String, WslConvertError> {
     let mut command = Command::new("wsl.exe");
-    if let Ok(distro) = std::env::var("INTERMEDIARY_WSL_DISTRO") {
-        let trimmed = distro.trim();
-        if !trimmed.is_empty() {
-            command.arg("-d").arg(trimmed);
-        }
+    for arg in build_wslpath_command_args(wsl_path, distro_override) {
+        command.arg(arg);
     }
-
-    let output = command
-        .args(["wslpath", "-w", wsl_path])
-        .output()
-        .map_err(WslConvertError::WslNotFound)?;
+    let output = command.output().map_err(WslConvertError::WslNotFound)?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -153,13 +149,46 @@ pub fn run_wslpath(wsl_path: &str) -> Result<String, WslConvertError> {
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn run_wslpath(_wsl_path: &str) -> Result<String, WslConvertError> {
+pub fn run_wslpath(
+    _wsl_path: &str,
+    _distro_override: Option<&str>,
+) -> Result<String, WslConvertError> {
     Err(WslConvertError::UnsupportedPlatform)
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_effective_wsl_distro(distro_override: Option<&str>) -> Option<String> {
+    let explicit = distro_override
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    if let Some(value) = explicit {
+        return Some(value.to_string());
+    }
+
+    std::env::var("INTERMEDIARY_WSL_DISTRO")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+#[cfg(target_os = "windows")]
+fn build_wslpath_command_args(wsl_path: &str, distro_override: Option<&str>) -> Vec<String> {
+    let mut args = Vec::with_capacity(5);
+    if let Some(distro) = resolve_effective_wsl_distro(distro_override) {
+        args.push("-d".to_string());
+        args.push(distro);
+    }
+    args.push("wslpath".to_string());
+    args.push("-w".to_string());
+    args.push(wsl_path.to_string());
+    args
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(target_os = "windows")]
+    use std::sync::{Mutex, OnceLock};
 
     #[test]
     fn test_windows_to_wsl() {
@@ -236,5 +265,110 @@ mod tests {
 
         let err = WslConvertError::InvalidOutput("empty".to_string());
         assert_eq!(err.to_string(), "wslpath returned invalid output: empty");
+    }
+
+    #[cfg(target_os = "windows")]
+    fn with_env_var<T>(key: &str, value: Option<&str>, test: impl FnOnce() -> T) -> T {
+        static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        let _guard = ENV_LOCK.get_or_init(|| Mutex::new(())).lock().ok();
+        let original = std::env::var(key).ok();
+        match value {
+            Some(next) => std::env::set_var(key, next),
+            None => std::env::remove_var(key),
+        }
+        let result = test();
+        match original {
+            Some(previous) => std::env::set_var(key, previous),
+            None => std::env::remove_var(key),
+        }
+        result
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_build_wslpath_command_args_uses_explicit_override() {
+        with_env_var("INTERMEDIARY_WSL_DISTRO", Some("EnvDistro"), || {
+            let args = build_wslpath_command_args("/home/john/code", Some("ConfiguredDistro"));
+            assert_eq!(
+                args,
+                vec![
+                    "-d".to_string(),
+                    "ConfiguredDistro".to_string(),
+                    "wslpath".to_string(),
+                    "-w".to_string(),
+                    "/home/john/code".to_string()
+                ]
+            );
+        });
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_build_wslpath_command_args_trims_explicit_override() {
+        with_env_var("INTERMEDIARY_WSL_DISTRO", None, || {
+            let args = build_wslpath_command_args("/home/john/code", Some("  Ubuntu-22.04  "));
+            assert_eq!(
+                args,
+                vec![
+                    "-d".to_string(),
+                    "Ubuntu-22.04".to_string(),
+                    "wslpath".to_string(),
+                    "-w".to_string(),
+                    "/home/john/code".to_string()
+                ]
+            );
+        });
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_build_wslpath_command_args_uses_env_fallback_when_override_missing() {
+        with_env_var("INTERMEDIARY_WSL_DISTRO", Some("Ubuntu"), || {
+            let args = build_wslpath_command_args("/home/john/code", None);
+            assert_eq!(
+                args,
+                vec![
+                    "-d".to_string(),
+                    "Ubuntu".to_string(),
+                    "wslpath".to_string(),
+                    "-w".to_string(),
+                    "/home/john/code".to_string()
+                ]
+            );
+        });
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_build_wslpath_command_args_uses_env_fallback_when_override_blank() {
+        with_env_var("INTERMEDIARY_WSL_DISTRO", Some("Ubuntu"), || {
+            let args = build_wslpath_command_args("/home/john/code", Some("   "));
+            assert_eq!(
+                args,
+                vec![
+                    "-d".to_string(),
+                    "Ubuntu".to_string(),
+                    "wslpath".to_string(),
+                    "-w".to_string(),
+                    "/home/john/code".to_string()
+                ]
+            );
+        });
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_build_wslpath_command_args_no_override_when_sources_missing() {
+        with_env_var("INTERMEDIARY_WSL_DISTRO", None, || {
+            let args = build_wslpath_command_args("/home/john/code", None);
+            assert_eq!(
+                args,
+                vec![
+                    "wslpath".to_string(),
+                    "-w".to_string(),
+                    "/home/john/code".to_string()
+                ]
+            );
+        });
     }
 }

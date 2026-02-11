@@ -80,6 +80,8 @@ export function App(): React.JSX.Element {
   const {
     config,
     isLoaded,
+    persistenceLocked,
+    persistenceLockReason,
     setLastActiveTabId,
     setLastActiveGroupRepoId,
     setWindowBoundsForMode,
@@ -243,7 +245,11 @@ export function App(): React.JSX.Element {
           <StatusBar />
         </header>
         <main className="tab-content">
-          <EmptyRepoState onRepoAdded={handleRepoAdded} />
+          <EmptyRepoState
+            onRepoAdded={handleRepoAdded}
+            persistenceLocked={persistenceLocked}
+            persistenceLockReason={persistenceLockReason}
+          />
         </main>
       </div>
     );

@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
 import type { RepoRoot, TabTheme } from "../shared/config.js";
+import { useConfig } from "../hooks/use_config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { useTabBarScroll } from "../hooks/use_tab_bar_scroll.js";
 import { AddRepoButton } from "./add_repo_button.js";
@@ -48,6 +49,9 @@ export function TabBar({
   onRepoChange,
   onRepoAdded,
 }: TabBarProps): React.JSX.Element {
+  const {
+    config: { agentDistro },
+  } = useConfig();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -163,11 +167,14 @@ export function TabBar({
 
   const handleOpenFolder = useCallback(async (root: RepoRoot) => {
     try {
-      await invoke("open_in_file_manager", { folderPath: root.path });
+      await invoke("open_in_file_manager", {
+        folderPath: root.path,
+        distroOverride: agentDistro,
+      });
     } catch (err) {
       console.error("[TabBar] Failed to open folder:", err);
     }
-  }, []);
+  }, [agentDistro]);
 
   /* Find open dropdown's tab + accent for rendering outside the track */
   const openTab = openDropdownId

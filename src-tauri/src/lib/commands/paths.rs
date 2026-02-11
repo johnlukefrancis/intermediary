@@ -8,6 +8,8 @@ use crate::paths::repo_root_resolver::{resolve_repo_root_from_input, RepoRootKin
 use crate::paths::wsl_convert::{run_wslpath, windows_to_wsl_path, wsl_to_windows_path};
 use tauri::{AppHandle, State};
 
+use super::wsl_distro::resolve_runtime_wsl_distro;
+
 /// Returns resolved application paths for staging, logging, etc.
 /// If `output_host_root` is provided, uses it as the staging root.
 #[tauri::command]
@@ -53,7 +55,11 @@ pub fn resolve_repo_root(input_path: String) -> Result<RepoRoot, String> {
 /// Convert a WSL path to Windows path format.
 /// Handles both /mnt/X/... paths (fast pure conversion) and native WSL paths (via wslpath).
 #[tauri::command]
-pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> {
+pub async fn convert_wsl_to_windows(
+    app: AppHandle,
+    wsl_path: String,
+    distro_override: Option<String>,
+) -> Result<String, String> {
     if !cfg!(target_os = "windows") {
         return Err(wsl_conversion_unsupported_error());
     }
@@ -64,9 +70,12 @@ pub async fn convert_wsl_to_windows(wsl_path: String) -> Result<String, String> 
     }
 
     // Native Linux path: call wslpath via subprocess
-    tauri::async_runtime::spawn_blocking(move || run_wslpath(&wsl_path).map_err(|e| e.to_string()))
-        .await
-        .map_err(|e| format!("Task join error: {e}"))?
+    let distro_override = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
+    tauri::async_runtime::spawn_blocking(move || {
+        run_wslpath(&wsl_path, distro_override.as_deref()).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
 }
 
 fn wsl_conversion_unsupported_error() -> String {

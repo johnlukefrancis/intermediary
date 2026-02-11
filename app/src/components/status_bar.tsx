@@ -58,6 +58,8 @@ export function StatusBar(): React.JSX.Element {
     setUiMode,
     loadError,
     saveError,
+    persistenceLocked,
+    persistenceLockReason,
     resetConfig,
     renameRepoLabel,
     renameGroupLabel,
@@ -85,11 +87,13 @@ export function StatusBar(): React.JSX.Element {
       : status === "connected"
         ? agentErrorMessage ?? helloState.lastError
         : connectionError;
-  const configErrorMessage = loadError
-    ? `Config load failed: ${loadError}`
-    : saveError
-      ? `Config save failed: ${saveError}`
-      : null;
+  const configErrorMessage = persistenceLocked
+    ? `Config persistence locked: ${persistenceLockReason ?? "Config load failed"}`
+    : loadError
+      ? `Config load failed: ${loadError}`
+      : saveError
+        ? `Config save failed: ${saveError}`
+        : null;
   const errorItems = [errorToShow, configErrorMessage].filter(
     (item): item is string => Boolean(item)
   );

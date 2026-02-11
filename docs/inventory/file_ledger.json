@@ -467,7 +467,7 @@
     },
     {
       "path": "app/src/styles/note_panel.css",
-      "summary": "Monospace textarea and DOCS|NOTES header toggle styles"
+      "summary": "Monospace textarea and notes-related panel header styles"
     },
     {
       "path": "app/src/styles/options_controls.css",
@@ -972,6 +972,10 @@
     {
       "path": "src-tauri/src/lib/commands/startup.rs",
       "summary": "Startup readiness command for splashscreen -> main transition"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/wsl_distro.rs",
+      "summary": "Resolve WSL distro override from persisted app config for command-time path conversion"
     },
     {
       "path": "src-tauri/src/lib/config/generated_code_globs.rs",

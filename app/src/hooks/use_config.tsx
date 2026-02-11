@@ -49,6 +49,10 @@ interface ConfigContextValue {
   loadError: string | null;
   /** Error message if save failed */
   saveError: string | null;
+  /** True when persistence is disabled due to startup config load failure */
+  persistenceLocked: boolean;
+  /** Reason why persistence is locked for this session */
+  persistenceLockReason: string | null;
   /** Update auto-stage global setting */
   setAutoStageGlobal: (value: boolean) => void;
   /** Update last active tab (by repoId) */
@@ -125,6 +129,8 @@ export function ConfigProvider({
     isLoaded,
     loadError,
     saveError,
+    persistenceLocked,
+    persistenceLockReason,
     saveConfig,
     saveConfigNow,
     resetConfig,
@@ -169,6 +175,8 @@ export function ConfigProvider({
     isLoaded,
     loadError,
     saveError,
+    persistenceLocked,
+    persistenceLockReason,
     setAutoStageGlobal,
     setLastActiveTabId,
     setLastActiveGroupRepoId,

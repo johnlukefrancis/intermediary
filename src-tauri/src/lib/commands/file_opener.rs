@@ -4,8 +4,10 @@
 use crate::config::types::RepoRoot;
 use std::path::{Component, Path};
 use std::process::Command;
+use tauri::AppHandle;
 
 use super::file_manager::resolve_host_path;
+use super::wsl_distro::resolve_runtime_wsl_distro;
 
 const TEXT_EXTENSIONS: &[&str] = &[
     "txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "jsonc",
@@ -58,16 +60,21 @@ fn validate_relative_path(relative_path: &str) -> Result<(), String> {
 
     Ok(())
 }
-fn resolve_host_file_path(root: &RepoRoot, relative_path: &str) -> Result<String, String> {
+fn resolve_host_file_path(
+    root: &RepoRoot,
+    relative_path: &str,
+    distro_override: Option<&str>,
+) -> Result<String, String> {
     let normalized_relative = relative_path.trim().replace('\\', "/");
     validate_relative_path(&normalized_relative)?;
 
     let absolute_path = build_absolute_repo_path(root, &normalized_relative)?;
-    resolve_host_path(&absolute_path)
+    resolve_host_path(&absolute_path, distro_override)
 }
 fn resolve_host_file_paths(
     root: &RepoRoot,
     relative_paths: &[String],
+    distro_override: Option<&str>,
 ) -> Result<Vec<String>, String> {
     if relative_paths.is_empty() {
         return Err("No files provided".to_string());
@@ -75,7 +82,7 @@ fn resolve_host_file_paths(
 
     let mut host_paths = Vec::with_capacity(relative_paths.len());
     for relative_path in relative_paths {
-        let host_path = resolve_host_file_path(root, relative_path)?;
+        let host_path = resolve_host_file_path(root, relative_path, distro_override)?;
         let path = Path::new(&host_path);
         if !path.exists() || path.is_dir() {
             return Err(format!("File does not exist: {host_path}"));
@@ -257,9 +264,15 @@ fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Resul
 }
 
 #[tauri::command]
-pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Result<(), String> {
+pub async fn reveal_in_file_manager(
+    app: AppHandle,
+    root: RepoRoot,
+    relative_path: String,
+    distro_override: Option<String>,
+) -> Result<(), String> {
+    let distro_override = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
     tauri::async_runtime::spawn_blocking(move || {
-        let host_path = resolve_host_file_path(&root, &relative_path)?;
+        let host_path = resolve_host_file_path(&root, &relative_path, distro_override.as_deref())?;
         let path = Path::new(&host_path);
         if !path.exists() || path.is_dir() {
             return Err(format!("File does not exist: {host_path}"));
@@ -304,12 +317,18 @@ pub async fn reveal_in_file_manager(root: RepoRoot, relative_path: String) -> Re
 }
 
 #[tauri::command]
-pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), String> {
+pub async fn open_file(
+    app: AppHandle,
+    root: RepoRoot,
+    relative_path: String,
+    distro_override: Option<String>,
+) -> Result<(), String> {
+    let distro_override = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
     tauri::async_runtime::spawn_blocking(move || {
         let relative_paths = vec![relative_path];
         open_paths_by_policy(
             &relative_paths,
-            &resolve_host_file_paths(&root, &relative_paths)?,
+            &resolve_host_file_paths(&root, &relative_paths, distro_override.as_deref())?,
         )
     })
     .await
@@ -317,11 +336,17 @@ pub async fn open_file(root: RepoRoot, relative_path: String) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub async fn open_files(root: RepoRoot, relative_paths: Vec<String>) -> Result<(), String> {
+pub async fn open_files(
+    app: AppHandle,
+    root: RepoRoot,
+    relative_paths: Vec<String>,
+    distro_override: Option<String>,
+) -> Result<(), String> {
+    let distro_override = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
     tauri::async_runtime::spawn_blocking(move || {
         open_paths_by_policy(
             &relative_paths,
-            &resolve_host_file_paths(&root, &relative_paths)?,
+            &resolve_host_file_paths(&root, &relative_paths, distro_override.as_deref())?,
         )
     })
     .await

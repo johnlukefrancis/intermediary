@@ -134,11 +134,12 @@ export function OptionsOverlay({
     try {
       await invoke("open_in_file_manager", {
         folderPath: appPaths.stagingHostRoot,
+        distroOverride: agentDistro,
       });
     } catch (err) {
       console.error("[OptionsOverlay] Failed to open output folder:", err);
     }
-  }, [appPaths?.stagingHostRoot]);
+  }, [agentDistro, appPaths?.stagingHostRoot]);
 
   // Derive theme entries from repos (grouped: one per groupId, ungrouped: one per repoId)
   const themeEntries = useMemo((): ThemeEntry[] => {

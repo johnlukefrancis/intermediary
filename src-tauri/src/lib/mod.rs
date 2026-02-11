@@ -19,6 +19,7 @@ use commands::paths::{
 };
 use commands::reset::reset_app_state;
 use commands::startup::{apply_launch_window_bounds, startup_ready};
+use commands::wsl_distro::WslDistroState;
 use obs::logging;
 use std::io::Error;
 use tauri::{Manager, RunEvent};
@@ -37,6 +38,7 @@ pub fn run() {
 
             apply_launch_window_bounds(app.handle());
             app.manage(AgentSupervisor::new());
+            app.manage(WslDistroState::default());
             let auth_state =
                 AgentWebSocketAuthState::from_app(app.handle()).map_err(Error::other)?;
             app.manage(auth_state);

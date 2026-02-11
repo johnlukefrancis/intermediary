@@ -10,3 +10,4 @@ pub mod notes;
 pub mod paths;
 pub mod reset;
 pub mod startup;
+pub mod wsl_distro;
