@@ -76,7 +76,7 @@ export function GeneralSection({
       <div className="options-section-title">General</div>
       <OptionsFieldRow
         label="Mode"
-        title="Layout density for the UI"
+        title="Preferred layout baseline; runtime mode can auto-switch between standard and handset based on window size"
         controlAlign="stretch"
         control={(
           <TriStateRocker

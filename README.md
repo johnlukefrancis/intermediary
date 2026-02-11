@@ -11,6 +11,7 @@ High-friction file/context handoff between local repos (often in WSL) and ChatGP
 A single-window "handoff console" that:
 - Watches repos for file changes (works reliably with WSL Linux filesystem)
 - Shows recently changed docs and code in separate columns
+- Auto-switches between standard and handset layouts by window size (hysteresis-based)
 - Generates zip bundles with provenance manifests
 - Enables drag-and-drop of files/bundles directly into browser upload zones
 

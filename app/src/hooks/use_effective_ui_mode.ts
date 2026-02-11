@@ -28,8 +28,8 @@ async function readWindowModeSnapshot(
 
 /**
  * Computes runtime mode used for rendering:
- * - preferred standard is always standard
- * - preferred handset can temporarily render standard on maximize/wide windows
+ * - selected mode is the baseline preference in config
+ * - runtime mode can switch on maximize/width thresholds in either direction
  */
 export function useEffectiveUiMode(
   preferredUiMode: UiMode,
@@ -43,16 +43,12 @@ export function useEffectiveUiMode(
       return;
     }
 
-    if (preferredUiMode === "standard") {
-      setEffectiveUiMode("standard");
-      return;
-    }
-
     let mounted = true;
     let unlistenResize: (() => void) | null = null;
 
     const updateEffectiveMode = async (
-      appWindow: ReturnType<typeof getCurrentWindow>
+      appWindow: ReturnType<typeof getCurrentWindow>,
+      previousModeOverride?: UiMode
     ): Promise<void> => {
       const snapshot = await readWindowModeSnapshot(appWindow);
       if (!mounted) {
@@ -61,10 +57,9 @@ export function useEffectiveUiMode(
 
       setEffectiveUiMode((previous) =>
         resolveEffectiveUiMode({
-          preferredMode: preferredUiMode,
           width: snapshot.width,
           maximized: snapshot.maximized,
-          previousEffectiveMode: previous,
+          previousEffectiveMode: previousModeOverride ?? previous,
         })
       );
     };
@@ -72,8 +67,8 @@ export function useEffectiveUiMode(
     const setup = async (): Promise<void> => {
       try {
         const appWindow = getCurrentWindow();
-        // Reset baseline on handset preference so hysteresis starts in handset.
-        setEffectiveUiMode("handset");
+        // Reset baseline to selected preference so hysteresis starts from user intent.
+        setEffectiveUiMode(preferredUiMode);
         const unlisten = await appWindow.onResized(() => {
           void updateEffectiveMode(appWindow).catch((error: unknown) => {
             console.warn("[useEffectiveUiMode] resize evaluation skipped:", error);
@@ -84,7 +79,7 @@ export function useEffectiveUiMode(
           return;
         }
         unlistenResize = unlisten;
-        await updateEffectiveMode(appWindow);
+        await updateEffectiveMode(appWindow, preferredUiMode);
       } catch (error) {
         // Tauri APIs can be unavailable in browser-only contexts.
         if (mounted) {

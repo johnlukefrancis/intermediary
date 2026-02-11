@@ -77,6 +77,15 @@ Depends on: ADR-000, ADR-006, ADR-007
   2. **Code** (recently changed code-like files)
   3. **Zip bundles** (bundle presets + recently built outputs)
 
+### Responsive mode behavior
+
+* The user-selected `uiMode` (`standard` or `handset`) is a preferred baseline, not a hard lock.
+* Runtime layout can auto-switch while resizing:
+  * Enter `standard` at `>= 980px`
+  * Return to `handset` at `<= 860px`
+* Maximized windows always render `standard`.
+* Hysteresis is required to avoid mode flapping around the breakpoint band.
+
 ### File item row
 
 * Filename + relative path

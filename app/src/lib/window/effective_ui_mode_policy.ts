@@ -3,13 +3,12 @@
 
 import type { UiMode } from "../../shared/config.js";
 
-/** Enter standard mode when handset-preferred width reaches this threshold. */
+/** Enter standard mode when handset-width transitions to desktop width. */
 export const ENTER_STANDARD_WIDTH = 980;
-/** Return to handset mode when width contracts to this threshold. */
+/** Return to handset mode when desktop-width transitions to handset width. */
 export const EXIT_HANDSET_WIDTH = 860;
 
 interface ResolveEffectiveUiModeInput {
-  preferredMode: UiMode;
   width: number;
   maximized: boolean;
   previousEffectiveMode: UiMode;
@@ -23,19 +22,15 @@ function normalizeWidth(width: number): number {
 }
 
 /**
- * For handset preference, maximize or wide windows temporarily render standard mode.
- * Hysteresis avoids mode flapping near the breakpoint.
+ * Runtime mode follows window geometry with hysteresis:
+ * - maximized windows always render standard
+ * - width thresholds avoid flapping near breakpoints
  */
 export function resolveEffectiveUiMode({
-  preferredMode,
   width,
   maximized,
   previousEffectiveMode,
 }: ResolveEffectiveUiModeInput): UiMode {
-  if (preferredMode === "standard") {
-    return "standard";
-  }
-
   if (maximized) {
     return "standard";
   }

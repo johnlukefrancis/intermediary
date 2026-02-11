@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-02-10 (Config-driven themes + responsive handset override)
+Updated on: 2026-02-11 (Config-driven themes + responsive handset override)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -299,14 +299,14 @@ UI mode now has two runtime layers:
 - **Preferred mode**: persisted `config.uiMode` (`standard` or `handset`) selected by the user in Options.
 - **Effective mode**: runtime render mode used by layout/CSS datasets.
 
-When preferred mode is `handset`, the app temporarily renders `standard` mode when window geometry is desktop-like:
+Runtime layout responds to window geometry from either preferred mode:
 
 - **Always standard while maximized**
 - **Width hysteresis**:
   - Enter standard at `>= 980px`
   - Return to handset at `<= 860px`
 
-This avoids gutter-heavy handset framing on maximized or wide windows while preserving user intent in config.
+Preferred mode remains the baseline intent used when entering the hysteresis deadband, while effective mode follows geometry at threshold crossings. This avoids flapping near breakpoints and keeps the layout responsive during live resize.
 
 Implementation anchors:
 

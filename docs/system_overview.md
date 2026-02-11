@@ -64,6 +64,7 @@ Intermediary uses a **host-routed architecture**:
 - **Key features:**
   - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
   - Three-column layout per repo: Docs, Code, Zip Bundles
+  - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Docs panel includes a per-repo plain-text Notes view (saved under app-local data)
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - Native drag-out via `tauri-plugin-drag`
