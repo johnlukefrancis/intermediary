@@ -254,6 +254,10 @@
       "summary": "Per-repo file state management with event subscription"
     },
     {
+      "path": "app/src/hooks/use_resume_detector.ts",
+      "summary": "Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals"
+    },
+    {
       "path": "app/src/hooks/use_starred_files.ts",
       "summary": "Hook exposing starred file state and actions for a repo"
     },

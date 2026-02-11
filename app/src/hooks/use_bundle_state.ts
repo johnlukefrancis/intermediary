@@ -233,6 +233,7 @@ export function useBundleState(
     client,
     connectionState,
     helloState,
+    rehydrateEpoch,
     config,
     resyncClientHello,
   } = useAgent();
@@ -599,7 +600,13 @@ export function useBundleState(
   useEffect(() => {
     refreshEpochRef.current += 1;
     clearAllRefreshRetries();
-  }, [repoId, connectionState.status, helloState.lastHelloAt, clearAllRefreshRetries]);
+  }, [
+    repoId,
+    connectionState.status,
+    helloState.lastHelloAt,
+    rehydrateEpoch,
+    clearAllRefreshRetries,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -687,7 +694,7 @@ export function useBundleState(
     ) {
       return;
     }
-    const refreshKey = `${repoId}:${activePresetId}:${helloState.lastHelloAt}`;
+    const refreshKey = `${repoId}:${activePresetId}:${helloState.lastHelloAt}:${rehydrateEpoch}`;
     if (lastRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -701,6 +708,7 @@ export function useBundleState(
     connectionState.status,
     helloState.status,
     helloState.lastHelloAt,
+    rehydrateEpoch,
     refreshBundles,
   ]);
 

@@ -236,6 +236,7 @@ Bundles should be self-identifying:
 * Auto-start can be disabled in Options.
 * Optional WSL distro override is supported for agent launch.
 * Users can manually restart the agent from Options.
+* On OS resume (sleep/wake), the UI triggers automatic recovery: it reconnects the WebSocket session and rehydrates repo/bundle state. Users may briefly see reconnect status, and stale transport errors should clear once backend status returns online.
 
 ---
 

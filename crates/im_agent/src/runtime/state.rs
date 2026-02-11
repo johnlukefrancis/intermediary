@@ -93,9 +93,6 @@ impl AgentRuntime {
         }
 
         for repo in parsed_config.repos.iter() {
-            if self.watchers.contains_key(&repo.repo_id) {
-                continue;
-            }
             let Some(repo_root) = repo.root.path_for_kind(self.supported_root_kind) else {
                 logger.info(
                     "Skipping unsupported repo root for runtime",
@@ -134,7 +131,10 @@ impl AgentRuntime {
                 );
                 continue;
             }
-            if let Err(err) = self.start_repo_watcher(repo, event_bus, logger).await {
+            if let Err(err) = self
+                .ensure_repo_watcher_running(repo, event_bus, logger)
+                .await
+            {
                 logger.error(
                     "Failed to start repo watcher",
                     Some(serde_json::json!({"repoId": repo.repo_id, "error": err.message()})),
@@ -164,7 +164,12 @@ impl AgentRuntime {
         event_bus: &EventBus,
         logger: &Logger,
     ) -> Result<WatchRepoResult, AgentError> {
-        if self.watchers.contains_key(repo_id) {
+        if self
+            .watchers
+            .get(repo_id)
+            .map(|watcher| !watcher.is_task_finished())
+            .unwrap_or(false)
+        {
             return Ok(WatchRepoResult {
                 repo_id: repo_id.to_string(),
             });
@@ -195,7 +200,7 @@ impl AgentRuntime {
             ));
         }
 
-        self.start_repo_watcher(&repo_config, event_bus, logger)
+        self.ensure_repo_watcher_running(&repo_config, event_bus, logger)
             .await?;
 
         Ok(WatchRepoResult {

@@ -58,7 +58,7 @@ function upsertFile(files: FileEntry[], entry: FileEntry, limit: number): FileEn
 }
 
 export function useRepoState(repoId: string): RepoState {
-  const { subscribe, client, connectionState, helloState } = useAgent();
+  const { subscribe, client, connectionState, helloState, rehydrateEpoch } = useAgent();
   const { config } = useConfig();
   const recentFilesLimit = config.recentFilesLimit;
 
@@ -174,7 +174,7 @@ export function useRepoState(repoId: string): RepoState {
       return;
     }
 
-    const refreshKey = `${repoId}:${helloState.lastHelloAt}`;
+    const refreshKey = `${repoId}:${helloState.lastHelloAt}:${rehydrateEpoch}`;
     if (lastHelloRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -251,6 +251,7 @@ export function useRepoState(repoId: string): RepoState {
     helloState.status,
     helloState.lastHelloAt,
     helloState.watchedRepoIds,
+    rehydrateEpoch,
   ]);
 
   return {

@@ -5,6 +5,7 @@ use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::repos::{RepoWatcher, RepoWatcherConfig};
 use crate::server::EventBus;
+use serde_json::json;
 
 use super::state::AgentRuntime;
 use super::RepoConfig;
@@ -22,7 +23,15 @@ impl AgentRuntime {
     }
 
     pub(crate) fn watched_repo_ids(&self) -> Vec<String> {
-        self.watchers.keys().cloned().collect()
+        self.watchers
+            .iter()
+            .filter_map(|(repo_id, watcher)| {
+                if watcher.is_task_finished() {
+                    return None;
+                }
+                Some(repo_id.clone())
+            })
+            .collect()
     }
 
     pub(crate) async fn start_repo_watcher(
@@ -73,5 +82,35 @@ impl AgentRuntime {
 
         self.watchers.insert(repo.repo_id.clone(), watcher);
         Ok(())
+    }
+
+    pub(crate) async fn ensure_repo_watcher_running(
+        &mut self,
+        repo: &RepoConfig,
+        event_bus: &EventBus,
+        logger: &Logger,
+    ) -> Result<(), AgentError> {
+        let repo_id = repo.repo_id.as_str();
+        let watcher_finished = self
+            .watchers
+            .get(repo_id)
+            .map(|watcher| watcher.is_task_finished())
+            .unwrap_or(false);
+
+        if watcher_finished {
+            logger.warn(
+                "Repo watcher task ended; restarting watcher",
+                Some(json!({ "repoId": repo_id })),
+            );
+            if let Some(watcher) = self.watchers.remove(repo_id) {
+                watcher.stop().await;
+            }
+        }
+
+        if self.watchers.contains_key(repo_id) {
+            return Ok(());
+        }
+
+        self.start_repo_watcher(repo, event_bus, logger).await
     }
 }

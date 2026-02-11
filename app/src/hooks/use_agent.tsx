@@ -18,6 +18,7 @@ import {
 } from "../lib/agent/agent_client.js";
 import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
 import { useClientHello } from "./use_client_hello.js";
+import { useResumeDetector } from "./use_resume_detector.js";
 import { extractAppConfig } from "../shared/config.js";
 import {
   type ConnectionState,
@@ -65,6 +66,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [appPaths, setAppPaths] = useState<AppPaths | null>(null);
   const [autoStageOnChange, setAutoStageOnChangeState] = useState(config.autoStageGlobal);
   const [client, setClient] = useState<AgentClient | null>(null);
+  const [rehydrateEpoch, setRehydrateEpoch] = useState(0);
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
   const helloSyncInFlightRef = useRef<Promise<boolean> | null>(null);
 
@@ -143,6 +145,30 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   });
   useAgentShutdown();
   const startupGateReady = !startupGateRequired || startupEnsureState === "ready";
+  const triggerResumeRecovery = useCallback((): void => {
+    setRehydrateEpoch((previous) => previous + 1);
+
+    if (!client) {
+      return;
+    }
+
+    if (
+      connectionState.status === "connected" ||
+      connectionState.status === "connecting" ||
+      connectionState.status === "reconnecting"
+    ) {
+      client.disconnect();
+      client.connect();
+      return;
+    }
+
+    client.connect();
+  }, [client, connectionState.status]);
+  useResumeDetector({
+    enabled: configIsLoaded && startupGateReady,
+    onResume: triggerResumeRecovery,
+  });
+
   useEffect(() => {
     if (!configIsLoaded || !startupGateReady) return;
 
@@ -272,6 +298,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     client,
     connectionState,
     helloState,
+    rehydrateEpoch,
     agentError,
     agentDiagnostics,
     platformSupportsWsl,

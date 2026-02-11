@@ -66,6 +66,7 @@ app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the 
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
+app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track

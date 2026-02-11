@@ -15,6 +15,7 @@ export interface AgentContextValue {
   client: AgentClient | null;
   connectionState: ConnectionState;
   helloState: HelloState;
+  rehydrateEpoch: number;
   agentError: AgentErrorEvent | null;
   agentDiagnostics: AgentDiagnostics | null;
   platformSupportsWsl: boolean;

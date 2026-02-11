@@ -143,6 +143,10 @@ impl RepoWatcher {
         mru.entries()
     }
 
+    pub fn is_task_finished(&self) -> bool {
+        self.task.is_finished()
+    }
+
     pub fn broadcast_snapshot(&self) {
         let repo_id = self.repo_id.clone();
         let event_bus = self.event_bus.clone();
