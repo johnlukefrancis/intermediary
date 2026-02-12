@@ -1,5 +1,5 @@
 # Agent Commands
-Updated on: 2026-02-11
+Updated on: 2026-02-12
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -16,7 +16,14 @@ pnpm run agent:dev
 Use `3142` when running as the backend under the host-agent model (`hostPort + 1`).
 When `INTERMEDIARY_WSL_WS_TOKEN` is unset, the launcher resolves `wslWsToken`
 from app-local `ws_auth.json` under the active Windows `%LOCALAPPDATA%` profile
-before falling back to `im_dev_wsl_token`.
+before falling back to `im_dev_wsl_token`. You can pin lookup with
+`INTERMEDIARY_WINDOWS_LOCALAPPDATA` or `INTERMEDIARY_WS_AUTH_FILE`.
+
+If this dev backend is launched separately from the app, run the app with
+`INTERMEDIARY_WSL_BACKEND_MODE=external` so supervisor stale-port remediation does
+not attempt to terminate externally managed port `3142` occupants.
+`INTERMEDIARY_WSL_BACKEND_MODE=managed` now enforces installed-backend ownership and
+will reject external occupants even when websocket auth succeeds.
 
 ## Type Check
 

@@ -7,19 +7,42 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 port="${INTERMEDIARY_AGENT_PORT:-3142}"
 
+resolve_windows_cmd_exe() {
+  if command -v cmd.exe >/dev/null 2>&1; then
+    local cmd_from_path=""
+    cmd_from_path="$(command -v cmd.exe 2>/dev/null || true)"
+    if [[ -n "${cmd_from_path}" && -x "${cmd_from_path}" ]]; then
+      printf '%s\n' "${cmd_from_path}"
+      return 0
+    fi
+  fi
+
+  local candidate
+  for candidate in /mnt/c/Windows/System32/cmd.exe /mnt/c/windows/system32/cmd.exe; do
+    if [[ -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 resolve_windows_local_app_data() {
   if [[ -n "${INTERMEDIARY_WINDOWS_LOCALAPPDATA:-}" ]]; then
     printf '%s\n' "${INTERMEDIARY_WINDOWS_LOCALAPPDATA}"
     return 0
   fi
 
-  if ! command -v cmd.exe >/dev/null 2>&1; then
+  local cmd_exe=""
+  cmd_exe="$(resolve_windows_cmd_exe || true)"
+  if [[ -z "${cmd_exe}" ]]; then
     return 1
   fi
 
   local raw_local_app_data=""
   raw_local_app_data="$(
-    cmd.exe /C "echo %LOCALAPPDATA%" 2>/dev/null \
+    "${cmd_exe}" /C "echo %LOCALAPPDATA%" 2>/dev/null \
       | tr -d '\r' \
       | tail -n 1
   )"
@@ -32,6 +55,11 @@ resolve_windows_local_app_data() {
 
 windows_path_to_wsl() {
   local windows_path="$1"
+
+  if [[ "${windows_path}" == /* ]]; then
+    printf '%s\n' "${windows_path}"
+    return 0
+  fi
 
   if command -v wslpath >/dev/null 2>&1; then
     local via_wslpath=""
@@ -53,6 +81,38 @@ windows_path_to_wsl() {
   return 1
 }
 
+resolve_local_app_data_from_user_fallback() {
+  local windows_username="${INTERMEDIARY_WINDOWS_USERNAME:-}"
+  local wsl_username="${USER:-}"
+  local windows_username_title=""
+  local wsl_username_title=""
+  if [[ -n "${windows_username}" ]]; then
+    windows_username_title="${windows_username^}"
+  fi
+  if [[ -n "${wsl_username}" ]]; then
+    wsl_username_title="${wsl_username^}"
+  fi
+
+  local user_candidate
+  for user_candidate in \
+    "${windows_username}" \
+    "${windows_username_title}" \
+    "${wsl_username}" \
+    "${wsl_username_title}"; do
+    if [[ -z "${user_candidate}" ]]; then
+      continue
+    fi
+
+    local candidate="/mnt/c/Users/${user_candidate}/AppData/Local"
+    if [[ -d "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
 resolve_ws_auth_file() {
   local explicit_auth_file="${INTERMEDIARY_WS_AUTH_FILE:-}"
   if [[ -n "${explicit_auth_file}" && -f "${explicit_auth_file}" ]]; then
@@ -62,12 +122,13 @@ resolve_ws_auth_file() {
 
   local local_app_data_win=""
   local_app_data_win="$(resolve_windows_local_app_data || true)"
-  if [[ -z "${local_app_data_win}" ]]; then
-    return 1
-  fi
-
   local local_app_data_wsl=""
-  local_app_data_wsl="$(windows_path_to_wsl "${local_app_data_win}" || true)"
+  if [[ -n "${local_app_data_win}" ]]; then
+    local_app_data_wsl="$(windows_path_to_wsl "${local_app_data_win}" || true)"
+  fi
+  if [[ -z "${local_app_data_wsl}" ]]; then
+    local_app_data_wsl="$(resolve_local_app_data_from_user_fallback || true)"
+  fi
   if [[ -z "${local_app_data_wsl}" ]]; then
     return 1
   fi
@@ -117,7 +178,7 @@ resolve_wsl_ws_token() {
     fi
     echo "Could not parse wslWsToken in ${auth_file}; falling back to dev token" >&2
   else
-    echo "ws_auth.json not found; falling back to dev token" >&2
+    echo "ws_auth.json not found (checked INTERMEDIARY_WS_AUTH_FILE, INTERMEDIARY_WINDOWS_LOCALAPPDATA, cmd.exe %LOCALAPPDATA%, and /mnt/c/Users/<user>/AppData/Local fallback); falling back to dev token" >&2
   fi
 
   printf '%s\n' "im_dev_wsl_token"

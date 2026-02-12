@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-02-11
+Updated on: 2026-02-12
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -11,6 +11,8 @@ The project includes VS Code tasks that handle sync and build automatically.
 
 Note: Installed builds auto-start the host agent (`3141`) and conditionally start the WSL backend (`3142`) when WSL repos are configured. During development these tasks launch the WSL backend from source on `3142`; the host remains app-managed on `3141`.
 When `INTERMEDIARY_WSL_WS_TOKEN` is not explicitly set, the WSL dev launcher resolves `wslWsToken` from the app auth file (`ws_auth.json`) under app local data so backend token auth matches the running app by default.
+Windows dev tasks that launch `WSL Agent: dev` now set `INTERMEDIARY_WSL_BACKEND_MODE=external` so the app treats port `3142` as externally managed and avoids in-distro terminate loops.
+`WSL Agent: dev` also sets `INTERMEDIARY_WINDOWS_LOCALAPPDATA` so token discovery stays deterministic even when WSL PATH does not expose Windows interop binaries.
 
 Important:
 - For repos rooted on mounted Windows paths (`/mnt/<drive>/...`), prefer the Windows tasks in this document.
@@ -83,7 +85,7 @@ pnpm run agent:dev
 The launcher resolves `INTERMEDIARY_WSL_WS_TOKEN` in this order:
 1. Explicit `INTERMEDIARY_WSL_WS_TOKEN` environment variable
 2. `wslWsToken` from `ws_auth.json` under the active Windows `%LOCALAPPDATA%` profile (`com.johnf.intermediary/agent/` then legacy `Intermediary/agent/`)
-3. Fallback dev token (`im_dev_wsl_token`) with a warning
+3. Fallback dev token (`im_dev_wsl_token`) with a warning (this usually indicates auth drift and will cause websocket `invalid_token` failures until corrected)
 
 ## Environment Variables
 
@@ -94,6 +96,8 @@ The VS Code tasks set these automatically:
 | `INTERMEDIARY_WIN_PATH` | Windows mirror directory | `D:\code\intermediary` |
 | `INTERMEDIARY_WSL_PATH` | WSL source directory | `/home/johnf/code/intermediary` |
 | `INTERMEDIARY_WSL_DISTRO` | WSL distro for VS Code tasks (sync scripts) | `Ubuntu` |
+| `INTERMEDIARY_WSL_BACKEND_MODE` | WSL backend ownership mode in app runtime (`external` in Windows dev tasks) | `external` |
+| `INTERMEDIARY_WINDOWS_LOCALAPPDATA` | Deterministic Windows app-local path used by WSL agent launcher to resolve `ws_auth.json` | `/mnt/c/Users/Johnf/AppData/Local` |
 | `INTERMEDIARY_LOG_DIR` | Log output directory (WSL UNC path) | `\\wsl$\Ubuntu\home\johnf\code\intermediary\logs` |
 
 **Note:** Native WSL paths (e.g., `/home/...`) are converted to Windows paths automatically via `wslpath` at runtime. Intermediary now uses persisted app config (`agentDistro`) as the primary distro authority for runtime conversion; `INTERMEDIARY_WSL_DISTRO` is mainly for dev scripts/tools and as a fallback when no app override is configured.

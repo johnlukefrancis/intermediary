@@ -1,7 +1,10 @@
 // Path: src-tauri/src/lib/agent/supervisor/lifecycle.rs
 // Description: Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 
-use super::{build_result, AgentSupervisor, EnsureProcessResult};
+use super::{
+    build_result, wsl::wsl_backend_mode_requires_managed_owner, AgentSupervisor,
+    EnsureProcessResult,
+};
 use crate::agent::install::resolve_launch_bundle;
 use crate::agent::supervisor_helpers::{
     resolve_expected_dirs, resolve_wsl_port, should_prefer_installed_bundle, ProcessKind,
@@ -109,7 +112,12 @@ impl AgentSupervisor {
                 unsupported_wsl_message.clone(),
             ));
         }
-        if host_auth_ok && requires_wsl && wsl_auth_ok {
+        if should_short_circuit_already_running_with_wsl(
+            host_auth_ok,
+            requires_wsl,
+            wsl_auth_ok,
+            wsl_backend_mode_requires_managed_owner(),
+        ) {
             self.set_last_error(None)?;
             return Ok(build_result(
                 AgentSupervisorStatus::AlreadyRunning,
@@ -216,5 +224,33 @@ fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Optio
     match secondary {
         Some(secondary) => Some(format!("{primary}. {secondary}")),
         None => Some(primary),
+    }
+}
+
+fn should_short_circuit_already_running_with_wsl(
+    host_auth_ok: bool,
+    requires_wsl: bool,
+    wsl_auth_ok: bool,
+    managed_owner_required: bool,
+) -> bool {
+    host_auth_ok && requires_wsl && wsl_auth_ok && !managed_owner_required
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_short_circuit_already_running_with_wsl;
+
+    #[test]
+    fn managed_mode_disables_wsl_already_running_fast_path() {
+        assert!(!should_short_circuit_already_running_with_wsl(
+            true, true, true, true
+        ));
+    }
+
+    #[test]
+    fn non_managed_mode_keeps_wsl_already_running_fast_path() {
+        assert!(should_short_circuit_already_running_with_wsl(
+            true, true, true, false
+        ));
     }
 }

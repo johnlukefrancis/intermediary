@@ -9,11 +9,45 @@ use crate::agent::supervisor_helpers::{
 };
 use crate::agent::types::AgentWebSocketAuth;
 use crate::agent::wsl_process_control::{
-    build_wsl_launch_target, format_wsl_target, spawn_wsl_agent_process,
+    build_wsl_launch_target, format_wsl_target, list_exact_wsl_agent_pids, spawn_wsl_agent_process,
     terminate_wsl_agent_process, WslLaunchTarget, WslTerminateOutcome,
 };
 use crate::obs::logging;
 use std::process::Child;
+
+const WSL_BACKEND_MODE_ENV: &str = "INTERMEDIARY_WSL_BACKEND_MODE";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WslBackendMode {
+    Auto,
+    Managed,
+    External,
+}
+
+impl WslBackendMode {
+    fn log_key(self) -> &'static str {
+        match self {
+            Self::Auto => "auto",
+            Self::Managed => "managed",
+            Self::External => "external",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WslBackendOwner {
+    InstalledManaged,
+    ExternalUnmanaged,
+}
+
+impl WslBackendOwner {
+    fn log_key(self) -> &'static str {
+        match self {
+            Self::InstalledManaged => "installed_managed",
+            Self::ExternalUnmanaged => "external_unmanaged",
+        }
+    }
+}
 
 impl AgentSupervisor {
     pub(super) async fn ensure_wsl_running(
@@ -25,18 +59,136 @@ impl AgentSupervisor {
         force: bool,
     ) -> Result<EnsureProcessResult, String> {
         let target = build_wsl_launch_target(bundle, distro)?;
-        self.set_wsl_launch_target(Some(target.clone()))?;
+        let (backend_mode, invalid_mode_raw) = resolve_wsl_backend_mode();
+        self.set_wsl_launch_target(None)?;
+        if let Some(invalid) = invalid_mode_raw {
+            logging::log(
+                "warn",
+                "agent",
+                "wsl_mode_invalid",
+                &format!(
+                    "invalid={invalid} env={WSL_BACKEND_MODE_ENV} defaulted=auto {}",
+                    format_wsl_target(&target)
+                ),
+            );
+        }
 
         if self.probe_listening(wsl_port).await? {
+            let installed_pid_count = self.detect_installed_wsl_pid_count(&target).await?;
+            let owner = if installed_pid_count > 0 {
+                WslBackendOwner::InstalledManaged
+            } else {
+                WslBackendOwner::ExternalUnmanaged
+            };
+            if owner == WslBackendOwner::ExternalUnmanaged {
+                self.reconcile_recorded_child(ProcessKind::Wsl, "external_unmanaged_detected")
+                    .await?;
+            }
+            logging::log(
+                "info",
+                "agent",
+                "wsl_owner_detected",
+                &format!(
+                    "mode={} owner={} installed_pid_count={installed_pid_count} port={wsl_port} {}",
+                    backend_mode.log_key(),
+                    owner.log_key(),
+                    format_wsl_target(&target)
+                ),
+            );
+
+            if !backend_mode_allows_owner(backend_mode, owner) {
+                let message = format!(
+                    "WSL backend mode=managed expected the installed backend process, but an external occupant is using port {wsl_port} ({})",
+                    format_wsl_target(&target)
+                );
+                logging::log(
+                    "warn",
+                    "agent",
+                    "wsl_external_unmanaged_auth_failed",
+                    &format!(
+                        "mode=managed owner=external_unmanaged port={wsl_port} {}",
+                        format_wsl_target(&target)
+                    ),
+                );
+                return Err(message);
+            }
+
             if self
                 .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
                 .await?
             {
+                if owner == WslBackendOwner::InstalledManaged
+                    && !matches!(backend_mode, WslBackendMode::External)
+                {
+                    self.set_wsl_launch_target(Some(target.clone()))?;
+                }
                 return Ok(EnsureProcessResult::AlreadyRunning);
             }
-            self.remediate_stale_wsl_port(wsl_port, &target).await?;
+
+            match (backend_mode, owner) {
+                (WslBackendMode::External, _) => {
+                    let message = format!(
+                        "WSL backend auth failed on port {wsl_port} while mode=external (owner={}, {}). Ensure the external backend token matches app websocket auth state.",
+                        owner.log_key(),
+                        format_wsl_target(&target)
+                    );
+                    logging::log(
+                        "warn",
+                        "agent",
+                        "wsl_external_unmanaged_auth_failed",
+                        &format!(
+                            "mode=external owner={} port={wsl_port} {}",
+                            owner.log_key(),
+                            format_wsl_target(&target)
+                        ),
+                    );
+                    return Err(message);
+                }
+                (WslBackendMode::Auto, WslBackendOwner::ExternalUnmanaged) => {
+                    let message = format!(
+                        "WSL backend port {wsl_port} is occupied by an external process that rejected the current websocket token ({}) and will not be terminated in mode=auto.",
+                        format_wsl_target(&target)
+                    );
+                    logging::log(
+                        "warn",
+                        "agent",
+                        "wsl_external_unmanaged_auth_failed",
+                        &format!(
+                            "mode=auto owner=external_unmanaged port={wsl_port} {}",
+                            format_wsl_target(&target)
+                        ),
+                    );
+                    return Err(message);
+                }
+                (WslBackendMode::Managed, WslBackendOwner::ExternalUnmanaged) => {
+                    let message = format!(
+                        "WSL backend mode=managed expected the installed backend process, but an external occupant is using port {wsl_port} ({})",
+                        format_wsl_target(&target)
+                    );
+                    logging::log(
+                        "warn",
+                        "agent",
+                        "wsl_external_unmanaged_auth_failed",
+                        &format!(
+                            "mode=managed owner=external_unmanaged port={wsl_port} {}",
+                            format_wsl_target(&target)
+                        ),
+                    );
+                    return Err(message);
+                }
+                (_, WslBackendOwner::InstalledManaged) => {
+                    self.set_wsl_launch_target(Some(target.clone()))?;
+                    self.remediate_stale_wsl_port(wsl_port, &target).await?;
+                }
+            }
+        } else if matches!(backend_mode, WslBackendMode::External) {
+            return Err(format!(
+                "WSL backend mode=external requires an externally managed backend listening on port {wsl_port} ({})",
+                format_wsl_target(&target)
+            ));
         }
 
+        self.set_wsl_launch_target(Some(target.clone()))?;
         self.reconcile_recorded_child(ProcessKind::Wsl, "port_probe_failed")
             .await?;
         if !force && self.is_in_backoff(ProcessKind::Wsl)? {
@@ -242,5 +394,110 @@ impl AgentSupervisor {
             .await
             .map_err(|err| format!("WSL stale retry backoff task failed: {err}"))?;
         Ok(())
+    }
+
+    async fn detect_installed_wsl_pid_count(
+        &self,
+        target: &WslLaunchTarget,
+    ) -> Result<usize, String> {
+        let target_for_probe = target.clone();
+        tauri::async_runtime::spawn_blocking(move || list_exact_wsl_agent_pids(&target_for_probe))
+            .await
+            .map_err(|err| format!("WSL owner-detection task failed: {err}"))?
+            .map(|pids| pids.len())
+    }
+}
+
+fn resolve_wsl_backend_mode() -> (WslBackendMode, Option<String>) {
+    let raw = std::env::var(WSL_BACKEND_MODE_ENV).ok();
+    parse_wsl_backend_mode(raw.as_deref())
+}
+
+pub(super) fn wsl_backend_mode_requires_managed_owner() -> bool {
+    matches!(resolve_wsl_backend_mode().0, WslBackendMode::Managed)
+}
+
+fn parse_wsl_backend_mode(raw: Option<&str>) -> (WslBackendMode, Option<String>) {
+    let Some(raw_mode) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return (WslBackendMode::Auto, None);
+    };
+
+    if raw_mode.eq_ignore_ascii_case("auto") {
+        return (WslBackendMode::Auto, None);
+    }
+    if raw_mode.eq_ignore_ascii_case("managed") {
+        return (WslBackendMode::Managed, None);
+    }
+    if raw_mode.eq_ignore_ascii_case("external") {
+        return (WslBackendMode::External, None);
+    }
+
+    (WslBackendMode::Auto, Some(raw_mode.to_string()))
+}
+
+fn backend_mode_allows_owner(mode: WslBackendMode, owner: WslBackendOwner) -> bool {
+    !matches!(
+        (mode, owner),
+        (WslBackendMode::Managed, WslBackendOwner::ExternalUnmanaged)
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        backend_mode_allows_owner, parse_wsl_backend_mode, WslBackendMode, WslBackendOwner,
+    };
+
+    #[test]
+    fn parse_wsl_backend_mode_defaults_to_auto_when_missing_or_empty() {
+        let (mode_missing, invalid_missing) = parse_wsl_backend_mode(None);
+        assert_eq!(mode_missing, WslBackendMode::Auto);
+        assert_eq!(invalid_missing, None);
+
+        let (mode_empty, invalid_empty) = parse_wsl_backend_mode(Some("  "));
+        assert_eq!(mode_empty, WslBackendMode::Auto);
+        assert_eq!(invalid_empty, None);
+    }
+
+    #[test]
+    fn parse_wsl_backend_mode_accepts_supported_values_case_insensitively() {
+        let (auto_mode, auto_invalid) = parse_wsl_backend_mode(Some("AUTO"));
+        assert_eq!(auto_mode, WslBackendMode::Auto);
+        assert_eq!(auto_invalid, None);
+
+        let (managed_mode, managed_invalid) = parse_wsl_backend_mode(Some("managed"));
+        assert_eq!(managed_mode, WslBackendMode::Managed);
+        assert_eq!(managed_invalid, None);
+
+        let (external_mode, external_invalid) = parse_wsl_backend_mode(Some("External"));
+        assert_eq!(external_mode, WslBackendMode::External);
+        assert_eq!(external_invalid, None);
+    }
+
+    #[test]
+    fn parse_wsl_backend_mode_reports_invalid_value() {
+        let (mode, invalid) = parse_wsl_backend_mode(Some("sidecar"));
+        assert_eq!(mode, WslBackendMode::Auto);
+        assert_eq!(invalid, Some("sidecar".to_string()));
+    }
+
+    #[test]
+    fn managed_mode_requires_installed_owner() {
+        assert!(backend_mode_allows_owner(
+            WslBackendMode::Auto,
+            WslBackendOwner::ExternalUnmanaged
+        ));
+        assert!(backend_mode_allows_owner(
+            WslBackendMode::External,
+            WslBackendOwner::ExternalUnmanaged
+        ));
+        assert!(backend_mode_allows_owner(
+            WslBackendMode::Managed,
+            WslBackendOwner::InstalledManaged
+        ));
+        assert!(!backend_mode_allows_owner(
+            WslBackendMode::Managed,
+            WslBackendOwner::ExternalUnmanaged
+        ));
     }
 }

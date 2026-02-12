@@ -33,15 +33,23 @@ pub(super) fn build_wsl_spawn_command_line(
     )
 }
 
-pub(super) fn build_wsl_probe_command_line(agent_bin_wsl: &str) -> String {
-    format!("pgrep -f {} >/dev/null", quote_bash(agent_bin_wsl))
+pub(super) fn build_wsl_list_exact_pids_command_line(agent_bin_wsl: &str) -> String {
+    let target = quote_bash(agent_bin_wsl);
+    format!(
+        "target={target}; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; fi; done"
+    )
 }
 
-pub(super) fn build_wsl_signal_command_line(agent_bin_wsl: &str, signal: &str) -> String {
-    format!(
-        "pgrep -f {} | awk -v self=$$ '$1 != self' | xargs -r kill -{signal}",
-        quote_bash(agent_bin_wsl)
-    )
+pub(super) fn build_wsl_signal_pids_command_line(pids: &[u32], signal: &str) -> String {
+    if pids.is_empty() {
+        return "true".to_string();
+    }
+    let pid_list = pids
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<String>>()
+        .join(" ");
+    format!("kill -{signal} {pid_list}")
 }
 
 pub(super) fn normalize_distro(distro: Option<&str>) -> Option<String> {
@@ -69,8 +77,8 @@ fn quote_bash(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_wsl_bash_args, build_wsl_signal_command_line, build_wsl_spawn_command_line,
-        normalize_distro,
+        build_wsl_bash_args, build_wsl_list_exact_pids_command_line,
+        build_wsl_signal_pids_command_line, build_wsl_spawn_command_line, normalize_distro,
     };
 
     #[test]
@@ -84,15 +92,26 @@ mod tests {
     }
 
     #[test]
-    fn wsl_signal_command_targets_absolute_agent_path() {
-        let command = build_wsl_signal_command_line(
+    fn wsl_list_exact_pids_command_targets_absolute_agent_path() {
+        let command = build_wsl_list_exact_pids_command_line(
             "/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent",
-            "TERM",
         );
         assert_eq!(
             command,
-            "pgrep -f '/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent' | awk -v self=$$ '$1 != self' | xargs -r kill -TERM"
+            "target='/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent'; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; fi; done"
         );
+    }
+
+    #[test]
+    fn wsl_signal_command_targets_explicit_pid_list() {
+        let command = build_wsl_signal_pids_command_line(&[12, 34, 56], "TERM");
+        assert_eq!(command, "kill -TERM 12 34 56");
+    }
+
+    #[test]
+    fn wsl_signal_command_empty_pid_list_is_noop() {
+        let command = build_wsl_signal_pids_command_line(&[], "KILL");
+        assert_eq!(command, "true");
     }
 
     #[test]
