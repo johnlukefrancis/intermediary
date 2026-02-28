@@ -5,11 +5,13 @@ mod commands;
 mod envelopes;
 mod events;
 mod responses;
+mod responses_tr_fleet;
 
 pub use commands::{
     BuildBundleCommand, BundleSelection, ClientHelloCommand, GetRepoTopLevelCommand,
-    GlobalExcludes, ListBundlesCommand, RefreshCommand, SetOptionsCommand, StageFileCommand,
-    UiCommand, WatchRepoCommand,
+    GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand, RefreshCommand,
+    SetOptionsCommand, StageFileCommand, TrFleetActionCommand, TrFleetActionPayload,
+    TrFleetWatchBackend, UiCommand, WatchRepoCommand,
 };
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
@@ -23,6 +25,12 @@ pub use responses::{
     BuildBundleResult, BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult,
     RefreshResult, SetOptionsResult, StageFileResult, UiResponse, WatchRepoResult,
 };
+pub use responses_tr_fleet::{
+    GetTrFleetStatusResult, TrFleetActionKind, TrFleetActionResult, TrFleetEndpointError,
+    TrFleetEndpointErrorCode, TrFleetTargetStatus,
+};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tr_fleet_tests;

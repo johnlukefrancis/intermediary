@@ -194,6 +194,10 @@ pub async fn dispatch_command(
                 },
             ))
         }
+        UiCommand::GetTrFleetStatus(_) | UiCommand::TrFleetAction(_) => Err(AgentError::new(
+            "UNSUPPORTED_COMMAND",
+            "TR fleet commands are supported only by the host agent",
+        )),
         UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
     }
 }

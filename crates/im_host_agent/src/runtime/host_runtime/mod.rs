@@ -20,6 +20,7 @@ use crate::runtime::host_runtime_helpers::{
 };
 use crate::runtime::local_host_backend::LocalHostBackend;
 use crate::runtime::router::resolve_repo_backend;
+use crate::runtime::tr_fleet_service::TrFleetService;
 use crate::runtime::wsl_client_hello_cache::WslClientHelloCache;
 use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
@@ -36,6 +37,7 @@ pub struct HostRuntime {
     wsl_transport_state: WslTransportEpochState,
     wsl_port: u16,
     wsl_ws_token: String,
+    tr_fleet_service: TrFleetService,
     logger: Logger,
 }
 
@@ -49,6 +51,7 @@ impl HostRuntime {
             wsl_transport_state: WslTransportEpochState::default(),
             wsl_port,
             wsl_ws_token,
+            tr_fleet_service: TrFleetService::new(),
             logger,
         }
     }
@@ -69,6 +72,14 @@ impl HostRuntime {
             UiCommand::SetOptions(command) => {
                 let result = self.handle_set_options(command, event_bus).await;
                 Ok(UiResponse::SetOptionsResult(result))
+            }
+            UiCommand::GetTrFleetStatus(_) => {
+                let result = self.tr_fleet_service.get_tr_fleet_status().await;
+                Ok(UiResponse::GetTrFleetStatusResult(result))
+            }
+            UiCommand::TrFleetAction(command) => {
+                let result = self.tr_fleet_service.run_tr_fleet_action(command).await?;
+                Ok(UiResponse::TrFleetActionResult(result))
             }
             UiCommand::WatchRepo(_)
             | UiCommand::Refresh(_)
@@ -225,9 +236,11 @@ impl HostRuntime {
                 let result = self.local_backend.list_bundles(command).await?;
                 Ok(UiResponse::ListBundlesResult(result))
             }
-            UiCommand::ClientHello(_) | UiCommand::SetOptions(_) | UiCommand::Unknown => {
-                Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command"))
-            }
+            UiCommand::ClientHello(_)
+            | UiCommand::SetOptions(_)
+            | UiCommand::GetTrFleetStatus(_)
+            | UiCommand::TrFleetAction(_)
+            | UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
     }
 

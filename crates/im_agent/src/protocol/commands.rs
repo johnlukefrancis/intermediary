@@ -133,6 +133,39 @@ pub struct ListBundlesCommand {
     pub preset_id: String,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTrFleetStatusCommand {}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TrFleetWatchBackend {
+    #[default]
+    Auto,
+    Native,
+    Poll,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "action", rename_all = "camelCase")]
+pub enum TrFleetActionPayload {
+    Rebuild {
+        port: u16,
+    },
+    RestartWatch {
+        port: u16,
+        #[serde(default)]
+        backend: TrFleetWatchBackend,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrFleetActionCommand {
+    #[serde(flatten)]
+    pub payload: TrFleetActionPayload,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum UiCommand {
@@ -152,6 +185,10 @@ pub enum UiCommand {
     GetRepoTopLevel(GetRepoTopLevelCommand),
     #[serde(rename = "listBundles")]
     ListBundles(ListBundlesCommand),
+    #[serde(rename = "getTrFleetStatus")]
+    GetTrFleetStatus(GetTrFleetStatusCommand),
+    #[serde(rename = "trFleetAction")]
+    TrFleetAction(TrFleetActionCommand),
     #[serde(other)]
     Unknown,
 }
@@ -167,6 +204,8 @@ impl UiCommand {
             UiCommand::BuildBundle(_) => "buildBundle",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
             UiCommand::ListBundles(_) => "listBundles",
+            UiCommand::GetTrFleetStatus(_) => "getTrFleetStatus",
+            UiCommand::TrFleetAction(_) => "trFleetAction",
             UiCommand::Unknown => "unknown",
         }
     }

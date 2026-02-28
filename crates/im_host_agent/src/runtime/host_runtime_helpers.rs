@@ -54,7 +54,11 @@ pub(super) fn repo_id_from_command(command: &UiCommand) -> Option<&str> {
         UiCommand::BuildBundle(command) => Some(&command.repo_id),
         UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),
         UiCommand::ListBundles(command) => Some(&command.repo_id),
-        UiCommand::ClientHello(_) | UiCommand::SetOptions(_) | UiCommand::Unknown => None,
+        UiCommand::ClientHello(_)
+        | UiCommand::SetOptions(_)
+        | UiCommand::GetTrFleetStatus(_)
+        | UiCommand::TrFleetAction(_)
+        | UiCommand::Unknown => None,
     }
 }
 

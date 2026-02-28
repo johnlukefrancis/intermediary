@@ -390,6 +390,10 @@
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
     {
+      "path": "app/src/shared/protocol_tr_fleet.ts",
+      "summary": "TR fleet command/response schemas for build-server status and recovery controls"
+    },
+    {
       "path": "app/src/shared/protocol.ts",
       "summary": "Agent<->UI WebSocket protocol types with Zod validation"
     },
@@ -591,7 +595,7 @@
     },
     {
       "path": "crates/im_agent/src/logging/json_logger.rs",
-      "summary": "JSONL logger that writes to agent_latest.log and stdout/stderr"
+      "summary": "JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr"
     },
     {
       "path": "crates/im_agent/src/logging/mod.rs",
@@ -618,12 +622,20 @@
       "summary": "WebSocket protocol types for the agent"
     },
     {
+      "path": "crates/im_agent/src/protocol/responses_tr_fleet.rs",
+      "summary": "TR fleet response payload types for host-agent build-server control"
+    },
+    {
       "path": "crates/im_agent/src/protocol/responses.rs",
       "summary": "Agent-to-UI response payloads for the WebSocket protocol"
     },
     {
       "path": "crates/im_agent/src/protocol/tests.rs",
       "summary": "Protocol envelope serialization and backward-compat tests"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tr_fleet_tests.rs",
+      "summary": "TR fleet protocol command/response serialization tests"
     },
     {
       "path": "crates/im_agent/src/repos/categorizer.rs",
@@ -824,6 +836,10 @@
     {
       "path": "crates/im_host_agent/src/runtime/router.rs",
       "summary": "Repo-id command routing for host-agent backend selection"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/tr_fleet_service.rs",
+      "summary": "Host-agent TR fleet status polling and recovery action execution"
     },
     {
       "path": "crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs",

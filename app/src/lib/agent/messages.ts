@@ -13,6 +13,9 @@ import type {
   BuildBundleResult,
   ListBundlesResult,
   BundleSelection,
+  TrFleetActionCommand,
+  TrFleetActionResult,
+  GetTrFleetStatusResult,
 } from "../../shared/protocol.js";
 
 function shouldRetryWithLegacyHelloConfig(error: unknown): boolean {
@@ -160,4 +163,19 @@ export async function sendListBundles(
     repoId,
     presetId,
   });
+}
+
+export async function sendGetTrFleetStatus(
+  client: AgentClient
+): Promise<GetTrFleetStatusResult> {
+  return client.send<GetTrFleetStatusResult>({
+    type: "getTrFleetStatus",
+  });
+}
+
+export async function sendTrFleetAction(
+  client: AgentClient,
+  command: TrFleetActionCommand
+): Promise<TrFleetActionResult> {
+  return client.send<TrFleetActionResult>(command);
 }

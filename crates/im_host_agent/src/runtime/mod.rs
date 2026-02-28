@@ -6,6 +6,7 @@ mod host_runtime_helpers;
 mod local_host_backend;
 mod repo_backend;
 mod router;
+mod tr_fleet_service;
 mod wsl_client_hello_cache;
 
 pub use host_runtime::HostRuntime;

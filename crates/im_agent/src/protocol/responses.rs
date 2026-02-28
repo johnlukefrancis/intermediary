@@ -3,6 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::responses_tr_fleet::{GetTrFleetStatusResult, TrFleetActionResult};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientHelloResult {
@@ -255,4 +257,8 @@ pub enum UiResponse {
     GetRepoTopLevelResult(GetRepoTopLevelResult),
     #[serde(rename = "listBundlesResult")]
     ListBundlesResult(ListBundlesResult),
+    #[serde(rename = "getTrFleetStatusResult")]
+    GetTrFleetStatusResult(GetTrFleetStatusResult),
+    #[serde(rename = "trFleetActionResult")]
+    TrFleetActionResult(TrFleetActionResult),
 }

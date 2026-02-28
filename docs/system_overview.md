@@ -138,6 +138,8 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `buildBundle { repoId, presetId, selection } → buildBundleResult`
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
+- `getTrFleetStatus {} → getTrFleetStatusResult` (host-agent only; polls TR build ports 5601–5605 `__trdev/status` + `__trdev/doctor`)
+- `trFleetAction { action, port, backend? } → trFleetActionResult` (host-agent only; `rebuild` / `restartWatch` with control header)
 
 ### Lifecycle recovery behavior
 

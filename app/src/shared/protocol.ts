@@ -5,36 +5,30 @@ import { z } from "zod";
 import { AppConfigSchema } from "./config.js";
 import { GlobalExcludesSchema } from "./global_excludes.js";
 import { AgentEventSchema, type AgentEvent } from "./protocol_events.js";
+import {
+  GetTrFleetStatusCommandSchema,
+  GetTrFleetStatusResultSchema,
+  TrFleetActionCommandSchema,
+  TrFleetActionResultSchema,
+} from "./protocol_tr_fleet.js";
 export {
-  AgentErrorCodeSchema,
-  AgentEventSchema,
-  BundleBuildPhaseSchema,
-  BundleBuildProgressEventSchema,
-  BundleBuiltEventSchema,
-  ErrorEventSchema,
-  FileChangeTypeSchema,
-  FileChangedEventSchema,
-  FileEntrySchema,
-  FileKindSchema,
-  HelloEventSchema,
-  SnapshotEventSchema,
-  StagedInfoSchema,
-  WslBackendConnectionStatusSchema,
-  WslBackendStatusEventSchema,
-  type AgentErrorCode,
-  type AgentErrorEvent,
-  type AgentEvent,
-  type BundleBuildPhase,
-  type BundleBuildProgressEvent,
-  type BundleBuiltEvent,
-  type FileChangeType,
-  type FileChangedEvent,
-  type FileEntry,
-  type FileKind,
-  type StagedInfo,
-  type WslBackendConnectionStatus,
-  type WslBackendStatusEvent,
+  AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
+  BundleBuiltEventSchema, ErrorEventSchema, FileChangeTypeSchema, FileChangedEventSchema,
+  FileEntrySchema, FileKindSchema, HelloEventSchema, SnapshotEventSchema, StagedInfoSchema,
+  WslBackendConnectionStatusSchema, WslBackendStatusEventSchema, type AgentErrorCode,
+  type AgentErrorEvent, type AgentEvent, type BundleBuildPhase, type BundleBuildProgressEvent,
+  type BundleBuiltEvent, type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
+  type StagedInfo, type WslBackendConnectionStatus, type WslBackendStatusEvent,
 } from "./protocol_events.js";
+export {
+  GetTrFleetStatusCommandSchema, GetTrFleetStatusResultSchema, TrFleetActionCommandSchema,
+  TrFleetActionResultSchema, TrFleetActionKindSchema, TrFleetEndpointErrorCodeSchema,
+  TrFleetEndpointErrorSchema, TrFleetPortSchema, TrFleetTargetStatusSchema,
+  TrFleetWatchBackendSchema, type GetTrFleetStatusCommand, type GetTrFleetStatusResult,
+  type TrFleetActionCommand, type TrFleetActionKind, type TrFleetActionResult,
+  type TrFleetEndpointError, type TrFleetEndpointErrorCode, type TrFleetPort,
+  type TrFleetTargetStatus, type TrFleetWatchBackend,
+} from "./protocol_tr_fleet.js";
 
 // -----------------------------------------------------------------------------
 // UI -> Agent commands (payloads)
@@ -119,6 +113,8 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   SetOptionsCommandSchema,
   GetRepoTopLevelCommandSchema,
   ListBundlesCommandSchema,
+  GetTrFleetStatusCommandSchema,
+  TrFleetActionCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
 
@@ -210,6 +206,8 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   SetOptionsResultSchema,
   GetRepoTopLevelResultSchema,
   ListBundlesResultSchema,
+  GetTrFleetStatusResultSchema,
+  TrFleetActionResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 
