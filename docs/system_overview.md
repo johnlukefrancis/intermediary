@@ -1,12 +1,12 @@
 # Intermediary System Overview
 
-Updated on: 2026-02-11
+Updated on: 2026-03-27
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
 ## Goal
 
-Reduce friction when sharing files and context bundles between local repos (often in WSL) and browser-based LLM interfaces like ChatGPT. Intermediary is a single-window "handoff console" that surfaces recently changed files and generates standardized zip bundles for drag-and-drop sharing.
+Reduce friction when sharing trustworthy local repo context with browser-based LLM interfaces like ChatGPT. Intermediary is a single-window "handoff console" that surfaces recently changed files, stages drag-and-drop-safe copies, and generates standardized timestamped bundles so users can hand off either broad repo context or the latest incremental files without Explorer and `\\wsl$` friction.
 
 Maintainer-validated runtime today is Windows 10/11. WSL2 is the recommended path for the full WSL-backed workflow, while host-native Windows repo workflows are also validated. The codebase includes host-native paths beyond that target, but macOS and Linux are not yet validated to the same standard.
 

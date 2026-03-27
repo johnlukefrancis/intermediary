@@ -3,6 +3,7 @@
 
 import { createHash } from "node:crypto";
 import {
+  access,
   copyFile,
   mkdir,
   readdir,
@@ -14,15 +15,19 @@ import path from "node:path";
 import process from "node:process";
 
 const repoRoot = process.cwd();
-const bundleRoot = path.join(repoRoot, "src-tauri", "target", "release", "bundle");
 const outputRoot = path.join(repoRoot, "artifacts", "windows-release");
 const allowedExtensions = new Set([".exe", ".msi", ".zip", ".msix", ".appx"]);
+const bundleRootCandidates = [
+  path.join(repoRoot, "target", "release", "bundle"),
+  path.join(repoRoot, "src-tauri", "target", "release", "bundle"),
+];
 
 async function main() {
+  const bundleRoot = await resolveBundleRoot();
   const sourceFiles = await collectReleaseFiles(bundleRoot);
   if (sourceFiles.length === 0) {
     throw new Error(
-      "No Windows release artifacts were found under src-tauri/target/release/bundle."
+      `No Windows release artifacts were found under ${bundleRoot}.`
     );
   }
 
@@ -59,6 +64,25 @@ async function main() {
   for (const asset of manifest) {
     console.log(`- ${asset.path}`);
   }
+}
+
+async function resolveBundleRoot() {
+  for (const candidate of bundleRootCandidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Try the next known Tauri bundle location.
+    }
+  }
+
+  throw new Error(
+    [
+      "No Windows release bundle directory was found.",
+      "Checked:",
+      ...bundleRootCandidates.map((candidate) => `- ${candidate}`),
+    ].join("\n")
+  );
 }
 
 async function collectReleaseFiles(rootDir) {
