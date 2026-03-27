@@ -32,7 +32,7 @@ If you use a bundle-first prompting workflow, the companion doc is [docs/environ
 | Environment | Status | Notes |
 | --- | --- | --- |
 | Windows 10/11 + WSL2 | Maintainer-validated | This is the only runtime validated end-to-end by the maintainer today. |
-| Windows 10/11 without WSL2 | Partial | Host-native paths exist, but the repo's core workflow story assumes WSL-backed development. |
+| Windows 10/11 without WSL2 | Unvalidated | Some host-native code paths exist, but this runtime is not maintainer-validated and is not the recommended public path. |
 | macOS | Experimental | Code paths exist in places, but the maintainer has not validated macOS to the same standard as Windows + WSL2. |
 | Linux | Experimental | Code paths exist in places, but the maintainer has not validated Linux to the same standard as Windows + WSL2. |
 
