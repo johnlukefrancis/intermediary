@@ -1,0 +1,144 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux_agent_bundle:
+    name: Build Linux Agent Bundle
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Validate version contract
+        run: node scripts/release/check_versions.mjs
+
+      - name: Build bundled Linux im_agent
+        run: bash ./scripts/build/build_agent_bundle.sh
+
+      - name: Upload Linux agent bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-agent-bundle
+          if-no-files-found: error
+          path: |
+            src-tauri/resources/agent_bundle/im_agent
+            src-tauri/resources/agent_bundle/version.json
+
+  windows_release_build:
+    name: Build Windows Release Artifacts
+    runs-on: windows-latest
+    needs: linux_agent_bundle
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive release version from tag
+        shell: pwsh
+        run: |
+          $raw = "${{ github.ref_name }}"
+          if (-not $raw.StartsWith("v")) {
+            throw "Release tag must start with v."
+          }
+          $version = $raw.Substring(1)
+          "INTERMEDIARY_RELEASE_VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Download Linux agent bundle artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-agent-bundle
+          path: src-tauri/resources/agent_bundle
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Windows bundler dependencies
+        shell: pwsh
+        run: choco install nsis wixtoolset --no-progress -y
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate version contract against tag
+        shell: pwsh
+        run: node scripts/release/check_versions.mjs --expect-version $env:INTERMEDIARY_RELEASE_VERSION
+
+      - name: Run frontend and Rust checks
+        run: |
+          pnpm exec tsc --noEmit
+          pnpm exec eslint
+          cargo check
+
+      - name: Validate agent bundle contract
+        run: node scripts/build/ensure_agent_bundle.mjs
+
+      - name: Build Windows Tauri bundles
+        run: pnpm tauri build
+
+      - name: Stage Windows release artifacts
+        run: node scripts/release/stage_windows_release_assets.mjs
+
+      - name: Upload Windows release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-artifacts
+          if-no-files-found: error
+          path: artifacts/windows-release/**
+
+  publish_release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: windows_release_build
+
+    steps:
+      - name: Download Windows release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release-artifacts
+          path: artifacts/windows-release
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/windows-release/**/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

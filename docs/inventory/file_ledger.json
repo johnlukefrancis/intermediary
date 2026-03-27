@@ -906,6 +906,22 @@
       "summary": "Resize preview geometry icons from raw assets to display sizes. Outputs 40px (1x) and 80px (2x retina) versions."
     },
     {
+      "path": "scripts/release/bump_version.mjs",
+      "summary": "Update all release-facing version files to a single Intermediary version."
+    },
+    {
+      "path": "scripts/release/check_versions.mjs",
+      "summary": "Validate that all public Intermediary version files stay in lockstep."
+    },
+    {
+      "path": "scripts/release/stage_windows_release_assets.mjs",
+      "summary": "Collect Windows bundle outputs into a release artifact directory with sha256 files."
+    },
+    {
+      "path": "scripts/release/version_contract.mjs",
+      "summary": "Shared version-contract helpers for Intermediary release automation."
+    },
+    {
       "path": "scripts/zip/zip_bundles.mjs",
       "summary": "Builds timestamped Intermediary zip bundles for ChatGPT context."
     },

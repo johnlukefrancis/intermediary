@@ -229,6 +229,10 @@ scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + d
 scripts/fileledger/gen_file_ledger.mjs - Generates human+machine file ledgers for Intermediary code sources.
 scripts/icons/generate_icons.mjs - Generate all icon sizes from a source PNG. Usage: node scripts/generate_icons.mjs [source.png] Default source: app/as...
 scripts/icons/resize_preview_icons.mjs - Resize preview geometry icons from raw assets to display sizes. Outputs 40px (1x) and 80px (2x retina) versions.
+scripts/release/bump_version.mjs - Update all release-facing version files to a single Intermediary version.
+scripts/release/check_versions.mjs - Validate that all public Intermediary version files stay in lockstep.
+scripts/release/stage_windows_release_assets.mjs - Collect Windows bundle outputs into a release artifact directory with sha256 files.
+scripts/release/version_contract.mjs - Shared version-contract helpers for Intermediary release automation.
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
