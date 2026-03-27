@@ -1,198 +1,81 @@
 # Intermediary
 
-A workflow handoff console for agentic coding workflows. Surfaces recently changed files and generates standardized zip bundles that can be dragged directly into ChatGPT (or anywhere).
+Intermediary is a desktop handoff console for agent-assisted local development. It watches the repos you care about, keeps recent docs and code close at hand, and builds timestamped context bundles you can drag into browser-based LLM tools without hunting through Explorer, Finder, or `\\wsl$`.
+
+![Intermediary window](assets/readme/intermediary_window.png)
 
 ## Problem
 
-High-friction file/context handoff between local repos (often in WSL) and ChatGPT/browser-based workflows.
+Agent workflows break down when the "last mile" is manual: finding the right files, rebuilding a clean bundle, and proving that what you uploaded is the latest state from the repo you meant to share.
 
 ## Solution
 
-A single-window "handoff console" that:
-- Watches repos for file changes (works reliably with WSL Linux filesystem)
-- Shows recently changed docs and code in separate columns
-- Auto-switches between standard and handset layouts by window size (hysteresis-based)
-- Provides a global window opacity slider (0-100, default 100) for a terminal-style transparency vibe
-- Provides an independent global texture-intensity slider (0-100, default 100)
-- Generates zip bundles with provenance manifests
-- Enables drag-and-drop of files/bundles directly into browser upload zones
-- Uses file-based agent diagnostics (`agent_latest.log`) for supervised processes instead of stdout/stderr pipe capture
+Intermediary keeps that loop in one place:
 
-## Architecture
+- Watches configured repos and surfaces recently changed docs and code.
+- Stages drag-and-drop-safe file copies on the host side.
+- Builds zip bundles with a `BUNDLE_MANIFEST.json` provenance record.
+- Preserves a bundle-first workflow for sharing local context with browser-based LLM tools.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                Host OS (Windows/macOS)                      │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Tauri App (React/TS + Rust commands)                │  │
-│  │  - Docs | Code | Bundles columns                     │  │
-│  │  - Native drag-out and host file-manager actions     │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                            │                                │
-│                   WebSocket (localhost)                     │
-│                            │                                │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Host Agent (im_host_agent)                          │  │
-│  │  - UI-facing endpoint                                │  │
-│  │  - Routes host-native repos locally                  │  │
-│  │  - Forwards WSL repos to WSL backend (Windows only)  │  │
-│  └───────────────────────────────────────────────────────┘  │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-                     WSL boundary (Windows only)
-                               │
-┌─────────────────────────────────────────────────────────────┐
-│                    WSL Backend (im_agent)                   │
-│  - inotify watching, staging, bundle build, events          │
-└─────────────────────────────────────────────────────────────┘
-```
+## Screenshot
 
-## Tech Stack
+The screenshot above is tracked at [assets/readme/intermediary_window.png](assets/readme/intermediary_window.png).
 
-| Component | Technology |
-|-----------|------------|
-| Host UI | Tauri v2 |
-| Frontend | React + TypeScript |
-| Host Agent | Rust (`crates/im_host_agent`) |
-| WSL Backend Agent | Rust (`crates/im_agent`, Windows-only backend) |
-| File Watching | notify (inotify on Linux / native host FS handling) |
-| Bundling | Rust `im_bundle` library (crates/im_bundle) |
-| IPC | WebSocket (JSON request/response + events) |
-| Drag-out | `tauri-plugin-drag` |
+## Workflow Companion
 
-## Project Structure
+Intermediary does not integrate with ChatGPT directly and should not be described as an official integration. The intended workflow is still browser-first: build a bundle or drag staged files, then upload them into the tool you already use.
 
-```
-intermediary/
-├── app/                    # React/TypeScript frontend
-│   ├── src/
-│   │   ├── components/     # UI components
-│   │   ├── hooks/          # React hooks
-│   │   ├── lib/            # Agent client + helpers
-│   │   ├── shared/         # Protocol + config types
-│   │   ├── styles/         # CSS
-│   │   ├── tabs/           # Repo tab UI
-│   │   └── types/          # App-facing types
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── src-tauri/              # Tauri Rust backend
-│   ├── src/
-│   │   └── lib/
-│   │       ├── commands/   # Tauri command handlers
-│   │       ├── config/     # Configuration management
-│   │       ├── obs/        # Observability/logging
-│   │       └── paths/      # Path resolution + WSL conversion
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-│
-├── crates/                 # Rust workspace crates
-│   ├── im_host_agent/      # Host routing agent daemon (Rust)
-│   ├── im_agent/           # WSL backend agent daemon (Rust)
-│   └── im_bundle/          # Bundle library + CLI (scan + zip + manifest)
-│
-├── docs/                   # Documentation
-│   ├── compliance/         # ADRs (architectural decisions)
-│   ├── environment/        # Dev environment guides
-│   ├── inventory/          # File/skill inventories
-│   ├── guide.md            # Documentation index
-│   ├── prd.md              # Product requirements
-│   ├── system_overview.md  # Architecture overview
-│   └── roadmap.md          # Development roadmap
-│
-├── scripts/                # Build and utility scripts
-│   ├── zip/                # Bundle generation
-│   ├── fileledger/         # File inventory tools
-│   └── windows/            # WSL↔Windows sync
-│
-├── logs/                   # Runtime logs (gitignored)
-├── .vscode/                # VS Code tasks and settings
-├── CLAUDE.md               # Agent instructions
-└── README.md               # This file
-```
+If you use a bundle-first prompting workflow, the companion doc is [docs/environment/chatgpt_custom_instructions.md](docs/environment/chatgpt_custom_instructions.md). Treat it as an optional workflow companion, not a hidden product requirement.
 
-## Key Concepts
+## Support Matrix
 
-### Staging Directory
+| Environment | Status | Notes |
+| --- | --- | --- |
+| Windows 10/11 + WSL2 | Maintainer-validated | This is the only runtime validated end-to-end by the maintainer today. |
+| Windows 10/11 without WSL2 | Partial | Host-native paths exist, but the repo's core workflow story assumes WSL-backed development. |
+| macOS | Experimental | Code paths exist in places, but the maintainer has not validated macOS to the same standard as Windows + WSL2. |
+| Linux | Experimental | Code paths exist in places, but the maintainer has not validated Linux to the same standard as Windows + WSL2. |
 
-All draggable files originate from a host staging directory:
-```
-<app_local_data>/staging/
-  files/<repoId>/...
-  bundles/<repoId>/<presetId>/...
-```
+If you are evaluating the repo as a portfolio project, read "supported today" as "Windows 10/11 with WSL2."
 
-On Windows, the WSL backend writes to the host staging directory through its `/mnt/<drive>/...` mirror path.
+## Install And Build
 
-### Bundle Manifests
+Intermediary is currently documented as a source-first project.
 
-Every generated zip includes `BUNDLE_MANIFEST.json`:
-```json
-{
-  "generatedAt": "2026-01-30T10:30:00Z",
-  "repoId": "textureportal",
-  "repoRoot": "/home/johnf/code/textureportal",
-  "presetId": "full",
-  "presetName": "Full",
-  "selection": {
-    "includeRoot": true,
-    "topLevelDirsIncluded": ["app", "src-tauri", "docs"],
-    "excludedSubdirs": ["TriangleRain/Assets"]
-  },
-  "git": {
-    "headSha": "abc1234",
-    "shortSha": "abc1234",
-    "branch": "main"
-  },
-  "fileCount": 312,
-  "totalBytesBestEffort": 4820194
-}
-```
+- Windows + WSL setup and daily development flow: [docs/commands/dev_windows.md](docs/commands/dev_windows.md)
+- WSL backend agent workflow: [docs/commands/dev_wsl_agent.md](docs/commands/dev_wsl_agent.md)
+- Closeout and verification commands: [docs/commands/workflow/closeout_checks.md](docs/commands/workflow/closeout_checks.md)
 
-### Bundle Naming + Retention
+Prerequisites for the maintainer-validated path:
 
-Bundles are timestamped to make the "latest" obvious, and only the most recent bundle per preset is kept. Older bundles for the same repo + preset are deleted before a new one is written.
+- Windows 10 or 11
+- WSL2
+- Rust stable
+- Node.js 20+
+- pnpm
 
-### IPC Protocol
+## Privacy
 
-Agent → UI:
-- `fileChanged` - Single file change event (includes changeType + optional staged info)
-- `snapshot` - Batch of recent changes
-- `bundleBuilt` - Bundle ready for drag-out (includes alias path + size metadata)
-- `error` - Structured error event
+- Intermediary is designed for local-first use.
+- The repo docs specify no telemetry by default.
+- Bundle manifests include provenance such as repo ID, preset, timestamps, and best-effort git metadata so uploads are auditable.
+- Repo access is scoped to the roots you configure inside the app; it is not a cloud sync tool.
 
-UI → Agent:
-- `clientHello` - Configure agent with config + staging roots
-- `setOptions` - Toggle auto-stage at runtime
-- `watchRepo` - Start watching a repo
-- `refresh` - Request a fresh snapshot
-- `stageFile` - Stage a single file for drag-out
-- `buildBundle` - Build a zip bundle (with selection payload)
-- `getRepoTopLevel` - Fetch top-level dirs/files
-- `listBundles` - List existing bundles for a preset
+## Known Limits
 
-## Development
+- Windows + WSL2 is the only maintainer-tested runtime today.
+- Bundle sharing is drag-and-drop based; there is no direct ChatGPT API or official ChatGPT integration in the product.
+- Very large or contended WSL bundle builds can still time out; see [docs/known_issues.md](docs/known_issues.md).
+- Mounted Windows paths inside WSL can have degraded watcher reliability on large trees; the validated path is native WSL repos with Windows-hosted UI/runtime.
 
-### Prerequisites
+## Documentation
 
-- Windows 10/11 (WSL2 required for WSL repos) or macOS
-- Rust (stable)
-- Node.js 20+ with pnpm
-- VS Code (recommended)
+Start with [docs/guide.md](docs/guide.md) for the docs index, then read:
 
-### Setup & Running
-
-Use the command docs for current, copy-safe steps:
-- `docs/commands/dev_windows.md` — Windows development workflow
-- `docs/commands/dev_wsl_agent.md` — WSL backend development (Windows+WSL only)
-- `docs/commands/zip_bundles.md` — build repo context bundles
-
-## Status
-
-**Current phase:** Host-routed architecture implemented (host agent + optional Windows WSL backend); ongoing parity hardening and documentation alignment.
-
-See [docs/roadmap.md](docs/roadmap.md) for development phases.
+- [docs/system_overview.md](docs/system_overview.md) for architecture
+- [docs/prd.md](docs/prd.md) for product intent and implementation scope
+- [docs/known_issues.md](docs/known_issues.md) for current limitations
 
 ## License
 
-TBD
+This repository is licensed under the [MIT License](LICENSE).

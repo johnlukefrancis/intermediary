@@ -31,5 +31,11 @@ Thumbs.db
 .env
 .env.local
 
+# Local agent/editor state
+.claude/
+.codex/
+.vscode/settings.json
+.vscode/*.local.json
+
 # Screenshots
 docs/screenshots

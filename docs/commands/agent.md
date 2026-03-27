@@ -63,9 +63,9 @@ Send a clientHello to configure the agent:
       "autoStageGlobal": true,
       "repos": [
         {
-          "repoId": "textureportal",
-          "label": "TexturePortal",
-          "root": { "kind": "wsl", "path": "/home/johnf/code/textureportal" },
+          "repoId": "example-repo",
+          "label": "Example Repo",
+          "root": { "kind": "wsl", "path": "/home/<you>/code/example-repo" },
           "autoStage": true,
           "docsGlobs": ["docs/**", "**/*.md", "**/*.mdx"],
           "codeGlobs": ["src/**", "**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
@@ -73,8 +73,8 @@ Send a clientHello to configure the agent:
         }
       ]
     },
-    "stagingWslRoot": "/mnt/c/Users/johnf/AppData/Local/Intermediary/staging",
-    "stagingWinRoot": "C:\\Users\\johnf\\AppData\\Local\\Intermediary\\staging",
+    "stagingWslRoot": "/mnt/c/Users/<you>/AppData/Local/Intermediary/staging",
+    "stagingWinRoot": "C:\\Users\\<you>\\AppData\\Local\\Intermediary\\staging",
     "autoStageOnChange": true
   }
 }
@@ -90,7 +90,7 @@ Request staging of a file:
   "requestId": "test-2",
   "payload": {
     "type": "stageFile",
-    "repoId": "textureportal",
+    "repoId": "example-repo",
     "path": "docs/readme.md"
   }
 }

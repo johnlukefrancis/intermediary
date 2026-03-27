@@ -70,7 +70,7 @@ One JSON file per repo:
 {
   "version": 1,
   "repoId": "intermediary",
-  "repoRoot": "/home/johnf/code/intermediary",
+  "repoRoot": "/home/<you>/code/intermediary",
   "updatedAtIso": "2026-01-30T12:34:56.789Z",
   "entries": [
     { "path": "docs/prd.md", "kind": "docs", "changeType": "change", "mtime": 1738230896789 }

@@ -8,6 +8,8 @@ Depends on: ADR-000, ADR-007, ADR-010
 
 Reduce friction when sharing files and context bundles between local repos (often in WSL) and browser-based LLM interfaces like ChatGPT. Intermediary is a single-window "handoff console" that surfaces recently changed files and generates standardized zip bundles for drag-and-drop sharing.
 
+Maintainer-validated runtime today is Windows 10/11 with WSL2. The codebase includes host-native paths beyond that target, but macOS and Linux are not yet validated to the same standard.
+
 ## Architecture
 
 Intermediary uses a **host-routed architecture**:
