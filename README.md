@@ -2,7 +2,8 @@
 
 Intermediary is a desktop handoff console for getting trustworthy local repo context into ChatGPT and other browser-based LLMs. It keeps the latest docs, code, and screenshots ready to drag out, and it builds timestamped context bundles so the model can work from the repo state you meant to share instead of stale uploads or pasted snippets.
 
-![Intermediary window](assets/readme/intermediary_window.png)
+![Intermediary standard mode](docs/screenshots/app_standard.png)
+![Intermediary handset mode](docs/screenshots/app_handset.png)
 
 ## Why It Exists
 
@@ -20,10 +21,6 @@ Intermediary keeps that handoff loop in one place:
 - Lets you favourite the files you hand off repeatedly.
 - Stages drag-and-drop-safe host-side copies for files that started in WSL or deep repo paths.
 - Makes screenshot sharing easier in browser chats and coding-agent chats that accept image drops.
-
-## Screenshot
-
-The screenshot above is tracked at [assets/readme/intermediary_window.png](assets/readme/intermediary_window.png).
 
 ## Recommended Workflow
 
@@ -51,6 +48,15 @@ For the best bundle-first workflow, use a ChatGPT Project and pair it with the c
 - Treat the provided bundle as the source of truth for that repo.
 
 This setup is the recommended default for getting the full value from Intermediary. It is still a companion workflow, not a hidden runtime requirement.
+
+## Customization
+
+Intermediary is not just a fixed utility window. It is designed to be shaped around how you actually work:
+
+- Color-code repo tabs so different projects and worktrees stay visually distinct.
+- Switch between standard and handset layouts depending on how compact you want the window to be.
+- Choose different texture treatments and visual intensity settings for the background and overall surface.
+- Tune bundle presets and exclusions so the context you share is deliberate instead of noisy.
 
 ## Support Matrix
 
@@ -81,18 +87,25 @@ Prerequisites for the recommended Windows + WSL2 path:
 
 ## Privacy
 
-- Intermediary is designed for local-first use.
-- The repo docs specify no telemetry by default.
-- Bundle manifests include provenance such as repo ID, preset, timestamps, and best-effort git metadata so uploads are auditable.
-- Repo access is scoped to the roots you configure inside the app; it is not a cloud sync tool.
+- Intermediary is local-first.
+- There is zero telemetry and no data collection in the documented product behavior.
+- The app does not have cloud access to your repos or uploads.
+- It does not delete your files as part of the normal handoff workflow.
+- Bundle manifests include provenance such as repo ID, preset, timestamps, and best-effort git metadata so uploads remain auditable.
 
 ## Known Limits
 
 - Windows 10/11 is the maintainer-tested runtime today; WSL2 is recommended when you want the full WSL-backed workflow.
 - Bundle sharing is drag-and-drop based; there is no direct ChatGPT API or official ChatGPT integration in the product.
-- LLM tool behavior still varies. The Project + bundle + companion-instructions workflow improves reliability, but it does not force the tool to behave perfectly.
 - Very large or contended WSL bundle builds can still time out; see [docs/known_issues.md](docs/known_issues.md).
 - Mounted Windows paths inside WSL can have degraded watcher reliability on large trees; the validated path is native WSL repos with Windows-hosted UI/runtime.
+- Layout transitions between standard and handset mode can still produce occasional UI oddities.
+- The app can occasionally launch into a blank window state and require a restart.
+
+## Future Improvements
+
+- Search across Docs and Code panes.
+- More granular bundle exclusion depth and filtering.
 
 ## Documentation
 
