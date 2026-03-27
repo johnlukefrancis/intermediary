@@ -6,7 +6,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 1. Product overview
 
 **Product name:** Intermediary
-**Platform:** Maintainer-validated runtime is Windows 10/11 + WSL2. The architecture includes host-native paths for other platforms, but macOS and Linux are not yet validated to the same standard.
+**Platform:** Maintainer-validated runtime is Windows 10/11. WSL2 is the recommended path for the full WSL-backed workflow, while host-native Windows repo workflows are also validated. The architecture includes host-native paths for other platforms, but macOS and Linux are not yet validated to the same standard.
 **Problem:** High-friction file/context handoff between local repos (often in WSL) and ChatGPT/browser-based workflows.
 **Outcome:** A single-window “handoff console” that surfaces recently changed files and generates standardized zip bundles that can be dragged directly into ChatGPT (or anywhere).
 

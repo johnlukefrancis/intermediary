@@ -31,12 +31,12 @@ If you use a bundle-first prompting workflow, the companion doc is [docs/environ
 
 | Environment | Status | Notes |
 | --- | --- | --- |
-| Windows 10/11 + WSL2 | Maintainer-validated | This is the only runtime validated end-to-end by the maintainer today. |
-| Windows 10/11 without WSL2 | Unvalidated | Some host-native code paths exist, but this runtime is not maintainer-validated and is not the recommended public path. |
-| macOS | Experimental | Code paths exist in places, but the maintainer has not validated macOS to the same standard as Windows + WSL2. |
-| Linux | Experimental | Code paths exist in places, but the maintainer has not validated Linux to the same standard as Windows + WSL2. |
+| Windows 10/11 + WSL2 | Maintainer-validated | Recommended path for the full workflow, including the bundled Linux WSL backend. |
+| Windows 10/11 without WSL2 | Maintainer-validated | Validated for host-native repo workflows; the WSL companion/backend path does not apply. |
+| macOS | Experimental | Code paths exist in places, but the maintainer has not validated macOS to the same standard as Windows. |
+| Linux | Experimental | Code paths exist in places, but the maintainer has not validated Linux to the same standard as Windows. |
 
-If you are evaluating the repo as a portfolio project, read "supported today" as "Windows 10/11 with WSL2."
+If you are evaluating the repo as a portfolio project, read "supported today" as "Windows 10/11," with WSL2 as the recommended path for the full handoff workflow.
 
 ## Install And Build
 
@@ -46,7 +46,7 @@ Intermediary is currently documented as a source-first project.
 - WSL backend agent workflow: [docs/commands/dev_wsl_agent.md](docs/commands/dev_wsl_agent.md)
 - Closeout and verification commands: [docs/commands/workflow/closeout_checks.md](docs/commands/workflow/closeout_checks.md)
 
-Prerequisites for the maintainer-validated path:
+Prerequisites for the recommended Windows + WSL2 path:
 
 - Windows 10 or 11
 - WSL2
@@ -63,7 +63,7 @@ Prerequisites for the maintainer-validated path:
 
 ## Known Limits
 
-- Windows + WSL2 is the only maintainer-tested runtime today.
+- Windows 10/11 is the maintainer-tested runtime today; WSL2 is recommended when you want the full WSL-backed workflow.
 - Bundle sharing is drag-and-drop based; there is no direct ChatGPT API or official ChatGPT integration in the product.
 - Very large or contended WSL bundle builds can still time out; see [docs/known_issues.md](docs/known_issues.md).
 - Mounted Windows paths inside WSL can have degraded watcher reliability on large trees; the validated path is native WSL repos with Windows-hosted UI/runtime.
