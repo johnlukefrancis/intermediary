@@ -11,6 +11,7 @@ import {
   GLOBAL_EXCLUDE_MODEL_WEIGHT_EXTENSIONS,
   GLOBAL_EXCLUDE_MODEL_FORMAT_EXTENSIONS,
   GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS,
+  GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS,
   GLOBAL_EXCLUDE_BINARY_EXTENSIONS,
   GLOBAL_EXCLUDE_HF_CACHE_PATTERNS,
   GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS,
@@ -95,6 +96,42 @@ export function migrateRecommendedExtensions(
     globalExcludes: {
       ...config.globalExcludes,
       extensions: mergedExtensions,
+    },
+  };
+}
+
+export function migrateLegacyModelDirPatterns(
+  config: PersistedConfig
+): PersistedConfig {
+  const modelDirPatternSet = new Set(
+    GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS.map(normalizePatternValue)
+  );
+  const legacyRecommendedPatternSet = new Set(
+    [
+      ...GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS,
+      ...GLOBAL_EXCLUDE_HF_CACHE_PATTERNS,
+      ...GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS,
+    ].map(normalizePatternValue)
+  );
+  const currentPatternSet = new Set(
+    config.globalExcludes.patterns
+      .map(normalizePatternValue)
+      .filter((value) => value.length > 0)
+  );
+
+  if (!setsEqual(currentPatternSet, legacyRecommendedPatternSet)) {
+    return config;
+  }
+
+  const filteredPatterns = config.globalExcludes.patterns.filter(
+    (value) => !modelDirPatternSet.has(normalizePatternValue(value))
+  );
+
+  return {
+    ...config,
+    globalExcludes: {
+      ...config.globalExcludes,
+      patterns: filteredPatterns,
     },
   };
 }
@@ -229,4 +266,16 @@ function mergeUnique(...groups: string[][]): string[] {
     group.forEach((value) => merged.add(value));
   });
   return Array.from(merged);
+}
+
+function setsEqual(left: Set<string>, right: Set<string>): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false;
+    }
+  }
+  return true;
 }

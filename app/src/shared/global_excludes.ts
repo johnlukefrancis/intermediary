@@ -49,7 +49,11 @@ export const GLOBAL_EXCLUDE_BINARY_EXTENSIONS = [
   ".a",
 ];
 
-export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "checkpoints", "weights"];
+export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "weights"];
+export const GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS = [
+  ...GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS,
+  "checkpoints",
+];
 
 export const GLOBAL_EXCLUDE_HF_CACHE_PATTERNS = [".huggingface", "huggingface_hub"];
 
@@ -147,7 +151,7 @@ export interface GlobalExcludePatternOption {
 }
 
 export const GLOBAL_EXCLUDE_PATTERN_OPTIONS: GlobalExcludePatternOption[] = [
-  ...GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS.map((value) => ({
+  ...GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS.map((value) => ({
     value,
     label: `${value}/`,
   })),
@@ -165,9 +169,10 @@ export const GLOBAL_EXCLUDE_RECOMMENDED_EXTENSIONS = GLOBAL_EXCLUDE_EXTENSION_OP
   (option) => option.value
 );
 
-export const GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS = GLOBAL_EXCLUDE_PATTERN_OPTIONS.map(
-  (option) => option.value
-);
+export const GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS = [
+  ...GLOBAL_EXCLUDE_HF_CACHE_PATTERNS,
+  ...GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS,
+];
 
 export const GLOBAL_EXCLUDE_RECOMMENDED_DIRS = GLOBAL_EXCLUDE_DIR_OPTIONS.map(
   (option) => option.value

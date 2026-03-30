@@ -157,8 +157,12 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 20 -> 21: Remove compact ui_mode and fold compact bounds into standard.
     // Version 21 -> 22: Add window_opacity_percent (serde default handles missing field).
     // Version 22 -> 23: Add texture_intensity_percent (serde default handles missing field).
+    // Version 23 -> 24: Remove legacy model-dir path excludes from the recommended baseline.
     if config.config_version < 21 {
         migrate_compact_mode(&mut config);
+    }
+    if config.config_version < 24 {
+        migrate_legacy_model_dir_patterns(&mut config);
     }
 
     config.config_version = CONFIG_VERSION;
@@ -265,6 +269,34 @@ fn default_code_globs_without_inl() -> Vec<String> {
         .into_iter()
         .filter(|glob| !glob.eq_ignore_ascii_case(INL_CODE_GLOB))
         .collect()
+}
+
+const LEGACY_MODEL_DIR_PATTERNS: &[&str] = &["models", "weights", "checkpoints"];
+const CURRENT_RECOMMENDED_PATTERNS: &[&str] =
+    &[".huggingface", "huggingface_hub", "wandb", "mlruns", "lightning_logs"];
+
+fn migrate_legacy_model_dir_patterns(config: &mut PersistedConfig) {
+    let current_patterns = build_normalized_set(
+        config
+            .global_excludes
+            .patterns
+            .iter()
+            .map(|value| value.as_str()),
+    );
+    let legacy_recommended_patterns = build_normalized_set(
+        LEGACY_MODEL_DIR_PATTERNS
+            .iter()
+            .chain(CURRENT_RECOMMENDED_PATTERNS.iter())
+            .copied(),
+    );
+    if current_patterns != legacy_recommended_patterns {
+        return;
+    }
+
+    let legacy_model_dir_set = build_normalized_set(LEGACY_MODEL_DIR_PATTERNS.iter().copied());
+    config.global_excludes.patterns.retain(|pattern| {
+        !legacy_model_dir_set.contains(&pattern.trim().trim_matches('/').to_lowercase())
+    });
 }
 
 fn build_normalized_set<'a>(values: impl Iterator<Item = &'a str>) -> HashSet<String> {

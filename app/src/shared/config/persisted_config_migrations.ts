@@ -2,6 +2,7 @@
 // Description: Persisted config migrations and legacy normalization
 
 import {
+  migrateLegacyModelDirPatterns,
   migrateRecommendedExtensions,
   normalizeLegacyGlobalExcludes,
 } from "./persisted_config_global_excludes_migration.js";
@@ -58,12 +59,16 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v20 -> v21: Remove compact uiMode and fold compact bounds into standard.
   // Migration: v21 -> v22: Add windowOpacityPercent (schema default handles missing field).
   // Migration: v22 -> v23: Add textureIntensityPercent (schema default handles missing field).
+  // Migration: v23 -> v24: Remove legacy model-dir path excludes from the recommended baseline.
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }
   // Migration: v16 -> v17: Expand default codeGlobs coverage to broad language support.
   if (config.configVersion < 17) {
     next = migrateDefaultCodeGlobs(next);
+  }
+  if (config.configVersion < 24) {
+    next = migrateLegacyModelDirPatterns(next);
   }
 
   return { ...next, configVersion: CONFIG_VERSION };

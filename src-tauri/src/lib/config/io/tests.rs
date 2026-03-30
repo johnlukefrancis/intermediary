@@ -170,6 +170,42 @@ fn test_v22_config_without_texture_intensity_gets_default() {
 }
 
 #[test]
+fn test_v23_recommended_patterns_drop_legacy_model_dir_segments() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(23_u64.into());
+    config_json["globalExcludes"]["patterns"] = json!([
+        "models",
+        "weights",
+        "checkpoints",
+        ".huggingface",
+        "huggingface_hub",
+        "wandb",
+        "mlruns",
+        "lightning_logs"
+    ]);
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert_eq!(
+        result.config.global_excludes.patterns,
+        vec![
+            ".huggingface".to_string(),
+            "huggingface_hub".to_string(),
+            "wandb".to_string(),
+            "mlruns".to_string(),
+            "lightning_logs".to_string(),
+        ]
+    );
+}
+
+#[test]
 fn test_unknown_window_bounds_mode_keys_are_ignored_at_runtime_resolution() {
     let mut config = PersistedConfig::default();
     config.ui_mode = UiMode::Handset;

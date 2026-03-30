@@ -75,9 +75,6 @@ const RECOMMENDED_FILE_SUFFIXES: &[&str] = &[
 ];
 
 const RECOMMENDED_PATH_SEGMENTS: &[&str] = &[
-    "models",
-    "checkpoints",
-    "weights",
     ".huggingface",
     "huggingface_hub",
     "wandb",
@@ -354,5 +351,101 @@ mod tests {
         let mut progress = ProgressEmitter::new();
         let result = scan_bundle(&plan, &mut progress).unwrap();
         assert_eq!(result.top_level_dirs_included, vec!["app".to_string()]);
+    }
+
+    #[test]
+    fn recommended_excludes_do_not_drop_checkpoint_named_code_paths() {
+        let dir = tempdir().unwrap();
+        let repo_root = dir.path();
+
+        std::fs::create_dir_all(repo_root.join("TriangleRain/Source/Systems/Checkpoints")).unwrap();
+        std::fs::write(
+            repo_root.join("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"),
+            "export const checkpoint = true;\n",
+        )
+        .unwrap();
+
+        let plan = BundlePlan {
+            output_path: repo_root.join("out.zip"),
+            repo_root: repo_root.to_path_buf(),
+            repo_id: "repo".to_string(),
+            preset_id: "context".to_string(),
+            preset_name: "Context".to_string(),
+            selection: BundleSelection {
+                include_root: false,
+                top_level_dirs: vec!["TriangleRain".to_string()],
+                excluded_subdirs: vec![],
+            },
+            git: BundleGitInfo {
+                head_sha: None,
+                short_sha: None,
+                branch: None,
+            },
+            built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+            global_excludes: recommended_global_excludes(),
+        };
+
+        let mut progress = ProgressEmitter::new();
+        let result = scan_bundle(&plan, &mut progress).unwrap();
+        let archive_paths: std::collections::HashSet<_> = result
+            .entries
+            .iter()
+            .map(|entry| entry.archive_path.as_str())
+            .collect();
+
+        assert!(archive_paths.contains(
+            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
+        ));
+    }
+
+    #[test]
+    fn explicit_checkpoint_pattern_still_excludes_checkpoint_named_paths() {
+        let dir = tempdir().unwrap();
+        let repo_root = dir.path();
+
+        std::fs::create_dir_all(repo_root.join("TriangleRain/Source/Systems/Checkpoints")).unwrap();
+        std::fs::write(
+            repo_root.join("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"),
+            "export const checkpoint = true;\n",
+        )
+        .unwrap();
+
+        let plan = BundlePlan {
+            output_path: repo_root.join("out.zip"),
+            repo_root: repo_root.to_path_buf(),
+            repo_id: "repo".to_string(),
+            preset_id: "context".to_string(),
+            preset_name: "Context".to_string(),
+            selection: BundleSelection {
+                include_root: false,
+                top_level_dirs: vec!["TriangleRain".to_string()],
+                excluded_subdirs: vec![],
+            },
+            git: BundleGitInfo {
+                head_sha: None,
+                short_sha: None,
+                branch: None,
+            },
+            built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+            global_excludes: GlobalExcludes {
+                dir_names: vec![],
+                dir_suffixes: vec![],
+                file_names: vec![],
+                extensions: vec![],
+                patterns: vec!["checkpoints".to_string()],
+            },
+        };
+
+        let mut progress = ProgressEmitter::new();
+        let result = scan_bundle(&plan, &mut progress).unwrap();
+        let archive_paths: std::collections::HashSet<_> = result
+            .entries
+            .iter()
+            .map(|entry| entry.archive_path.as_str())
+            .collect();
+
+        assert!(!archive_paths.contains(
+            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
+        ));
     }
 }

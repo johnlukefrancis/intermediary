@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 23;
+pub const CONFIG_VERSION: u32 = 24;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,7 +130,7 @@ pub struct GlobalExcludes {
     /// File extensions to exclude (e.g. ".safetensors", ".ckpt")
     #[serde(default)]
     pub extensions: Vec<String>,
-    /// Path patterns to exclude (e.g. "models/", "checkpoints/")
+    /// Path patterns to exclude (e.g. ".huggingface/", "wandb/")
     #[serde(default)]
     pub patterns: Vec<String>,
 }
