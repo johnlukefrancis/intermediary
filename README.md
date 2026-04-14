@@ -2,7 +2,7 @@
 
 Intermediary is a desktop handoff console for getting trustworthy local repo context into ChatGPT and other browser-based LLMs. It keeps the latest docs, code, and screenshots ready to drag out, and it builds timestamped context bundles so the model can work from the repo state you meant to share instead of stale uploads or pasted snippets.
 
-![Intermediary standard mode](assets/readme/app_standard.png)
+![Intermediary standard mode](assets#/readme/app_standard.png)
 
 ## Why It Exists
 

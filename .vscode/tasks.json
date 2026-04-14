@@ -142,17 +142,13 @@
     {
       "label": "Tauri: dev (Windows)",
       "type": "process",
-      "dependsOn": [
-        "WSL Agent: dev"
-      ],
-      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$ErrorActionPreference='Stop'; $env:INTERMEDIARY_WIN_PATH='${input:intermediaryWindowsMirrorPath}'; $env:INTERMEDIARY_WSL_PATH='${workspaceFolder}'; $env:INTERMEDIARY_WSL_DISTRO='${input:intermediaryWslDistro}'; $env:INTERMEDIARY_WSL_BACKEND_MODE='external'; $wslPathForUnc = $env:INTERMEDIARY_WSL_PATH.TrimStart('/').Replace('/','\\'); $env:INTERMEDIARY_LOG_DIR = \"\\\\wsl$\\$($env:INTERMEDIARY_WSL_DISTRO)\\$wslPathForUnc\\logs\"; wsl.exe -d $env:INTERMEDIARY_WSL_DISTRO -- bash -lc \"cd '$env:INTERMEDIARY_WSL_PATH' && ./scripts/windows/sync_to_windows.sh\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; node scripts/build/ensure_agent_bundle.mjs; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; if (-not (Test-Path 'src-tauri/resources/agent_bundle/im_host_agent.exe')) { Write-Error 'Missing src-tauri/resources/agent_bundle/im_host_agent.exe after ensure_agent_bundle'; exit 1 }; pnpm tauri dev"
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev' -WindowsLocalAppDataWslPath '${input:intermediaryWindowsLocalAppDataWslPath}'"
       ],
       "presentation": {
         "reveal": "always",
@@ -167,17 +163,13 @@
     {
       "label": "Tauri: dev (Windows, watch + sync)",
       "type": "process",
-      "dependsOn": [
-        "WSL Agent: dev"
-      ],
-      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$ErrorActionPreference='Stop'; $env:INTERMEDIARY_WIN_PATH='${input:intermediaryWindowsMirrorPath}'; $env:INTERMEDIARY_WSL_PATH='${workspaceFolder}'; $env:INTERMEDIARY_WSL_DISTRO='${input:intermediaryWslDistro}'; $env:INTERMEDIARY_WSL_BACKEND_MODE='external'; $wslPathForUnc = $env:INTERMEDIARY_WSL_PATH.TrimStart('/').Replace('/','\\'); $env:INTERMEDIARY_LOG_DIR = \"\\\\wsl$\\$($env:INTERMEDIARY_WSL_DISTRO)\\$wslPathForUnc\\logs\"; $winPath = $env:INTERMEDIARY_WIN_PATH; wsl.exe -d $env:INTERMEDIARY_WSL_DISTRO -- bash -lc \"cd '$env:INTERMEDIARY_WSL_PATH' && ./scripts/windows/sync_to_windows.sh\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Start-Process wsl.exe -ArgumentList \"-d $($env:INTERMEDIARY_WSL_DISTRO) -- bash -lc \\\"cd '$($env:INTERMEDIARY_WSL_PATH)' && ./scripts/windows/watch_sync_to_windows.sh\\\"\"; if (-not (Test-Path $winPath)) { Write-Error \"Sync did not create $winPath\"; exit 1 }; Set-Location $winPath; if (-not (Test-Path node_modules)) { pnpm install; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null; node scripts/build/ensure_agent_bundle.mjs; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; if (-not (Test-Path 'src-tauri/resources/agent_bundle/im_host_agent.exe')) { Write-Error 'Missing src-tauri/resources/agent_bundle/im_host_agent.exe after ensure_agent_bundle'; exit 1 }; pnpm tauri dev"
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev-watch-sync' -WindowsLocalAppDataWslPath '${input:intermediaryWindowsLocalAppDataWslPath}'"
       ],
       "presentation": {
         "reveal": "always",
@@ -195,7 +187,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$ErrorActionPreference='Stop'; $env:INTERMEDIARY_WIN_PATH='${input:intermediaryWindowsMirrorPath}'; $env:INTERMEDIARY_WSL_PATH='${workspaceFolder}'; $env:INTERMEDIARY_WSL_DISTRO='${input:intermediaryWslDistro}'; wsl.exe -d $env:INTERMEDIARY_WSL_DISTRO -- bash -lc \"cd '$env:INTERMEDIARY_WSL_PATH' && bash ./scripts/build/build_agent_bundle.sh && ./scripts/windows/sync_to_windows.sh\"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Set-Location $env:INTERMEDIARY_WIN_PATH; if (-not (Test-Path node_modules)) { pnpm install; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }; node scripts/build/ensure_agent_bundle.mjs; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; if (-not (Test-Path 'src-tauri/resources/agent_bundle/im_host_agent.exe')) { Write-Error 'Missing src-tauri/resources/agent_bundle/im_host_agent.exe after ensure_agent_bundle'; exit 1 }; pnpm tauri build"
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'build-installer'"
       ],
       "presentation": {
         "reveal": "always",
