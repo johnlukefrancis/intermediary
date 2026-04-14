@@ -6,7 +6,20 @@ use crate::config::{
     types::{resolve_window_bounds_for_mode, UiWindowBounds},
 };
 use crate::obs::logging;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, LogicalSize, Manager, Monitor, PhysicalPosition, Position, Size};
+
+pub struct StartupWindowState {
+    transition_completed: AtomicBool,
+}
+
+impl Default for StartupWindowState {
+    fn default() -> Self {
+        Self {
+            transition_completed: AtomicBool::new(false),
+        }
+    }
+}
 
 fn logical_to_physical_dimension(value: u32, scale_factor: f64) -> Option<i32> {
     let scaled = (f64::from(value) * scale_factor).round();
@@ -132,21 +145,7 @@ pub fn apply_launch_window_bounds(app: &AppHandle) {
     }
 }
 
-/// Marks frontend startup as ready and transitions from splash to main window.
-/// Idempotent: safe to call multiple times.
-#[tauri::command]
-pub fn startup_ready(app: AppHandle) -> Result<(), String> {
-    if let Some(splash) = app.get_webview_window("splashscreen") {
-        if let Err(err) = splash.close() {
-            logging::log(
-                "warn",
-                "startup",
-                "close_splash_failed",
-                &format!("Failed to close splashscreen window: {err}"),
-            );
-        }
-    }
-
+fn ensure_main_window_ready(app: &AppHandle) -> Result<(), String> {
     let main_window = app
         .get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
@@ -160,4 +159,55 @@ pub fn startup_ready(app: AppHandle) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn retire_splashscreen(app: &AppHandle) {
+    let Some(splash_window) = app.get_webview_window("splashscreen") else {
+        return;
+    };
+
+    if let Err(err) = splash_window.hide() {
+        logging::log(
+            "warn",
+            "startup",
+            "hide_splash_failed",
+            &format!("Failed to hide splashscreen window: {err}"),
+        );
+    }
+
+    if let Err(err) = splash_window.destroy() {
+        logging::log(
+            "warn",
+            "startup",
+            "destroy_splash_failed",
+            &format!("Failed to destroy splashscreen window: {err}"),
+        );
+
+        if let Err(close_err) = splash_window.close() {
+            logging::log(
+                "warn",
+                "startup",
+                "close_splash_fallback_failed",
+                &format!("Fallback close for splashscreen window failed: {close_err}"),
+            );
+        }
+    }
+}
+
+/// Marks frontend startup as ready and transitions from splash to main window.
+/// Idempotent: safe to call multiple times.
+#[tauri::command]
+pub fn startup_ready(app: AppHandle) -> Result<(), String> {
+    let startup_state = app.state::<StartupWindowState>();
+    if startup_state.transition_completed.load(Ordering::SeqCst) {
+        return ensure_main_window_ready(&app);
+    }
+
+    ensure_main_window_ready(&app)?;
+    retire_splashscreen(&app);
+    startup_state
+        .transition_completed
+        .store(true, Ordering::SeqCst);
+
+    ensure_main_window_ready(&app)
 }

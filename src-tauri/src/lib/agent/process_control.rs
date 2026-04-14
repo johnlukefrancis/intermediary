@@ -168,8 +168,8 @@ fn read_log_tail_since(
     limit_bytes: usize,
     line_limit: usize,
 ) -> Result<String, String> {
-    let mut reader = std::fs::File::open(log_file)
-        .map_err(|err| format!("failed to open log file: {err}"))?;
+    let mut reader =
+        std::fs::File::open(log_file).map_err(|err| format!("failed to open log file: {err}"))?;
     let file_len = reader
         .metadata()
         .map_err(|err| format!("failed to read log metadata: {err}"))?

@@ -272,8 +272,13 @@ fn default_code_globs_without_inl() -> Vec<String> {
 }
 
 const LEGACY_MODEL_DIR_PATTERNS: &[&str] = &["models", "weights", "checkpoints"];
-const CURRENT_RECOMMENDED_PATTERNS: &[&str] =
-    &[".huggingface", "huggingface_hub", "wandb", "mlruns", "lightning_logs"];
+const CURRENT_RECOMMENDED_PATTERNS: &[&str] = &[
+    ".huggingface",
+    "huggingface_hub",
+    "wandb",
+    "mlruns",
+    "lightning_logs",
+];
 
 fn migrate_legacy_model_dir_patterns(config: &mut PersistedConfig) {
     let current_patterns = build_normalized_set(

@@ -18,7 +18,7 @@ use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
 use commands::reset::reset_app_state;
-use commands::startup::{apply_launch_window_bounds, startup_ready};
+use commands::startup::{apply_launch_window_bounds, startup_ready, StartupWindowState};
 use commands::wsl_distro::WslDistroState;
 use obs::logging;
 use std::io::Error;
@@ -37,6 +37,7 @@ pub fn run() {
             }
 
             apply_launch_window_bounds(app.handle());
+            app.manage(StartupWindowState::default());
             app.manage(AgentSupervisor::new());
             app.manage(WslDistroState::default());
             let auth_state =
