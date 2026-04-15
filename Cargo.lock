@@ -1577,7 +1577,7 @@ dependencies = [
 
 [[package]]
 name = "im_agent"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "futures-util",
@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "im_bundle"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1607,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "im_host_agent"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures-util",
  "im_agent",
@@ -1671,7 +1671,7 @@ dependencies = [
 
 [[package]]
 name = "intermediary"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "chrono",
  "dirs 5.0.1",

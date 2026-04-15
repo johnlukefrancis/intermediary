@@ -1,6 +1,6 @@
 [package]
 name = "intermediary"
-version = "0.1.0"
+version = "0.1.1"
 description = "Intermediary - Context bundling app for AI agents"
 authors = ["JL"]
 edition = "2021"
