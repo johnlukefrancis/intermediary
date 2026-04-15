@@ -6,6 +6,11 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 port="${INTERMEDIARY_AGENT_PORT:-3142}"
+ready_timeout_seconds="${INTERMEDIARY_AGENT_READY_TIMEOUT_SECONDS:-30}"
+
+emit_ready_marker() {
+  echo "INTERMEDIARY_WSL_AGENT_READY port=${port}"
+}
 
 resolve_windows_cmd_exe() {
   if command -v cmd.exe >/dev/null 2>&1; then
@@ -199,8 +204,44 @@ is_port_listening() {
 
 if is_port_listening; then
   echo "WebSocket server started (already running on ${port})"
+  emit_ready_marker
   exit 0
 fi
 
 cd "${repo_root}"
-INTERMEDIARY_AGENT_PORT="${port}" INTERMEDIARY_WSL_WS_TOKEN="${ws_token}" cargo run -p im_agent --bin im_agent
+echo "INTERMEDIARY_WSL_AGENT_STARTING port=${port}"
+INTERMEDIARY_AGENT_PORT="${port}" INTERMEDIARY_WSL_WS_TOKEN="${ws_token}" cargo run -p im_agent --bin im_agent &
+agent_pid=$!
+ready_emitted=0
+
+cleanup() {
+  if [[ "${ready_emitted}" -eq 0 ]] && kill -0 "${agent_pid}" >/dev/null 2>&1; then
+    kill "${agent_pid}" >/dev/null 2>&1 || true
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
+deadline=$((SECONDS + ready_timeout_seconds))
+while (( SECONDS < deadline )); do
+  if is_port_listening; then
+    emit_ready_marker
+    ready_emitted=1
+    break
+  fi
+
+  if ! kill -0 "${agent_pid}" >/dev/null 2>&1; then
+    wait "${agent_pid}"
+    exit $?
+  fi
+
+  sleep 0.1
+done
+
+if [[ "${ready_emitted}" -eq 0 ]]; then
+  echo "Timed out waiting for WSL agent to listen on ${port}" >&2
+  wait "${agent_pid}"
+  exit 1
+fi
+
+wait "${agent_pid}"

@@ -2,13 +2,14 @@
 // Description: Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 
 use super::{
-    build_result, wsl::wsl_backend_mode_requires_managed_owner, AgentSupervisor,
+    build_result, wsl_mode::wsl_backend_mode_requires_managed_owner, AgentSupervisor,
     EnsureProcessResult,
 };
 use crate::agent::install::resolve_launch_bundle;
-use crate::agent::supervisor_helpers::{
-    resolve_expected_dirs, resolve_wsl_port, should_prefer_installed_bundle, ProcessKind,
+use crate::agent::supervisor::runtime::{
+    resolve_expected_dirs, resolve_wsl_port, should_prefer_installed_bundle,
 };
+use crate::agent::supervisor::state::ProcessKind;
 use crate::agent::types::{
     AgentSupervisorConfig, AgentSupervisorResult, AgentSupervisorStatus, AgentSupervisorWslStatus,
 };
@@ -92,6 +93,16 @@ impl AgentSupervisor {
         } else {
             false
         };
+        let host_origin_compat_ok = if host_auth_ok {
+            self.probe_websocket_origin_compatibility(
+                config.port,
+                &websocket_auth.host_ws_token,
+                &websocket_auth.host_allowed_origins,
+            )
+            .await?
+        } else {
+            false
+        };
         let wsl_auth_ok = if requires_wsl && wsl_listening {
             self.probe_websocket_auth(wsl_port, &websocket_auth.wsl_ws_token)
                 .await?
@@ -99,7 +110,7 @@ impl AgentSupervisor {
             false
         };
 
-        if host_auth_ok && !requires_wsl {
+        if host_auth_ok && host_origin_compat_ok && !requires_wsl {
             self.stop_process(ProcessKind::Wsl).await?;
             self.set_last_error(None)?;
             return Ok(build_result(
@@ -114,6 +125,7 @@ impl AgentSupervisor {
         }
         if should_short_circuit_already_running_with_wsl(
             host_auth_ok,
+            host_origin_compat_ok,
             requires_wsl,
             wsl_auth_ok,
             wsl_backend_mode_requires_managed_owner(),
@@ -229,11 +241,12 @@ fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Optio
 
 fn should_short_circuit_already_running_with_wsl(
     host_auth_ok: bool,
+    host_origin_compat_ok: bool,
     requires_wsl: bool,
     wsl_auth_ok: bool,
     managed_owner_required: bool,
 ) -> bool {
-    host_auth_ok && requires_wsl && wsl_auth_ok && !managed_owner_required
+    host_auth_ok && host_origin_compat_ok && requires_wsl && wsl_auth_ok && !managed_owner_required
 }
 
 #[cfg(test)]
@@ -243,14 +256,21 @@ mod tests {
     #[test]
     fn managed_mode_disables_wsl_already_running_fast_path() {
         assert!(!should_short_circuit_already_running_with_wsl(
-            true, true, true, true
+            true, true, true, true, true
         ));
     }
 
     #[test]
     fn non_managed_mode_keeps_wsl_already_running_fast_path() {
         assert!(should_short_circuit_already_running_with_wsl(
-            true, true, true, false
+            true, true, true, true, false
+        ));
+    }
+
+    #[test]
+    fn origin_mismatch_disables_wsl_already_running_fast_path() {
+        assert!(!should_short_circuit_already_running_with_wsl(
+            true, false, true, true, false
         ));
     }
 }

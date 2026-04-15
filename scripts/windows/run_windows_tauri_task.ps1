@@ -14,10 +14,7 @@ param(
 
   [Parameter(Mandatory = $true)]
   [ValidateSet("dev", "dev-watch-sync", "build-installer")]
-  [string]$Mode,
-
-  [Parameter()]
-  [string]$WindowsLocalAppDataWslPath = ""
+  [string]$Mode
 )
 
 Set-StrictMode -Version Latest
@@ -71,35 +68,6 @@ function Start-WslRepoProcess {
   ) | Out-Null
 }
 
-function Wait-ForTcpPort {
-  param(
-    [Parameter(Mandatory = $true)]
-    [int]$Port,
-
-    [Parameter()]
-    [int]$TimeoutMs = 15000
-  )
-
-  $deadline = (Get-Date).AddMilliseconds($TimeoutMs)
-  while ((Get-Date) -lt $deadline) {
-    try {
-      $client = [System.Net.Sockets.TcpClient]::new()
-      $iar = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
-      if ($iar.AsyncWaitHandle.WaitOne(250)) {
-        $client.EndConnect($iar)
-        $client.Dispose()
-        return
-      }
-      $client.Dispose()
-    } catch {
-    }
-
-    Start-Sleep -Milliseconds 250
-  }
-
-  throw "Timed out waiting for 127.0.0.1:$Port"
-}
-
 function Invoke-NativeCommand {
   param(
     [Parameter(Mandatory = $true)]
@@ -112,27 +80,6 @@ function Invoke-NativeCommand {
   & $FilePath @ArgumentList
   Exit-OnFailure -ExitCode $LASTEXITCODE
 }
-
-function Start-WslAgentIfNeeded {
-  if ($Mode -eq "build-installer") {
-    return
-  }
-
-  $agentBootstrap = @(
-    'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"',
-    'export INTERMEDIARY_AGENT_PORT=3142',
-    "export INTERMEDIARY_WINDOWS_LOCALAPPDATA='$WindowsLocalAppDataWslPath'",
-    'set -e',
-    'if [ -s "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; else echo "cargo env not found at $HOME/.cargo/env" >&2; exit 1; fi',
-    'command -v cargo >/dev/null 2>&1 || { echo "cargo not available in PATH" >&2; exit 1; }',
-    'bash ./scripts/dev/run_wsl_agent_dev.sh'
-  ) -join '; '
-
-  Start-WslRepoProcess -CommandText $agentBootstrap
-  Wait-ForTcpPort -Port 3142
-}
-
-Start-WslAgentIfNeeded
 
 switch ($Mode) {
   "dev" {

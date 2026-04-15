@@ -104,6 +104,7 @@
       "label": "WSL Agent: dev",
       "type": "process",
       "command": "wsl.exe",
+      "isBackground": true,
       "args": [
         "-d",
         "${input:intermediaryWslDistro}",
@@ -112,43 +113,41 @@
         "-lc",
         "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; export INTERMEDIARY_AGENT_PORT=3142; export INTERMEDIARY_WINDOWS_LOCALAPPDATA='${input:intermediaryWindowsLocalAppDataWslPath}'; set -e; if [ -s \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; else echo \"cargo env not found at $HOME/.cargo/env\" >&2; exit 1; fi; cd '${workspaceFolder}'; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; bash ./scripts/dev/run_wsl_agent_dev.sh"
       ],
-      "isBackground": true,
-      "problemMatcher": [
-        {
-          "owner": "wsl-agent",
-          "pattern": [
-            {
-              "regexp": "^(.*):(\\d+):(\\d+):\\s+(.*)$",
-              "file": 1,
-              "line": 2,
-              "column": 3,
-              "message": 4
-            }
-          ],
-          "background": {
-            "activeOnStart": true,
-            "beginsPattern": "WebSocket server started",
-            "endsPattern": "WebSocket server started"
-          }
-        }
-      ],
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
         "showReuseMessage": false
       },
+      "problemMatcher": [
+        {
+          "owner": "intermediary-wsl-agent",
+          "pattern": {
+            "regexp": "^(.*)$",
+            "message": 1
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^(.*)$",
+            "endsPattern": "^INTERMEDIARY_WSL_AGENT_READY port=[0-9]+$"
+          }
+        }
+      ],
       "group": "build"
     },
     {
       "label": "Tauri: dev (Windows)",
       "type": "process",
+      "dependsOn": [
+        "WSL Agent: dev"
+      ],
+      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev' -WindowsLocalAppDataWslPath '${input:intermediaryWindowsLocalAppDataWslPath}'"
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev'"
       ],
       "presentation": {
         "reveal": "always",
@@ -163,13 +162,17 @@
     {
       "label": "Tauri: dev (Windows, watch + sync)",
       "type": "process",
+      "dependsOn": [
+        "WSL Agent: dev"
+      ],
+      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev-watch-sync' -WindowsLocalAppDataWslPath '${input:intermediaryWindowsLocalAppDataWslPath}'"
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev-watch-sync'"
       ],
       "presentation": {
         "reveal": "always",

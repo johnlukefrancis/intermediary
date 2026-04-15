@@ -1,8 +1,8 @@
 // Path: src-tauri/src/lib/agent/supervisor.rs
 // Description: Public host-agent supervisor types and wiring
 
-use super::supervisor_helpers::AgentSupervisorState;
 use super::types::{AgentSupervisorResult, AgentSupervisorStatus, AgentSupervisorWslStatus};
+use state::AgentSupervisorState;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -17,7 +17,7 @@ pub(super) enum EnsureProcessResult {
 
 #[derive(Debug, Default)]
 pub struct AgentSupervisor {
-    pub(super) state: Mutex<AgentSupervisorState>,
+    state: Mutex<AgentSupervisorState>,
 }
 
 fn build_result(
@@ -40,6 +40,15 @@ fn build_result(
     }
 }
 
+mod host;
 mod lifecycle;
-mod processes;
+mod managed_processes;
+mod probes;
+mod process_kill;
+mod runtime;
+mod state;
+mod websocket_probe;
 mod wsl;
+mod wsl_control;
+mod wsl_mode;
+mod wsl_runtime;

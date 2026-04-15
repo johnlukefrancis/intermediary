@@ -236,14 +236,25 @@ scripts/release/version_contract.mjs - Shared version-contract helpers for Inter
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
+src-tauri/src/lib/agent/host_process_control.rs - Windows host-agent process detection and stale-port termination helpers
+src-tauri/src/lib/agent/install_host_binary.rs - Resolve and copy the correct host-agent binary into an install bundle staging directory
+src-tauri/src/lib/agent/install_runtime.rs - Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup
 src-tauri/src/lib/agent/install.rs - Install bundled agent runtimes into app local data with platform-specific requirements
 src-tauri/src/lib/agent/mod.rs - Host-agent supervisor module exports (with optional Windows WSL backend)
 src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
-src-tauri/src/lib/agent/supervisor_helpers.rs - Shared state and helper utilities for host-agent supervision with optional Windows WSL backend
 src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
+src-tauri/src/lib/agent/supervisor/host.rs - Host-agent startup and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
-src-tauri/src/lib/agent/supervisor/processes.rs - Process lifecycle helpers for host/WSL supervisor tasks
-src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend lifecycle helpers, including stale-port remediation and in-WSL termination
+src-tauri/src/lib/agent/supervisor/managed_processes.rs - Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers
+src-tauri/src/lib/agent/supervisor/probes.rs - Async supervisor probe helpers for port, websocket auth, and origin compatibility
+src-tauri/src/lib/agent/supervisor/process_kill.rs - Blocking child-process termination helpers for supervisor-owned processes
+src-tauri/src/lib/agent/supervisor/runtime.rs - Supervisor runtime path, port, and installed-bundle preference helpers
+src-tauri/src/lib/agent/supervisor/state.rs - Shared supervisor process state and process-kind labels
+src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth and origin probes used by the supervisor
+src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
+src-tauri/src/lib/agent/supervisor/wsl_mode.rs - WSL backend mode parsing and ownership-policy helpers for the supervisor
+src-tauri/src/lib/agent/supervisor/wsl_runtime.rs - Shared WSL supervisor timing constants
+src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend startup and ownership detection for the supervisor
 src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
 src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
 src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution, spawning, and in-WSL termination helpers

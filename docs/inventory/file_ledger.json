@@ -934,6 +934,18 @@
       "summary": "Binary entry point for Tauri app"
     },
     {
+      "path": "src-tauri/src/lib/agent/host_process_control.rs",
+      "summary": "Windows host-agent process detection and stale-port termination helpers"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/install_host_binary.rs",
+      "summary": "Resolve and copy the correct host-agent binary into an install bundle staging directory"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/install_runtime.rs",
+      "summary": "Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup"
+    },
+    {
       "path": "src-tauri/src/lib/agent/install.rs",
       "summary": "Install bundled agent runtimes into app local data with platform-specific requirements"
     },
@@ -946,24 +958,56 @@
       "summary": "Spawn helpers for host/WSL agents and readiness probing"
     },
     {
-      "path": "src-tauri/src/lib/agent/supervisor_helpers.rs",
-      "summary": "Shared state and helper utilities for host-agent supervision with optional Windows WSL backend"
-    },
-    {
       "path": "src-tauri/src/lib/agent/supervisor.rs",
       "summary": "Public host-agent supervisor types and wiring"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/host.rs",
+      "summary": "Host-agent startup and stale-port remediation for the supervisor"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/lifecycle.rs",
       "summary": "Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend"
     },
     {
-      "path": "src-tauri/src/lib/agent/supervisor/processes.rs",
-      "summary": "Process lifecycle helpers for host/WSL supervisor tasks"
+      "path": "src-tauri/src/lib/agent/supervisor/managed_processes.rs",
+      "summary": "Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/probes.rs",
+      "summary": "Async supervisor probe helpers for port, websocket auth, and origin compatibility"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/process_kill.rs",
+      "summary": "Blocking child-process termination helpers for supervisor-owned processes"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/runtime.rs",
+      "summary": "Supervisor runtime path, port, and installed-bundle preference helpers"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/state.rs",
+      "summary": "Shared supervisor process state and process-kind labels"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/websocket_probe.rs",
+      "summary": "Blocking websocket auth and origin probes used by the supervisor"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_control.rs",
+      "summary": "WSL backend termination, stale-port remediation, and launch-target bookkeeping"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_mode.rs",
+      "summary": "WSL backend mode parsing and ownership-policy helpers for the supervisor"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_runtime.rs",
+      "summary": "Shared WSL supervisor timing constants"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/wsl.rs",
-      "summary": "WSL backend lifecycle helpers, including stale-port remediation and in-WSL termination"
+      "summary": "WSL backend startup and ownership detection for the supervisor"
     },
     {
       "path": "src-tauri/src/lib/agent/types.rs",
