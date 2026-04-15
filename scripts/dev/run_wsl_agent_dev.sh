@@ -12,6 +12,10 @@ emit_ready_marker() {
   echo "INTERMEDIARY_WSL_AGENT_READY port=${port}"
 }
 
+emit_begin_marker() {
+  echo "INTERMEDIARY_WSL_AGENT_BEGIN port=${port}"
+}
+
 resolve_windows_cmd_exe() {
   if command -v cmd.exe >/dev/null 2>&1; then
     local cmd_from_path=""
@@ -190,6 +194,7 @@ resolve_wsl_ws_token() {
 }
 
 ws_token="$(resolve_wsl_ws_token)"
+emit_begin_marker
 
 is_port_listening() {
   if (echo >"/dev/tcp/127.0.0.1/${port}") >/dev/null 2>&1; then

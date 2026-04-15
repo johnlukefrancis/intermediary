@@ -122,12 +122,11 @@
         {
           "owner": "intermediary-wsl-agent",
           "pattern": {
-            "regexp": "^(.*)$",
-            "message": 1
+            "regexp": "$^"
           },
           "background": {
-            "activeOnStart": true,
-            "beginsPattern": "^(.*)$",
+            "activeOnStart": false,
+            "beginsPattern": "^INTERMEDIARY_WSL_AGENT_BEGIN port=[0-9]+$",
             "endsPattern": "^INTERMEDIARY_WSL_AGENT_READY port=[0-9]+$"
           }
         }
@@ -135,12 +134,8 @@
       "group": "build"
     },
     {
-      "label": "Tauri: dev (Windows)",
+      "label": "Tauri Launcher: dev (Windows)",
       "type": "process",
-      "dependsOn": [
-        "WSL Agent: dev"
-      ],
-      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
@@ -153,6 +148,19 @@
         "reveal": "always",
         "panel": "shared",
         "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Tauri: dev (Windows)",
+      "dependsOn": [
+        "WSL Agent: dev",
+        "Tauri Launcher: dev (Windows)"
+      ],
+      "dependsOrder": "sequence",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
       },
       "group": {
         "kind": "build",
@@ -160,12 +168,8 @@
       }
     },
     {
-      "label": "Tauri: dev (Windows, watch + sync)",
+      "label": "Tauri Launcher: dev (Windows, watch + sync)",
       "type": "process",
-      "dependsOn": [
-        "WSL Agent: dev"
-      ],
-      "dependsOrder": "parallel",
       "command": "powershell.exe",
       "args": [
         "-NoProfile",
@@ -174,6 +178,19 @@
         "-Command",
         "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'dev-watch-sync'"
       ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      }
+    },
+    {
+      "label": "Tauri: dev (Windows, watch + sync)",
+      "dependsOn": [
+        "WSL Agent: dev",
+        "Tauri Launcher: dev (Windows, watch + sync)"
+      ],
+      "dependsOrder": "sequence",
       "presentation": {
         "reveal": "always",
         "panel": "shared",
