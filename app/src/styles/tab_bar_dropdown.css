@@ -3,6 +3,23 @@
  * Description: Dropdown-specific styles for tab bar worktree actions
  */
 
+/* ===== DROPDOWN ANCHOR ===== */
+.tab-bar-dropdown-anchor {
+  position: absolute;
+  z-index: 600;
+  pointer-events: none;
+  right: auto;
+}
+
+.tab-bar-dropdown-anchor .group-dropdown {
+  position: relative;
+  top: auto;
+  right: auto;
+  margin-top: var(--space-1);
+  transform: translateX(-100%);
+  pointer-events: auto;
+}
+
 /* ===== DROPDOWN DIVIDER ===== */
 .group-dropdown-divider {
   height: 1px;

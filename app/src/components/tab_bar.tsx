@@ -2,21 +2,24 @@
 // Description: Tab navigation with grouped repo dropdown support and scroll overflow arrows
 
 import type React from "react";
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TabItem, SingleTab, GroupTab } from "../app.js";
 import type { RepoRoot, TabTheme } from "../shared/config.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
+import { useTabBarDropdown } from "../hooks/use_tab_bar_dropdown.js";
 import { useTabBarScroll } from "../hooks/use_tab_bar_scroll.js";
 import { AddRepoButton } from "./add_repo_button.js";
 import {
   GroupTabItem,
   SingleTabItem,
-  SingleTabDropdown,
-  GroupTabDropdown,
   isGroupActive,
 } from "./tab_bar/tab_bar_items.js";
+import {
+  GroupTabDropdown,
+  SingleTabDropdown,
+} from "./tab_bar/tab_bar_dropdowns.js";
 import {
   DEFAULT_ACCENT_HEX,
   hexToAccentCssVars,
@@ -52,8 +55,6 @@ export function TabBar({
   const {
     config: { agentDistro },
   } = useConfig();
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const {
     trackRef,
@@ -73,6 +74,14 @@ export function TabBar({
     () => hexToAccentCssVars(DEFAULT_ACCENT_HEX) as React.CSSProperties,
     []
   );
+  const {
+    closeDropdown,
+    dropdownAnchorStyle,
+    dropdownRef,
+    openDropdownId,
+    registerDropdownTrigger,
+    toggleDropdown,
+  } = useTabBarDropdown({ navRef, trackRef });
   const tabAccentStyles = useMemo(() => {
     const styles = new Map<string, React.CSSProperties>();
     for (const tab of tabs) {
@@ -82,22 +91,6 @@ export function TabBar({
     }
     return styles;
   }, [tabs, tabThemes]);
-
-  /* Close dropdown on outside click */
-  useEffect(() => {
-    if (!openDropdownId) return;
-
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpenDropdownId(null);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [openDropdownId]);
 
   /* Auto-scroll active tab into view */
   useEffect(() => {
@@ -129,40 +122,32 @@ export function TabBar({
     [activeRepoId, lastActiveGroupRepoIds, onRepoChange]
   );
 
-  const toggleDropdown = useCallback(
-    (e: React.MouseEvent, dropdownId: string) => {
-      e.stopPropagation();
-      setOpenDropdownId((prev) => (prev === dropdownId ? null : dropdownId));
-    },
-    []
-  );
-
   const handleRepoSelect = useCallback(
     (repoId: string) => {
       onRepoChange(repoId);
-      setOpenDropdownId(null);
+      closeDropdown();
     },
-    [onRepoChange]
+    [closeDropdown, onRepoChange]
   );
 
   const handleAddWorktreeToGroup = useCallback(
     async (groupId: string, groupLabel: string) => {
       const didAdd = await addWorktreeToGroup(groupId, groupLabel);
       if (didAdd) {
-        setOpenDropdownId(null);
+        closeDropdown();
       }
     },
-    [addWorktreeToGroup]
+    [addWorktreeToGroup, closeDropdown]
   );
 
   const handleAddWorktreeToSingle = useCallback(
     async (singleTab: SingleTab) => {
       const didAdd = await addWorktreeToSingle(singleTab);
       if (didAdd) {
-        setOpenDropdownId(null);
+        closeDropdown();
       }
     },
-    [addWorktreeToSingle]
+    [addWorktreeToSingle, closeDropdown]
   );
 
   const handleOpenFolder = useCallback(async (root: RepoRoot) => {
@@ -215,6 +200,7 @@ export function TabBar({
                 onOpenFolder={(root) => {
                   void handleOpenFolder(root);
                 }}
+                onRegisterDropdownTrigger={registerDropdownTrigger}
                 onToggleDropdown={toggleDropdown}
               />
             );
@@ -232,6 +218,7 @@ export function TabBar({
               onOpenFolder={(root) => {
                 void handleOpenFolder(root);
               }}
+              onRegisterDropdownTrigger={registerDropdownTrigger}
               onToggleDropdown={toggleDropdown}
             />
           );
@@ -253,7 +240,11 @@ export function TabBar({
 
       {/* Dropdown rendered outside track to avoid overflow clip */}
       {openTab && (
-        <div className="tab-bar-dropdown-anchor" ref={dropdownRef}>
+        <div
+          className="tab-bar-dropdown-anchor"
+          ref={dropdownRef}
+          style={dropdownAnchorStyle ?? undefined}
+        >
           {openTab.type === "single" ? (
             <SingleTabDropdown
               tab={openTab}
@@ -276,7 +267,7 @@ export function TabBar({
                 void handleAddWorktreeToGroup(groupId, groupLabel);
               }}
               onCloseDropdown={() => {
-                setOpenDropdownId(null);
+                closeDropdown();
               }}
             />
           )}

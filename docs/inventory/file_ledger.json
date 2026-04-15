@@ -154,6 +154,10 @@
       "summary": "Tab navigation with grouped repo dropdown support and scroll overflow arrows"
     },
     {
+      "path": "app/src/components/tab_bar/tab_bar_dropdowns.tsx",
+      "summary": "Dropdown panels for single-repo and grouped-repo tab-bar actions"
+    },
+    {
       "path": "app/src/components/tab_bar/tab_bar_items.tsx",
       "summary": "Focused tab item renderers for single and grouped repository tabs"
     },
@@ -264,6 +268,10 @@
     {
       "path": "app/src/hooks/use_startup_ready.ts",
       "summary": "One-shot startup handshake to reveal main window after config load"
+    },
+    {
+      "path": "app/src/hooks/use_tab_bar_dropdown.ts",
+      "summary": "Owns tab-bar dropdown open state, trigger containment, and anchored positioning"
     },
     {
       "path": "app/src/hooks/use_tab_bar_scroll.ts",

@@ -73,6 +73,10 @@ interface SingleTabItemProps {
   accentStyle: React.CSSProperties;
   onRepoChange: (repoId: string) => void;
   onOpenFolder: (root: RepoRoot) => void;
+  onRegisterDropdownTrigger: (
+    dropdownId: string,
+    node: HTMLButtonElement | null
+  ) => void;
   onToggleDropdown: (e: React.MouseEvent, dropdownId: string) => void;
 }
 
@@ -83,6 +87,7 @@ export function SingleTabItem({
   accentStyle,
   onRepoChange,
   onOpenFolder,
+  onRegisterDropdownTrigger,
   onToggleDropdown,
 }: SingleTabItemProps): React.JSX.Element {
   return (
@@ -117,6 +122,9 @@ export function SingleTabItem({
       {isActive && (
         <button
           className="group-chevron"
+          ref={(node) => {
+            onRegisterDropdownTrigger(tab.repoId, node);
+          }}
           onClick={(e) => {
             onToggleDropdown(e, tab.repoId);
           }}
@@ -133,40 +141,6 @@ export function SingleTabItem({
   );
 }
 
-/* ===== DROPDOWN COMPONENTS (rendered outside the scroll track) ===== */
-
-interface SingleTabDropdownProps {
-  tab: SingleTab;
-  isAdding: boolean;
-  addError: string | null;
-  accentStyle: React.CSSProperties;
-  onAddWorktree: (tab: SingleTab) => void;
-}
-
-export function SingleTabDropdown({
-  tab,
-  isAdding,
-  addError,
-  accentStyle,
-  onAddWorktree,
-}: SingleTabDropdownProps): React.JSX.Element {
-  return (
-    <div className="group-dropdown" style={accentStyle}>
-      {addError && <div className="group-dropdown-error">{addError}</div>}
-      <button
-        className="group-dropdown-add"
-        onClick={() => {
-          onAddWorktree(tab);
-        }}
-        disabled={isAdding}
-        type="button"
-      >
-        + Add subfolder
-      </button>
-    </div>
-  );
-}
-
 interface GroupTabItemProps {
   tab: GroupTab;
   activeRepoId: string | null;
@@ -175,6 +149,10 @@ interface GroupTabItemProps {
   lastActiveGroupRepoIds: Record<string, string>;
   onGroupClick: (group: GroupTab) => void;
   onOpenFolder: (root: RepoRoot) => void;
+  onRegisterDropdownTrigger: (
+    dropdownId: string,
+    node: HTMLButtonElement | null
+  ) => void;
   onToggleDropdown: (e: React.MouseEvent, dropdownId: string) => void;
 }
 
@@ -186,6 +164,7 @@ export function GroupTabItem({
   lastActiveGroupRepoIds,
   onGroupClick,
   onOpenFolder,
+  onRegisterDropdownTrigger,
   onToggleDropdown,
 }: GroupTabItemProps): React.JSX.Element {
   const isActive = isGroupActive(tab, activeRepoId);
@@ -225,6 +204,9 @@ export function GroupTabItem({
       {isActive && (
         <button
           className="group-chevron"
+          ref={(node) => {
+            onRegisterDropdownTrigger(tab.groupId, node);
+          }}
           onClick={(e) => {
             onToggleDropdown(e, tab.groupId);
           }}
@@ -241,76 +223,6 @@ export function GroupTabItem({
         groupLabel={tab.groupLabel}
         repoCount={repoCount}
         variant="icon"
-      />
-    </div>
-  );
-}
-
-interface GroupTabDropdownProps {
-  tab: GroupTab;
-  activeRepoId: string | null;
-  isAdding: boolean;
-  addError: string | null;
-  accentStyle: React.CSSProperties;
-  onRepoSelect: (repoId: string) => void;
-  onAddWorktreeToGroup: (groupId: string, groupLabel: string) => void;
-  onCloseDropdown: () => void;
-}
-
-export function GroupTabDropdown({
-  tab,
-  activeRepoId,
-  isAdding,
-  addError,
-  accentStyle,
-  onRepoSelect,
-  onAddWorktreeToGroup,
-  onCloseDropdown,
-}: GroupTabDropdownProps): React.JSX.Element {
-  const repoCount = tab.repos.length;
-
-  return (
-    <div className="group-dropdown" style={accentStyle}>
-      {tab.repos.map((repo) => {
-        const isSelected = activeRepoId === repo.repoId;
-        return (
-          <div key={repo.repoId} className="group-dropdown-row">
-            <button
-              className={`group-dropdown-item ${isSelected ? "selected" : ""}`}
-              onClick={() => {
-                onRepoSelect(repo.repoId);
-              }}
-              type="button"
-            >
-              <span className="group-radio">{isSelected ? "●" : "○"}</span>
-              {repo.label}
-            </button>
-            <TabRemoveButton
-              repoId={repo.repoId}
-              label={repo.label}
-              className="group-dropdown-remove"
-            />
-          </div>
-        );
-      })}
-      <div className="group-dropdown-divider" />
-      {addError && <div className="group-dropdown-error">{addError}</div>}
-      <button
-        className="group-dropdown-add"
-        onClick={() => {
-          onAddWorktreeToGroup(tab.groupId, tab.groupLabel);
-        }}
-        disabled={isAdding}
-        type="button"
-      >
-        + Add subfolder
-      </button>
-      <GroupRemoveButton
-        groupId={tab.groupId}
-        groupLabel={tab.groupLabel}
-        repoCount={repoCount}
-        variant="dropdown"
-        onRemoved={onCloseDropdown}
       />
     </div>
   );

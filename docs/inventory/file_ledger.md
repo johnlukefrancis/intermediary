@@ -41,6 +41,7 @@ app/src/components/options/texture_picker.tsx - Small texture picker popover for
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
+app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
 app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
@@ -69,6 +70,7 @@ app/src/hooks/use_repo_state.ts - Per-repo file state management with event subs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
+app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
