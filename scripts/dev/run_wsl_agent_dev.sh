@@ -6,7 +6,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 port="${INTERMEDIARY_AGENT_PORT:-3142}"
-ready_timeout_seconds="${INTERMEDIARY_AGENT_READY_TIMEOUT_SECONDS:-30}"
+ready_timeout_seconds="${INTERMEDIARY_AGENT_READY_TIMEOUT_SECONDS:-120}"
 
 emit_ready_marker() {
   echo "INTERMEDIARY_WSL_AGENT_READY port=${port}"
