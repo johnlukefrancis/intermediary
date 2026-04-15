@@ -202,10 +202,63 @@ is_port_listening() {
   return 1
 }
 
+probe_websocket_auth() {
+  local status_line=""
+  exec 3<>"/dev/tcp/127.0.0.1/${port}" || return 1
+  printf 'GET /?token=%s HTTP/1.1\r\nHost: 127.0.0.1:%s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n' "${ws_token}" "${port}" >&3 || {
+    exec 3>&- 3<&-
+    return 1
+  }
+  IFS= read -r status_line <&3 || {
+    exec 3>&- 3<&-
+    return 1
+  }
+  exec 3>&- 3<&-
+  [[ "${status_line}" == *" 101 "* ]]
+}
+
+list_listener_pid() {
+  command -v ss >/dev/null 2>&1 || return 1
+  ss -ltnp "( sport = :${port} )" 2>/dev/null \
+    | awk 'NR>1 {print $NF}' \
+    | sed -E 's/.*pid=([0-9]+).*/\1/' \
+    | head -n 1
+}
+
+retire_stale_listener() {
+  local listener_pid=""
+  listener_pid="$(list_listener_pid || true)"
+  if [[ -z "${listener_pid}" ]]; then
+    return 1
+  fi
+
+  echo "Retiring stale WSL agent listener on ${port} (pid=${listener_pid})" >&2
+  kill "${listener_pid}" >/dev/null 2>&1 || true
+  local deadline=$((SECONDS + 5))
+  while (( SECONDS < deadline )); do
+    if ! is_port_listening; then
+      return 0
+    fi
+    sleep 0.1
+  done
+
+  kill -9 "${listener_pid}" >/dev/null 2>&1 || true
+  sleep 0.2
+  ! is_port_listening
+}
+
 if is_port_listening; then
-  echo "WebSocket server started (already running on ${port})"
-  emit_ready_marker
-  exit 0
+  if probe_websocket_auth; then
+    echo "WebSocket server started (already running on ${port})"
+    emit_ready_marker
+    exit 0
+  fi
+
+  echo "WSL agent listener on ${port} rejected current websocket token; replacing stale listener" >&2
+  if ! retire_stale_listener; then
+    echo "Could not retire stale WSL agent listener on ${port}" >&2
+    exit 1
+  fi
 fi
 
 cd "${repo_root}"
@@ -224,7 +277,7 @@ trap cleanup EXIT INT TERM
 
 deadline=$((SECONDS + ready_timeout_seconds))
 while (( SECONDS < deadline )); do
-  if is_port_listening; then
+  if is_port_listening && probe_websocket_auth; then
     emit_ready_marker
     ready_emitted=1
     break
