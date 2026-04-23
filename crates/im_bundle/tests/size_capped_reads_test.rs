@@ -41,6 +41,7 @@ fn caps_file_reads_to_initial_length() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
+        extra_entries: vec![],
     };
 
     let append_handle = thread::spawn({

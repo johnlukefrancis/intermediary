@@ -142,6 +142,7 @@ app/src/tabs/repo_tab.tsx - Generic repo tab component with conditional layout (
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
+crates/im_agent/src/bundles/bundle_artifacts.rs - Repo-declared bundle artifact hook execution and status injection
 crates/im_agent/src/bundles/bundle_builder_blocking.rs - Blocking bundle build steps and filesystem operations
 crates/im_agent/src/bundles/bundle_builder_tests.rs - Tests for bundle builder helpers
 crates/im_agent/src/bundles/bundle_builder.rs - Bundle build orchestration using the im_bundle library

@@ -558,6 +558,10 @@
       "summary": "Vite client type declarations"
     },
     {
+      "path": "crates/im_agent/src/bundles/bundle_artifacts.rs",
+      "summary": "Repo-declared bundle artifact hook execution and status injection"
+    },
+    {
       "path": "crates/im_agent/src/bundles/bundle_builder_blocking.rs",
       "summary": "Blocking bundle build steps and filesystem operations"
     },

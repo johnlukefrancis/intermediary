@@ -2,6 +2,7 @@
 // Description: Tests for bundle builder helpers
 
 use chrono::TimeZone;
+use std::io::Read;
 use tempfile::TempDir;
 use tokio::sync::mpsc;
 
@@ -147,4 +148,76 @@ fn successful_build_replaces_then_cleans_older_bundles() {
         })
         .count();
     assert_eq!(matching, 1);
+}
+
+#[test]
+fn successful_build_injects_declared_bundle_artifacts() {
+    let root = TempDir::new().expect("tempdir");
+    let repo_root = root.path().join("repo");
+    let staging_root = root.path().join("staging");
+    std::fs::create_dir_all(repo_root.join(".intermediary")).expect("artifact config mkdir");
+    std::fs::write(repo_root.join("README.md"), "bundle content").expect("seed repo file");
+    std::fs::write(repo_root.join("handoff.json"), "{\"ready\":true}").expect("seed handoff file");
+    std::fs::write(
+        repo_root.join(".intermediary/bundle_artifacts.json"),
+        r#"{
+          "schema": "intermediary-bundle-artifacts-v1",
+          "artifacts": [{
+            "id": "handoff",
+            "outputs": [{
+              "path": "{repoRoot}/handoff.json",
+              "archivePath": "AGENT_HANDOFF/handoff.json"
+            }]
+          }]
+        }"#,
+    )
+    .expect("write artifact config");
+
+    let options = BuildBundleBlockingOptions {
+        repo_id: "repo".to_string(),
+        repo_root: repo_root.to_string_lossy().to_string(),
+        preset_id: "preset".to_string(),
+        preset_name: "Preset".to_string(),
+        selection: BundleSelection {
+            include_root: true,
+            top_level_dirs: vec![],
+            excluded_subdirs: vec![],
+        },
+        staging: PathBridgeConfig {
+            staging_host_root: staging_root.to_string_lossy().to_string(),
+            staging_wsl_root: None,
+        },
+        staging_kind: StagingRootKind::Host,
+        global_excludes: None,
+    };
+    let (progress_tx, _progress_rx) = mpsc::unbounded_channel();
+
+    let result = build_bundle_blocking(
+        options,
+        "2026-02-03T04:05:06Z".to_string(),
+        "20260203_040506".to_string(),
+        GitInfo {
+            head_sha: None,
+            short_sha: None,
+            branch: None,
+        },
+        progress_tx,
+    )
+    .expect("build should succeed");
+
+    let file = std::fs::File::open(result.host_path).expect("open bundle");
+    let mut archive = zip::ZipArchive::new(file).expect("open zip");
+    let mut handoff_content = String::new();
+    {
+        let mut handoff = archive
+            .by_name("AGENT_HANDOFF/handoff.json")
+            .expect("handoff artifact");
+        handoff
+            .read_to_string(&mut handoff_content)
+            .expect("read handoff");
+    }
+    assert_eq!(handoff_content, "{\"ready\":true}");
+    assert!(archive
+        .by_name("AGENT_HANDOFF/INTERMEDIARY_BUNDLE_ARTIFACTS_STATUS.json")
+        .is_ok());
 }

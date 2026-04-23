@@ -39,6 +39,7 @@ fn scan_respects_ignore_and_exclude() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
+        extra_entries: vec![],
     };
 
     let mut progress = ProgressEmitter::new();
@@ -79,6 +80,7 @@ fn reject_invalid_top_level_dir() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
+        extra_entries: vec![],
     };
 
     let mut progress = ProgressEmitter::new();
@@ -116,6 +118,7 @@ fn ignores_top_level_ignored_dirs_without_error() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
+        extra_entries: vec![],
     };
 
     let mut progress = ProgressEmitter::new();

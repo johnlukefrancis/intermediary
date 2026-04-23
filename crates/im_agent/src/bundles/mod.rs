@@ -1,6 +1,7 @@
 // Path: crates/im_agent/src/bundles/mod.rs
 // Description: Bundle helpers for the agent
 
+mod bundle_artifacts;
 mod bundle_builder;
 mod bundle_builder_blocking;
 mod bundle_lister;

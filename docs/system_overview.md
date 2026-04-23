@@ -109,6 +109,7 @@ Intermediary uses a **host-routed architecture**:
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
   - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; last-good bundle remains on build failure)
+  - Repo-declared bundle artifact hooks via `.intermediary/bundle_artifacts.json`; generated outputs are injected under archive paths such as `AGENT_HANDOFF/**` with `INTERMEDIARY_BUNDLE_ARTIFACTS_STATUS.json` recording hook status
   - Atomic file staging for WSL repo operations
   - Auto-stage on change (configurable)
 
@@ -245,7 +246,7 @@ intermediary/
 
 1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
-3. **Bundle Build:** User clicks Build → host agent routes by repo kind → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
+3. **Bundle Build:** User clicks Build → host agent routes by repo kind → backend runs repo-declared bundle artifact hooks when present → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 
 ## Related docs
 
