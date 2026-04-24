@@ -16,7 +16,6 @@ use crate::error::AgentError;
 use crate::protocol::{BundleSelection, GlobalExcludes};
 use crate::staging::{PathBridgeConfig, StagingLayout, StagingRootKind};
 
-use super::bundle_artifacts::collect_bundle_artifacts;
 use super::git_info::GitInfo;
 
 pub(crate) struct BuildBundleBlockingOptions {
@@ -60,40 +59,27 @@ pub(crate) fn build_bundle_blocking(
 
     let final_path = output_dir.join(file_name);
     let temp_path = temp_path_for(&final_path);
-    let artifact_dir = output_dir.join(format!("{base_name}.artifacts.tmp"));
 
     let sink = CallbackProgressSink::new(move |message| {
         let _ = progress_tx.send(message);
     });
 
-    let extra_entries = match collect_bundle_artifacts(Path::new(&options.repo_root), &artifact_dir)
-    {
-        Ok(entries) => entries,
-        Err(err) => {
-            let _ = std::fs::remove_dir_all(&artifact_dir);
-            return Err(err);
-        }
-    };
-
-    let plan = build_plan(&options, &temp_path, &built_at_iso, git_info, extra_entries);
+    let plan = build_plan(&options, &temp_path, &built_at_iso, git_info);
 
     let bundle_result = match write_bundle_with_progress(&plan, Box::new(sink)) {
         Ok(result) => result,
         Err(err) => {
             let _ = std::fs::remove_file(&temp_path);
-            let _ = std::fs::remove_dir_all(&artifact_dir);
             return Err(AgentError::new("BUNDLE_BUILD_FAILED", err.to_string()));
         }
     };
 
     if let Err(err) = std::fs::rename(&temp_path, &final_path) {
         let _ = std::fs::remove_file(&temp_path);
-        let _ = std::fs::remove_dir_all(&artifact_dir);
         return Err(AgentError::internal(format!(
             "Failed to finalize bundle: {err}"
         )));
     }
-    let _ = std::fs::remove_dir_all(&artifact_dir);
 
     cleanup_older_bundles(
         &output_dir,
@@ -147,7 +133,6 @@ fn build_plan(
     output_path: &Path,
     built_at_iso: &str,
     git_info: GitInfo,
-    extra_entries: Vec<im_bundle::plan::BundleExtraEntry>,
 ) -> BundlePlan {
     BundlePlan {
         output_path: output_path.to_path_buf(),
@@ -167,7 +152,6 @@ fn build_plan(
         },
         built_at_iso: built_at_iso.to_string(),
         global_excludes: map_global_excludes(options.global_excludes.as_ref()),
-        extra_entries,
     }
 }
 

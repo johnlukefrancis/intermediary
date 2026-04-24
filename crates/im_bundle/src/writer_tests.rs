@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use tempfile::tempdir;
 
-use crate::plan::{BundleExtraEntry, BundleGitInfo, BundleSelection, GlobalExcludes};
+use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
 use crate::progress::ProgressMessage;
 use crate::progress_sink::CallbackProgressSink;
 use crate::writer::{write_bundle, write_bundle_with_progress};
@@ -41,7 +41,6 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
-        extra_entries: vec![],
     };
 
     let result = write_bundle(&plan).unwrap();
@@ -87,7 +86,6 @@ fn progress_callbacks_follow_phase_order() {
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
-        extra_entries: vec![],
     };
 
     let phases: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -116,48 +114,4 @@ fn progress_callbacks_follow_phase_order() {
     assert!(zipping_index < finalizing_index);
     assert!(finalizing_index < syncing_index);
     assert!(syncing_index < done_index);
-}
-
-#[test]
-fn writes_extra_entries_outside_normal_scan_selection() {
-    let dir = tempdir().unwrap();
-    let repo_root = dir.path();
-    let generated_dir = repo_root.join(".generated");
-    std::fs::create_dir_all(&generated_dir).unwrap();
-    std::fs::write(repo_root.join("README.md"), "root").unwrap();
-    std::fs::write(generated_dir.join("handoff.json"), "{\"ready\":true}").unwrap();
-
-    let output_path = repo_root.join("bundle.zip");
-    let plan = BundlePlan {
-        output_path: output_path.clone(),
-        repo_root: repo_root.to_path_buf(),
-        repo_id: "repo".to_string(),
-        preset_id: "full".to_string(),
-        preset_name: "Full".to_string(),
-        selection: BundleSelection {
-            include_root: true,
-            top_level_dirs: vec![],
-            excluded_subdirs: vec![],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
-        built_at_iso: "2026-01-31T00:00:00Z".to_string(),
-        global_excludes: GlobalExcludes::default(),
-        extra_entries: vec![BundleExtraEntry {
-            source_path: generated_dir.join("handoff.json"),
-            archive_path: "AGENT_HANDOFF/handoff.json".to_string(),
-        }],
-    };
-
-    write_bundle(&plan).unwrap();
-    let file = std::fs::File::open(&output_path).unwrap();
-    let mut archive = zip::ZipArchive::new(file).unwrap();
-    assert!(archive.by_name("README.md").is_ok());
-    let mut handoff = archive.by_name("AGENT_HANDOFF/handoff.json").unwrap();
-    let mut handoff_content = String::new();
-    handoff.read_to_string(&mut handoff_content).unwrap();
-    assert_eq!(handoff_content, "{\"ready\":true}");
 }

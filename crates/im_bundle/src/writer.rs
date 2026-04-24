@@ -11,7 +11,7 @@ use zip::CompressionMethod;
 use crate::compression_policy::compression_method_for;
 use crate::error::{BundleError, Result};
 use crate::manifest::build_manifest;
-use crate::plan::{BundleExtraEntry, BundlePlan};
+use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
 use crate::progress_sink::{ProgressSink, StdoutProgressSink};
 use crate::scanner::{scan_bundle, ScanEntry};
@@ -49,14 +49,13 @@ fn write_bundle_with_emitter(
     let scan_result = scan_bundle(plan, progress)?;
     let scan_ms = scan_start.elapsed().as_millis();
 
-    let total_files = scan_result.entries.len() as u64 + plan.extra_entries.len() as u64 + 1;
+    let total_files = scan_result.entries.len() as u64 + 1;
     progress.emit_progress("zipping", 0, total_files);
 
     let zip_start = Instant::now();
     let (bytes_written, file_count) = write_zip(
         plan,
         &scan_result.entries,
-        &plan.extra_entries,
         &scan_result.top_level_dirs_included,
         progress,
     )?;
@@ -75,7 +74,6 @@ fn write_bundle_with_emitter(
 fn write_zip(
     plan: &BundlePlan,
     entries: &[ScanEntry],
-    extra_entries: &[BundleExtraEntry],
     top_level_dirs_included: &[String],
     progress: &mut ProgressEmitter,
 ) -> Result<(u64, u64)> {
@@ -95,29 +93,12 @@ fn write_zip(
     let mut bytes_copied = 0u64;
     let mut files_done = 0u64;
     let mut buffer = vec![0u8; BUFFER_SIZE];
-    let files_total = entries.len() as u64 + extra_entries.len() as u64 + 1;
+    let files_total = entries.len() as u64 + 1;
 
     for entry in entries {
         bytes_copied += write_entry(
             &mut zip,
-            &entry.source_path,
-            &entry.archive_path,
-            &mut buffer,
-            progress,
-            files_done,
-            files_total,
-            bytes_copied,
-        )?;
-        files_done += 1;
-        progress.emit_progress("zipping", files_done, files_total);
-    }
-
-    for entry in extra_entries {
-        validate_extra_entry(entry)?;
-        bytes_copied += write_entry(
-            &mut zip,
-            &entry.source_path,
-            &entry.archive_path,
+            entry,
             &mut buffer,
             progress,
             files_done,
@@ -132,7 +113,7 @@ fn write_zip(
         plan,
         top_level_dirs_included,
         bytes_copied,
-        entries.len() as u64 + extra_entries.len() as u64 + 1,
+        entries.len() as u64 + 1,
     )?;
 
     zip.start_file(MANIFEST_NAME, manifest_options)
@@ -171,34 +152,34 @@ fn write_zip(
 
 fn write_entry(
     zip: &mut zip::ZipWriter<BufWriter<File>>,
-    source_path: &std::path::Path,
-    archive_path: &str,
+    entry: &ScanEntry,
     buffer: &mut [u8],
     progress: &mut ProgressEmitter,
     files_done: u64,
     files_total: u64,
     bytes_done_total: u64,
 ) -> Result<u64> {
-    let source_file = File::open(source_path).map_err(|source| BundleError::FileOpenFailed {
-        path: source_path.to_path_buf(),
-        archive_path: archive_path.to_string(),
-        source,
-    })?;
+    let source_file =
+        File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
+            path: entry.source_path.clone(),
+            archive_path: entry.archive_path.clone(),
+            source,
+        })?;
     let current_bytes_total = source_file
         .metadata()
         .map(|metadata| metadata.len())
         .map_err(|source| BundleError::FileMetadataFailed {
-            path: source_path.to_path_buf(),
-            archive_path: archive_path.to_string(),
+            path: entry.source_path.clone(),
+            archive_path: entry.archive_path.clone(),
             source,
         })?;
     let mut reader = BufReader::new(source_file).take(current_bytes_total);
 
-    let entry_options = build_entry_options(archive_path, current_bytes_total);
+    let entry_options = build_entry_options(&entry.archive_path, current_bytes_total);
 
-    zip.start_file(archive_path, entry_options)
+    zip.start_file(&entry.archive_path, entry_options)
         .map_err(|source| BundleError::ArchiveWriteFailed {
-            archive_path: archive_path.to_string(),
+            archive_path: entry.archive_path.clone(),
             source,
         })?;
 
@@ -207,7 +188,7 @@ fn write_entry(
         "zipping",
         files_done,
         files_total,
-        archive_path,
+        &entry.archive_path,
         total,
         Some(current_bytes_total),
         bytes_done_total,
@@ -217,8 +198,8 @@ fn write_entry(
         let bytes_read = reader
             .read(buffer)
             .map_err(|source| BundleError::FileReadFailed {
-                path: source_path.to_path_buf(),
-                archive_path: archive_path.to_string(),
+                path: entry.source_path.clone(),
+                archive_path: entry.archive_path.clone(),
                 source,
             })?;
         if bytes_read == 0 {
@@ -226,7 +207,7 @@ fn write_entry(
         }
         zip.write_all(&buffer[..bytes_read])
             .map_err(|source| BundleError::ArchiveWriteFailed {
-                archive_path: archive_path.to_string(),
+                archive_path: entry.archive_path.clone(),
                 source: zip::result::ZipError::Io(source),
             })?;
         total += bytes_read as u64;
@@ -234,7 +215,7 @@ fn write_entry(
             "zipping",
             files_done,
             files_total,
-            archive_path,
+            &entry.archive_path,
             total,
             Some(current_bytes_total),
             bytes_done_total + total,
@@ -246,7 +227,7 @@ fn write_entry(
         "zipping",
         files_done,
         files_total,
-        archive_path,
+        &entry.archive_path,
         total,
         Some(current_bytes_total),
         bytes_done_total + total,
@@ -254,22 +235,6 @@ fn write_entry(
     );
 
     Ok(total)
-}
-
-fn validate_extra_entry(entry: &BundleExtraEntry) -> Result<()> {
-    let archive_path = entry.archive_path.replace('\\', "/");
-    if archive_path.trim().is_empty()
-        || archive_path.starts_with('/')
-        || archive_path
-            .split('/')
-            .any(|segment| segment == ".." || segment.is_empty())
-    {
-        return Err(BundleError::InvalidPlan(format!(
-            "extra entry archivePath is invalid: {}",
-            entry.archive_path
-        )));
-    }
-    Ok(())
 }
 
 fn build_entry_options(archive_path: &str, size_bytes: u64) -> SimpleFileOptions {

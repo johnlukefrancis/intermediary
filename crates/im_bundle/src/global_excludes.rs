@@ -294,7 +294,6 @@ mod tests {
                 ],
                 patterns: vec!["models".to_string()],
             },
-            extra_entries: vec![],
         };
 
         let mut progress = ProgressEmitter::new();
@@ -347,7 +346,6 @@ mod tests {
                 extensions: vec![],
                 patterns: vec!["models".to_string()],
             },
-            extra_entries: vec![],
         };
 
         let mut progress = ProgressEmitter::new();
@@ -385,7 +383,6 @@ mod tests {
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
             global_excludes: recommended_global_excludes(),
-            extra_entries: vec![],
         };
 
         let mut progress = ProgressEmitter::new();
@@ -396,9 +393,9 @@ mod tests {
             .map(|entry| entry.archive_path.as_str())
             .collect();
 
-        assert!(
-            archive_paths.contains("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts")
-        );
+        assert!(archive_paths.contains(
+            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
+        ));
     }
 
     #[test]
@@ -437,7 +434,6 @@ mod tests {
                 extensions: vec![],
                 patterns: vec!["checkpoints".to_string()],
             },
-            extra_entries: vec![],
         };
 
         let mut progress = ProgressEmitter::new();
@@ -448,8 +444,8 @@ mod tests {
             .map(|entry| entry.archive_path.as_str())
             .collect();
 
-        assert!(
-            !archive_paths.contains("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts")
-        );
+        assert!(!archive_paths.contains(
+            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
+        ));
     }
 }

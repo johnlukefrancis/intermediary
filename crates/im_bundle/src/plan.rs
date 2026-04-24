@@ -50,13 +50,6 @@ pub struct BundleGitInfo {
     pub branch: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct BundleExtraEntry {
-    pub source_path: PathBuf,
-    pub archive_path: String,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BundlePlan {
@@ -71,8 +64,6 @@ pub struct BundlePlan {
     /// User-configurable global excludes
     #[serde(default)]
     pub global_excludes: GlobalExcludes,
-    #[serde(default)]
-    pub extra_entries: Vec<BundleExtraEntry>,
 }
 
 impl BundlePlan {
