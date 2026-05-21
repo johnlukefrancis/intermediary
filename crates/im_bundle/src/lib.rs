@@ -4,6 +4,7 @@
 pub mod compression_policy;
 pub mod error;
 pub mod global_excludes;
+pub mod global_excludes_summary;
 pub mod manifest;
 pub mod plan;
 pub mod progress;

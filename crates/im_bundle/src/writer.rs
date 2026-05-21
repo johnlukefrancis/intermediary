@@ -263,6 +263,7 @@ fn build_manifest_json(
             &plan.preset_id,
             &plan.preset_name,
             &plan.selection,
+            &plan.global_excludes,
             top_level_dirs_included,
             &plan.git,
             file_count,

@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-02-04
+Updated on: 2026-05-21
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -36,6 +36,12 @@ Architectural Decision Records — the primary contracts for this codebase.
 | Document | Purpose |
 |----------|---------|
 | [docs/design/intermediary_ui_overhaul_design.md](design/intermediary_ui_overhaul_design.md) | UI design system, tokens, and visual guidelines |
+
+## Reports
+
+| Document | Purpose |
+|----------|---------|
+| [docs/reports/bundle_global_excludes_report.md](reports/bundle_global_excludes_report.md) | Model verdict for bundle global-exclude ownership and manifest evidence |
 
 ## Environment
 

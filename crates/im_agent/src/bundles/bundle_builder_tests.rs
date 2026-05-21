@@ -1,11 +1,13 @@
 // Path: crates/im_agent/src/bundles/bundle_builder_tests.rs
 // Description: Tests for bundle builder helpers
 
+use std::io::Read;
+
 use chrono::TimeZone;
 use tempfile::TempDir;
 use tokio::sync::mpsc;
 
-use crate::protocol::BundleSelection;
+use crate::protocol::{BundleSelection, GlobalExcludes};
 use crate::staging::{PathBridgeConfig, StagingRootKind};
 
 use super::bundle_builder_blocking::{
@@ -147,4 +149,83 @@ fn successful_build_replaces_then_cleans_older_bundles() {
         })
         .count();
     assert_eq!(matching, 1);
+}
+
+#[test]
+fn explicit_global_excludes_without_build_include_scripts_build_files() {
+    let root = TempDir::new().expect("tempdir");
+    let repo_root = root.path().join("repo");
+    let staging_root = root.path().join("staging");
+    std::fs::create_dir_all(repo_root.join("Scripts/Build")).expect("scripts build mkdir");
+    std::fs::create_dir_all(repo_root.join("node_modules")).expect("node_modules mkdir");
+    std::fs::write(
+        repo_root.join("Scripts/Build/Build-TriangleRainEditor.ps1"),
+        "Write-Output 'build'\n",
+    )
+    .expect("seed build script");
+    std::fs::write(repo_root.join("node_modules/noise.txt"), "ignored").expect("seed ignored file");
+
+    let options = BuildBundleBlockingOptions {
+        repo_id: "repo".to_string(),
+        repo_root: repo_root.to_string_lossy().to_string(),
+        preset_id: "context".to_string(),
+        preset_name: "Context".to_string(),
+        selection: BundleSelection {
+            include_root: false,
+            top_level_dirs: vec!["Scripts".to_string(), "node_modules".to_string()],
+            excluded_subdirs: vec![],
+        },
+        staging: PathBridgeConfig {
+            staging_host_root: staging_root.to_string_lossy().to_string(),
+            staging_wsl_root: None,
+        },
+        staging_kind: StagingRootKind::Host,
+        global_excludes: Some(GlobalExcludes {
+            dir_names: vec!["node_modules".to_string()],
+            dir_suffixes: vec![],
+            file_names: vec![],
+            extensions: vec![],
+            patterns: vec![],
+        }),
+    };
+    let (progress_tx, _progress_rx) = mpsc::unbounded_channel();
+
+    let result = build_bundle_blocking(
+        options,
+        "2026-05-21T22:13:17Z".to_string(),
+        "20260521_221317".to_string(),
+        GitInfo {
+            head_sha: None,
+            short_sha: Some("7c3470e".to_string()),
+            branch: None,
+        },
+        progress_tx,
+    )
+    .expect("build should succeed");
+
+    let file = std::fs::File::open(result.host_path).expect("open bundle");
+    let mut archive = zip::ZipArchive::new(file).expect("open zip");
+    assert!(archive
+        .by_name("Scripts/Build/Build-TriangleRainEditor.ps1")
+        .is_ok());
+    assert!(archive.by_name("node_modules/noise.txt").is_err());
+
+    let mut manifest = archive
+        .by_name("BUNDLE_MANIFEST.json")
+        .expect("manifest entry");
+    let mut manifest_content = String::new();
+    manifest
+        .read_to_string(&mut manifest_content)
+        .expect("read manifest");
+    let manifest_json: serde_json::Value =
+        serde_json::from_str(&manifest_content).expect("parse manifest");
+    assert_eq!(
+        manifest_json["effectiveGlobalExcludes"]["dirNames"],
+        serde_json::json!(["node_modules"])
+    );
+    assert!(!manifest_json["effectiveGlobalExcludes"]["dirNames"]
+        .as_array()
+        .expect("dirNames array")
+        .iter()
+        .any(|value| value == "build"));
 }

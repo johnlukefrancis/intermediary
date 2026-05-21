@@ -191,6 +191,7 @@ crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-ac
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
+crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization

@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-03-27
+Updated on: 2026-05-21
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -204,8 +204,8 @@ Per repo, user can define multiple presets:
 * Preset name, description
 * **v0 selection UI:** top-level folders only (no nested subfolder selection). User toggles which top-level folders to include.
 * **Include root files toggle:** single boolean, default ON. When ON, includes files at repo root (README, package.json, etc.).
-* Always-ignored directories: `node_modules`, `.git`, `dist`, `build`, `target`, `.next`, `.cache`, `logs`, `.turbo`, `.vercel`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `coverage`
-* Always-ignored files: `.DS_Store`, `Thumbs.db`, `.env`, `.env.local`
+* Recommended global excludes seed new or omitted bundle config: `node_modules`, `.git`, `dist`, `build`, `target`, `.next`, `.cache`, `logs`, `.turbo`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `coverage`, common cache dirs, generated artifacts, binary/model-weight extensions, and local env/cache files.
+* Explicit user-configured `globalExcludes` are authoritative after normalization; recommended entries are not hidden mandatory filters.
 * Advanced include/exclude globs: later enhancement
 * Output naming template
 * Output destination: staging bundles folder
@@ -220,6 +220,7 @@ Every generated zip includes:
   * `repoId`, `repoRoot`
   * `presetId`, `presetName`
   * `selection` (includeRoot + topLevelDirsIncluded)
+  * `effectiveGlobalExcludes` used by the scan
   * `git` info (headSha/shortSha/branch, best-effort)
   * `fileCount`, `totalBytesBestEffort`
 

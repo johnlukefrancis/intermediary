@@ -142,5 +142,10 @@ mod tests {
         let plan = BundlePlan::load(file.path()).unwrap();
         assert_eq!(plan.repo_id, "intermediary");
         assert!(plan.selection.include_root);
+        assert!(plan
+            .global_excludes
+            .dir_names
+            .iter()
+            .any(|name| name == "build"));
     }
 }

@@ -59,6 +59,7 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
     assert!(manifest_content.contains("\"presetId\""));
     assert!(manifest_content.contains("\"fileCount\""));
     assert!(manifest_content.contains("\"totalBytesBestEffort\""));
+    assert!(manifest_content.contains("\"effectiveGlobalExcludes\""));
 }
 
 #[test]

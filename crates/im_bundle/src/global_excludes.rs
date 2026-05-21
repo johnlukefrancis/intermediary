@@ -84,11 +84,11 @@ const RECOMMENDED_PATH_SEGMENTS: &[&str] = &[
 
 #[derive(Debug, Clone)]
 pub struct NormalizedGlobalExcludes {
-    dir_names: Vec<String>,
-    dir_suffixes: Vec<String>,
-    file_names: Vec<String>,
-    file_suffixes: Vec<String>,
-    path_segments: Vec<String>,
+    pub(crate) dir_names: Vec<String>,
+    pub(crate) dir_suffixes: Vec<String>,
+    pub(crate) file_names: Vec<String>,
+    pub(crate) file_suffixes: Vec<String>,
+    pub(crate) path_segments: Vec<String>,
 }
 
 pub fn normalize_global_excludes(excludes: &GlobalExcludes) -> NormalizedGlobalExcludes {
@@ -393,9 +393,9 @@ mod tests {
             .map(|entry| entry.archive_path.as_str())
             .collect();
 
-        assert!(archive_paths.contains(
-            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
-        ));
+        assert!(
+            archive_paths.contains("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts")
+        );
     }
 
     #[test]
@@ -444,8 +444,8 @@ mod tests {
             .map(|entry| entry.archive_path.as_str())
             .collect();
 
-        assert!(!archive_paths.contains(
-            "TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts"
-        ));
+        assert!(
+            !archive_paths.contains("TriangleRain/Source/Systems/Checkpoints/CheckpointManager.ts")
+        );
     }
 }
