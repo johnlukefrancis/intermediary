@@ -44,6 +44,7 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-05-22: Fresh Windows installs could still report `WSL backend port 3142 is occupied by an external process that rejected the current websocket token` when a stale app-local WSL `im_agent` survived cache removal or reinstall. Fixed by validating app-local agent binaries against packaged resources before reuse and by treating exact command-line matches to the configured app-local WSL agent path as managed stale processes eligible for bounded remediation.
 - 2026-05-21: Bundle global excludes re-applied recommended defaults after users removed them, so source/control directories named `Build` could be omitted without manifest evidence. Fixed by treating explicit `globalExcludes` as authoritative and recording `effectiveGlobalExcludes` in bundle manifests.
 - 2026-02-11: Supervised host/WSL agent processes could stall when logger stdout/stderr writes filled undrained pipe buffers. Fixed by disabling per-entry stdio emission for app-managed spawns, launching managed agents with null stdio streams, and using bounded `agent_latest.log` tails for early-exit diagnostics.
 - 2026-02-11: Screenshot/image files with common extensions (`.png`, `.jpg`, `.jpeg`, `.webp`, etc.) are now classified as Docs so they appear in the Docs pane instead of being filtered as `other`.

@@ -36,7 +36,7 @@ pub(super) fn build_wsl_spawn_command_line(
 pub(super) fn build_wsl_list_exact_pids_command_line(agent_bin_wsl: &str) -> String {
     let target = quote_bash(agent_bin_wsl);
     format!(
-        "target={target}; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; fi; done"
+        "target={target}; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; continue; fi; cmdline=$(tr '\\0' ' ' < \"/proc/$pid/cmdline\" 2>/dev/null || true); case \"$cmdline\" in *\"$target\"*) echo \"$pid\";; esac; done"
     )
 }
 
@@ -98,8 +98,18 @@ mod tests {
         );
         assert_eq!(
             command,
-            "target='/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent'; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; fi; done"
+            "target='/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent'; deleted_target=\"$target (deleted)\"; self=$$; pids=''; if pgrep_out=$(pgrep -f \"$target\" 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; exe=$(readlink \"/proc/$pid/exe\" 2>/dev/null || true); if [ \"$exe\" = \"$target\" ] || [ \"$exe\" = \"$deleted_target\" ]; then echo \"$pid\"; continue; fi; cmdline=$(tr '\\0' ' ' < \"/proc/$pid/cmdline\" 2>/dev/null || true); case \"$cmdline\" in *\"$target\"*) echo \"$pid\";; esac; done"
         );
+    }
+
+    #[test]
+    fn wsl_list_exact_pids_uses_cmdline_fallback_for_same_agent_path() {
+        let command = build_wsl_list_exact_pids_command_line(
+            "/mnt/c/Users/john/AppData/Local/Intermediary/agent/im_agent",
+        );
+
+        assert!(command.contains("cmdline=$(tr '\\0' ' ' < \"/proc/$pid/cmdline\""));
+        assert!(command.contains("case \"$cmdline\" in *\"$target\"*) echo \"$pid\";; esac"));
     }
 
     #[test]

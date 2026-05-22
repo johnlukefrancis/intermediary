@@ -125,7 +125,8 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
         | UiCommand::StageFile(_)
         | UiCommand::GetRepoTopLevel(_)
         | UiCommand::ListBundles(_)
-        | UiCommand::GetTrFleetStatus(_) | UiCommand::TrFleetAction(_)
+        | UiCommand::GetTrFleetStatus(_)
+        | UiCommand::TrFleetAction(_)
         | UiCommand::Unknown => FORWARD_REQUEST_TIMEOUT_DEFAULT,
     }
 }

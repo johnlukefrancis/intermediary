@@ -32,8 +32,12 @@ impl TrFleetService {
     }
 
     pub async fn get_tr_fleet_status(&self) -> GetTrFleetStatusResult {
-        let targets = join_all(TR_FLEET_PORTS.into_iter().map(|port| self.fetch_port_status(port)))
-            .await;
+        let targets = join_all(
+            TR_FLEET_PORTS
+                .into_iter()
+                .map(|port| self.fetch_port_status(port)),
+        )
+        .await;
         GetTrFleetStatusResult { targets }
     }
 

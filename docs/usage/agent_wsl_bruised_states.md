@@ -105,10 +105,13 @@ Observed behavior:
 
 Automatic remediation now:
 - Supervisor tracks the absolute WSL binary path (`<agent_dir_in_wsl>/im_agent`) for the launched backend.
+- Startup validates the app-local installed agent bundle against the packaged resource bundle before reusing it, even when a backend is already listening.
 - On **Stop Agent**, **Restart Agent**, and WSL auth-mismatch readiness failures, supervisor runs in-distro termination:
-  - `pgrep -f '<agent_bin_wsl>' | xargs -r kill -TERM`
+  - lists only processes whose command line contains the exact configured agent binary path
+  - accepts `/proc/<pid>/exe` matches and command-line fallback matches for the same configured path
+  - sends `TERM` to the matched process IDs
   - waits a short grace window
-  - escalates to `kill -KILL` for the same matched process only if needed
+  - escalates to `KILL` for the same matched process IDs only if needed
 - If the port is still occupied after remediation, supervisor performs one bounded retry with backoff, then returns a clear stale-port error.
 
 Safety constraints:

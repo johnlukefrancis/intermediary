@@ -9,9 +9,9 @@ mod responses_tr_fleet;
 
 pub use commands::{
     BuildBundleCommand, BundleSelection, ClientHelloCommand, GetRepoTopLevelCommand,
-    GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand, RefreshCommand,
-    SetOptionsCommand, StageFileCommand, TrFleetActionCommand, TrFleetActionPayload,
-    TrFleetWatchBackend, UiCommand, WatchRepoCommand,
+    GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand, RefreshCommand, SetOptionsCommand,
+    StageFileCommand, TrFleetActionCommand, TrFleetActionPayload, TrFleetWatchBackend, UiCommand,
+    WatchRepoCommand,
 };
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
