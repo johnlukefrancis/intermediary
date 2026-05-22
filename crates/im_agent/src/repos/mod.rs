@@ -7,6 +7,7 @@ mod ignore_matcher;
 mod mru_index;
 mod recent_files_store;
 mod repo_top_level;
+mod repo_topology_change;
 mod repo_watcher;
 mod repo_watcher_events;
 mod watcher_error;

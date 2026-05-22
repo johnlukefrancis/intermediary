@@ -2,11 +2,14 @@
 // Description: Event handling for repo watcher changes and rename mapping
 
 use crate::logging::Logger;
-use crate::protocol::{AgentEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind};
+use crate::protocol::{
+    AgentEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, RepoTopologyChangedEvent,
+};
 use crate::repos::categorizer::Categorizer;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
+use crate::repos::repo_topology_change::event_affects_top_level_metadata;
 use crate::server::EventBus;
 use notify::event::{ModifyKind, RenameMode};
 use notify::{Event, EventKind};
@@ -25,6 +28,15 @@ struct EventContext<'a> {
 }
 
 impl<'a> EventContext<'a> {
+    async fn maybe_broadcast_topology_changed(&self, event: &Event) {
+        if event_affects_top_level_metadata(self.root_path, event).await {
+            self.event_bus
+                .broadcast_event(AgentEvent::RepoTopologyChanged(
+                    RepoTopologyChangedEvent::new(self.repo_id.to_string()),
+                ));
+        }
+    }
+
     async fn apply_change(&self, path: &Path, change_type: FileChangeType) {
         let relative_path = match path.strip_prefix(self.root_path) {
             Ok(relative) => relative,
@@ -127,6 +139,8 @@ pub(crate) async fn handle_event(
         event_bus,
         logger,
     };
+
+    context.maybe_broadcast_topology_changed(&event).await;
 
     if let EventKind::Modify(ModifyKind::Name(mode)) = event.kind {
         handle_rename_event(&context, mode, &event.paths).await;

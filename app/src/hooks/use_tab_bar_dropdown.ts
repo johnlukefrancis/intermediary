@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const DROPDOWN_VIEWPORT_GUTTER_PX = 12;
+const MODAL_ROOT_SELECTOR = "[data-intermediary-modal-root]";
 
 interface UseTabBarDropdownArgs {
   navRef: React.RefObject<HTMLElement | null>;
@@ -51,6 +52,9 @@ export function useTabBarDropdown({
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node | null;
       const activeTrigger = triggerRefs.current.get(activeDropdownId);
+      if (target instanceof Element && target.closest(MODAL_ROOT_SELECTOR)) {
+        return;
+      }
       if (target && dropdownRef.current?.contains(target)) {
         return;
       }

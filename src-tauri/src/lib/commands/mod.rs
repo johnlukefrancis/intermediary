@@ -4,8 +4,10 @@
 pub mod agent_control;
 pub mod agent_probe;
 pub mod config;
+mod file_open_policy;
 pub mod file_manager;
 pub mod file_opener;
+mod file_opener_paths;
 pub mod notes;
 pub mod paths;
 pub mod reset;

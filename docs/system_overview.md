@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-03-27
+Updated on: 2026-05-22
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -125,6 +125,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 **Agent → UI events:**
 - `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 - `snapshot { repoId, recent: FileEntry[] }`
+- `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or depth-2 subdirectory metadata
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 - `error { scope, message, details? }`
 - `wslBackendStatus { status: "online" | "offline", generation }` emitted on WSL transport transitions; generation increments on each successful reconnect
@@ -244,7 +245,7 @@ intermediary/
 
 ## Key Workflows
 
-1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list
+1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list; topology-changing directory events also refresh bundle directory selection metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
 3. **Bundle Build:** User clicks Build → host agent routes by repo kind → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 

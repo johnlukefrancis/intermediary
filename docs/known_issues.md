@@ -29,9 +29,6 @@ Depends on: ADR-000, ADR-007
 
 ## P2 — Degraded but usable
 
-- 2026-05-22: Opening files in the containing folder can fail for Windows-path files. Needs verification for whether this affects all file roots or only host/Windows paths.
-- 2026-05-22: Removing a folder from the app can stall after confirmation: click delete, confirm, and nothing changes. Observed during folder/subfolder removal flows.
-- 2026-05-22: Newly created folders inside a watched repo, for example `Docs/Screenshots`, may not appear in the app until closing and reopening Intermediary.
 - 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).
@@ -47,6 +44,9 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-05-22: Opening files in the containing folder could fail for Windows-path files. Fixed by passing Explorer's reveal selection and target path as one `/select,<path>` argument.
+- 2026-05-22: Removing a folder or subfolder from the app could stall after confirmation because tab-dropdown outside-click handling could unmount portal confirmations before the confirm click ran. Fixed by making modal portals an explicit dropdown exclusion.
+- 2026-05-22: Newly created folders inside a watched repo, for example `Docs/Screenshots`, could be missing until app restart. Fixed by adding a watcher topology-change event and refreshing the repo top-level directory model on that event.
 - 2026-05-22: Fresh Windows installs could still report `WSL backend port 3142 is occupied by an external process that rejected the current websocket token` when a stale app-local WSL `im_agent` survived cache removal or reinstall. Fixed by validating app-local agent binaries against packaged resources before reuse and by treating exact command-line matches to the configured app-local WSL agent path as managed stale processes eligible for bounded remediation.
 - 2026-05-21: Bundle global excludes re-applied recommended defaults after users removed them, so source/control directories named `Build` could be omitted without manifest evidence. Fixed by treating explicit `globalExcludes` as authoritative and recording `effectiveGlobalExcludes` in bundle manifests.
 - 2026-02-11: Supervised host/WSL agent processes could stall when logger stdout/stderr writes filled undrained pipe buffers. Fixed by disabling per-entry stdio emission for app-managed spawns, launching managed agents with null stdio streams, and using bounded `agent_latest.log` tails for early-exit diagnostics.

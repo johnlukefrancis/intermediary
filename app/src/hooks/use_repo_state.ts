@@ -77,7 +77,14 @@ export function useRepoState(repoId: string): RepoState {
   const [defaultExcluded, setDefaultExcluded] = useState<string[]>([]);
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
   const refreshInFlightKeyRef = useRef<string | null>(null);
+  const currentRepoIdRef = useRef(repoId);
+  const topologyRefreshSeqRef = useRef(0);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (currentRepoIdRef.current !== repoId) {
+    currentRepoIdRef.current = repoId;
+    topologyRefreshSeqRef.current += 1;
+  }
 
   const registerStaged = useCallback((relativePath: string, stagedInfo: StagedInfo) => {
     setStagedByPath((prev) => {
@@ -128,9 +135,28 @@ export function useRepoState(repoId: string): RepoState {
           }
           return next;
         });
+      } else if (event.type === "repoTopologyChanged" && event.repoId === repoId && client) {
+        const requestRepoId = event.repoId;
+        const requestSeq = topologyRefreshSeqRef.current + 1;
+        topologyRefreshSeqRef.current = requestSeq;
+        const isStaleTopologyRefresh = (): boolean =>
+          currentRepoIdRef.current !== requestRepoId ||
+          topologyRefreshSeqRef.current !== requestSeq;
+        void sendGetRepoTopLevel(client, requestRepoId)
+          .then((result) => {
+            if (isStaleTopologyRefresh()) return;
+            setTopLevelDirs(result.dirs);
+            setTopLevelFiles(result.files);
+            setTopLevelSubdirs(result.subdirs ?? {});
+            setDefaultExcluded(result.defaultExcluded);
+          })
+          .catch((err: unknown) => {
+            if (isStaleTopologyRefresh()) return;
+            console.error("[useRepoState] repo topology refresh failed:", err);
+          });
       }
     },
-    [repoId, recentFilesLimit]
+    [client, repoId, recentFilesLimit]
   );
 
   useEffect(() => {
@@ -203,6 +229,7 @@ export function useRepoState(repoId: string): RepoState {
         if (isStale()) return;
         const result = await sendGetRepoTopLevel(client, repoId);
         if (isStale()) return;
+        topologyRefreshSeqRef.current += 1;
         setTopLevelDirs(result.dirs);
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});

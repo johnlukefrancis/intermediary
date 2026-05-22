@@ -20,11 +20,13 @@ import {
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
   BundleBuiltEventSchema, ErrorEventSchema, FileChangeTypeSchema, FileChangedEventSchema,
-  FileEntrySchema, FileKindSchema, HelloEventSchema, SnapshotEventSchema, StagedInfoSchema,
-  WslBackendConnectionStatusSchema, WslBackendStatusEventSchema, type AgentErrorCode,
-  type AgentErrorEvent, type AgentEvent, type BundleBuildPhase, type BundleBuildProgressEvent,
-  type BundleBuiltEvent, type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
-  type StagedInfo, type WslBackendConnectionStatus, type WslBackendStatusEvent,
+  FileEntrySchema, FileKindSchema, HelloEventSchema, RepoTopologyChangedEventSchema,
+  SnapshotEventSchema, StagedInfoSchema, WslBackendConnectionStatusSchema,
+  WslBackendStatusEventSchema, type AgentErrorCode, type AgentErrorEvent, type AgentEvent,
+  type BundleBuildPhase, type BundleBuildProgressEvent, type BundleBuiltEvent,
+  type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
+  type RepoTopologyChangedEvent, type StagedInfo, type WslBackendConnectionStatus,
+  type WslBackendStatusEvent,
 } from "./protocol_events.js";
 export {
   BuildBundleCommandSchema, BuildBundleResultSchema, BundleInfoSchema, BundleSelectionSchema,

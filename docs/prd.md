@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-05-21
+Updated on: 2026-05-22
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -322,6 +322,7 @@ Host agent → UI events:
 
 * `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 * `snapshot { repoId, recent: FileEntry[] }`
+* `repoTopologyChanged { repoId }`
 * `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 * `error { scope, message, details? }`
 

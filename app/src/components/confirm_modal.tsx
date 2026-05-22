@@ -49,7 +49,11 @@ export function ConfirmModal({
   }, [onCancel]);
 
   return createPortal(
-    <div className="confirm-overlay" onClick={handleBackdropClick}>
+    <div
+      className="confirm-overlay"
+      data-intermediary-modal-root
+      onClick={handleBackdropClick}
+    >
       <div className="confirm-panel" role="dialog" aria-modal="true">
         <h3 className="confirm-title">{title}</h3>
         <p className="confirm-message">{message}</p>

@@ -674,6 +674,10 @@
       "summary": "Protocol envelope types for request/response messaging"
     },
     {
+      "path": "crates/im_agent/src/protocol/events_runtime.rs",
+      "summary": "Runtime status and error event payloads"
+    },
+    {
       "path": "crates/im_agent/src/protocol/events.rs",
       "summary": "Agent event payloads and file entry types"
     },
@@ -724,6 +728,10 @@
     {
       "path": "crates/im_agent/src/repos/repo_top_level.rs",
       "summary": "Scan top-level directories and files in a repo"
+    },
+    {
+      "path": "crates/im_agent/src/repos/repo_topology_change.rs",
+      "summary": "Detect watcher events that invalidate repo top-level metadata"
     },
     {
       "path": "crates/im_agent/src/repos/repo_watcher_events.rs",
@@ -1116,6 +1124,14 @@
     {
       "path": "src-tauri/src/lib/commands/file_manager.rs",
       "summary": "Open folders in the host OS file manager"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/file_open_policy.rs",
+      "summary": "Host launcher policy for opening text and non-text files"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/file_opener_paths.rs",
+      "summary": "Resolve repo-relative file paths to host-visible paths"
     },
     {
       "path": "src-tauri/src/lib/commands/file_opener.rs",

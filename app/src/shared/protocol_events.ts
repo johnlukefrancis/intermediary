@@ -65,6 +65,12 @@ export const SnapshotEventSchema = z.object({
   recent: z.array(FileEntrySchema),
 });
 
+export const RepoTopologyChangedEventSchema = z.object({
+  type: z.literal("repoTopologyChanged"),
+  repoId: z.string(),
+});
+export type RepoTopologyChangedEvent = z.infer<typeof RepoTopologyChangedEventSchema>;
+
 export const BundleBuiltEventSchema = z.object({
   type: z.literal("bundleBuilt"),
   repoId: z.string(),
@@ -133,6 +139,7 @@ export const AgentEventSchema = z.discriminatedUnion("type", [
   HelloEventSchema,
   FileChangedEventSchema,
   SnapshotEventSchema,
+  RepoTopologyChangedEventSchema,
   BundleBuiltEventSchema,
   BundleBuildProgressEventSchema,
   ErrorEventSchema,

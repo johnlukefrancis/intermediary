@@ -171,6 +171,7 @@ crates/im_agent/src/main.rs - WSL agent daemon entry point
 crates/im_agent/src/protocol/cancel_bundle_tests.rs - Protocol tests for cancellable bundle build messages
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
+crates/im_agent/src/protocol/events_runtime.rs - Runtime status and error event payloads
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
@@ -184,6 +185,7 @@ crates/im_agent/src/repos/mod.rs - Repository scanning module exports
 crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
 crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debounced atomic writes
 crates/im_agent/src/repos/repo_top_level.rs - Scan top-level directories and files in a repo
+crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
 crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
@@ -282,6 +284,8 @@ src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + op
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence
 src-tauri/src/lib/commands/file_manager.rs - Open folders in the host OS file manager
+src-tauri/src/lib/commands/file_open_policy.rs - Host launcher policy for opening text and non-text files
+src-tauri/src/lib/commands/file_opener_paths.rs - Resolve repo-relative file paths to host-visible paths
 src-tauri/src/lib/commands/file_opener.rs - Reveal files in file manager or open with default application
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/notes.rs - Tauri commands for per-repo plain-text notes persistence

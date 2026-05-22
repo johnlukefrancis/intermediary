@@ -32,8 +32,7 @@ pub async fn open_in_file_manager(
     tauri::async_runtime::spawn_blocking(move || {
         let host_path = resolve_host_path(&folder_path, distro_override.as_deref())?;
         let path = Path::new(&host_path);
-        let is_windows_unc = cfg!(target_os = "windows") && host_path.starts_with(r"\\");
-        if !is_windows_unc && !path.is_dir() {
+        if !is_windows_unc_path(&host_path) && !path.is_dir() {
             return Err(format!("Folder does not exist: {host_path}"));
         }
 
@@ -69,6 +68,10 @@ pub async fn open_in_file_manager(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
+}
+
+pub(crate) fn is_windows_unc_path(path: &str) -> bool {
+    cfg!(target_os = "windows") && path.starts_with(r"\\")
 }
 
 #[cfg(target_os = "windows")]

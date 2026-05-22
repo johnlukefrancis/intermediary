@@ -480,6 +480,22 @@ fn wsl_backend_status_event_roundtrip() {
 }
 
 #[test]
+fn repo_topology_changed_event_roundtrip() {
+    let json = json!({
+        "type": "repoTopologyChanged",
+        "repoId": "trianglerain"
+    });
+
+    let event: AgentEvent = serde_json::from_value(json).expect("parse repoTopologyChanged");
+    match event {
+        AgentEvent::RepoTopologyChanged(result) => {
+            assert_eq!(result.repo_id, "trianglerain");
+        }
+        _ => panic!("expected RepoTopologyChanged"),
+    }
+}
+
+#[test]
 fn watcher_mounted_windows_path_risk_error_code_roundtrip() {
     let json = json!({
         "type": "error",

@@ -4,6 +4,7 @@
 mod commands;
 mod envelopes;
 mod events;
+mod events_runtime;
 mod responses;
 mod responses_tr_fleet;
 
@@ -20,9 +21,12 @@ pub use envelopes::{
     EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
 };
 pub use events::{
-    AgentErrorCode, AgentErrorDetails, AgentErrorEvent, AgentEvent, BundleBuildProgressEvent,
-    BundleBuiltEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, SnapshotEvent,
-    StagedInfo, WslBackendConnectionStatus, WslBackendStatusEvent,
+    AgentEvent, BundleBuildProgressEvent, BundleBuiltEvent, FileChangeType, FileChangedEvent,
+    FileEntry, FileKind, RepoTopologyChangedEvent, SnapshotEvent, StagedInfo,
+};
+pub use events_runtime::{
+    AgentErrorCode, AgentErrorDetails, AgentErrorEvent, WslBackendConnectionStatus,
+    WslBackendStatusEvent,
 };
 pub use responses::{
     BuildBundleResult, BundleInfo, CancelBundleBuildResult, ClientHelloResult,
