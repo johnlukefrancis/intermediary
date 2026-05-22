@@ -23,6 +23,7 @@ impl WslBackendMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum WslBackendOwner {
     InstalledManaged,
+    SamePortIntermediary,
     ExternalUnmanaged,
 }
 
@@ -30,6 +31,7 @@ impl WslBackendOwner {
     pub(super) fn log_key(self) -> &'static str {
         match self {
             Self::InstalledManaged => "installed_managed",
+            Self::SamePortIntermediary => "same_port_intermediary",
             Self::ExternalUnmanaged => "external_unmanaged",
         }
     }
@@ -111,6 +113,14 @@ mod tests {
         assert!(!backend_mode_allows_owner(
             WslBackendMode::Managed,
             WslBackendOwner::ExternalUnmanaged
+        ));
+    }
+
+    #[test]
+    fn managed_mode_allows_same_port_intermediary_for_remediation() {
+        assert!(backend_mode_allows_owner(
+            WslBackendMode::Managed,
+            WslBackendOwner::SamePortIntermediary
         ));
     }
 }

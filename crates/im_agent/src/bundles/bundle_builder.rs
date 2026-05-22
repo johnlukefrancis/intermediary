@@ -208,15 +208,15 @@ mod tests {
     #[test]
     fn rejects_duplicate_build_lock_for_same_repo_and_preset() {
         let first = acquire_build_lock(
-            "repo_a",
-            "preset_main",
+            "repo_duplicate_lock",
+            "preset_duplicate_lock",
             "build_1",
             im_bundle::cancel::BundleCancelToken::new(),
         )
         .expect("first lock");
         let err = match acquire_build_lock(
-            "repo_a",
-            "preset_main",
+            "repo_duplicate_lock",
+            "preset_duplicate_lock",
             "build_2",
             im_bundle::cancel::BundleCancelToken::new(),
         ) {
@@ -226,8 +226,8 @@ mod tests {
         assert_eq!(err.code(), "BUNDLE_BUILD_IN_PROGRESS");
         drop(first);
         acquire_build_lock(
-            "repo_a",
-            "preset_main",
+            "repo_duplicate_lock",
+            "preset_duplicate_lock",
             "build_3",
             im_bundle::cancel::BundleCancelToken::new(),
         )
@@ -257,12 +257,25 @@ mod tests {
     #[test]
     fn cancels_only_matching_active_build_id() {
         let token = im_bundle::cancel::BundleCancelToken::new();
-        let guard =
-            acquire_build_lock("repo_a", "preset_main", "build_1", token.clone()).expect("lock");
+        let guard = acquire_build_lock(
+            "repo_cancel_lock",
+            "preset_cancel_lock",
+            "build_1",
+            token.clone(),
+        )
+        .expect("lock");
 
-        assert!(!cancel_bundle_build("repo_a", "preset_main", "build_2"));
+        assert!(!cancel_bundle_build(
+            "repo_cancel_lock",
+            "preset_cancel_lock",
+            "build_2"
+        ));
         assert!(!token.is_cancelled());
-        assert!(cancel_bundle_build("repo_a", "preset_main", "build_1"));
+        assert!(cancel_bundle_build(
+            "repo_cancel_lock",
+            "preset_cancel_lock",
+            "build_1"
+        ));
         assert!(token.is_cancelled());
 
         drop(guard);

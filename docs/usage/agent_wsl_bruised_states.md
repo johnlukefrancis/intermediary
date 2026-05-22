@@ -104,6 +104,7 @@ Use Restart Agent when:
 Observed behavior:
 - WSL backend port is listening, but websocket auth probe rejects (`wrong token` / stale backend).
 - This can happen when a previous WSL `im_agent` process survives while the supervisor only has a stale `wsl.exe` wrapper handle.
+- It can also happen when another Intermediary install/dev task owns the same backend port with a different app-auth token.
 
 Automatic remediation now:
 - Supervisor tracks the absolute WSL binary path (`<agent_dir_in_wsl>/im_agent`) for the launched backend.
@@ -111,11 +112,13 @@ Automatic remediation now:
 - On **Stop Agent**, **Restart Agent**, and WSL auth-mismatch readiness failures, supervisor runs in-distro termination:
   - lists only processes whose command line contains the exact configured agent binary path
   - accepts `/proc/<pid>/exe` matches and command-line fallback matches for the same configured path
+  - for auth-mismatch remediation in auto/managed modes, also accepts same-port Intermediary `im_agent` processes whose environment includes the matching `INTERMEDIARY_AGENT_PORT` and an `INTERMEDIARY_WSL_WS_TOKEN`
   - sends `TERM` to the matched process IDs
   - waits a short grace window
   - escalates to `KILL` for the same matched process IDs only if needed
 - If the port is still occupied after remediation, supervisor performs one bounded retry with backoff, then returns a clear stale-port error.
+- In `external` WSL backend mode, supervisor never terminates the listener; token mismatch remains an external-backend setup error.
 
 Safety constraints:
-- Termination is path-targeted to the configured agent binary and distro; it does not use global `pkill im_agent`.
+- Termination is path-targeted to the configured agent binary, or same-port/env-targeted to an Intermediary WSL agent in the selected distro; it does not use global `pkill im_agent`.
 - Host backend remains independent; this remediation only affects the WSL backend process match.

@@ -40,6 +40,13 @@ pub(super) fn build_wsl_list_exact_pids_command_line(agent_bin_wsl: &str) -> Str
     )
 }
 
+pub(super) fn build_wsl_list_intermediary_agent_pids_command_line(wsl_port: u16) -> String {
+    let target_port = quote_bash(&wsl_port.to_string());
+    format!(
+        "target_port={target_port}; self=$$; pids=''; if pgrep_out=$(pgrep -x im_agent 2>/dev/null); then pids=\"$pgrep_out\"; else rc=$?; [ \"$rc\" -eq 1 ] || exit \"$rc\"; fi; for pid in $pids; do [ \"$pid\" = \"$self\" ] && continue; env_lines=$(tr '\\0' '\\n' < \"/proc/$pid/environ\" 2>/dev/null || true); case \"\n$env_lines\n\" in *\"\nINTERMEDIARY_AGENT_PORT=$target_port\n\"*) ;; *) continue;; esac; case \"\n$env_lines\n\" in *\"\nINTERMEDIARY_WSL_WS_TOKEN=\"*) echo \"$pid\";; esac; done"
+    )
+}
+
 pub(super) fn build_wsl_signal_pids_command_line(pids: &[u32], signal: &str) -> String {
     if pids.is_empty() {
         return "true".to_string();
@@ -78,7 +85,8 @@ fn quote_bash(value: &str) -> String {
 mod tests {
     use super::{
         build_wsl_bash_args, build_wsl_list_exact_pids_command_line,
-        build_wsl_signal_pids_command_line, build_wsl_spawn_command_line, normalize_distro,
+        build_wsl_list_intermediary_agent_pids_command_line, build_wsl_signal_pids_command_line,
+        build_wsl_spawn_command_line, normalize_distro,
     };
 
     #[test]
@@ -110,6 +118,16 @@ mod tests {
 
         assert!(command.contains("cmdline=$(tr '\\0' ' ' < \"/proc/$pid/cmdline\""));
         assert!(command.contains("case \"$cmdline\" in *\"$target\"*) echo \"$pid\";; esac"));
+    }
+
+    #[test]
+    fn wsl_list_intermediary_agent_pids_scopes_by_port_and_token_env() {
+        let command = build_wsl_list_intermediary_agent_pids_command_line(3142);
+
+        assert!(command.contains("pgrep -x im_agent"));
+        assert!(command.contains("INTERMEDIARY_AGENT_PORT=$target_port"));
+        assert!(command.contains("INTERMEDIARY_WSL_WS_TOKEN="));
+        assert!(!command.contains("pkill"));
     }
 
     #[test]

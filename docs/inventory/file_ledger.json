@@ -90,12 +90,12 @@
       "summary": "Bracketed tab switcher for handset mode sections (Docs | Code | Zips)"
     },
     {
-      "path": "app/src/components/layout/three_column.tsx",
-      "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
+      "path": "app/src/components/layout/text_workspace_layout.tsx",
+      "summary": "Layout that replaces Docs and Code panes with a full text workspace"
     },
     {
-      "path": "app/src/components/note_panel.tsx",
-      "summary": "Plain-text monospace note editor panel content"
+      "path": "app/src/components/layout/three_column.tsx",
+      "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
     },
     {
       "path": "app/src/components/options_overlay.tsx",
@@ -158,6 +158,10 @@
       "summary": "Options panel theme controls (warm mode toggle + texture/accent per tab)"
     },
     {
+      "path": "app/src/components/repo_pane_headers.tsx",
+      "summary": "Header controls for repo Docs and Code file panes"
+    },
+    {
       "path": "app/src/components/status_bar.tsx",
       "summary": "Status bar with connection status LED, error display, and options button"
     },
@@ -176,6 +180,10 @@
     {
       "path": "app/src/components/tab_remove_button.tsx",
       "summary": "\"x\" button for removing repos with confirmation"
+    },
+    {
+      "path": "app/src/components/text_workspace.tsx",
+      "summary": "Shared minimal textarea surface for notes and scratch file viewing"
     },
     {
       "path": "app/src/hooks/agent/agent_context_types.ts",
@@ -288,6 +296,10 @@
     {
       "path": "app/src/hooks/use_repo_state.ts",
       "summary": "Per-repo file state management with event subscription"
+    },
+    {
+      "path": "app/src/hooks/use_repo_text_workspace.ts",
+      "summary": "Repo-tab text workspace state for notes and ephemeral file scratch buffers"
     },
     {
       "path": "app/src/hooks/use_resume_detector.ts",
@@ -530,10 +542,6 @@
       "summary": "Motion utilities, transition presets, and reduced-motion support"
     },
     {
-      "path": "app/src/styles/note_panel.css",
-      "summary": "Monospace textarea and notes-related panel header styles"
-    },
-    {
       "path": "app/src/styles/options_controls.css",
       "summary": "Buttons, text/number inputs, checkbox rows, and path display controls"
     },
@@ -572,6 +580,10 @@
     {
       "path": "app/src/styles/tab_bar.css",
       "summary": "Tab bar navigation with ASCII-instrument bracketed labels"
+    },
+    {
+      "path": "app/src/styles/text_workspace.css",
+      "summary": "Text workspace layout and editor styling for notes and scratch file buffers"
     },
     {
       "path": "app/src/styles/theme_accents.css",
@@ -744,6 +756,10 @@
     {
       "path": "crates/im_agent/src/repos/repo_watcher.rs",
       "summary": "Notify-based repo watcher with MRU and event emission"
+    },
+    {
+      "path": "crates/im_agent/src/repos/text_file_reader.rs",
+      "summary": "Repo-relative UTF-8 text file reader for in-app scratch viewing"
     },
     {
       "path": "crates/im_agent/src/repos/watcher_error.rs",
@@ -1098,6 +1114,10 @@
       "summary": "Shared WSL supervisor timing constants"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_same_port_termination.rs",
+      "summary": "Same-port Intermediary WSL agent termination for supervisor remediation"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/wsl.rs",
       "summary": "WSL backend startup and ownership detection for the supervisor"
     },
@@ -1106,8 +1126,16 @@
       "summary": "Types for supervising host agent lifecycle with optional Windows WSL backend"
     },
     {
+      "path": "src-tauri/src/lib/agent/wsl_command_runner.rs",
+      "summary": "Bounded WSL command execution helpers for agent process control"
+    },
+    {
       "path": "src-tauri/src/lib/agent/wsl_process_control_commands.rs",
       "summary": "Shared command-line builders and quoting helpers for WSL process control"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_process_control_tests.rs",
+      "summary": "Tests for WSL process-control parsing helpers"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_process_control.rs",

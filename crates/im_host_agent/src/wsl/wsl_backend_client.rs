@@ -117,6 +117,7 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
         | UiCommand::WatchRepo(_)
         | UiCommand::Refresh(_)
         | UiCommand::StageFile(_)
+        | UiCommand::ReadTextFile(_)
         | UiCommand::CancelBundleBuild(_)
         | UiCommand::GetRepoTopLevel(_)
         | UiCommand::ListBundles(_)

@@ -8,11 +8,11 @@ use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
     BuildBundleCommand, BundleBuiltEvent, BundleInfo, ClientHelloCommand, ClientHelloResult,
-    GetRepoTopLevelCommand, ListBundlesCommand, RefreshCommand, RefreshResult, SetOptionsCommand,
-    SetOptionsResult, StageFileCommand, StageFileResult, UiResponse, WatchRepoCommand,
-    WatchRepoResult,
+    GetRepoTopLevelCommand, ListBundlesCommand, ReadTextFileCommand, ReadTextFileResult,
+    RefreshCommand, RefreshResult, SetOptionsCommand, SetOptionsResult, StageFileCommand,
+    StageFileResult, UiResponse, WatchRepoCommand, WatchRepoResult,
 };
-use im_agent::repos::get_repo_top_level;
+use im_agent::repos::{get_repo_top_level, read_text_file};
 use im_agent::runtime::{AgentRuntime, RepoConfig, RepoRootKind};
 use im_agent::server::EventBus;
 use im_agent::staging::{stage_file_for_kind, StagingRootKind};
@@ -90,6 +90,23 @@ impl LocalHostBackend {
             wsl_path: result.wsl_path,
             bytes_copied: result.bytes_copied,
             mtime_ms: result.mtime_ms,
+        })
+    }
+
+    pub async fn read_text_file(
+        &self,
+        command: ReadTextFileCommand,
+    ) -> Result<ReadTextFileResult, AgentError> {
+        let repo_root = self.host_repo_root(&command.repo_id)?;
+        let result = read_text_file(repo_root, &command.path).await?;
+
+        Ok(ReadTextFileResult {
+            repo_id: command.repo_id,
+            path: command.path,
+            content: result.content,
+            bytes: result.bytes,
+            mtime_ms: result.mtime_ms,
+            encoding: "utf-8".to_string(),
         })
     }
 

@@ -208,6 +208,44 @@ fn stage_file_result_accepts_host_and_legacy_windows_paths_together() {
 }
 
 #[test]
+fn read_text_file_command_and_result_roundtrip() {
+    let command_json = json!({
+        "type": "readTextFile",
+        "repoId": "repo",
+        "path": "docs/guide.md"
+    });
+    let command: UiCommand = serde_json::from_value(command_json).expect("parse readTextFile");
+    match command {
+        UiCommand::ReadTextFile(command) => {
+            assert_eq!(command.repo_id, "repo");
+            assert_eq!(command.path, "docs/guide.md");
+        }
+        _ => panic!("expected ReadTextFile"),
+    }
+
+    let response_json = json!({
+        "type": "readTextFileResult",
+        "repoId": "repo",
+        "path": "docs/guide.md",
+        "content": "# Guide\n",
+        "bytes": 8,
+        "mtimeMs": 1700000000000_u64,
+        "encoding": "utf-8"
+    });
+    let response: UiResponse =
+        serde_json::from_value(response_json).expect("parse readTextFileResult");
+    match response {
+        UiResponse::ReadTextFileResult(result) => {
+            assert_eq!(result.repo_id, "repo");
+            assert_eq!(result.path, "docs/guide.md");
+            assert_eq!(result.content, "# Guide\n");
+            assert_eq!(result.encoding, "utf-8");
+        }
+        _ => panic!("expected ReadTextFileResult"),
+    }
+}
+
+#[test]
 fn legacy_build_bundle_result_windows_aliases() {
     let json = json!({
         "type": "buildBundleResult",

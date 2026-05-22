@@ -17,8 +17,12 @@ interface FileListColumnProps {
   kind: "docs" | "code";
   emptyMessage?: string;
   selectedPaths: ReadonlySet<string>;
-  onSelect: (path: string, event: React.MouseEvent) => void;
-  onDragStart: (path: string, event: React.MouseEvent) => void | Promise<void>;
+  onSelect: (
+    path: string,
+    event: Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">
+  ) => void;
+  onDragStart: (path: string) => void | Promise<void>;
+  onOpen: (path: string) => void;
 }
 
 interface ContextMenuState {
@@ -35,6 +39,7 @@ export function FileListColumn({
   selectedPaths,
   onSelect,
   onDragStart,
+  onOpen,
 }: FileListColumnProps): React.JSX.Element {
   const { isStarred, toggle } = useStarredFiles(repoId);
   const { config } = useConfig();
@@ -153,6 +158,7 @@ export function FileListColumn({
           isSelected={selectedPaths.has(file.path)}
           onDragStart={onDragStart}
           onSelect={onSelect}
+          onOpen={onOpen}
           onToggleStar={() => { toggle(kind, file.path); }}
           onContextMenu={handleContextMenu}
         />

@@ -168,6 +168,18 @@ Based on 4px unit:
 
 ---
 
+## Text Workspace
+
+The text workspace is the clean, full-pane text surface used for both per-repo notes and opened file scratch buffers.
+
+- Standard layout: one workspace panel spans the Docs+Code area while the Zips panel remains visible.
+- Handset layout: the workspace replaces the active deck content until closed.
+- Editor text uses `--font-mono`, `--color-text-primary`, and active accent variables for caret, selection, focus rail, and title brackets.
+- Workspace controls use existing deck panel headers and `panel-header-icon` buttons; file buffers have no save action because they never write back to repository files.
+- Line and character counts sit inside the editor at bottom-right using muted mono metadata styling.
+
+---
+
 ## V2: Deck Tokens
 
 ### Deck Radii (Hardware Feel)

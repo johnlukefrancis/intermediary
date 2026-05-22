@@ -111,7 +111,7 @@
         "--",
         "bash",
         "-lc",
-        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; export INTERMEDIARY_AGENT_PORT=3142; export INTERMEDIARY_WINDOWS_LOCALAPPDATA='${input:intermediaryWindowsLocalAppDataWslPath}'; set -e; if [ -s \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; else echo \"cargo env not found at $HOME/.cargo/env\" >&2; exit 1; fi; cd '${workspaceFolder}'; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; bash ./scripts/dev/run_wsl_agent_dev.sh"
+        "export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"; export INTERMEDIARY_AGENT_PORT=3142; export INTERMEDIARY_WS_AUTH_APP_ID='com.johnf.intermediary'; export INTERMEDIARY_WINDOWS_LOCALAPPDATA='${input:intermediaryWindowsLocalAppDataWslPath}'; set -e; if [ -s \"$HOME/.cargo/env\" ]; then . \"$HOME/.cargo/env\"; else echo \"cargo env not found at $HOME/.cargo/env\" >&2; exit 1; fi; cd '${workspaceFolder}'; command -v cargo >/dev/null 2>&1 || { echo \"cargo not available in PATH\" >&2; exit 1; }; bash ./scripts/dev/run_wsl_agent_dev.sh"
       ],
       "presentation": {
         "reveal": "always",

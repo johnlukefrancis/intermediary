@@ -40,7 +40,7 @@ impl AgentSupervisor {
         }
 
         if self.probe_listening(wsl_port).await? {
-            let owner = self.detect_wsl_backend_owner(&target).await?;
+            let owner = self.detect_wsl_backend_owner(&target, wsl_port).await?;
             if owner == WslBackendOwner::ExternalUnmanaged {
                 self.reconcile_recorded_child(ProcessKind::Wsl, "external_unmanaged_detected")
                     .await?;
@@ -58,25 +58,44 @@ impl AgentSupervisor {
                 return Err(message);
             }
 
+            let mut remediated_current_listener = false;
             if self
                 .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
                 .await?
             {
-                if owner == WslBackendOwner::InstalledManaged
-                    && !matches!(backend_mode, WslBackendMode::External)
+                if owner == WslBackendOwner::SamePortIntermediary
+                    && matches!(backend_mode, WslBackendMode::Managed)
                 {
                     self.set_wsl_launch_target(Some(target.clone()))?;
+                    self.remediate_stale_wsl_port(
+                        wsl_port,
+                        &target,
+                        owner,
+                        "managed_owner_mismatch",
+                    )
+                    .await?;
+                    remediated_current_listener = true;
+                } else {
+                    if owner == WslBackendOwner::InstalledManaged
+                        && !matches!(backend_mode, WslBackendMode::External)
+                    {
+                        self.set_wsl_launch_target(Some(target.clone()))?;
+                    }
+                    return Ok(EnsureProcessResult::AlreadyRunning);
                 }
-                return Ok(EnsureProcessResult::AlreadyRunning);
             }
 
-            if let Some(error) = self.wsl_auth_failure_error(backend_mode, owner, wsl_port, &target)
-            {
-                return Err(error);
-            }
+            if !remediated_current_listener {
+                if let Some(error) =
+                    self.wsl_auth_failure_error(backend_mode, owner, wsl_port, &target)
+                {
+                    return Err(error);
+                }
 
-            self.set_wsl_launch_target(Some(target.clone()))?;
-            self.remediate_stale_wsl_port(wsl_port, &target).await?;
+                self.set_wsl_launch_target(Some(target.clone()))?;
+                self.remediate_stale_wsl_port(wsl_port, &target, owner, "auth_probe_failed")
+                    .await?;
+            }
         } else if matches!(backend_mode, WslBackendMode::External) {
             return Err(format!(
                 "WSL backend mode=external requires an externally managed backend listening on port {wsl_port} ({})",
@@ -97,13 +116,21 @@ impl AgentSupervisor {
     async fn detect_wsl_backend_owner(
         &self,
         target: &crate::agent::wsl_process_control::WslLaunchTarget,
+        wsl_port: u16,
     ) -> Result<WslBackendOwner, String> {
         let installed_pid_count = self.detect_installed_wsl_pid_count(target).await?;
-        Ok(if installed_pid_count > 0 {
-            WslBackendOwner::InstalledManaged
-        } else {
-            WslBackendOwner::ExternalUnmanaged
-        })
+        if installed_pid_count > 0 {
+            return Ok(WslBackendOwner::InstalledManaged);
+        }
+
+        let same_port_pid_count = self
+            .detect_intermediary_wsl_pid_count_by_port(target, wsl_port)
+            .await?;
+        if same_port_pid_count > 0 {
+            return Ok(WslBackendOwner::SamePortIntermediary);
+        }
+
+        Ok(WslBackendOwner::ExternalUnmanaged)
     }
 
     fn wsl_auth_failure_error(
@@ -137,7 +164,7 @@ impl AgentSupervisor {
                     target,
                 )
             }
-            (_, WslBackendOwner::InstalledManaged) => None,
+            (_, WslBackendOwner::InstalledManaged | WslBackendOwner::SamePortIntermediary) => None,
         }
     }
 }

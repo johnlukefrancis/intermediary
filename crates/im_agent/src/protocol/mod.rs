@@ -14,7 +14,7 @@ mod cancel_bundle_tests;
 pub use commands::{
     BuildBundleCommand, BundleSelection, CancelBundleBuildCommand, ClientHelloCommand,
     GetRepoTopLevelCommand, GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand,
-    RefreshCommand, SetOptionsCommand, StageFileCommand, TrFleetActionCommand,
+    ReadTextFileCommand, RefreshCommand, SetOptionsCommand, StageFileCommand, TrFleetActionCommand,
     TrFleetActionPayload, TrFleetWatchBackend, UiCommand, WatchRepoCommand,
 };
 pub use envelopes::{
@@ -30,8 +30,8 @@ pub use events_runtime::{
 };
 pub use responses::{
     BuildBundleResult, BundleInfo, CancelBundleBuildResult, ClientHelloResult,
-    GetRepoTopLevelResult, ListBundlesResult, RefreshResult, SetOptionsResult, StageFileResult,
-    UiResponse, WatchRepoResult,
+    GetRepoTopLevelResult, ListBundlesResult, ReadTextFileResult, RefreshResult, SetOptionsResult,
+    StageFileResult, UiResponse, WatchRepoResult,
 };
 pub use responses_tr_fleet::{
     GetTrFleetStatusResult, TrFleetActionKind, TrFleetActionResult, TrFleetEndpointError,

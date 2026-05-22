@@ -6,7 +6,9 @@ import type { FileEntry } from "../shared/protocol.js";
 
 const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
-function isToggleModifier(e: React.MouseEvent): boolean {
+type SelectionEvent = Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">;
+
+function isToggleModifier(e: SelectionEvent): boolean {
   return IS_MAC ? e.metaKey : e.ctrlKey;
 }
 
@@ -14,7 +16,7 @@ export interface UseFileSelectionResult {
   selectedPaths: ReadonlySet<string>;
   selectionCount: number;
   isSelected: (path: string) => boolean;
-  handleSelect: (path: string, event: React.MouseEvent) => void;
+  handleSelect: (path: string, event: SelectionEvent) => void;
   clearSelection: () => void;
 }
 
@@ -41,7 +43,7 @@ export function useFileSelection(files: FileEntry[]): UseFileSelectionResult {
   }, [orderedPaths]);
 
   const handleSelect = useCallback(
-    (path: string, event: React.MouseEvent) => {
+    (path: string, event: SelectionEvent) => {
       const toggle = isToggleModifier(event);
       const shift = event.shiftKey;
 

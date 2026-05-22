@@ -8,6 +8,7 @@ mod install_runtime;
 mod process_control;
 pub mod supervisor;
 pub mod types;
+mod wsl_command_runner;
 mod wsl_process_control;
 mod wsl_process_control_commands;
 

@@ -2,14 +2,15 @@
 // Description: WSL agent launch target resolution, spawning, and in-WSL termination helpers
 
 use super::install::AgentBundlePaths;
+use super::wsl_command_runner::{run_wsl_bash, run_wsl_signal_command, sanitize_stream_text};
 use super::wsl_process_control_commands::{
     build_wsl_bash_args, build_wsl_list_exact_pids_command_line,
-    build_wsl_signal_pids_command_line, build_wsl_spawn_command_line, distro_label,
-    normalize_distro,
+    build_wsl_list_intermediary_agent_pids_command_line, build_wsl_signal_pids_command_line,
+    build_wsl_spawn_command_line, distro_label, normalize_distro,
 };
 use crate::paths::wsl_convert::windows_to_wsl_path;
 use std::path::Path;
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -17,8 +18,6 @@ use std::time::{Duration, Instant};
 use std::os::windows::process::CommandExt;
 
 const WSL_AGENT_BINARY_NAME: &str = "im_agent";
-const WSL_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
-const WSL_COMMAND_POLL: Duration = Duration::from_millis(25);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WslLaunchTarget {
@@ -102,7 +101,45 @@ pub fn terminate_wsl_agent_process(
         return Ok(WslTerminateOutcome::NoMatch);
     }
 
-    let mut matching_pids = list_exact_wsl_agent_pids(target)?;
+    terminate_matching_wsl_agent_processes(
+        target,
+        term_grace,
+        poll,
+        || list_exact_wsl_agent_pids(target),
+        &target.agent_bin_wsl,
+    )
+}
+
+pub fn terminate_intermediary_wsl_agent_processes_by_port(
+    target: &WslLaunchTarget,
+    wsl_port: u16,
+    term_grace: Duration,
+    poll: Duration,
+) -> Result<WslTerminateOutcome, String> {
+    if !cfg!(target_os = "windows") {
+        return Ok(WslTerminateOutcome::NoMatch);
+    }
+
+    terminate_matching_wsl_agent_processes(
+        target,
+        term_grace,
+        poll,
+        || list_intermediary_wsl_agent_pids_by_port(target, wsl_port),
+        &format!("INTERMEDIARY_AGENT_PORT={wsl_port}"),
+    )
+}
+
+fn terminate_matching_wsl_agent_processes<F>(
+    target: &WslLaunchTarget,
+    term_grace: Duration,
+    poll: Duration,
+    mut list_pids: F,
+    match_description: &str,
+) -> Result<WslTerminateOutcome, String>
+where
+    F: FnMut() -> Result<Vec<u32>, String>,
+{
+    let mut matching_pids = list_pids()?;
     if matching_pids.is_empty() {
         return Ok(WslTerminateOutcome::NoMatch);
     }
@@ -113,11 +150,11 @@ pub fn terminate_wsl_agent_process(
     if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &term_command, "TERM")? {
         signal_errors.push(error);
     }
-    if wait_for_wsl_agent_exit(target, term_grace, poll)? {
+    if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
         return Ok(WslTerminateOutcome::TerminatedWithTerm);
     }
 
-    matching_pids = list_exact_wsl_agent_pids(target)?;
+    matching_pids = list_pids()?;
     if matching_pids.is_empty() {
         return Ok(WslTerminateOutcome::TerminatedWithTerm);
     }
@@ -126,14 +163,12 @@ pub fn terminate_wsl_agent_process(
     if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &kill_command, "KILL")? {
         signal_errors.push(error);
     }
-    if wait_for_wsl_agent_exit(target, term_grace, poll)? {
+    if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
         return Ok(WslTerminateOutcome::TerminatedWithKill);
     }
 
-    let mut error = format!(
-        "WSL agent process matched by {} did not exit after TERM/KILL",
-        target.agent_bin_wsl
-    );
+    let mut error =
+        format!("WSL agent process matched by {match_description} did not exit after TERM/KILL");
     if !signal_errors.is_empty() {
         error = format!("{error}. {}", signal_errors.join("; "));
     }
@@ -165,14 +200,39 @@ pub fn list_exact_wsl_agent_pids(target: &WslLaunchTarget) -> Result<Vec<u32>, S
     parse_pid_list(&String::from_utf8_lossy(&output.stdout))
 }
 
-fn wait_for_wsl_agent_exit(
+pub fn list_intermediary_wsl_agent_pids_by_port(
     target: &WslLaunchTarget,
+    wsl_port: u16,
+) -> Result<Vec<u32>, String> {
+    let command_line = build_wsl_list_intermediary_agent_pids_command_line(wsl_port);
+    let output = run_wsl_bash(target.distro.as_deref(), &command_line)?;
+    if !output.status.success() {
+        let status = output
+            .status
+            .code()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "signal".to_string());
+        let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
+        return Err(format!(
+            "Failed to list same-port Intermediary WSL agent pids (exit={status}, port={wsl_port}, {}): {stderr}",
+            format_wsl_target(target)
+        ));
+    }
+
+    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn wait_for_wsl_agent_exit<F>(
     term_grace: Duration,
     poll: Duration,
-) -> Result<bool, String> {
+    list_pids: &mut F,
+) -> Result<bool, String>
+where
+    F: FnMut() -> Result<Vec<u32>, String>,
+{
     let start = Instant::now();
     loop {
-        if !probe_wsl_agent_running(target)? {
+        if list_pids()?.is_empty() {
             return Ok(true);
         }
         if start.elapsed() >= term_grace {
@@ -180,95 +240,6 @@ fn wait_for_wsl_agent_exit(
         }
         thread::sleep(poll);
     }
-}
-
-fn probe_wsl_agent_running(target: &WslLaunchTarget) -> Result<bool, String> {
-    Ok(!list_exact_wsl_agent_pids(target)?.is_empty())
-}
-
-fn run_wsl_signal_command(
-    distro: Option<&str>,
-    command_line: &str,
-    stage: &str,
-) -> Result<Option<String>, String> {
-    let output = run_wsl_bash(distro, command_line)?;
-    if output.status.success() {
-        return Ok(None);
-    }
-
-    let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-    Ok(Some(format_wsl_signal_command_error(
-        stage,
-        distro,
-        output.status.code(),
-        &stderr,
-    )))
-}
-
-fn format_wsl_signal_command_error(
-    stage: &str,
-    distro: Option<&str>,
-    status: Option<i32>,
-    stderr: &str,
-) -> String {
-    let status = status
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "signal".to_string());
-    let prefix = format!(
-        "WSL agent {stage} command failed (exit={status}, distro={})",
-        distro_label(distro)
-    );
-    if stderr.is_empty() {
-        return prefix;
-    }
-    format!("{prefix}: {stderr}")
-}
-
-fn run_wsl_bash(distro: Option<&str>, command_line: &str) -> Result<Output, String> {
-    let mut command = build_wsl_bash_command(distro, command_line);
-    command.stdout(Stdio::piped()).stderr(Stdio::piped());
-    let mut child = command.spawn().map_err(|err| {
-        format!(
-            "Failed to execute WSL command (distro={}): {err}",
-            distro_label(distro)
-        )
-    })?;
-    let start = Instant::now();
-
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => {
-                return child.wait_with_output().map_err(|err| {
-                    format!(
-                        "Failed to read WSL command output (distro={}): {err}",
-                        distro_label(distro)
-                    )
-                });
-            }
-            Ok(None) => {
-                if start.elapsed() >= WSL_COMMAND_TIMEOUT {
-                    return timeout_wsl_command(child, distro);
-                }
-                thread::sleep(WSL_COMMAND_POLL);
-            }
-            Err(err) => {
-                return Err(format!(
-                    "Failed to poll WSL command process (distro={}): {err}",
-                    distro_label(distro)
-                ));
-            }
-        }
-    }
-}
-
-fn timeout_wsl_command(mut child: Child, distro: Option<&str>) -> Result<Output, String> {
-    let _ = child.kill();
-    let _ = child.wait();
-    Err(format!(
-        "WSL command timed out after {}ms (distro={})",
-        WSL_COMMAND_TIMEOUT.as_millis(),
-        distro_label(distro)
-    ))
 }
 
 fn build_wsl_bash_command(distro: Option<&str>, command_line: &str) -> Command {
@@ -302,13 +273,6 @@ fn format_wsl_spawn_error(err: std::io::Error, distro: Option<&str>) -> String {
     }
 }
 
-fn sanitize_stream_text(text: &str) -> String {
-    text.trim()
-        .replace('\r', "")
-        .replace('\n', "\\n")
-        .replace('\t', "\\t")
-}
-
 fn parse_pid_list(raw: &str) -> Result<Vec<u32>, String> {
     let mut parsed: Vec<u32> = Vec::new();
     for line in raw.lines() {
@@ -328,40 +292,5 @@ fn parse_pid_list(raw: &str) -> Result<Vec<u32>, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{format_wsl_signal_command_error, parse_pid_list};
-
-    #[test]
-    fn format_wsl_signal_command_error_omits_empty_stderr_suffix() {
-        let error = format_wsl_signal_command_error("TERM", Some("Ubuntu"), Some(15), "");
-        assert_eq!(
-            error,
-            "WSL agent TERM command failed (exit=15, distro=Ubuntu)"
-        );
-    }
-
-    #[test]
-    fn format_wsl_signal_command_error_includes_sanitized_stderr() {
-        let error =
-            format_wsl_signal_command_error("KILL", None, Some(2), "kill: failed to parse pid");
-        assert_eq!(
-            error,
-            "WSL agent KILL command failed (exit=2, distro=default): kill: failed to parse pid"
-        );
-    }
-
-    #[test]
-    fn parse_pid_list_parses_unique_sorted_values() {
-        let parsed = parse_pid_list("42\n7\n42\n\n9\n").expect("parsed");
-        assert_eq!(parsed, vec![7, 9, 42]);
-    }
-
-    #[test]
-    fn parse_pid_list_rejects_non_numeric_entries() {
-        let error = parse_pid_list("41\nabc\n").expect_err("expected parse failure");
-        assert!(
-            error.contains("Invalid pid entry"),
-            "unexpected error: {error}"
-        );
-    }
-}
+#[path = "wsl_process_control_tests.rs"]
+mod tests;

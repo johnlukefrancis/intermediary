@@ -48,3 +48,9 @@ cargo check -p intermediary
 ```bash
 cargo test -p im_bundle
 ```
+
+## Rust tests (im_agent)
+
+```bash
+cargo test -p im_agent
+```

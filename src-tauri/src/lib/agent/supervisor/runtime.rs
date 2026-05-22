@@ -57,11 +57,21 @@ mod tests {
         );
     }
 
+    #[cfg(not(debug_assertions))]
     #[test]
     fn installed_bundle_is_preferred_when_host_or_wsl_is_alive() {
         assert!(should_prefer_installed_bundle(true, false));
         assert!(should_prefer_installed_bundle(false, true));
         assert!(should_prefer_installed_bundle(true, true));
+        assert!(!should_prefer_installed_bundle(false, false));
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn installed_bundle_is_not_preferred_in_debug_builds() {
+        assert!(!should_prefer_installed_bundle(true, false));
+        assert!(!should_prefer_installed_bundle(false, true));
+        assert!(!should_prefer_installed_bundle(true, true));
         assert!(!should_prefer_installed_bundle(false, false));
     }
 }

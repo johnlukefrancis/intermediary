@@ -5,6 +5,7 @@ import type { AgentClient } from "./agent_client.js";
 import type { AppConfig, GlobalExcludes } from "../../shared/config.js";
 import type {
   ClientHelloResult,
+  ReadTextFileResult,
   StageFileResult,
   SetOptionsResult,
   WatchRepoResult,
@@ -93,6 +94,18 @@ export async function sendStageFile(
 ): Promise<StageFileResult> {
   return client.send<StageFileResult>({
     type: "stageFile",
+    repoId,
+    path,
+  });
+}
+
+export async function sendReadTextFile(
+  client: AgentClient,
+  repoId: string,
+  path: string
+): Promise<ReadTextFileResult> {
+  return client.send<ReadTextFileResult>({
+    type: "readTextFile",
     repoId,
     path,
   });

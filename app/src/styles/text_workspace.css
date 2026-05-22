@@ -1,0 +1,164 @@
+/*
+ * Path: app/src/styles/text_workspace.css
+ * Description: Text workspace layout and editor styling for notes and scratch file buffers
+ */
+
+.text-workspace-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1.1fr);
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.text-workspace-panel {
+  min-width: 0;
+}
+
+.text-workspace-header {
+  gap: var(--space-3);
+}
+
+.text-workspace-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.text-workspace-title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-workspace-title::before {
+  content: "[ ";
+  color: var(--color-accent);
+  font-weight: var(--weight-normal);
+}
+
+.text-workspace-title::after {
+  content: " ]";
+  color: var(--color-accent);
+  font-weight: var(--weight-normal);
+}
+
+.text-workspace-subtitle {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-workspace-close {
+  flex: 0 0 auto;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.text-workspace-content {
+  display: flex;
+  min-height: 0;
+  padding: 0;
+}
+
+.text-workspace-editor-shell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.text-workspace-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  margin: 0;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-8) + var(--space-4));
+  resize: none;
+  overflow: auto;
+  border: none;
+  outline: none;
+  background:
+    linear-gradient(90deg, var(--color-accent-soft), transparent 2px),
+    transparent;
+  color: var(--color-text-primary);
+  caret-color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  letter-spacing: 0;
+}
+
+.text-workspace-textarea::placeholder {
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.text-workspace-textarea::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-text-primary);
+}
+
+.text-workspace-textarea:focus {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.text-workspace-count {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-sm);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.text-workspace-error {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  left: var(--space-3);
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-error-muted);
+  border-radius: var(--radius-deck-sm);
+  background: var(--color-error-soft);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.text-workspace-handset .text-workspace-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .text-workspace-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    overflow-y: auto;
+  }
+}

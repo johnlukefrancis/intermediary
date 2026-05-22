@@ -6,9 +6,17 @@ import { useCallback, useEffect, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
+import { TextWorkspaceLayout } from "../components/layout/text_workspace_layout.js";
 import { FileListColumn } from "../components/file_list_column.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
-import { NotePanel } from "../components/note_panel.js";
+import { TextWorkspaceEditor } from "../components/text_workspace.js";
+import {
+  CodeHeaderLeft,
+  CodeHeaderRight,
+  DocsHeaderLeft,
+  DocsHeaderRight,
+  type FilePaneView,
+} from "../components/repo_pane_headers.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
@@ -17,10 +25,12 @@ import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
+import { getFileName, useRepoTextWorkspace } from "../hooks/use_repo_text_workspace.js";
 import type { UiMode } from "../shared/config.js";
 import type { FileEntry } from "../shared/protocol.js";
 
-type PaneView = "recent" | "starred" | "notes";
+const MAX_NOTE_LENGTH = 100_000;
+const MAX_SCRATCH_LENGTH = 1_000_000;
 
 interface RepoTabProps {
   repoId: string;
@@ -64,10 +74,11 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   });
   const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
   const noteState = useNotes(repoId);
+  const textWorkspace = useRepoTextWorkspace(repoId);
 
   // View state for docs and code panes
-  const [docsView, setDocsView] = useState<PaneView>("recent");
-  const [codeView, setCodeView] = useState<PaneView>("recent");
+  const [docsView, setDocsView] = useState<FilePaneView>("recent");
+  const [codeView, setCodeView] = useState<FilePaneView>("recent");
 
   const handleBundleDragStart = useCallback(
     async (hostPath: string) => {
@@ -90,7 +101,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           ? "Unable to load files"
           : "No recent files";
 
-  // Build file lists based on view (only needed when not in notes view)
+  // Build file lists based on view.
   const docsFiles =
     docsView === "starred"
       ? buildStarredEntries(starredDocsPaths, recentDocs, "docs")
@@ -139,7 +150,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
 
   // View-switch handlers: clear selection when switching views
   const handleDocsViewChange = useCallback(
-    (view: PaneView) => {
+    (view: FilePaneView) => {
       setDocsView(view);
       docsSelection.clearSelection();
     },
@@ -147,7 +158,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   );
 
   const handleCodeViewChange = useCallback(
-    (view: PaneView) => {
+    (view: FilePaneView) => {
       setCodeView(view);
       codeSelection.clearSelection();
     },
@@ -174,88 +185,39 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
 
   const isHandset = uiMode === "handset";
 
-  // Track which docs sub-view was active before switching to notes
-  // so clicking DOCS returns to recent (not starred)
-  const isDocsFileView = docsView === "recent" || docsView === "starred";
-
-  // Header left: Docs title button (click returns to recent docs view)
   const docsHeaderLeft = (
-    <button
-      type="button"
-      className={`panel-title-button${isDocsFileView ? "" : " panel-title-button--dimmed"}`}
-      onClick={() => { handleDocsViewChange("recent"); }}
-      title="Show recent docs"
-    >
-      Docs
-    </button>
+    <DocsHeaderLeft onRecent={() => { handleDocsViewChange("recent"); }} />
   );
-
-  // Header right: docs star and notes toggles (favourite first, then pencil)
   const docsHeaderRight = (
-    <div className="panel-header-icons">
-      {docsView !== "notes" && (
-        <button
-          type="button"
-          className={`panel-header-icon${docsView === "starred" ? " panel-header-icon--active" : ""}`}
-          onClick={() => { handleDocsViewChange(docsView === "starred" ? "recent" : "starred"); }}
-          title={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
-          aria-label={docsView === "starred" ? "Show recent docs" : "Show favourited docs"}
-          aria-pressed={docsView === "starred"}
-        >
-          ★
-        </button>
-      )}
-      <button
-        type="button"
-        className={`panel-header-icon${docsView === "notes" ? " panel-header-icon--active" : ""}`}
-        onClick={() => { handleDocsViewChange(docsView === "notes" ? "recent" : "notes"); }}
-        title={docsView === "notes" ? "Show docs" : "Show notes"}
-        aria-label={docsView === "notes" ? "Show docs" : "Show notes"}
-        aria-pressed={docsView === "notes"}
-      >
-        ✎
-      </button>
-    </div>
+    <DocsHeaderRight
+      view={docsView}
+      onViewChange={handleDocsViewChange}
+      onOpenNote={textWorkspace.openNote}
+    />
   );
-
-  // Header components for code pane
   const codeHeaderLeft = (
-    <button
-      type="button"
-      className={`panel-title-button${codeView === "starred" ? " panel-title-button--dimmed" : ""}`}
-      onClick={() => { handleCodeViewChange("recent"); }}
-      title="Show recent files"
-    >
-      Code
-    </button>
+    <CodeHeaderLeft
+      view={codeView}
+      onRecent={() => { handleCodeViewChange("recent"); }}
+    />
   );
   const codeHeaderRight = (
-    <button
-      type="button"
-      className={`panel-header-icon${codeView === "starred" ? " panel-header-icon--active" : ""}`}
-      onClick={() => { handleCodeViewChange(codeView === "starred" ? "recent" : "starred"); }}
-      title={codeView === "starred" ? "Show recent files" : "Show favourited files"}
-      aria-label={codeView === "starred" ? "Show recent files" : "Show favourited files"}
-      aria-pressed={codeView === "starred"}
-    >
-      ★
-    </button>
+    <CodeHeaderRight view={codeView} onViewChange={handleCodeViewChange} />
   );
 
   // Content blocks — shared between layouts
-  const docsContent = docsView === "notes"
-    ? <NotePanel noteState={noteState} />
-    : (
-      <FileListColumn
-        files={docsFiles}
-        repoId={repoId}
-        kind="docs"
-        emptyMessage={docsEmptyMessage}
-        selectedPaths={docsSelection.selectedPaths}
-        onSelect={docsSelection.handleSelect}
-        onDragStart={handleDocsDrag}
-      />
-    );
+  const docsContent = (
+    <FileListColumn
+      files={docsFiles}
+      repoId={repoId}
+      kind="docs"
+      emptyMessage={docsEmptyMessage}
+      selectedPaths={docsSelection.selectedPaths}
+      onSelect={docsSelection.handleSelect}
+      onDragStart={handleDocsDrag}
+      onOpen={textWorkspace.openFileScratch}
+    />
+  );
   const codeContent = (
     <FileListColumn
       files={codeFiles}
@@ -265,6 +227,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       selectedPaths={codeSelection.selectedPaths}
       onSelect={codeSelection.handleSelect}
       onDragStart={handleCodeDrag}
+      onOpen={textWorkspace.openFileScratch}
     />
   );
   const zipsContent = (
@@ -276,12 +239,44 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     />
   );
 
+  const workspace = textWorkspace.workspace;
+  const workspaceLayout = workspace.kind === "none" ? null : (
+    <TextWorkspaceLayout
+      title={workspace.kind === "note" ? "Note" : getFileName(workspace.path)}
+      subtitle={workspace.kind === "note" ? "Repository notes" : workspace.path}
+      onClose={textWorkspace.closeWorkspace}
+      editorContent={
+        workspace.kind === "note" ? (
+          <TextWorkspaceEditor
+            value={noteState.content}
+            onChange={noteState.onChange}
+            isLoading={noteState.isLoading}
+            error={noteState.error}
+            maxLength={MAX_NOTE_LENGTH}
+            placeholder="Type notes here..."
+            ariaLabel="Repository notes"
+          />
+        ) : (
+          <TextWorkspaceEditor
+            value={workspace.content}
+            onChange={textWorkspace.updateFileScratch}
+            maxLength={MAX_SCRATCH_LENGTH}
+            placeholder="Empty file"
+            ariaLabel={`Scratch text buffer for ${workspace.path}`}
+          />
+        )
+      }
+      zipsContent={zipsContent}
+      isHandset={isHandset}
+    />
+  );
+
   return (
     <div className="tab repo-tab">
       {dragState.error && (
         <DragErrorNotice message={dragState.error} onDismiss={clearError} />
       )}
-      {isHandset ? (
+      {workspaceLayout ?? (isHandset ? (
         <HandsetDeck
           docsHeaderRight={docsHeaderRight}
           codeHeaderRight={codeHeaderRight}
@@ -299,7 +294,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           codeContent={codeContent}
           zipsContent={zipsContent}
         />
-      )}
+      ))}
     </div>
   );
 }

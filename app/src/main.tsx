@@ -22,7 +22,7 @@ import "./styles/panels.css";
 import "./styles/scrollbars.css";
 import "./styles/chrome.css";
 import "./styles/bundle_column.css";
-import "./styles/note_panel.css";
+import "./styles/text_workspace.css";
 
 const container = document.getElementById("root");
 if (!container) {

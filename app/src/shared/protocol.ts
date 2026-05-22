@@ -64,6 +64,12 @@ export const StageFileCommandSchema = z.object({
   path: z.string(),
 });
 
+export const ReadTextFileCommandSchema = z.object({
+  type: z.literal("readTextFile"),
+  repoId: z.string(),
+  path: z.string(),
+});
+
 /** Handshake from UI with config and staging paths */
 export const ClientHelloCommandSchema = z.object({
   type: z.literal("clientHello"),
@@ -102,6 +108,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   WatchRepoCommandSchema,
   RefreshCommandSchema,
   StageFileCommandSchema,
+  ReadTextFileCommandSchema,
   BuildBundleCommandSchema,
   CancelBundleBuildCommandSchema,
   ClientHelloCommandSchema,
@@ -137,6 +144,16 @@ export const StageFileResultSchema = z.object({
   mtimeMs: z.number(),
 });
 
+export const ReadTextFileResultSchema = z.object({
+  type: z.literal("readTextFileResult"),
+  repoId: z.string(),
+  path: z.string(),
+  content: z.string(),
+  bytes: z.number().int().nonnegative(),
+  mtimeMs: z.number().int().nonnegative(),
+  encoding: z.literal("utf-8"),
+});
+
 /** Response to clientHello with agent info */
 export const ClientHelloResultSchema = z.object({
   type: z.literal("clientHelloResult"),
@@ -166,6 +183,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
   RefreshResultSchema,
   StageFileResultSchema,
+  ReadTextFileResultSchema,
   BuildBundleResultSchema,
   CancelBundleBuildResultSchema,
   ClientHelloResultSchema,
@@ -181,6 +199,7 @@ export type UiResponse = z.infer<typeof UiResponseSchema>;
 export type WatchRepoResult = z.infer<typeof WatchRepoResultSchema>;
 export type RefreshResult = z.infer<typeof RefreshResultSchema>;
 export type StageFileResult = z.infer<typeof StageFileResultSchema>;
+export type ReadTextFileResult = z.infer<typeof ReadTextFileResultSchema>;
 export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
 export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
 export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;

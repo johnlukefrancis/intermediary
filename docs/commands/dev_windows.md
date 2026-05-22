@@ -87,8 +87,13 @@ pnpm run agent:dev
 
 The launcher resolves `INTERMEDIARY_WSL_WS_TOKEN` in this order:
 1. Explicit `INTERMEDIARY_WSL_WS_TOKEN` environment variable
-2. `wslWsToken` from `ws_auth.json` under the active Windows `%LOCALAPPDATA%` profile (`com.johnf.intermediary/agent/` then legacy `Intermediary/agent/`)
-3. Fallback dev token (`im_dev_wsl_token`) with a warning (this usually indicates auth drift and will cause websocket `invalid_token` failures until corrected)
+2. Explicit `INTERMEDIARY_WS_AUTH_FILE`
+3. `wslWsToken` from the app-local `ws_auth.json` selected by `INTERMEDIARY_WS_AUTH_APP_ID`
+4. Existing production, legacy, then dev app-local auth files under the active Windows `%LOCALAPPDATA%` profile
+5. Fallback dev token (`im_dev_wsl_token`) with a warning (this usually indicates auth drift and will cause websocket `invalid_token` failures until corrected)
+
+The VS Code `WSL Agent: dev` task sets `INTERMEDIARY_WS_AUTH_APP_ID` to the app-local identity used by the Windows Tauri task and the launcher creates that auth file if needed before the app starts.
+If an existing listener on port `3142` rejects the selected token, the launcher only retires it when it is an Intermediary `im_agent` for the same backend port.
 
 ## Environment Variables
 
@@ -100,6 +105,7 @@ The VS Code tasks set these automatically:
 | `INTERMEDIARY_WSL_PATH` | WSL source directory | `/home/<you>/code/intermediary` |
 | `INTERMEDIARY_WSL_DISTRO` | WSL distro for VS Code tasks (sync scripts) | `Ubuntu` |
 | `INTERMEDIARY_WSL_BACKEND_MODE` | WSL backend ownership mode in app runtime (`external` in Windows dev tasks) | `external` |
+| `INTERMEDIARY_WS_AUTH_APP_ID` | App identity whose websocket auth file the WSL dev launcher should read/create | `com.johnf.intermediary` |
 | `INTERMEDIARY_WINDOWS_LOCALAPPDATA` | Deterministic Windows app-local path used by WSL agent launcher to resolve `ws_auth.json` | `/mnt/c/Users/<you>/AppData/Local` |
 | `INTERMEDIARY_LOG_DIR` | Log output directory (WSL UNC path) | `\\wsl$\<your-distro>\<your-wsl-path>\logs` |
 

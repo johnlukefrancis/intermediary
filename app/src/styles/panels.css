@@ -81,6 +81,12 @@
   min-width: 1em;
 }
 
+.panel-header-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* ===== PANEL HEADER BUTTONS ===== */
 
 /* Title as clickable button — inherits bracketed style */

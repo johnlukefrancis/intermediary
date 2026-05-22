@@ -5,11 +5,11 @@ use std::path::Path;
 use std::process::Command;
 
 const TEXT_EXTENSIONS: &[&str] = &[
-    "txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json",
-    "jsonc", "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "rs", "py", "java", "kt",
-    "kts", "go", "c", "h", "hpp", "hxx", "cc", "cpp", "cxx", "cs", "swift", "rb", "php",
-    "sh", "bash", "zsh", "fish", "ps1", "bat", "cmd", "css", "scss", "less", "html", "htm",
-    "xml", "svg", "sql", "vue", "svelte",
+    "txt", "md", "mdx", "rst", "adoc", "ts", "tsx", "js", "jsx", "mjs", "cjs", "json", "jsonc",
+    "yaml", "yml", "toml", "ini", "cfg", "conf", "env", "rs", "py", "java", "kt", "kts", "go", "c",
+    "h", "hpp", "hxx", "cc", "cpp", "cxx", "cs", "swift", "rb", "php", "sh", "bash", "zsh", "fish",
+    "ps1", "bat", "cmd", "css", "scss", "less", "html", "htm", "xml", "svg", "sql", "vue",
+    "svelte",
 ];
 const TEXT_BASENAMES: &[&str] = &[
     "readme",

@@ -1,13 +1,13 @@
 // Path: src-tauri/src/lib/agent/supervisor/wsl_control.rs
 // Description: WSL backend termination, stale-port remediation, and launch-target bookkeeping
 
-use super::wsl_mode::WslBackendMode;
+use super::wsl_mode::{WslBackendMode, WslBackendOwner};
 use super::wsl_runtime::{WSL_STALE_RETRY_BACKOFF, WSL_TERMINATE_POLL, WSL_TERMINATE_TERM_GRACE};
 use super::AgentSupervisor;
 use crate::agent::supervisor::state::ProcessKind;
 use crate::agent::wsl_process_control::{
-    format_wsl_target, list_exact_wsl_agent_pids, terminate_wsl_agent_process, WslLaunchTarget,
-    WslTerminateOutcome,
+    format_wsl_target, list_exact_wsl_agent_pids, list_intermediary_wsl_agent_pids_by_port,
+    terminate_wsl_agent_process, WslLaunchTarget, WslTerminateOutcome,
 };
 use crate::obs::logging;
 
@@ -38,18 +38,26 @@ impl AgentSupervisor {
         &self,
         wsl_port: u16,
         target: &WslLaunchTarget,
+        owner: WslBackendOwner,
+        reason: &str,
     ) -> Result<(), String> {
         for attempt in 1..=2 {
-            let reason = if attempt == 1 {
-                "auth_probe_failed"
+            let attempt_reason = if attempt == 1 {
+                reason.to_string()
             } else {
-                "auth_probe_failed_retry"
+                format!("{reason}_retry")
             };
 
-            self.reconcile_recorded_child(ProcessKind::Wsl, reason)
+            self.reconcile_recorded_child(ProcessKind::Wsl, &attempt_reason)
                 .await?;
-            self.terminate_wsl_backend_target(target, reason, attempt)
-                .await?;
+            self.terminate_wsl_backend_target_for_owner(
+                target,
+                wsl_port,
+                owner,
+                &attempt_reason,
+                attempt,
+            )
+            .await?;
             if !self.probe_listening(wsl_port).await? {
                 return Ok(());
             }
@@ -69,10 +77,7 @@ impl AgentSupervisor {
             }
         }
 
-        Err(format!(
-            "WSL agent port {wsl_port} is occupied by a process that rejected the current websocket token ({})",
-            format_wsl_target(target)
-        ))
+        Err(format_stale_wsl_port_error(wsl_port, target, owner, reason))
     }
 
     pub(super) async fn detect_installed_wsl_pid_count(
@@ -84,6 +89,20 @@ impl AgentSupervisor {
             .await
             .map_err(|err| format!("WSL owner-detection task failed: {err}"))?
             .map(|pids| pids.len())
+    }
+
+    pub(super) async fn detect_intermediary_wsl_pid_count_by_port(
+        &self,
+        target: &WslLaunchTarget,
+        wsl_port: u16,
+    ) -> Result<usize, String> {
+        let target_for_probe = target.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            list_intermediary_wsl_agent_pids_by_port(&target_for_probe, wsl_port)
+        })
+        .await
+        .map_err(|err| format!("WSL same-port owner-detection task failed: {err}"))?
+        .map(|pids| pids.len())
     }
 
     pub(super) fn wsl_launch_target_snapshot(&self) -> Result<Option<WslLaunchTarget>, String> {
@@ -160,6 +179,26 @@ impl AgentSupervisor {
         }
     }
 
+    async fn terminate_wsl_backend_target_for_owner(
+        &self,
+        target: &WslLaunchTarget,
+        wsl_port: u16,
+        owner: WslBackendOwner,
+        reason: &str,
+        attempt: usize,
+    ) -> Result<(), String> {
+        match owner {
+            WslBackendOwner::SamePortIntermediary => {
+                self.terminate_wsl_backend_same_port_intermediary(target, wsl_port, reason, attempt)
+                    .await
+            }
+            WslBackendOwner::InstalledManaged | WslBackendOwner::ExternalUnmanaged => {
+                self.terminate_wsl_backend_target(target, reason, attempt)
+                    .await
+            }
+        }
+    }
+
     async fn sleep_wsl_stale_retry_backoff(&self) -> Result<(), String> {
         tauri::async_runtime::spawn_blocking(move || std::thread::sleep(WSL_STALE_RETRY_BACKOFF))
             .await
@@ -181,4 +220,25 @@ impl AgentSupervisor {
             format_wsl_target(target)
         ))
     }
+}
+
+fn format_stale_wsl_port_error(
+    wsl_port: u16,
+    target: &WslLaunchTarget,
+    owner: WslBackendOwner,
+    reason: &str,
+) -> String {
+    if reason == "managed_owner_mismatch" {
+        return format!(
+            "WSL agent port {wsl_port} is occupied by owner={} instead of the configured installed backend ({})",
+            owner.log_key(),
+            format_wsl_target(target)
+        );
+    }
+
+    format!(
+        "WSL agent port {wsl_port} is occupied by owner={} that rejected the current websocket token ({})",
+        owner.log_key(),
+        format_wsl_target(target)
+    )
 }

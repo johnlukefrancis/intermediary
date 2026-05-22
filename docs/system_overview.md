@@ -69,8 +69,9 @@ Intermediary uses a **host-routed architecture**:
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
-  - Docs panel includes a per-repo plain-text Notes view (saved under app-local data)
+  - Text workspace replaces Docs+Code for per-repo notes or supported UTF-8 file scratch buffers; scratch edits never write back to repo files
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
+  - File-row double-click opens supported text files through the agent-routed `readTextFile` command
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
@@ -88,6 +89,7 @@ Intermediary uses a **host-routed architecture**:
   - Restart command and diagnostics surfaced in the UI
   - Spawns managed host/WSL agents with stdio logging disabled and null stdio streams to avoid undrained pipe-buffer stalls; early-exit diagnostics read bounded tails from `agent_latest.log`
   - Reconciles tracked host/WSL child processes before spawn/replace/stop, and stops tracked children on app exit to enforce a no-orphan-process boundary for supervisor-owned processes
+  - Remediates stale WSL backend port occupants only when ownership is proven by the configured installed agent path or same-port Intermediary agent environment; `external` mode remains user-managed
 
 ### Host Agent
 
@@ -138,6 +140,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `watchRepo { repoId } → watchRepoResult`
 - `refresh { repoId } → refreshResult`
 - `stageFile { repoId, path } → stageFileResult`
+- `readTextFile { repoId, path } → readTextFileResult`
 - `buildBundle { repoId, presetId, buildId, selection } → buildBundleResult`
 - `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`

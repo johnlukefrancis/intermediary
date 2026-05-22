@@ -45,6 +45,17 @@ pub struct StageFileResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadTextFileResult {
+    pub repo_id: String,
+    pub path: String,
+    pub content: String,
+    pub bytes: u64,
+    pub mtime_ms: u64,
+    pub encoding: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", try_from = "BuildBundleResultWire")]
 pub struct BuildBundleResult {
     pub repo_id: String,
@@ -260,6 +271,8 @@ pub enum UiResponse {
     RefreshResult(RefreshResult),
     #[serde(rename = "stageFileResult")]
     StageFileResult(StageFileResult),
+    #[serde(rename = "readTextFileResult")]
+    ReadTextFileResult(ReadTextFileResult),
     #[serde(rename = "buildBundleResult")]
     BuildBundleResult(BuildBundleResult),
     #[serde(rename = "cancelBundleBuildResult")]

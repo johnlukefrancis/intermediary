@@ -25,8 +25,8 @@ app/src/components/file_row.tsx - Draggable file row with file-type icon, contex
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for handset mode with chassis framing
 app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Docs | Code | Zips)
+app/src/components/layout/text_workspace_layout.tsx - Layout that replaces Docs and Code panes with a full text workspace
 app/src/components/layout/three_column.tsx - Three-column layout component with modular deck panels (Docs | Code | Zips)
-app/src/components/note_panel.tsx - Plain-text monospace note editor panel content
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
@@ -42,11 +42,13 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
+app/src/components/repo_pane_headers.tsx - Header controls for repo Docs and Code file panes
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
+app/src/components/text_workspace.tsx - Shared minimal textarea surface for notes and scratch file viewing
 app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
 app/src/hooks/agent/agent_diagnostics.ts - Agent diagnostics model and helpers for connection-state-driven status bar details
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
@@ -75,6 +77,7 @@ app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the 
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
 app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
+app/src/hooks/use_repo_text_workspace.ts - Repo-tab text workspace state for notes and ephemeral file scratch buffers
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_starred_files.ts - Hook exposing starred file state and actions for a repo
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
@@ -135,7 +138,6 @@ app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule acce
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
-app/src/styles/note_panel.css - Monospace textarea and notes-related panel header styles
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
 app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and advanced grid/groups for excludes
 app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
@@ -146,6 +148,7 @@ app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
+app/src/styles/text_workspace.css - Text workspace layout and editor styling for notes and scratch file buffers
 app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
@@ -189,6 +192,7 @@ crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
+crates/im_agent/src/repos/text_file_reader.rs - Repo-relative UTF-8 text file reader for in-app scratch viewing
 crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
 crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
@@ -277,9 +281,12 @@ src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth 
 src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
 src-tauri/src/lib/agent/supervisor/wsl_mode.rs - WSL backend mode parsing and ownership-policy helpers for the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_runtime.rs - Shared WSL supervisor timing constants
+src-tauri/src/lib/agent/supervisor/wsl_same_port_termination.rs - Same-port Intermediary WSL agent termination for supervisor remediation
 src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend startup and ownership detection for the supervisor
 src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
+src-tauri/src/lib/agent/wsl_command_runner.rs - Bounded WSL command execution helpers for agent process control
 src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
+src-tauri/src/lib/agent/wsl_process_control_tests.rs - Tests for WSL process-control parsing helpers
 src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution, spawning, and in-WSL termination helpers
 src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics

@@ -2,17 +2,23 @@
 // Description: Draggable file row with file-type icon, context menu, and star toggle
 
 import type React from "react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type { FileEntry } from "../shared/protocol.js";
 import { getFileFamily, FileIcon } from "../lib/icons/index.js";
 import "../styles/file_row.css";
+
+const DRAG_START_DISTANCE_PX = 6;
 
 interface FileRowProps {
   file: FileEntry;
   isStarred: boolean;
   isSelected: boolean;
-  onDragStart: (path: string, event: React.MouseEvent) => void | Promise<void>;
-  onSelect: (path: string, event: React.MouseEvent) => void;
+  onDragStart: (path: string) => void | Promise<void>;
+  onSelect: (
+    path: string,
+    event: Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">
+  ) => void;
+  onOpen: (path: string) => void;
   onToggleStar: () => void;
   onContextMenu: (e: React.MouseEvent, file: FileEntry) => void;
 }
@@ -53,12 +59,23 @@ export function FileRow({
   isSelected,
   onDragStart,
   onSelect,
+  onOpen,
   onToggleStar,
   onContextMenu,
 }: FileRowProps): React.JSX.Element {
-  // MouseDown on row — modifier keys = selection, no modifier = drag
-  const handleRowMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  const dragStartRef = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const clearPointerCapture = useCallback((target: Element, pointerId: number): void => {
+    if (!(target instanceof HTMLElement) || !target.hasPointerCapture(pointerId)) return;
+    target.releasePointerCapture(pointerId);
+  }, []);
+
+  const handleRowPointerDown = useCallback(
+    (e: React.PointerEvent) => {
       if (e.button !== 0) return;
       if ((e.target as HTMLElement).closest("button")) return;
 
@@ -66,10 +83,56 @@ export function FileRow({
         e.preventDefault(); // Prevent text selection from shift-click
         onSelect(file.path, e);
       } else {
-        void onDragStart(file.path, e);
+        dragStartRef.current = {
+          pointerId: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+        };
+        e.currentTarget.setPointerCapture(e.pointerId);
       }
     },
-    [file.path, onDragStart, onSelect]
+    [file.path, onSelect]
+  );
+
+  const handleRowPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      const start = dragStartRef.current;
+      if (!start || start.pointerId !== e.pointerId) return;
+      if ((e.buttons & 1) !== 1) {
+        clearPointerCapture(e.currentTarget, e.pointerId);
+        dragStartRef.current = null;
+        return;
+      }
+
+      const deltaX = e.clientX - start.x;
+      const deltaY = e.clientY - start.y;
+      const distance = Math.hypot(deltaX, deltaY);
+      if (distance < DRAG_START_DISTANCE_PX) return;
+
+      clearPointerCapture(e.currentTarget, e.pointerId);
+      dragStartRef.current = null;
+      void onDragStart(file.path);
+    },
+    [clearPointerCapture, file.path, onDragStart]
+  );
+
+  const handleRowPointerEnd = useCallback(
+    (e: React.PointerEvent) => {
+      clearPointerCapture(e.currentTarget, e.pointerId);
+      if (dragStartRef.current?.pointerId === e.pointerId) {
+        dragStartRef.current = null;
+      }
+    },
+    [clearPointerCapture]
+  );
+
+  const handleDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      e.preventDefault();
+      onOpen(file.path);
+    },
+    [file.path, onOpen]
   );
 
   // Star button click -> toggle starred (no copy, no drag)
@@ -99,9 +162,13 @@ export function FileRow({
       className="file-row"
       data-change-type={file.changeType}
       data-selected={isSelected || undefined}
-      onMouseDown={handleRowMouseDown}
+      onPointerDown={handleRowPointerDown}
+      onPointerMove={handleRowPointerMove}
+      onPointerUp={handleRowPointerEnd}
+      onPointerCancel={handleRowPointerEnd}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      title="Right-click for file actions"
+      title="Double-click to preview text; drag to stage for handoff; right-click for file actions"
     >
       <FileIcon family={family} />
       <div className="file-info">
