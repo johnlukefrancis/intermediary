@@ -1,0 +1,83 @@
+/*
+ * Path: app/src/styles/bundle_column_layout.css
+ * Description: Bundle column layout and preset selector styles
+ */
+
+.bundle-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: 100%;
+  overflow: hidden;
+}
+
+.bundle-column-empty {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-5);
+}
+
+.preset-selector {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  background: var(--glass-vintage-content);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-sm);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.preset-tab {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.preset-tab:last-child {
+  border-right: none;
+}
+
+.preset-tab:hover:not(.active) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.preset-tab.active {
+  background: var(--color-bg-elevated);
+  color: var(--color-accent);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.preset-tab.active::before {
+  content: '[ ';
+  opacity: 0.7;
+}
+
+.preset-tab.active::after {
+  content: ' ]';
+  opacity: 0.7;
+}
+
+.preset-tab:focus {
+  outline: none;
+}
+
+.preset-tab:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

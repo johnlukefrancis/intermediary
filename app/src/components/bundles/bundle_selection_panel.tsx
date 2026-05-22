@@ -2,80 +2,17 @@
 // Description: Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
 
 import React from "react";
-import { useCallback, useState, useRef, useEffect } from "react";
+import { useCallback, useState } from "react";
 import type { BundleBuildPhase, BundleSelection } from "../../shared/protocol.js";
-
-/** Checkbox that supports indeterminate state */
-function IndeterminateCheckbox({
-  id,
-  checked,
-  indeterminate,
-  onChange,
-}: {
-  id: string;
-  checked: boolean;
-  indeterminate: boolean;
-  onChange: () => void;
-}): React.JSX.Element {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
-  return (
-    <label className="vintage-toggle">
-      <input
-        ref={inputRef}
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-      />
-      <span className={`vintage-toggle-track${indeterminate ? " indeterminate" : ""}`} />
-    </label>
-  );
-}
-
-function formatPathDepth(path: string, depth: number): string {
-  if (!path) return "";
-  const normalized = path.replace(/\\/g, "/");
-  const parts = normalized.split("/").filter(Boolean);
-  if (parts.length <= depth) {
-    return normalized;
-  }
-  return `${parts.slice(0, depth).join("/")}/…`;
-}
-
-const BuildProgressDetails = React.memo(function BuildProgressDetails({
-  show,
-  currentFile,
-  depth,
-}: {
-  show: boolean;
-  currentFile?: string;
-  depth: number;
-}): React.JSX.Element {
-  const displayPath = show ? formatPathDepth(currentFile ?? "", depth) : "";
-  return (
-    <div
-      className={`build-progress-details${show ? "" : " hidden"}`}
-      aria-live={show ? "polite" : "off"}
-    >
-      <span className="build-progress-file" title={currentFile}>
-        {show ? `Writing ${displayPath}` : " "}
-      </span>
-    </div>
-  );
-});
+import { BuildProgressButton } from "./build_progress_button.js";
+import { IndeterminateCheckbox } from "./indeterminate_checkbox.js";
 
 interface BundleSelectionPanelProps {
   selection: BundleSelection;
   topLevelDirs: string[];
   topLevelSubdirs: Record<string, string[]>;
   isBuilding: boolean;
+  isCancelling: boolean;
   buildProgress: {
     phase: BundleBuildPhase;
     filesDone: number;
@@ -88,6 +25,7 @@ interface BundleSelectionPanelProps {
   lastBuildError: string | null;
   onSelectionChange: (selection: BundleSelection) => void;
   onBuild: () => void;
+  onCancelBuild: () => void;
 }
 
 export function BundleSelectionPanel({
@@ -95,10 +33,12 @@ export function BundleSelectionPanel({
   topLevelDirs,
   topLevelSubdirs,
   isBuilding,
+  isCancelling,
   buildProgress,
   lastBuildError,
   onSelectionChange,
   onBuild,
+  onCancelBuild,
 }: BundleSelectionPanelProps): React.JSX.Element {
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() => new Set());
   const selectedDirs = new Set(selection.topLevelDirs);
@@ -106,9 +46,7 @@ export function BundleSelectionPanel({
   const allSelected =
     topLevelDirs.length > 0 && selection.topLevelDirs.length === topLevelDirs.length;
   const noneSelected = selection.topLevelDirs.length === 0;
-  const currentFile = buildProgress?.currentFile;
-  const showProgressDetails = Boolean(isBuilding && currentFile);
-  const displayDepth = 4;
+  const canBuild = selection.includeRoot || selection.topLevelDirs.length > 0;
 
   const handleIncludeRootChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,33 +138,13 @@ export function BundleSelectionPanel({
 
   return (
     <div className="bundle-selection-panel">
-      <button
-        className={`build-button${isBuilding ? " building" : ""}`}
-        onClick={onBuild}
-        disabled={isBuilding || (!selection.includeRoot && selection.topLevelDirs.length === 0)}
-        aria-busy={isBuilding}
-      >
-        {isBuilding ? "Building..." : "Build Bundle"}
-        {isBuilding && buildProgress && (
-          <span
-            className={`build-button-progress${buildProgress.filesTotal === 0 ? " indeterminate" : ""}`}
-            role="progressbar"
-            aria-valuenow={buildProgress.filesTotal > 0 ? buildProgress.filesDone : undefined}
-            aria-valuemax={buildProgress.filesTotal > 0 ? buildProgress.filesTotal : undefined}
-            aria-label="Build progress"
-            style={
-              buildProgress.filesTotal > 0
-                ? { width: `${Math.round((buildProgress.filesDone / buildProgress.filesTotal) * 100)}%` }
-                : undefined
-            }
-          />
-        )}
-      </button>
-
-      <BuildProgressDetails
-        show={showProgressDetails}
-        depth={displayDepth}
-        {...(currentFile !== undefined ? { currentFile } : {})}
+      <BuildProgressButton
+        isBuilding={isBuilding}
+        isCancelling={isCancelling}
+        canBuild={canBuild}
+        buildProgress={buildProgress}
+        onBuild={onBuild}
+        onCancelBuild={onCancelBuild}
       />
 
       <div className="selection-header">

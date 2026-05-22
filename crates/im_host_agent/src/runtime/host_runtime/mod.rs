@@ -1,6 +1,7 @@
 // Path: crates/im_host_agent/src/runtime/host_runtime/mod.rs
 // Description: Host runtime command routing and clientHello orchestration for host and WSL backends
 
+mod bundle_forwarding;
 mod wsl_routing;
 mod wsl_transport_epoch_state;
 
@@ -85,6 +86,7 @@ impl HostRuntime {
             | UiCommand::Refresh(_)
             | UiCommand::StageFile(_)
             | UiCommand::BuildBundle(_)
+            | UiCommand::CancelBundleBuild(_)
             | UiCommand::GetRepoTopLevel(_)
             | UiCommand::ListBundles(_) => self.dispatch_repo_command(command, event_bus).await,
             UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
@@ -227,6 +229,10 @@ impl HostRuntime {
                 self.local_backend
                     .build_bundle(command, event_bus, &self.logger)
                     .await
+            }
+            UiCommand::CancelBundleBuild(command) => {
+                let result = self.local_backend.cancel_bundle_build(command);
+                Ok(UiResponse::CancelBundleBuildResult(result))
             }
             UiCommand::GetRepoTopLevel(command) => {
                 let result = self.local_backend.get_repo_top_level(command).await?;

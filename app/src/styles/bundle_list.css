@@ -1,0 +1,190 @@
+/*
+ * Path: app/src/styles/bundle_list.css
+ * Description: Bundle list rows, ready pulse, and metadata styles
+ */
+
+.bundle-list {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.bundle-list.empty {
+  min-height: 60px;
+  justify-content: center;
+  align-items: center;
+}
+
+.bundle-list-header {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.bundle-list-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.bundle-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  padding-left: calc(var(--space-3) + var(--deck-stroke-thin) + var(--space-2));
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.bundle-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  width: var(--deck-stroke-thin);
+  background: var(--color-border-subtle);
+  border-radius: var(--radius-deck-none);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.bundle-row:hover::before,
+.bundle-row:focus-within::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
+}
+
+.bundle-row:hover {
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-drop-sm);
+}
+
+.bundle-row:active,
+.bundle-row.dragging {
+  cursor: grabbing;
+}
+
+.bundle-row.dragging {
+  opacity: 0.8;
+  background: var(--color-bg-elevated);
+  box-shadow:
+    var(--shadow-drop-sm),
+    0 0 0 1px var(--color-accent-glow);
+}
+
+.bundle-row.dragging::before {
+  background: var(--color-accent);
+  box-shadow: 0 0 6px 0 var(--color-accent-glow);
+}
+
+.bundle-row.bundle-row--fresh {
+  animation: bundle-ready-pulse 5s var(--ease-in-out) forwards;
+}
+
+.bundle-row.bundle-row--fresh::before {
+  background: var(--color-accent);
+  animation: bundle-ready-rail-pulse 5s var(--ease-in-out) forwards;
+}
+
+@keyframes bundle-ready-pulse {
+  0% {
+    box-shadow: none;
+  }
+
+  17% {
+    box-shadow:
+      0 0 0 2px var(--color-accent-glow),
+      0 0 16px 4px var(--color-accent-glow);
+  }
+
+  33% {
+    box-shadow:
+      0 0 0 1px var(--color-accent-soft),
+      0 0 8px 2px var(--color-accent-glow);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 2px var(--color-accent-glow),
+      0 0 16px 4px var(--color-accent-glow);
+  }
+
+  67% {
+    box-shadow:
+      0 0 0 1px var(--color-accent-soft),
+      0 0 8px 2px var(--color-accent-glow);
+  }
+
+  83% {
+    box-shadow:
+      0 0 0 2px var(--color-accent-glow),
+      0 0 16px 4px var(--color-accent-glow);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes bundle-ready-rail-pulse {
+  0% { box-shadow: none; }
+  17% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  33% { box-shadow: 0 0 6px 1px var(--color-accent-glow); }
+  50% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  67% { box-shadow: 0 0 6px 1px var(--color-accent-glow); }
+  83% { box-shadow: 0 0 12px 2px var(--color-accent-glow); }
+  100% { box-shadow: none; }
+}
+
+.bundle-state-marker {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.bundle-state-marker--latest {
+  background: var(--color-accent);
+  box-shadow: 0 0 4px 0 var(--color-accent-glow);
+}
+
+.bundle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bundle-filename {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bundle-meta {
+  display: flex;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

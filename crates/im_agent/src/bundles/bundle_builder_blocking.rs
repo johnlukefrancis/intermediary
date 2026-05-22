@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 use im_bundle::progress::ProgressMessage;
 use im_bundle::progress_sink::CallbackProgressSink;
-use im_bundle::writer::write_bundle_with_progress;
+use im_bundle::writer::write_bundle_with_progress_and_cancel;
 use im_bundle::BundlePlan;
 
 use crate::error::AgentError;
@@ -43,6 +43,7 @@ pub(crate) fn build_bundle_blocking(
     timestamp: String,
     git_info: GitInfo,
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
+    cancel_token: im_bundle::cancel::BundleCancelToken,
 ) -> Result<BlockingBundleResult, AgentError> {
     let layout = StagingLayout::from_config(&options.staging, options.staging_kind)?;
     let output_dir = layout.bundles_dir(&options.repo_id, &options.preset_id);
@@ -66,13 +67,21 @@ pub(crate) fn build_bundle_blocking(
 
     let plan = build_plan(&options, &temp_path, &built_at_iso, git_info);
 
-    let bundle_result = match write_bundle_with_progress(&plan, Box::new(sink)) {
-        Ok(result) => result,
-        Err(err) => {
-            let _ = std::fs::remove_file(&temp_path);
-            return Err(AgentError::new("BUNDLE_BUILD_FAILED", err.to_string()));
-        }
-    };
+    let bundle_result =
+        match write_bundle_with_progress_and_cancel(&plan, Box::new(sink), &cancel_token) {
+            Ok(result) => result,
+            Err(im_bundle::BundleError::Cancelled) => {
+                let _ = std::fs::remove_file(&temp_path);
+                return Err(AgentError::new(
+                    "BUNDLE_BUILD_CANCELLED",
+                    "Bundle build cancelled",
+                ));
+            }
+            Err(err) => {
+                let _ = std::fs::remove_file(&temp_path);
+                return Err(AgentError::new("BUNDLE_BUILD_FAILED", err.to_string()));
+            }
+        };
 
     if let Err(err) = std::fs::rename(&temp_path, &final_path) {
         let _ = std::fs::remove_file(&temp_path);

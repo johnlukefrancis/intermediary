@@ -8,7 +8,9 @@ mod bundle_progress;
 mod git_info;
 pub mod ignore_rules;
 
-pub use bundle_builder::{build_bundle, BuildBundleOptions, BuildBundleResult};
+pub use bundle_builder::{
+    build_bundle, cancel_bundle_build, BuildBundleOptions, BuildBundleResult,
+};
 pub use bundle_lister::{list_bundles, ListBundlesOptions};
 
 #[cfg(test)]

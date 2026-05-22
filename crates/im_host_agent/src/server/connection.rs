@@ -23,6 +23,7 @@ use super::handshake_auth::{
     unauthorized_handshake_response, ConnectionHandshakeAuth, HandshakeRejectReason,
 };
 
+#[derive(Clone)]
 pub struct ConnectionContext {
     pub runtime: Arc<RwLock<HostRuntime>>,
     pub logger: Logger,
@@ -130,9 +131,13 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
     while let Some(message) = stream.next().await {
         match message {
             Ok(Message::Text(text)) => {
-                if let Some(response) = handle_message(&text, &ctx).await {
-                    let _ = response_tx.send(Message::Text(response));
-                }
+                let request_ctx = ctx.clone();
+                let request_response_tx = response_tx.clone();
+                tokio::spawn(async move {
+                    if let Some(response) = handle_message(&text, &request_ctx).await {
+                        let _ = request_response_tx.send(Message::Text(response));
+                    }
+                });
             }
             Ok(Message::Binary(_)) => {
                 ctx.logger.warn(

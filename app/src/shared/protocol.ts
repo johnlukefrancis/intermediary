@@ -3,8 +3,14 @@
 
 import { z } from "zod";
 import { AppConfigSchema } from "./config.js";
-import { GlobalExcludesSchema } from "./global_excludes.js";
 import { AgentEventSchema, type AgentEvent } from "./protocol_events.js";
+import {
+  BuildBundleCommandSchema,
+  BuildBundleResultSchema,
+  CancelBundleBuildCommandSchema,
+  CancelBundleBuildResultSchema,
+  ListBundlesResultSchema,
+} from "./protocol_bundles.js";
 import {
   GetTrFleetStatusCommandSchema,
   GetTrFleetStatusResultSchema,
@@ -20,6 +26,12 @@ export {
   type BundleBuiltEvent, type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
   type StagedInfo, type WslBackendConnectionStatus, type WslBackendStatusEvent,
 } from "./protocol_events.js";
+export {
+  BuildBundleCommandSchema, BuildBundleResultSchema, BundleInfoSchema, BundleSelectionSchema,
+  CancelBundleBuildCommandSchema, CancelBundleBuildResultSchema, ListBundlesResultSchema,
+  type BuildBundleResult, type BundleInfo, type BundleSelection, type CancelBundleBuildResult,
+  type ListBundlesResult,
+} from "./protocol_bundles.js";
 export {
   GetTrFleetStatusCommandSchema, GetTrFleetStatusResultSchema, TrFleetActionCommandSchema,
   TrFleetActionResultSchema, TrFleetActionKindSchema, TrFleetEndpointErrorCodeSchema,
@@ -48,26 +60,6 @@ export const StageFileCommandSchema = z.object({
   type: z.literal("stageFile"),
   repoId: z.string(),
   path: z.string(),
-});
-
-/** Selection payload for bundle building */
-export const BundleSelectionSchema = z.object({
-  /** Whether to include root-level files */
-  includeRoot: z.boolean(),
-  /** Top-level directories to include */
-  topLevelDirs: z.array(z.string().min(1)),
-  /** Subdirectories to exclude (e.g. "TriangleRain/Assets") */
-  excludedSubdirs: z.array(z.string().min(1)).default([]),
-});
-export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
-
-export const BuildBundleCommandSchema = z.object({
-  type: z.literal("buildBundle"),
-  repoId: z.string(),
-  presetId: z.string(),
-  selection: BundleSelectionSchema,
-  /** Global excludes (extensions and patterns) */
-  globalExcludes: GlobalExcludesSchema.optional(),
 });
 
 /** Handshake from UI with config and staging paths */
@@ -109,6 +101,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   RefreshCommandSchema,
   StageFileCommandSchema,
   BuildBundleCommandSchema,
+  CancelBundleBuildCommandSchema,
   ClientHelloCommandSchema,
   SetOptionsCommandSchema,
   GetRepoTopLevelCommandSchema,
@@ -142,18 +135,6 @@ export const StageFileResultSchema = z.object({
   mtimeMs: z.number(),
 });
 
-export const BuildBundleResultSchema = z.object({
-  type: z.literal("buildBundleResult"),
-  repoId: z.string(),
-  presetId: z.string(),
-  hostPath: z.string(),
-  wslPath: z.string().optional(),
-  aliasHostPath: z.string(),
-  bytes: z.number().int().nonnegative(),
-  fileCount: z.number().int().nonnegative(),
-  builtAtIso: z.string(),
-});
-
 /** Response to clientHello with agent info */
 export const ClientHelloResultSchema = z.object({
   type: z.literal("clientHelloResult"),
@@ -179,29 +160,12 @@ export const GetRepoTopLevelResultSchema = z.object({
   defaultExcluded: z.array(z.string()).default([]),
 });
 
-/** Info about a single bundle file */
-export const BundleInfoSchema = z.object({
-  hostPath: z.string(),
-  fileName: z.string(),
-  bytes: z.number().int().nonnegative(),
-  mtimeMs: z.number(),
-  isLatestAlias: z.boolean(),
-});
-export type BundleInfo = z.infer<typeof BundleInfoSchema>;
-
-/** Response with list of existing bundles */
-export const ListBundlesResultSchema = z.object({
-  type: z.literal("listBundlesResult"),
-  repoId: z.string(),
-  presetId: z.string(),
-  bundles: z.array(BundleInfoSchema),
-});
-
 export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
   RefreshResultSchema,
   StageFileResultSchema,
   BuildBundleResultSchema,
+  CancelBundleBuildResultSchema,
   ClientHelloResultSchema,
   SetOptionsResultSchema,
   GetRepoTopLevelResultSchema,
@@ -215,11 +179,9 @@ export type UiResponse = z.infer<typeof UiResponseSchema>;
 export type WatchRepoResult = z.infer<typeof WatchRepoResultSchema>;
 export type RefreshResult = z.infer<typeof RefreshResultSchema>;
 export type StageFileResult = z.infer<typeof StageFileResultSchema>;
-export type BuildBundleResult = z.infer<typeof BuildBundleResultSchema>;
 export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
 export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
 export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;
-export type ListBundlesResult = z.infer<typeof ListBundlesResultSchema>;
 
 // -----------------------------------------------------------------------------
 // Protocol envelopes

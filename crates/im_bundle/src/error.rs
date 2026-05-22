@@ -6,6 +6,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum BundleError {
+    #[error("bundle build cancelled")]
+    Cancelled,
+
     #[error("failed to read plan file at {path}: {source}")]
     PlanReadFailed {
         path: PathBuf,

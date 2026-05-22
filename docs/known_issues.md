@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-05-21
+Updated on: 2026-05-22
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -29,6 +29,9 @@ Depends on: ADR-000, ADR-007
 
 ## P2 — Degraded but usable
 
+- 2026-05-22: Opening files in the containing folder can fail for Windows-path files. Needs verification for whether this affects all file roots or only host/Windows paths.
+- 2026-05-22: Removing a folder from the app can stall after confirmation: click delete, confirm, and nothing changes. Observed during folder/subfolder removal flows.
+- 2026-05-22: Newly created folders inside a watched repo, for example `Docs/Screenshots`, may not appear in the app until closing and reopening Intermediary.
 - 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).

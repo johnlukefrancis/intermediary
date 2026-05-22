@@ -137,7 +137,8 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `watchRepo { repoId } → watchRepoResult`
 - `refresh { repoId } → refreshResult`
 - `stageFile { repoId, path } → stageFileResult`
-- `buildBundle { repoId, presetId, selection } → buildBundleResult`
+- `buildBundle { repoId, presetId, buildId, selection } → buildBundleResult`
+- `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
 - `getTrFleetStatus {} → getTrFleetStatusResult` (host-agent only; polls TR build ports 5601–5605 `__trdev/status` + `__trdev/doctor`)

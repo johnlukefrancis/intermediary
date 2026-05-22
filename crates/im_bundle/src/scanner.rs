@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use crate::cancel::{check_cancelled, BundleCancelToken};
 use crate::error::{BundleError, Result};
 use crate::global_excludes::{
     is_globally_excluded_dir_name, is_globally_excluded_file_name, is_globally_excluded_path,
@@ -25,12 +26,21 @@ pub struct ScanResult {
 }
 
 pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<ScanResult> {
+    scan_bundle_with_cancel(plan, progress, None)
+}
+
+pub fn scan_bundle_with_cancel(
+    plan: &BundlePlan,
+    progress: &mut ProgressEmitter,
+    cancel_token: Option<&BundleCancelToken>,
+) -> Result<ScanResult> {
     let repo_root = &plan.repo_root;
     if !repo_root.exists() {
         return Err(BundleError::RepoRootMissing {
             path: repo_root.clone(),
         });
     }
+    check_cancelled(cancel_token)?;
 
     let excluded = normalize_excluded(&plan.selection.excluded_subdirs)?;
     let excluded_set: HashSet<String> = excluded.into_iter().collect();
@@ -46,6 +56,7 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
                 source,
             })?;
         for entry in root_entries {
+            check_cancelled(cancel_token)?;
             let entry = entry.map_err(|source| BundleError::DirReadFailed {
                 path: repo_root.clone(),
                 source,
@@ -81,6 +92,7 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
     let top_level_dirs = validate_top_level_dirs(repo_root, &plan.selection.top_level_dirs)?;
     let mut top_level_dirs_included = Vec::new();
     for dir in &top_level_dirs {
+        check_cancelled(cancel_token)?;
         if is_globally_excluded_dir_name(dir, &global_excludes)
             || is_globally_excluded_path(dir, &global_excludes)
         {
@@ -96,6 +108,7 @@ pub fn scan_bundle(plan: &BundlePlan, progress: &mut ProgressEmitter) -> Result<
             &global_excludes,
             &mut files_scanned,
             progress,
+            cancel_token,
         )?;
     }
 
@@ -153,7 +166,9 @@ fn collect_dir_entries(
     global_excludes: &NormalizedGlobalExcludes,
     files_scanned: &mut u64,
     progress: &mut ProgressEmitter,
+    cancel_token: Option<&BundleCancelToken>,
 ) -> Result<()> {
+    check_cancelled(cancel_token)?;
     if excluded_set.contains(archive_root) {
         return Ok(());
     }
@@ -169,6 +184,7 @@ fn collect_dir_entries(
     })?;
 
     for entry in dir_entries {
+        check_cancelled(cancel_token)?;
         let entry = entry.map_err(|source| BundleError::DirReadFailed {
             path: dir_path.to_path_buf(),
             source,
@@ -201,6 +217,7 @@ fn collect_dir_entries(
                 global_excludes,
                 files_scanned,
                 progress,
+                cancel_token,
             )?;
             continue;
         }

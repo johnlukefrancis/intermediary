@@ -2,19 +2,20 @@
 // Description: Bundle zip writer with scanning, manifest, and progress
 
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufWriter, Write};
 use std::time::Instant;
 
 use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 
-use crate::compression_policy::compression_method_for;
+use crate::cancel::{check_cancelled, BundleCancelToken};
 use crate::error::{BundleError, Result};
 use crate::manifest::build_manifest;
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
 use crate::progress_sink::{ProgressSink, StdoutProgressSink};
-use crate::scanner::{scan_bundle, ScanEntry};
+use crate::scanner::{scan_bundle_with_cancel, ScanEntry};
+use crate::zip_entry::write_entry;
 
 const BUFFER_SIZE: usize = 256 * 1024;
 const OUTPUT_BUFFER_SIZE: usize = 256 * 1024;
@@ -38,16 +39,27 @@ pub fn write_bundle_with_progress(
     sink: Box<dyn ProgressSink>,
 ) -> Result<BundleResult> {
     let mut progress = ProgressEmitter::with_sink(sink);
-    write_bundle_with_emitter(plan, &mut progress)
+    write_bundle_with_emitter(plan, &mut progress, None)
+}
+
+pub fn write_bundle_with_progress_and_cancel(
+    plan: &BundlePlan,
+    sink: Box<dyn ProgressSink>,
+    cancel_token: &BundleCancelToken,
+) -> Result<BundleResult> {
+    let mut progress = ProgressEmitter::with_sink(sink);
+    write_bundle_with_emitter(plan, &mut progress, Some(cancel_token))
 }
 
 fn write_bundle_with_emitter(
     plan: &BundlePlan,
     progress: &mut ProgressEmitter,
+    cancel_token: Option<&BundleCancelToken>,
 ) -> Result<BundleResult> {
     let scan_start = Instant::now();
-    let scan_result = scan_bundle(plan, progress)?;
+    let scan_result = scan_bundle_with_cancel(plan, progress, cancel_token)?;
     let scan_ms = scan_start.elapsed().as_millis();
+    check_cancelled(cancel_token)?;
 
     let total_files = scan_result.entries.len() as u64 + 1;
     progress.emit_progress("zipping", 0, total_files);
@@ -58,6 +70,7 @@ fn write_bundle_with_emitter(
         &scan_result.entries,
         &scan_result.top_level_dirs_included,
         progress,
+        cancel_token,
     )?;
     let zip_ms = zip_start.elapsed().as_millis();
 
@@ -76,7 +89,9 @@ fn write_zip(
     entries: &[ScanEntry],
     top_level_dirs_included: &[String],
     progress: &mut ProgressEmitter,
+    cancel_token: Option<&BundleCancelToken>,
 ) -> Result<(u64, u64)> {
+    check_cancelled(cancel_token)?;
     let output_file =
         File::create(&plan.output_path).map_err(|source| BundleError::OutputCreateFailed {
             path: plan.output_path.clone(),
@@ -96,6 +111,7 @@ fn write_zip(
     let files_total = entries.len() as u64 + 1;
 
     for entry in entries {
+        check_cancelled(cancel_token)?;
         bytes_copied += write_entry(
             &mut zip,
             entry,
@@ -104,11 +120,13 @@ fn write_zip(
             files_done,
             files_total,
             bytes_copied,
+            cancel_token,
         )?;
         files_done += 1;
         progress.emit_progress("zipping", files_done, files_total);
     }
 
+    check_cancelled(cancel_token)?;
     let (manifest_json, total_bytes_best_effort) = build_manifest_json(
         plan,
         top_level_dirs_included,
@@ -130,6 +148,7 @@ fn write_zip(
     progress.emit_progress("zipping", files_done, files_total);
 
     progress.emit_progress("finalizing", files_done, files_total);
+    check_cancelled(cancel_token)?;
     let writer = zip
         .finish()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to finish archive: {e}")))?;
@@ -138,6 +157,7 @@ fn write_zip(
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to flush buffer: {e}")))?;
 
     progress.emit_progress("syncing", files_done, files_total);
+    check_cancelled(cancel_token)?;
     file.sync_all()
         .map_err(|e| BundleError::FinalizeFailed(format!("failed to sync file: {e}")))?;
 
@@ -148,102 +168,6 @@ fn write_zip(
     }
 
     Ok((bytes_written, files_done))
-}
-
-fn write_entry(
-    zip: &mut zip::ZipWriter<BufWriter<File>>,
-    entry: &ScanEntry,
-    buffer: &mut [u8],
-    progress: &mut ProgressEmitter,
-    files_done: u64,
-    files_total: u64,
-    bytes_done_total: u64,
-) -> Result<u64> {
-    let source_file =
-        File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
-            path: entry.source_path.clone(),
-            archive_path: entry.archive_path.clone(),
-            source,
-        })?;
-    let current_bytes_total = source_file
-        .metadata()
-        .map(|metadata| metadata.len())
-        .map_err(|source| BundleError::FileMetadataFailed {
-            path: entry.source_path.clone(),
-            archive_path: entry.archive_path.clone(),
-            source,
-        })?;
-    let mut reader = BufReader::new(source_file).take(current_bytes_total);
-
-    let entry_options = build_entry_options(&entry.archive_path, current_bytes_total);
-
-    zip.start_file(&entry.archive_path, entry_options)
-        .map_err(|source| BundleError::ArchiveWriteFailed {
-            archive_path: entry.archive_path.clone(),
-            source,
-        })?;
-
-    let mut total = 0u64;
-    progress.emit_file_progress(
-        "zipping",
-        files_done,
-        files_total,
-        &entry.archive_path,
-        total,
-        Some(current_bytes_total),
-        bytes_done_total,
-        true,
-    );
-    loop {
-        let bytes_read = reader
-            .read(buffer)
-            .map_err(|source| BundleError::FileReadFailed {
-                path: entry.source_path.clone(),
-                archive_path: entry.archive_path.clone(),
-                source,
-            })?;
-        if bytes_read == 0 {
-            break;
-        }
-        zip.write_all(&buffer[..bytes_read])
-            .map_err(|source| BundleError::ArchiveWriteFailed {
-                archive_path: entry.archive_path.clone(),
-                source: zip::result::ZipError::Io(source),
-            })?;
-        total += bytes_read as u64;
-        progress.emit_file_progress(
-            "zipping",
-            files_done,
-            files_total,
-            &entry.archive_path,
-            total,
-            Some(current_bytes_total),
-            bytes_done_total + total,
-            false,
-        );
-    }
-
-    progress.emit_file_progress(
-        "zipping",
-        files_done,
-        files_total,
-        &entry.archive_path,
-        total,
-        Some(current_bytes_total),
-        bytes_done_total + total,
-        true,
-    );
-
-    Ok(total)
-}
-
-fn build_entry_options(archive_path: &str, size_bytes: u64) -> SimpleFileOptions {
-    let method = compression_method_for(archive_path, size_bytes);
-    let mut options = SimpleFileOptions::default().compression_method(method);
-    if method == CompressionMethod::Deflated {
-        options = options.compression_level(Some(COMPRESSION_LEVEL));
-    }
-    options
 }
 
 fn build_manifest_json(

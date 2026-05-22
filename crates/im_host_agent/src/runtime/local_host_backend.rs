@@ -1,7 +1,9 @@
 // Path: crates/im_host_agent/src/runtime/local_host_backend.rs
 // Description: Host-native local backend for repo watch, staging, and bundle operations
 
-use im_agent::bundles::{build_bundle, list_bundles, BuildBundleOptions, ListBundlesOptions};
+use im_agent::bundles::{
+    build_bundle, cancel_bundle_build, list_bundles, BuildBundleOptions, ListBundlesOptions,
+};
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
@@ -123,6 +125,7 @@ impl LocalHostBackend {
                 repo_id: command.repo_id.clone(),
                 repo_root: repo_root.to_string(),
                 preset_id: command.preset_id.clone(),
+                build_id: command.build_id.clone(),
                 preset_name: preset.preset_name,
                 selection: command.selection,
                 staging,
@@ -162,6 +165,20 @@ impl LocalHostBackend {
                 built_at_iso: result.built_at_iso,
             },
         ))
+    }
+
+    pub fn cancel_bundle_build(
+        &self,
+        command: im_agent::protocol::CancelBundleBuildCommand,
+    ) -> im_agent::protocol::CancelBundleBuildResult {
+        let cancelled =
+            cancel_bundle_build(&command.repo_id, &command.preset_id, &command.build_id);
+        im_agent::protocol::CancelBundleBuildResult {
+            repo_id: command.repo_id,
+            preset_id: command.preset_id,
+            build_id: command.build_id,
+            cancelled,
+        }
     }
 
     pub async fn get_repo_top_level(

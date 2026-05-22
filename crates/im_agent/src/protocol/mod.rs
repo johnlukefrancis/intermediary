@@ -7,11 +7,14 @@ mod events;
 mod responses;
 mod responses_tr_fleet;
 
+#[cfg(test)]
+mod cancel_bundle_tests;
+
 pub use commands::{
-    BuildBundleCommand, BundleSelection, ClientHelloCommand, GetRepoTopLevelCommand,
-    GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand, RefreshCommand, SetOptionsCommand,
-    StageFileCommand, TrFleetActionCommand, TrFleetActionPayload, TrFleetWatchBackend, UiCommand,
-    WatchRepoCommand,
+    BuildBundleCommand, BundleSelection, CancelBundleBuildCommand, ClientHelloCommand,
+    GetRepoTopLevelCommand, GetTrFleetStatusCommand, GlobalExcludes, ListBundlesCommand,
+    RefreshCommand, SetOptionsCommand, StageFileCommand, TrFleetActionCommand,
+    TrFleetActionPayload, TrFleetWatchBackend, UiCommand, WatchRepoCommand,
 };
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
@@ -22,8 +25,9 @@ pub use events::{
     StagedInfo, WslBackendConnectionStatus, WslBackendStatusEvent,
 };
 pub use responses::{
-    BuildBundleResult, BundleInfo, ClientHelloResult, GetRepoTopLevelResult, ListBundlesResult,
-    RefreshResult, SetOptionsResult, StageFileResult, UiResponse, WatchRepoResult,
+    BuildBundleResult, BundleInfo, CancelBundleBuildResult, ClientHelloResult,
+    GetRepoTopLevelResult, ListBundlesResult, RefreshResult, SetOptionsResult, StageFileResult,
+    UiResponse, WatchRepoResult,
 };
 pub use responses_tr_fleet::{
     GetTrFleetStatusResult, TrFleetActionKind, TrFleetActionResult, TrFleetEndpointError,

@@ -5,13 +5,110 @@ use im_agent::error::AgentError;
 use im_agent::protocol::{UiCommand, UiResponse};
 
 use super::connection::ConnectionContext;
+use crate::runtime::RepoBackend;
 
 pub async fn dispatch_command(
     command: UiCommand,
     ctx: &ConnectionContext,
 ) -> Result<UiResponse, AgentError> {
-    let mut runtime = ctx.runtime.write().await;
-    runtime
-        .dispatch_command(command, &ctx.agent_version, &ctx.event_bus)
-        .await
+    match command {
+        UiCommand::BuildBundle(command) => {
+            return dispatch_build_bundle(command, ctx).await;
+        }
+        UiCommand::CancelBundleBuild(command) => {
+            return dispatch_cancel_bundle_build(command, ctx).await;
+        }
+        command => {
+            let mut runtime = ctx.runtime.write().await;
+            runtime
+                .dispatch_command(command, &ctx.agent_version, &ctx.event_bus)
+                .await
+        }
+    }
+}
+
+async fn dispatch_build_bundle(
+    command: im_agent::protocol::BuildBundleCommand,
+    ctx: &ConnectionContext,
+) -> Result<UiResponse, AgentError> {
+    let route_command = UiCommand::BuildBundle(command.clone());
+    let backend = {
+        let runtime = ctx.runtime.read().await;
+        runtime.repo_backend_for_command(&route_command)?
+    };
+
+    match backend {
+        Some(RepoBackend::Host) => {
+            let runtime = ctx.runtime.read().await;
+            runtime
+                .dispatch_host_build_bundle(command, &ctx.event_bus)
+                .await
+        }
+        Some(RepoBackend::Wsl) => {
+            let client = {
+                let mut runtime = ctx.runtime.write().await;
+                runtime
+                    .prepare_wsl_client_for_command(&route_command, &ctx.event_bus)
+                    .await?
+            };
+            let repo_id = command.repo_id.clone();
+            let result = client
+                .forward_command(UiCommand::BuildBundle(command))
+                .await;
+            let mut runtime = ctx.runtime.write().await;
+            match result {
+                Ok(response) => {
+                    runtime.mark_wsl_forward_success(&ctx.event_bus);
+                    Ok(response)
+                }
+                Err(err) => {
+                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
+                    Err(err)
+                }
+            }
+        }
+        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
+    }
+}
+
+async fn dispatch_cancel_bundle_build(
+    command: im_agent::protocol::CancelBundleBuildCommand,
+    ctx: &ConnectionContext,
+) -> Result<UiResponse, AgentError> {
+    let route_command = UiCommand::CancelBundleBuild(command.clone());
+    let backend = {
+        let runtime = ctx.runtime.read().await;
+        runtime.repo_backend_for_command(&route_command)?
+    };
+
+    match backend {
+        Some(RepoBackend::Host) => {
+            let runtime = ctx.runtime.read().await;
+            Ok(runtime.dispatch_host_cancel_bundle_build(command))
+        }
+        Some(RepoBackend::Wsl) => {
+            let client = {
+                let mut runtime = ctx.runtime.write().await;
+                runtime
+                    .prepare_wsl_client_for_command(&route_command, &ctx.event_bus)
+                    .await?
+            };
+            let repo_id = command.repo_id.clone();
+            let result = client
+                .forward_command(UiCommand::CancelBundleBuild(command))
+                .await;
+            let mut runtime = ctx.runtime.write().await;
+            match result {
+                Ok(response) => {
+                    runtime.mark_wsl_forward_success(&ctx.event_bus);
+                    Ok(response)
+                }
+                Err(err) => {
+                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
+                    Err(err)
+                }
+            }
+        }
+        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
+    }
 }

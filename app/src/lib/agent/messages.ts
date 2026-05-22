@@ -11,6 +11,7 @@ import type {
   GetRepoTopLevelResult,
   RefreshResult,
   BuildBundleResult,
+  CancelBundleBuildResult,
   ListBundlesResult,
   BundleSelection,
   TrFleetActionCommand,
@@ -141,6 +142,7 @@ export async function sendBuildBundle(
   client: AgentClient,
   repoId: string,
   presetId: string,
+  buildId: string,
   selection: BundleSelection,
   globalExcludes?: GlobalExcludes
 ): Promise<BuildBundleResult> {
@@ -148,8 +150,23 @@ export async function sendBuildBundle(
     type: "buildBundle",
     repoId,
     presetId,
+    buildId,
     selection,
     globalExcludes,
+  });
+}
+
+export async function sendCancelBundleBuild(
+  client: AgentClient,
+  repoId: string,
+  presetId: string,
+  buildId: string
+): Promise<CancelBundleBuildResult> {
+  return client.send<CancelBundleBuildResult>({
+    type: "cancelBundleBuild",
+    repoId,
+    presetId,
+    buildId,
   });
 }
 

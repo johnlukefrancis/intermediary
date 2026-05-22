@@ -64,6 +64,15 @@ pub struct BuildBundleResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CancelBundleBuildResult {
+    pub repo_id: String,
+    pub preset_id: String,
+    pub build_id: String,
+    pub cancelled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetRepoTopLevelResult {
     pub repo_id: String,
     pub dirs: Vec<String>,
@@ -253,6 +262,8 @@ pub enum UiResponse {
     StageFileResult(StageFileResult),
     #[serde(rename = "buildBundleResult")]
     BuildBundleResult(BuildBundleResult),
+    #[serde(rename = "cancelBundleBuildResult")]
+    CancelBundleBuildResult(CancelBundleBuildResult),
     #[serde(rename = "getRepoTopLevelResult")]
     GetRepoTopLevelResult(GetRepoTopLevelResult),
     #[serde(rename = "listBundlesResult")]

@@ -332,7 +332,8 @@ UI → Host agent commands:
 * `watchRepo { repoId } -> watchRepoResult`
 * `refresh { repoId } -> refreshResult`
 * `stageFile { repoId, path } -> stageFileResult`
-* `buildBundle { repoId, presetId, selection } -> buildBundleResult`
+* `buildBundle { repoId, presetId, buildId, selection } -> buildBundleResult`
+* `cancelBundleBuild { repoId, presetId, buildId } -> cancelBundleBuildResult`
 * `getRepoTopLevel { repoId } -> getRepoTopLevelResult`
 * `listBundles { repoId, presetId } -> listBundlesResult`
 

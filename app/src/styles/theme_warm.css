@@ -102,6 +102,12 @@
   text-shadow: none;
 }
 
+[data-theme-mode="warm"] .build-button.cancel,
+[data-theme-mode="warm"] .build-button.cancel:hover:not(:disabled) {
+  color: var(--color-error);
+  text-shadow: none;
+}
+
 [data-theme-mode="warm"] .preset-tab.active {
   /* Active preset tab - use primary text with accent glow */
   color: var(--theme-text-primary);

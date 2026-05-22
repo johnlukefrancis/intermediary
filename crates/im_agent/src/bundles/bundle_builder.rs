@@ -2,7 +2,7 @@
 // Description: Bundle build orchestration using the im_bundle library
 
 use chrono::Utc;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use crate::error::AgentError;
@@ -21,6 +21,7 @@ pub struct BuildBundleOptions {
     pub repo_id: String,
     pub repo_root: String,
     pub preset_id: String,
+    pub build_id: String,
     pub preset_name: String,
     pub selection: BundleSelection,
     pub staging: PathBridgeConfig,
@@ -43,22 +44,34 @@ struct BuildLockKey {
     preset_id: String,
 }
 
-static ACTIVE_BUNDLE_BUILDS: OnceLock<Mutex<HashSet<BuildLockKey>>> = OnceLock::new();
+static ACTIVE_BUNDLE_BUILDS: OnceLock<Mutex<HashMap<BuildLockKey, ActiveBundleBuild>>> =
+    OnceLock::new();
+
+struct ActiveBundleBuild {
+    build_id: String,
+    cancel_token: im_bundle::cancel::BundleCancelToken,
+}
 
 struct BuildLockGuard {
     key: BuildLockKey,
+    build_id: String,
 }
 
 impl Drop for BuildLockGuard {
     fn drop(&mut self) {
         if let Ok(mut active) = active_bundle_builds().lock() {
-            active.remove(&self.key);
+            if active
+                .get(&self.key)
+                .is_some_and(|active| active.build_id == self.build_id)
+            {
+                active.remove(&self.key);
+            }
         }
     }
 }
 
-fn active_bundle_builds() -> &'static Mutex<HashSet<BuildLockKey>> {
-    ACTIVE_BUNDLE_BUILDS.get_or_init(|| Mutex::new(HashSet::new()))
+fn active_bundle_builds() -> &'static Mutex<HashMap<BuildLockKey, ActiveBundleBuild>> {
+    ACTIVE_BUNDLE_BUILDS.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 fn build_lock_key(repo_id: &str, preset_id: &str) -> BuildLockKey {
@@ -68,19 +81,49 @@ fn build_lock_key(repo_id: &str, preset_id: &str) -> BuildLockKey {
     }
 }
 
-fn acquire_build_lock(repo_id: &str, preset_id: &str) -> Result<BuildLockGuard, AgentError> {
+fn acquire_build_lock(
+    repo_id: &str,
+    preset_id: &str,
+    build_id: &str,
+    cancel_token: im_bundle::cancel::BundleCancelToken,
+) -> Result<BuildLockGuard, AgentError> {
     let key = build_lock_key(repo_id, preset_id);
     let mut active = active_bundle_builds()
         .lock()
         .map_err(|_| AgentError::internal("Bundle build lock state is unavailable"))?;
-    if active.contains(&key) {
+    if active.contains_key(&key) {
         return Err(AgentError::new(
             "BUNDLE_BUILD_IN_PROGRESS",
             format!("Bundle build already in progress for {repo_id}/{preset_id}"),
         ));
     }
-    active.insert(key.clone());
-    Ok(BuildLockGuard { key })
+    active.insert(
+        key.clone(),
+        ActiveBundleBuild {
+            build_id: build_id.to_string(),
+            cancel_token,
+        },
+    );
+    Ok(BuildLockGuard {
+        key,
+        build_id: build_id.to_string(),
+    })
+}
+
+pub fn cancel_bundle_build(repo_id: &str, preset_id: &str, build_id: &str) -> bool {
+    let key = build_lock_key(repo_id, preset_id);
+    let active = match active_bundle_builds().lock() {
+        Ok(active) => active,
+        Err(_) => return false,
+    };
+    let Some(active_build) = active.get(&key) else {
+        return false;
+    };
+    if active_build.build_id != build_id {
+        return false;
+    }
+    active_build.cancel_token.cancel();
+    true
 }
 
 impl From<BuildBundleOptions> for BuildBundleBlockingOptions {
@@ -103,7 +146,13 @@ pub async fn build_bundle(
     event_bus: &EventBus,
     logger: &Logger,
 ) -> Result<BuildBundleResult, AgentError> {
-    let _build_lock = acquire_build_lock(&options.repo_id, &options.preset_id)?;
+    let cancel_token = im_bundle::cancel::BundleCancelToken::new();
+    let _build_lock = acquire_build_lock(
+        &options.repo_id,
+        &options.preset_id,
+        &options.build_id,
+        cancel_token.clone(),
+    )?;
     let built_at = Utc::now();
     let built_at_iso = built_at.to_rfc3339();
     let timestamp = format_timestamp(built_at);
@@ -123,6 +172,7 @@ pub async fn build_bundle(
             timestamp,
             git_info,
             progress_tx,
+            cancel_token,
         )
     })
     .await;
@@ -157,22 +207,64 @@ mod tests {
 
     #[test]
     fn rejects_duplicate_build_lock_for_same_repo_and_preset() {
-        let first = acquire_build_lock("repo_a", "preset_main").expect("first lock");
-        let err = match acquire_build_lock("repo_a", "preset_main") {
+        let first = acquire_build_lock(
+            "repo_a",
+            "preset_main",
+            "build_1",
+            im_bundle::cancel::BundleCancelToken::new(),
+        )
+        .expect("first lock");
+        let err = match acquire_build_lock(
+            "repo_a",
+            "preset_main",
+            "build_2",
+            im_bundle::cancel::BundleCancelToken::new(),
+        ) {
             Ok(_) => panic!("second lock should fail"),
             Err(err) => err,
         };
         assert_eq!(err.code(), "BUNDLE_BUILD_IN_PROGRESS");
         drop(first);
-        acquire_build_lock("repo_a", "preset_main").expect("lock should release after drop");
+        acquire_build_lock(
+            "repo_a",
+            "preset_main",
+            "build_3",
+            im_bundle::cancel::BundleCancelToken::new(),
+        )
+        .expect("lock should release after drop");
     }
 
     #[test]
     fn distinct_ids_with_delimiter_do_not_collide() {
-        let first = acquire_build_lock("a", "b::c").expect("first lock");
-        let second =
-            acquire_build_lock("a::b", "c").expect("distinct repo/preset pair should not collide");
+        let first = acquire_build_lock(
+            "a",
+            "b::c",
+            "build_1",
+            im_bundle::cancel::BundleCancelToken::new(),
+        )
+        .expect("first lock");
+        let second = acquire_build_lock(
+            "a::b",
+            "c",
+            "build_2",
+            im_bundle::cancel::BundleCancelToken::new(),
+        )
+        .expect("distinct repo/preset pair should not collide");
         drop(second);
         drop(first);
+    }
+
+    #[test]
+    fn cancels_only_matching_active_build_id() {
+        let token = im_bundle::cancel::BundleCancelToken::new();
+        let guard =
+            acquire_build_lock("repo_a", "preset_main", "build_1", token.clone()).expect("lock");
+
+        assert!(!cancel_bundle_build("repo_a", "preset_main", "build_2"));
+        assert!(!token.is_cancelled());
+        assert!(cancel_bundle_build("repo_a", "preset_main", "build_1"));
+        assert!(token.is_cancelled());
+
+        drop(guard);
     }
 }

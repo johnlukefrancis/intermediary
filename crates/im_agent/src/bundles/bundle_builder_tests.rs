@@ -81,6 +81,7 @@ fn failed_build_keeps_last_good_bundle() {
             branch: None,
         },
         progress_tx,
+        im_bundle::cancel::BundleCancelToken::new(),
     ) {
         Ok(_) => panic!("build should fail with missing top-level directory"),
         Err(err) => err,
@@ -132,6 +133,7 @@ fn successful_build_replaces_then_cleans_older_bundles() {
             branch: None,
         },
         progress_tx,
+        im_bundle::cancel::BundleCancelToken::new(),
     )
     .expect("build should succeed");
 
@@ -149,6 +151,66 @@ fn successful_build_replaces_then_cleans_older_bundles() {
         })
         .count();
     assert_eq!(matching, 1);
+}
+
+#[test]
+fn cancelled_build_keeps_last_good_bundle_and_removes_temp_output() {
+    let root = TempDir::new().expect("tempdir");
+    let repo_root = root.path().join("repo");
+    let staging_root = root.path().join("staging");
+    let bundle_dir = staging_root.join("bundles").join("repo").join("preset");
+    std::fs::create_dir_all(&repo_root).expect("repo mkdir");
+    std::fs::create_dir_all(&bundle_dir).expect("bundle mkdir");
+    std::fs::write(repo_root.join("README.md"), "bundle content").expect("seed repo file");
+
+    let last_good_path = bundle_dir.join("repo_preset_20240101_000000.zip");
+    std::fs::write(&last_good_path, "good").expect("seed last good");
+
+    let options = BuildBundleBlockingOptions {
+        repo_id: "repo".to_string(),
+        repo_root: repo_root.to_string_lossy().to_string(),
+        preset_id: "preset".to_string(),
+        preset_name: "Preset".to_string(),
+        selection: BundleSelection {
+            include_root: true,
+            top_level_dirs: vec![],
+            excluded_subdirs: vec![],
+        },
+        staging: PathBridgeConfig {
+            staging_host_root: staging_root.to_string_lossy().to_string(),
+            staging_wsl_root: None,
+        },
+        staging_kind: StagingRootKind::Host,
+        global_excludes: None,
+    };
+    let (progress_tx, _progress_rx) = mpsc::unbounded_channel();
+    let cancel_token = im_bundle::cancel::BundleCancelToken::new();
+    cancel_token.cancel();
+
+    let err = match build_bundle_blocking(
+        options,
+        "2026-02-03T04:05:06Z".to_string(),
+        "20260203_040506".to_string(),
+        GitInfo {
+            head_sha: None,
+            short_sha: Some("abc1234".to_string()),
+            branch: None,
+        },
+        progress_tx,
+        cancel_token,
+    ) {
+        Ok(_) => panic!("cancelled build should fail"),
+        Err(err) => err,
+    };
+
+    assert_eq!(err.code(), "BUNDLE_BUILD_CANCELLED");
+    assert!(last_good_path.exists());
+    let temp_outputs = std::fs::read_dir(&bundle_dir)
+        .expect("read bundle dir")
+        .flatten()
+        .filter(|entry| entry.file_name().to_string_lossy().ends_with(".tmp"))
+        .count();
+    assert_eq!(temp_outputs, 0);
 }
 
 #[test]
@@ -200,6 +262,7 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
             branch: None,
         },
         progress_tx,
+        im_bundle::cancel::BundleCancelToken::new(),
     )
     .expect("build should succeed");
 

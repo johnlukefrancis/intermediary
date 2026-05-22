@@ -109,6 +109,12 @@
   text-shadow: none;
 }
 
+[data-theme-mode="light"] .build-button.cancel,
+[data-theme-mode="light"] .build-button.cancel:hover:not(:disabled) {
+  color: var(--color-error);
+  text-shadow: none;
+}
+
 /* Active preset tab */
 [data-theme-mode="light"] .preset-tab.active {
   color: var(--theme-text-primary);

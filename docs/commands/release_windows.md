@@ -1,5 +1,5 @@
 # Windows Release Commands
-Updated on: 2026-03-27
+Updated on: 2026-05-22
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-012
 
@@ -39,7 +39,7 @@ See [docs/commands/checks_local.md](checks_local.md) for the local checks compan
 Update every release-facing version file in one step:
 
 ```bash
-pnpm run version:bump -- 0.1.1
+pnpm run version:bump 0.1.2
 ```
 
 Re-run the version check after the bump:
@@ -80,8 +80,8 @@ Staged installer assets and checksum sidecars are written to:
 After the version contract is bumped and committed, create and push a `v<version>` tag:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 That tag runs `.github/workflows/windows_release.yml`, which rebuilds the Linux helper, rebuilds the Windows helper, packages the Tauri app, generates `.sha256` sidecars, and publishes the Windows release artifacts to GitHub Releases.

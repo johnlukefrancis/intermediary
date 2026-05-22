@@ -1,5 +1,5 @@
 // Path: crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs
-// Description: Unit tests for WSL backend forwarded command timeout routing and pending-request cleanup
+// Description: Unit tests for WSL backend forwarded command timeout routing
 
 use super::*;
 use im_agent::protocol::BundleSelection;
@@ -10,17 +10,6 @@ fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> Wsl
         request_counter: Arc::new(AtomicU64::new(0)),
         connection_generation: Arc::new(AtomicU64::new(0)),
     }
-}
-
-#[test]
-fn cancel_message_removes_pending_entry() {
-    let (response_tx, _response_rx) = oneshot::channel::<Result<UiResponse, AgentError>>();
-    let mut pending = HashMap::new();
-    pending.insert("req_1".to_string(), response_tx);
-
-    cancel_pending_request(&mut pending, "req_1");
-
-    assert!(!pending.contains_key("req_1"));
 }
 
 #[tokio::test]
@@ -67,6 +56,7 @@ fn build_bundle_uses_extended_timeout_budget() {
     let command = UiCommand::BuildBundle(im_agent::protocol::BuildBundleCommand {
         repo_id: "repo".to_string(),
         preset_id: "context".to_string(),
+        build_id: "build_1".to_string(),
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],

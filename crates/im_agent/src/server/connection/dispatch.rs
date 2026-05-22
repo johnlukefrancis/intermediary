@@ -1,7 +1,9 @@
 // Path: crates/im_agent/src/server/connection/dispatch.rs
 // Description: Command dispatch for WebSocket request handling
 
-use crate::bundles::{build_bundle, list_bundles, BuildBundleOptions, ListBundlesOptions};
+use crate::bundles::{
+    build_bundle, cancel_bundle_build, list_bundles, BuildBundleOptions, ListBundlesOptions,
+};
 use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
 use crate::repos::get_repo_top_level;
@@ -106,6 +108,7 @@ pub async fn dispatch_command(
                     repo_id: command.repo_id.clone(),
                     repo_root,
                     preset_id: command.preset_id.clone(),
+                    build_id: command.build_id.clone(),
                     preset_name: preset.preset_name,
                     selection: command.selection,
                     staging,
@@ -142,6 +145,18 @@ pub async fn dispatch_command(
                     bytes: result.bytes,
                     file_count: result.file_count,
                     built_at_iso: result.built_at_iso,
+                },
+            ))
+        }
+        UiCommand::CancelBundleBuild(command) => {
+            let cancelled =
+                cancel_bundle_build(&command.repo_id, &command.preset_id, &command.build_id);
+            Ok(UiResponse::CancelBundleBuildResult(
+                crate::protocol::CancelBundleBuildResult {
+                    repo_id: command.repo_id,
+                    preset_id: command.preset_id,
+                    build_id: command.build_id,
+                    cancelled,
                 },
             ))
         }

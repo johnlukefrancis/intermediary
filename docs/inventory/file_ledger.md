@@ -8,10 +8,12 @@ app/splashscreen.html - Deck-themed boot screen shown before main window is read
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
 app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
+app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel button with inline progress details
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
+app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that supports the DOM indeterminate state
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
@@ -51,6 +53,11 @@ app/src/hooks/agent/use_agent_shutdown.ts - Stop the WSL agent when the app wind
 app/src/hooks/agent/use_agent_supervisor_helpers.ts - Shared parsing and request helpers for agent supervisor hook
 app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of host-agent supervision with optional Windows WSL backend
 app/src/hooks/agent/wsl_transport_errors.ts - Classifies WSL transport errors and clears stale errors on explicit backend recovery events
+app/src/hooks/bundles/bundle_selection_defaults.ts - Bundle preset selection initialization and default-exclusion helpers
+app/src/hooks/bundles/bundle_state_types.ts - Bundle state contracts shared by bundle hooks and UI
+app/src/hooks/bundles/use_bundle_build_actions.ts - Build and cancel actions for bundle presets
+app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle build state
+app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -101,6 +108,7 @@ app/src/shared/config/repo_config.ts - RepoConfig schema and type
 app/src/shared/config/repo_root.ts - Repo root authority union schema and path normalization helpers
 app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
+app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
 app/src/shared/protocol_tr_fleet.ts - TR fleet command/response schemas for build-server status and recovery controls
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
@@ -109,7 +117,11 @@ app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states
 app/src/styles/agent_offline_banner.css - Banner styling for offline WSL agent diagnostics
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
 app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main window becomes ready
-app/src/styles/bundle_column.css - Hardware-style bundle column with segmented controls and command buttons
+app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
+app/src/styles/bundle_column_layout.css - Bundle column layout and preset selector styles
+app/src/styles/bundle_column.css - Bundle column style entrypoint
+app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
+app/src/styles/bundle_selection_panel.css - Bundle selection panel, directory, and subdirectory controls
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
@@ -156,6 +168,7 @@ crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
 crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
+crates/im_agent/src/protocol/cancel_bundle_tests.rs - Protocol tests for cancellable bundle build messages
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
@@ -189,6 +202,7 @@ crates/im_agent/src/staging/layout.rs - Central staging layout derivation for fi
 crates/im_agent/src/staging/mod.rs - Staging module exports
 crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-accessible directory
 crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scans and writes bundle zip
+crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan and zip operations
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
 crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
@@ -201,6 +215,7 @@ crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle 
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
 crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and progress ordering
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
+crates/im_bundle/src/zip_entry.rs - Single file entry writer for bundle zip archives
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
 crates/im_host_agent/src/config.rs - Host agent environment configuration parsing
@@ -208,6 +223,7 @@ crates/im_host_agent/src/error_codes.rs - Shared host-agent error code constants
 crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent daemon
 crates/im_host_agent/src/main.rs - Host agent daemon entry point
 crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
+crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Build-bundle host dispatch and WSL forwarding helpers for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
@@ -224,7 +240,8 @@ crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module expo
 crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
 crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
-crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarded command timeout routing and pending-request cleanup
+crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarded command timeout routing
+crates/im_host_agent/src/wsl/wsl_backend_connection.rs - Connected WSL backend request loop and pending response handling
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 scripts/classification/code_extensions_source.mjs - Pinned baseline + local overrides for code-classification file extensions.
 scripts/classification/generate_code_classification_artifacts.mjs - Generate TS/Rust code-classification extension artifacts from a pinned source list.

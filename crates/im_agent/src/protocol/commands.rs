@@ -115,9 +115,18 @@ pub struct GlobalExcludes {
 pub struct BuildBundleCommand {
     pub repo_id: String,
     pub preset_id: String,
+    pub build_id: String,
     pub selection: BundleSelection,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub global_excludes: Option<GlobalExcludes>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelBundleBuildCommand {
+    pub repo_id: String,
+    pub preset_id: String,
+    pub build_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -181,6 +190,8 @@ pub enum UiCommand {
     StageFile(StageFileCommand),
     #[serde(rename = "buildBundle")]
     BuildBundle(BuildBundleCommand),
+    #[serde(rename = "cancelBundleBuild")]
+    CancelBundleBuild(CancelBundleBuildCommand),
     #[serde(rename = "getRepoTopLevel")]
     GetRepoTopLevel(GetRepoTopLevelCommand),
     #[serde(rename = "listBundles")]
@@ -202,6 +213,7 @@ impl UiCommand {
             UiCommand::Refresh(_) => "refresh",
             UiCommand::StageFile(_) => "stageFile",
             UiCommand::BuildBundle(_) => "buildBundle",
+            UiCommand::CancelBundleBuild(_) => "cancelBundleBuild",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
             UiCommand::ListBundles(_) => "listBundles",
             UiCommand::GetTrFleetStatus(_) => "getTrFleetStatus",

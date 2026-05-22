@@ -2,6 +2,7 @@
 // Description: WSL backend client module exports
 
 mod wsl_backend_client;
+mod wsl_backend_connection;
 mod wsl_backend_messages;
 
 pub use wsl_backend_client::WslBackendClient;

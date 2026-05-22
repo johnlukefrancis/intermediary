@@ -9,7 +9,9 @@ use tempfile::tempdir;
 use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
 use crate::progress::ProgressMessage;
 use crate::progress_sink::CallbackProgressSink;
-use crate::writer::{write_bundle, write_bundle_with_progress};
+use crate::writer::{
+    write_bundle, write_bundle_with_progress, write_bundle_with_progress_and_cancel,
+};
 use crate::BundlePlan;
 
 #[test]
@@ -115,4 +117,42 @@ fn progress_callbacks_follow_phase_order() {
     assert!(zipping_index < finalizing_index);
     assert!(finalizing_index < syncing_index);
     assert!(syncing_index < done_index);
+}
+
+#[test]
+fn cancelled_bundle_write_stops_before_output_creation() {
+    let dir = tempdir().unwrap();
+    let repo_root = dir.path();
+    std::fs::write(repo_root.join("README.md"), "root").unwrap();
+
+    let output_path = repo_root.join("bundle.zip");
+    let plan = BundlePlan {
+        output_path: output_path.clone(),
+        repo_root: repo_root.to_path_buf(),
+        repo_id: "repo".to_string(),
+        preset_id: "full".to_string(),
+        preset_name: "Full".to_string(),
+        selection: BundleSelection {
+            include_root: true,
+            top_level_dirs: vec![],
+            excluded_subdirs: vec![],
+        },
+        git: BundleGitInfo {
+            head_sha: None,
+            short_sha: None,
+            branch: None,
+        },
+        built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+        global_excludes: GlobalExcludes::default(),
+    };
+
+    let cancel_token = crate::cancel::BundleCancelToken::new();
+    cancel_token.cancel();
+    let sink = CallbackProgressSink::new(|_| {});
+
+    let err = write_bundle_with_progress_and_cancel(&plan, Box::new(sink), &cancel_token)
+        .expect_err("cancelled write should fail");
+
+    assert!(matches!(err, crate::BundleError::Cancelled));
+    assert!(!output_path.exists());
 }

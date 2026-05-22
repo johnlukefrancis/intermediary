@@ -22,6 +22,10 @@
       "summary": "Banner with diagnostics when the host agent endpoint is offline"
     },
     {
+      "path": "app/src/components/bundles/build_progress_button.tsx",
+      "summary": "Bundle build/cancel button with inline progress details"
+    },
+    {
       "path": "app/src/components/bundles/bundle_column.tsx",
       "summary": "Main bundles column component"
     },
@@ -36,6 +40,10 @@
     {
       "path": "app/src/components/bundles/bundle_selection_panel.tsx",
       "summary": "Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)"
+    },
+    {
+      "path": "app/src/components/bundles/indeterminate_checkbox.tsx",
+      "summary": "Checkbox component that supports the DOM indeterminate state"
     },
     {
       "path": "app/src/components/bundles/preset_selector.tsx",
@@ -192,6 +200,26 @@
     {
       "path": "app/src/hooks/agent/wsl_transport_errors.ts",
       "summary": "Classifies WSL transport errors and clears stale errors on explicit backend recovery events"
+    },
+    {
+      "path": "app/src/hooks/bundles/bundle_selection_defaults.ts",
+      "summary": "Bundle preset selection initialization and default-exclusion helpers"
+    },
+    {
+      "path": "app/src/hooks/bundles/bundle_state_types.ts",
+      "summary": "Bundle state contracts shared by bundle hooks and UI"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_bundle_build_actions.ts",
+      "summary": "Build and cancel actions for bundle presets"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_bundle_events.ts",
+      "summary": "Agent event handling for bundle build state"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_bundle_refresh.ts",
+      "summary": "Bundle list refresh flow with transient WSL retry handling"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -394,6 +422,10 @@
       "summary": "Global bundle exclude schema and UI options"
     },
     {
+      "path": "app/src/shared/protocol_bundles.ts",
+      "summary": "Bundle-related agent protocol schemas and types"
+    },
+    {
       "path": "app/src/shared/protocol_events.ts",
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
@@ -426,8 +458,24 @@
       "summary": "Boot phase opacity gate - smooth fade-in when main window becomes ready"
     },
     {
+      "path": "app/src/styles/bundle_build_button.css",
+      "summary": "Bundle build and cancel command button styles"
+    },
+    {
+      "path": "app/src/styles/bundle_column_layout.css",
+      "summary": "Bundle column layout and preset selector styles"
+    },
+    {
       "path": "app/src/styles/bundle_column.css",
-      "summary": "Hardware-style bundle column with segmented controls and command buttons"
+      "summary": "Bundle column style entrypoint"
+    },
+    {
+      "path": "app/src/styles/bundle_list.css",
+      "summary": "Bundle list rows, ready pulse, and metadata styles"
+    },
+    {
+      "path": "app/src/styles/bundle_selection_panel.css",
+      "summary": "Bundle selection panel, directory, and subdirectory controls"
     },
     {
       "path": "app/src/styles/chrome.css",
@@ -614,6 +662,10 @@
       "summary": "WSL agent daemon entry point"
     },
     {
+      "path": "crates/im_agent/src/protocol/cancel_bundle_tests.rs",
+      "summary": "Protocol tests for cancellable bundle build messages"
+    },
+    {
       "path": "crates/im_agent/src/protocol/commands.rs",
       "summary": "UI-to-agent command payloads for the WebSocket protocol"
     },
@@ -746,6 +798,10 @@
       "summary": "CLI entry point for im_bundle - scans and writes bundle zip"
     },
     {
+      "path": "crates/im_bundle/src/cancel.rs",
+      "summary": "Cooperative cancellation token for bundle scan and zip operations"
+    },
+    {
       "path": "crates/im_bundle/src/compression_policy.rs",
       "summary": "Compression policy for bundle entries based on extension and size"
     },
@@ -794,6 +850,10 @@
       "summary": "Bundle zip writer with scanning, manifest, and progress"
     },
     {
+      "path": "crates/im_bundle/src/zip_entry.rs",
+      "summary": "Single file entry writer for bundle zip archives"
+    },
+    {
       "path": "crates/im_bundle/tests/scanner_test.rs",
       "summary": "Integration tests for bundle scanner behavior"
     },
@@ -820,6 +880,10 @@
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime_helpers.rs",
       "summary": "Host-runtime helper functions for config parsing and repo-command metadata"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs",
+      "summary": "Build-bundle host dispatch and WSL forwarding helpers for HostRuntime"
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime/mod.rs",
@@ -887,7 +951,11 @@
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs",
-      "summary": "Unit tests for WSL backend forwarded command timeout routing and pending-request cleanup"
+      "summary": "Unit tests for WSL backend forwarded command timeout routing"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_connection.rs",
+      "summary": "Connected WSL backend request loop and pending response handling"
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_messages.rs",

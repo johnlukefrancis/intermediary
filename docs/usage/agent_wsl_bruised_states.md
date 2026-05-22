@@ -40,13 +40,15 @@ When to escalate:
 Observed behavior:
 - Bundle requests are timeout-bounded (notably 5 minutes for build requests).
 - A timed-out build returns an error to UI, but does **not** replace/remove the previous successful bundle.
+- While a bundle is building, the build button becomes **Cancel**. Cancellation is quiet in the UI: the in-progress state clears without recording a persistent build error.
 
 Why this is safe:
 - Bundle finalize uses temp file + atomic rename.
 - Older bundles are pruned only after successful finalize.
+- Cancellation is cooperative and build-id scoped. The backend removes only the matching in-progress temp zip and does not remove the previous successful bundle.
 
 What to do:
-- Retry build once backend is online/stable.
+- Cancel a long build if the selection was wrong or the backend is unstable, then retry once backend is online/stable.
 - If repeated timeout persists, use **Restart Agent** and rebuild.
 
 ## 4) Mounted Windows paths in Linux/WSL runtime (warn-only)

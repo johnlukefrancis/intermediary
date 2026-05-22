@@ -1,0 +1,204 @@
+/*
+ * Path: app/src/styles/bundle_selection_panel.css
+ * Description: Bundle selection panel, directory, and subdirectory controls
+ */
+
+.bundle-selection-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: transparent;
+  border: 1px solid var(--glass-vintage-edge);
+  border-radius: var(--radius-deck-sm);
+  box-shadow: var(--shadow-inset-subtle);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.selection-header {
+  display: flex;
+  align-items: center;
+}
+
+.include-root-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toggle-label {
+  font-size: var(--text-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.dir-selection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dir-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dir-selection-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.dir-action-btn {
+  padding: 2px var(--space-2);
+  background: var(--glass-vintage-header);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    color var(--duration-normal) var(--ease-out);
+}
+
+.dir-action-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.dir-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dir-action-btn:focus {
+  outline: none;
+}
+
+.dir-action-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.dir-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--glass-vintage-content);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.dir-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dir-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.dir-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dir-expand-btn {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.dir-expand-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.dir-expand-btn:focus {
+  outline: none;
+}
+
+.dir-expand-btn:focus-visible {
+  outline: 1px solid var(--color-accent);
+  border-radius: 2px;
+}
+
+.dir-expand-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.dir-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.subdir-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-left: calc(16px + var(--space-2));
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border-subtle);
+  margin-top: var(--space-1);
+}
+
+.subdir-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.subdir-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.subdir-label.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vintage-toggle-track.indeterminate {
+  background: var(--color-warning-muted, #8b7355);
+}
+
+.no-dirs {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
