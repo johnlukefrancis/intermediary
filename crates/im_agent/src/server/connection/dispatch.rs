@@ -6,7 +6,7 @@ use crate::bundles::{
 };
 use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
-use crate::repos::{get_repo_top_level, read_text_file};
+use crate::repos::{get_repo_top_level, read_image_file, read_text_file};
 use crate::staging::{stage_file, StagingRootKind};
 
 use super::ConnectionContext;
@@ -88,6 +88,27 @@ pub async fn dispatch_command(
                     bytes: result.bytes,
                     mtime_ms: result.mtime_ms,
                     encoding: "utf-8".to_string(),
+                },
+            ))
+        }
+        UiCommand::ReadImageFile(command) => {
+            let repo_root = {
+                let state = ctx.runtime.read().await;
+                let repo_config = state.repo_configs.get(&command.repo_id).ok_or_else(|| {
+                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
+                })?;
+                resolve_wsl_repo_root(&command.repo_id, repo_config)?
+            };
+
+            let result = read_image_file(&repo_root, &command.path).await?;
+            Ok(UiResponse::ReadImageFileResult(
+                crate::protocol::ReadImageFileResult {
+                    repo_id: command.repo_id,
+                    path: command.path,
+                    data_base64: result.data_base64,
+                    mime_type: result.mime_type,
+                    bytes: result.bytes,
+                    mtime_ms: result.mtime_ms,
                 },
             ))
         }

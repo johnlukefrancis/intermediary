@@ -4,6 +4,7 @@
 mod categorizer;
 mod generated_code_extensions;
 mod ignore_matcher;
+mod image_file_reader;
 mod mru_index;
 mod recent_files_store;
 mod repo_top_level;
@@ -14,6 +15,7 @@ mod text_file_reader;
 mod watcher_error;
 
 pub use categorizer::Categorizer;
+pub use image_file_reader::{read_image_file, ImageFileReadResult};
 pub use mru_index::MruIndex;
 pub use recent_files_store::RecentFilesStore;
 pub use repo_top_level::{get_repo_top_level, is_valid_repo_root, TopLevelResult};

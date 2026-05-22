@@ -70,6 +70,12 @@ export const ReadTextFileCommandSchema = z.object({
   path: z.string(),
 });
 
+export const ReadImageFileCommandSchema = z.object({
+  type: z.literal("readImageFile"),
+  repoId: z.string(),
+  path: z.string(),
+});
+
 /** Handshake from UI with config and staging paths */
 export const ClientHelloCommandSchema = z.object({
   type: z.literal("clientHello"),
@@ -109,6 +115,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   RefreshCommandSchema,
   StageFileCommandSchema,
   ReadTextFileCommandSchema,
+  ReadImageFileCommandSchema,
   BuildBundleCommandSchema,
   CancelBundleBuildCommandSchema,
   ClientHelloCommandSchema,
@@ -154,6 +161,16 @@ export const ReadTextFileResultSchema = z.object({
   encoding: z.literal("utf-8"),
 });
 
+export const ReadImageFileResultSchema = z.object({
+  type: z.literal("readImageFileResult"),
+  repoId: z.string(),
+  path: z.string(),
+  dataBase64: z.string(),
+  mimeType: z.string(),
+  bytes: z.number().int().nonnegative(),
+  mtimeMs: z.number().int().nonnegative(),
+});
+
 /** Response to clientHello with agent info */
 export const ClientHelloResultSchema = z.object({
   type: z.literal("clientHelloResult"),
@@ -184,6 +201,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   RefreshResultSchema,
   StageFileResultSchema,
   ReadTextFileResultSchema,
+  ReadImageFileResultSchema,
   BuildBundleResultSchema,
   CancelBundleBuildResultSchema,
   ClientHelloResultSchema,
@@ -200,6 +218,7 @@ export type WatchRepoResult = z.infer<typeof WatchRepoResultSchema>;
 export type RefreshResult = z.infer<typeof RefreshResultSchema>;
 export type StageFileResult = z.infer<typeof StageFileResultSchema>;
 export type ReadTextFileResult = z.infer<typeof ReadTextFileResultSchema>;
+export type ReadImageFileResult = z.infer<typeof ReadImageFileResultSchema>;
 export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
 export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
 export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;

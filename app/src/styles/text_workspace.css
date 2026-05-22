@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/text_workspace.css
- * Description: Text workspace layout and editor styling for notes and scratch file buffers
+ * Description: Shared workspace layout and editor/viewer styling for notes, text, and images
  */
 
 .text-workspace-layout {
@@ -148,6 +148,48 @@
   font-size: var(--text-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.text-workspace-error--inline {
+  position: static;
+  align-self: center;
+  margin: auto;
+  max-width: min(520px, calc(100% - var(--space-8)));
+}
+
+.text-workspace-image-shell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, var(--color-accent-soft), transparent 2px),
+    radial-gradient(circle at center, var(--color-bg-hover), transparent 68%),
+    transparent;
+}
+
+.text-workspace-image-shell[data-draggable="true"] {
+  cursor: grab;
+}
+
+.text-workspace-image-shell[data-draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.text-workspace-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .text-workspace-handset .text-workspace-panel {

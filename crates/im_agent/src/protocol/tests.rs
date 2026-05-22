@@ -246,6 +246,44 @@ fn read_text_file_command_and_result_roundtrip() {
 }
 
 #[test]
+fn read_image_file_command_and_result_roundtrip() {
+    let command_json = json!({
+        "type": "readImageFile",
+        "repoId": "repo",
+        "path": "docs/capture.png"
+    });
+    let command: UiCommand = serde_json::from_value(command_json).expect("parse readImageFile");
+    match command {
+        UiCommand::ReadImageFile(command) => {
+            assert_eq!(command.repo_id, "repo");
+            assert_eq!(command.path, "docs/capture.png");
+        }
+        _ => panic!("expected ReadImageFile"),
+    }
+
+    let response_json = json!({
+        "type": "readImageFileResult",
+        "repoId": "repo",
+        "path": "docs/capture.png",
+        "dataBase64": "cG5n",
+        "mimeType": "image/png",
+        "bytes": 3,
+        "mtimeMs": 1700000000000_u64
+    });
+    let response: UiResponse =
+        serde_json::from_value(response_json).expect("parse readImageFileResult");
+    match response {
+        UiResponse::ReadImageFileResult(result) => {
+            assert_eq!(result.repo_id, "repo");
+            assert_eq!(result.path, "docs/capture.png");
+            assert_eq!(result.data_base64, "cG5n");
+            assert_eq!(result.mime_type, "image/png");
+        }
+        _ => panic!("expected ReadImageFileResult"),
+    }
+}
+
+#[test]
 fn legacy_build_bundle_result_windows_aliases() {
     let json = json!({
         "type": "buildBundleResult",

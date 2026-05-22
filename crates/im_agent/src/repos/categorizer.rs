@@ -9,7 +9,7 @@ use crate::protocol::FileKind;
 
 const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
 const DOC_IMAGE_EXTENSIONS: &[&str] = &[
-    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".heic", ".heif", ".tiff", ".tif",
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif", ".heic", ".heif", ".tiff", ".tif",
 ];
 
 const DOC_DIRS: &[&str] = &["docs", "doc", "documentation", "wiki"];
@@ -139,5 +139,6 @@ mod tests {
         );
         assert_eq!(fallback_categorize("captures/IMG_0001.JPG"), FileKind::Docs);
         assert_eq!(fallback_categorize("notes/snip.webp"), FileKind::Docs);
+        assert_eq!(fallback_categorize("exports/frame.avif"), FileKind::Docs);
     }
 }

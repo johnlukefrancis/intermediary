@@ -8,11 +8,12 @@ use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
     BuildBundleCommand, BundleBuiltEvent, BundleInfo, ClientHelloCommand, ClientHelloResult,
-    GetRepoTopLevelCommand, ListBundlesCommand, ReadTextFileCommand, ReadTextFileResult,
-    RefreshCommand, RefreshResult, SetOptionsCommand, SetOptionsResult, StageFileCommand,
-    StageFileResult, UiResponse, WatchRepoCommand, WatchRepoResult,
+    GetRepoTopLevelCommand, ListBundlesCommand, ReadImageFileCommand, ReadImageFileResult,
+    ReadTextFileCommand, ReadTextFileResult, RefreshCommand, RefreshResult, SetOptionsCommand,
+    SetOptionsResult, StageFileCommand, StageFileResult, UiResponse, WatchRepoCommand,
+    WatchRepoResult,
 };
-use im_agent::repos::{get_repo_top_level, read_text_file};
+use im_agent::repos::{get_repo_top_level, read_image_file, read_text_file};
 use im_agent::runtime::{AgentRuntime, RepoConfig, RepoRootKind};
 use im_agent::server::EventBus;
 use im_agent::staging::{stage_file_for_kind, StagingRootKind};
@@ -107,6 +108,23 @@ impl LocalHostBackend {
             bytes: result.bytes,
             mtime_ms: result.mtime_ms,
             encoding: "utf-8".to_string(),
+        })
+    }
+
+    pub async fn read_image_file(
+        &self,
+        command: ReadImageFileCommand,
+    ) -> Result<ReadImageFileResult, AgentError> {
+        let repo_root = self.host_repo_root(&command.repo_id)?;
+        let result = read_image_file(repo_root, &command.path).await?;
+
+        Ok(ReadImageFileResult {
+            repo_id: command.repo_id,
+            path: command.path,
+            data_base64: result.data_base64,
+            mime_type: result.mime_type,
+            bytes: result.bytes,
+            mtime_ms: result.mtime_ms,
         })
     }
 

@@ -1,32 +1,32 @@
-// Path: app/src/components/layout/text_workspace_layout.tsx
-// Description: Layout that replaces Docs and Code panes with a full text workspace
+// Path: app/src/components/layout/workspace_layout.tsx
+// Description: Layout that replaces Docs and Code panes with a shared workspace
 
 import type React from "react";
 import "../../styles/handset_deck.css";
 import "../../styles/handset_chassis.css";
 
-interface TextWorkspaceLayoutProps {
+interface WorkspaceLayoutProps {
   title: string;
-  subtitle?: string;
+  subtitle: string | undefined;
   onClose: () => void;
-  editorContent: React.ReactNode;
+  content: React.ReactNode;
   zipsContent: React.ReactNode;
   isHandset: boolean;
 }
 
-interface TextWorkspacePanelProps {
+interface WorkspacePanelProps {
   title: string;
   subtitle: string | undefined;
   onClose: () => void;
-  editorContent: React.ReactNode;
+  content: React.ReactNode;
 }
 
-function TextWorkspacePanel({
+function WorkspacePanel({
   title,
   subtitle,
   onClose,
-  editorContent,
-}: TextWorkspacePanelProps): React.JSX.Element {
+  content,
+}: WorkspacePanelProps): React.JSX.Element {
   return (
     <section className="panel text-workspace-panel">
       <header className="panel-header text-workspace-header">
@@ -38,13 +38,13 @@ function TextWorkspacePanel({
           type="button"
           className="panel-header-icon text-workspace-close"
           onClick={onClose}
-          title="Close text editor"
-          aria-label="Close text editor"
+          title="Close workspace"
+          aria-label="Close workspace"
         >
           ×
         </button>
       </header>
-      <div className="panel-content text-workspace-content">{editorContent}</div>
+      <div className="panel-content text-workspace-content">{content}</div>
     </section>
   );
 }
@@ -61,21 +61,16 @@ function ZipsPanel({ zipsContent }: { zipsContent: React.ReactNode }): React.JSX
   );
 }
 
-export function TextWorkspaceLayout({
+export function WorkspaceLayout({
   title,
   subtitle,
   onClose,
-  editorContent,
+  content,
   zipsContent,
   isHandset,
-}: TextWorkspaceLayoutProps): React.JSX.Element {
+}: WorkspaceLayoutProps): React.JSX.Element {
   const panel = (
-    <TextWorkspacePanel
-      title={title}
-      subtitle={subtitle}
-      onClose={onClose}
-      editorContent={editorContent}
-    />
+    <WorkspacePanel title={title} subtitle={subtitle} onClose={onClose} content={content} />
   );
 
   if (isHandset) {

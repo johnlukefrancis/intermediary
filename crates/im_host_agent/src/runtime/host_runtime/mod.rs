@@ -86,6 +86,7 @@ impl HostRuntime {
             | UiCommand::Refresh(_)
             | UiCommand::StageFile(_)
             | UiCommand::ReadTextFile(_)
+            | UiCommand::ReadImageFile(_)
             | UiCommand::BuildBundle(_)
             | UiCommand::CancelBundleBuild(_)
             | UiCommand::GetRepoTopLevel(_)
@@ -229,6 +230,10 @@ impl HostRuntime {
             UiCommand::ReadTextFile(command) => {
                 let result = self.local_backend.read_text_file(command).await?;
                 Ok(UiResponse::ReadTextFileResult(result))
+            }
+            UiCommand::ReadImageFile(command) => {
+                let result = self.local_backend.read_image_file(command).await?;
+                Ok(UiResponse::ReadImageFileResult(result))
             }
             UiCommand::BuildBundle(command) => {
                 self.local_backend

@@ -6,10 +6,9 @@ import { useCallback, useEffect, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
-import { TextWorkspaceLayout } from "../components/layout/text_workspace_layout.js";
 import { FileListColumn } from "../components/file_list_column.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
-import { TextWorkspaceEditor } from "../components/text_workspace.js";
+import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
 import {
   CodeHeaderLeft,
   CodeHeaderRight,
@@ -25,12 +24,9 @@ import { useAgent } from "../hooks/use_agent.js";
 import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
-import { getFileName, useRepoTextWorkspace } from "../hooks/use_repo_text_workspace.js";
+import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
 import type { UiMode } from "../shared/config.js";
 import type { FileEntry } from "../shared/protocol.js";
-
-const MAX_NOTE_LENGTH = 100_000;
-const MAX_SCRATCH_LENGTH = 1_000_000;
 
 interface RepoTabProps {
   repoId: string;
@@ -74,7 +70,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   });
   const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
   const noteState = useNotes(repoId);
-  const textWorkspace = useRepoTextWorkspace(repoId);
+  const repoWorkspace = useRepoWorkspace(repoId);
 
   // View state for docs and code panes
   const [docsView, setDocsView] = useState<FilePaneView>("recent");
@@ -192,7 +188,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     <DocsHeaderRight
       view={docsView}
       onViewChange={handleDocsViewChange}
-      onOpenNote={textWorkspace.openNote}
+      onOpenNote={repoWorkspace.openNote}
     />
   );
   const codeHeaderLeft = (
@@ -215,7 +211,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       selectedPaths={docsSelection.selectedPaths}
       onSelect={docsSelection.handleSelect}
       onDragStart={handleDocsDrag}
-      onOpen={textWorkspace.openFileScratch}
+      onOpen={repoWorkspace.openFile}
     />
   );
   const codeContent = (
@@ -227,7 +223,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       selectedPaths={codeSelection.selectedPaths}
       onSelect={codeSelection.handleSelect}
       onDragStart={handleCodeDrag}
-      onOpen={textWorkspace.openFileScratch}
+      onOpen={repoWorkspace.openFile}
     />
   );
   const zipsContent = (
@@ -239,35 +235,18 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     />
   );
 
-  const workspace = textWorkspace.workspace;
+  const workspace = repoWorkspace.workspace;
   const workspaceLayout = workspace.kind === "none" ? null : (
-    <TextWorkspaceLayout
-      title={workspace.kind === "note" ? "Note" : getFileName(workspace.path)}
-      subtitle={workspace.kind === "note" ? "Repository notes" : workspace.path}
-      onClose={textWorkspace.closeWorkspace}
-      editorContent={
-        workspace.kind === "note" ? (
-          <TextWorkspaceEditor
-            value={noteState.content}
-            onChange={noteState.onChange}
-            isLoading={noteState.isLoading}
-            error={noteState.error}
-            maxLength={MAX_NOTE_LENGTH}
-            placeholder="Type notes here..."
-            ariaLabel="Repository notes"
-          />
-        ) : (
-          <TextWorkspaceEditor
-            value={workspace.content}
-            onChange={textWorkspace.updateFileScratch}
-            maxLength={MAX_SCRATCH_LENGTH}
-            placeholder="Empty file"
-            ariaLabel={`Scratch text buffer for ${workspace.path}`}
-          />
-        )
-      }
+    <RepoWorkspacePanel
+      workspace={workspace}
+      noteState={noteState}
       zipsContent={zipsContent}
       isHandset={isHandset}
+      onClose={repoWorkspace.closeWorkspace}
+      onTextChange={repoWorkspace.updateTextScratch}
+      onImageDragStart={(path) => {
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }}
     />
   );
 

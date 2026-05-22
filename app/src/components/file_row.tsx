@@ -168,7 +168,7 @@ export function FileRow({
       onPointerCancel={handleRowPointerEnd}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      title="Double-click to preview text; drag to stage for handoff; right-click for file actions"
+      title="Double-click to preview supported files; drag to stage for handoff; right-click for file actions"
     >
       <FileIcon family={family} />
       <div className="file-info">

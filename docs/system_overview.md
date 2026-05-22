@@ -69,9 +69,10 @@ Intermediary uses a **host-routed architecture**:
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
-  - Text workspace replaces Docs+Code for per-repo notes or supported UTF-8 file scratch buffers; scratch edits never write back to repo files
+  - Shared workspace replaces Docs+Code for per-repo notes, supported UTF-8 file scratch buffers, or supported image previews; scratch edits never write back to repo files
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
-  - File-row double-click opens supported text files through the agent-routed `readTextFile` command
+  - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
+  - Image previews render from Blob URLs created from agent-provided bytes; raw filesystem paths and `file://` sources are not used in the webview
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
@@ -141,6 +142,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `refresh { repoId } → refreshResult`
 - `stageFile { repoId, path } → stageFileResult`
 - `readTextFile { repoId, path } → readTextFileResult`
+- `readImageFile { repoId, path } → readImageFileResult`
 - `buildBundle { repoId, presetId, buildId, selection } → buildBundleResult`
 - `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`

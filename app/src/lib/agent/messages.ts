@@ -5,6 +5,7 @@ import type { AgentClient } from "./agent_client.js";
 import type { AppConfig, GlobalExcludes } from "../../shared/config.js";
 import type {
   ClientHelloResult,
+  ReadImageFileResult,
   ReadTextFileResult,
   StageFileResult,
   SetOptionsResult,
@@ -106,6 +107,18 @@ export async function sendReadTextFile(
 ): Promise<ReadTextFileResult> {
   return client.send<ReadTextFileResult>({
     type: "readTextFile",
+    repoId,
+    path,
+  });
+}
+
+export async function sendReadImageFile(
+  client: AgentClient,
+  repoId: string,
+  path: string
+): Promise<ReadImageFileResult> {
+  return client.send<ReadImageFileResult>({
+    type: "readImageFile",
     repoId,
     path,
   });

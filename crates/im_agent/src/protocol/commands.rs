@@ -95,6 +95,13 @@ pub struct ReadTextFileCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ReadImageFileCommand {
+    pub repo_id: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BundleSelection {
     pub include_root: bool,
     pub top_level_dirs: Vec<String>,
@@ -197,6 +204,8 @@ pub enum UiCommand {
     StageFile(StageFileCommand),
     #[serde(rename = "readTextFile")]
     ReadTextFile(ReadTextFileCommand),
+    #[serde(rename = "readImageFile")]
+    ReadImageFile(ReadImageFileCommand),
     #[serde(rename = "buildBundle")]
     BuildBundle(BuildBundleCommand),
     #[serde(rename = "cancelBundleBuild")]
@@ -222,6 +231,7 @@ impl UiCommand {
             UiCommand::Refresh(_) => "refresh",
             UiCommand::StageFile(_) => "stageFile",
             UiCommand::ReadTextFile(_) => "readTextFile",
+            UiCommand::ReadImageFile(_) => "readImageFile",
             UiCommand::BuildBundle(_) => "buildBundle",
             UiCommand::CancelBundleBuild(_) => "cancelBundleBuild",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",

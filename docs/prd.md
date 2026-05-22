@@ -96,7 +96,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ### File row interactions
 
 * **Drag row** → stages file / starts OS drag behavior (no clipboard copy)
-* **Double-click row** → opens supported UTF-8 text files in the in-app scratch viewer/editor; edits are ephemeral and never write back to the repo file
+* **Double-click row** → opens supported files in the in-app workspace: UTF-8 text files as scratch buffers and common image files as fit-to-panel previews
 * **Star button** → toggles starred status (does not copy or drag)
 * **Right-click row** → opens context menu with:
   * Open Containing Folder
@@ -136,15 +136,16 @@ Header controls:
 
 If starred count becomes zero, pane auto-switches back to Recent.
 
-### Text workspace
+### Workspace previews
 
-Docs and Code rows can open a minimal text workspace for supported text files. In standard layout, the workspace replaces the Docs and Code panes while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
+Docs and Code rows can open a minimal workspace for supported text and image files. In standard layout, the workspace replaces the Docs and Code panes while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
 
-* File workspace buffers are scratch-only: typing is allowed, but there is no save action and no source-file write-back.
+* Text file workspace buffers are scratch-only: typing is allowed, but there is no save action and no source-file write-back.
 * Opening another file or closing the workspace discards scratch edits.
 * The Docs header note button opens the same workspace using the existing one-note-per-repo note storage.
-* The workspace shows live line and character counts in the bottom-right corner.
-* Unsupported files, binary files, invalid UTF-8, and oversized files do not open in the text workspace.
+* Text workspaces show live line and character counts in the bottom-right corner.
+* Image workspaces support PNG, JPEG, WebP, GIF, BMP, and AVIF previews. Images are rendered from agent-provided preview bytes and can be dragged from the preview surface using the same staged-file drag path as file rows.
+* Unsupported files, binary files, invalid UTF-8 text files, oversized text files, and oversized image files do not open as editable text or image previews.
 
 ---
 
@@ -345,6 +346,7 @@ UI → Host agent commands:
 * `refresh { repoId } -> refreshResult`
 * `stageFile { repoId, path } -> stageFileResult`
 * `readTextFile { repoId, path } -> readTextFileResult`
+* `readImageFile { repoId, path } -> readImageFileResult`
 * `buildBundle { repoId, presetId, buildId, selection } -> buildBundleResult`
 * `cancelBundleBuild { repoId, presetId, buildId } -> cancelBundleBuildResult`
 * `getRepoTopLevel { repoId } -> getRepoTopLevelResult`

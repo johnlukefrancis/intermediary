@@ -82,6 +82,10 @@
       "summary": "Remove button for grouped repos with confirmation"
     },
     {
+      "path": "app/src/components/image_workspace.tsx",
+      "summary": "Fit-to-panel image preview surface for shared repo workspaces"
+    },
+    {
       "path": "app/src/components/layout/handset_deck.tsx",
       "summary": "Single-panel vertical deck layout for handset mode with chassis framing"
     },
@@ -90,12 +94,12 @@
       "summary": "Bracketed tab switcher for handset mode sections (Docs | Code | Zips)"
     },
     {
-      "path": "app/src/components/layout/text_workspace_layout.tsx",
-      "summary": "Layout that replaces Docs and Code panes with a full text workspace"
-    },
-    {
       "path": "app/src/components/layout/three_column.tsx",
       "summary": "Three-column layout component with modular deck panels (Docs | Code | Zips)"
+    },
+    {
+      "path": "app/src/components/layout/workspace_layout.tsx",
+      "summary": "Layout that replaces Docs and Code panes with a shared workspace"
     },
     {
       "path": "app/src/components/options_overlay.tsx",
@@ -160,6 +164,10 @@
     {
       "path": "app/src/components/repo_pane_headers.tsx",
       "summary": "Header controls for repo Docs and Code file panes"
+    },
+    {
+      "path": "app/src/components/repo_workspace_panel.tsx",
+      "summary": "Repo workspace renderer for notes, text scratch buffers, and image previews"
     },
     {
       "path": "app/src/components/status_bar.tsx",
@@ -298,8 +306,8 @@
       "summary": "Per-repo file state management with event subscription"
     },
     {
-      "path": "app/src/hooks/use_repo_text_workspace.ts",
-      "summary": "Repo-tab text workspace state for notes and ephemeral file scratch buffers"
+      "path": "app/src/hooks/use_repo_workspace.ts",
+      "summary": "Repo-tab workspace state for notes, text scratch buffers, and image previews"
     },
     {
       "path": "app/src/hooks/use_resume_detector.ts",
@@ -583,7 +591,7 @@
     },
     {
       "path": "app/src/styles/text_workspace.css",
-      "summary": "Text workspace layout and editor styling for notes and scratch file buffers"
+      "summary": "Shared workspace layout and editor/viewer styling for notes, text, and images"
     },
     {
       "path": "app/src/styles/theme_accents.css",
@@ -728,6 +736,10 @@
     {
       "path": "crates/im_agent/src/repos/ignore_matcher.rs",
       "summary": "Ignore glob matcher for repo watcher"
+    },
+    {
+      "path": "crates/im_agent/src/repos/image_file_reader.rs",
+      "summary": "Repo-relative image file reader for in-app preview workspaces"
     },
     {
       "path": "crates/im_agent/src/repos/mod.rs",

@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-02-11 (Config-driven themes + responsive handset override + global opacity + texture intensity)
+Updated on: 2026-05-22 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -168,15 +168,16 @@ Based on 4px unit:
 
 ---
 
-## Text Workspace
+## Shared Workspace
 
-The text workspace is the clean, full-pane text surface used for both per-repo notes and opened file scratch buffers.
+The shared workspace is the clean, full-pane surface used for per-repo notes, opened file scratch buffers, and image previews.
 
 - Standard layout: one workspace panel spans the Docs+Code area while the Zips panel remains visible.
 - Handset layout: the workspace replaces the active deck content until closed.
 - Editor text uses `--font-mono`, `--color-text-primary`, and active accent variables for caret, selection, focus rail, and title brackets.
-- Workspace controls use existing deck panel headers and `panel-header-icon` buttons; file buffers have no save action because they never write back to repository files.
-- Line and character counts sit inside the editor at bottom-right using muted mono metadata styling.
+- Workspace controls use existing deck panel headers and `panel-header-icon` buttons; text file buffers have no save action because they never write back to repository files.
+- Line and character counts sit inside text editors at bottom-right using muted mono metadata styling.
+- Image previews use the same panel footprint, center the image with `object-fit: contain`, and keep drag-out on the preview surface without exposing filesystem paths in the DOM.
 
 ---
 
