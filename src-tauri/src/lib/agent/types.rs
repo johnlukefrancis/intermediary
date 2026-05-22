@@ -3,7 +3,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::Path;
+use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
@@ -138,33 +139,82 @@ fn default_host_allowed_origins() -> Vec<String> {
 }
 
 fn read_or_create_tokens(path: &Path) -> Result<PersistedWsAuthTokens, String> {
-    if path.is_file() {
-        let raw = fs::read_to_string(path)
-            .map_err(|err| format!("Failed to read websocket auth token file: {err}"))?;
-        if let Ok(parsed) = serde_json::from_str::<PersistedWsAuthTokens>(&raw) {
-            if let Some(valid) = validate_tokens(parsed) {
-                return Ok(valid);
-            }
-        }
+    if let Some(valid) = read_valid_tokens(path)? {
+        return Ok(valid);
     }
 
     let created = PersistedWsAuthTokens {
         host_ws_token: generate_ws_token(),
         wsl_ws_token: generate_ws_token(),
     };
-    write_tokens(path, &created)?;
-    Ok(created)
+
+    if path.exists() {
+        write_tokens(path, &created)?;
+        return Ok(created);
+    }
+
+    match create_tokens_if_absent(path, &created)? {
+        TokenFileCreateResult::Created => Ok(created),
+        TokenFileCreateResult::AlreadyExists => read_valid_tokens(path)?.ok_or_else(|| {
+            "Websocket auth token file was created concurrently but is invalid".to_string()
+        }),
+    }
+}
+
+enum TokenFileCreateResult {
+    Created,
+    AlreadyExists,
+}
+
+fn read_valid_tokens(path: &Path) -> Result<Option<PersistedWsAuthTokens>, String> {
+    if !path.is_file() {
+        return Ok(None);
+    }
+
+    let raw = fs::read_to_string(path)
+        .map_err(|err| format!("Failed to read websocket auth token file: {err}"))?;
+    let Ok(parsed) = serde_json::from_str::<PersistedWsAuthTokens>(&raw) else {
+        return Ok(None);
+    };
+    Ok(validate_tokens(parsed))
+}
+
+fn create_tokens_if_absent(
+    path: &Path,
+    tokens: &PersistedWsAuthTokens,
+) -> Result<TokenFileCreateResult, String> {
+    let raw = serde_json::to_vec(tokens)
+        .map_err(|err| format!("Failed to serialize websocket auth token file: {err}"))?;
+    let temp = unique_temp_path(path);
+    fs::write(&temp, raw)
+        .map_err(|err| format!("Failed to write websocket auth token temp file: {err}"))?;
+
+    let link_result = fs::hard_link(&temp, path);
+    let _ = fs::remove_file(&temp);
+    match link_result {
+        Ok(()) => Ok(TokenFileCreateResult::Created),
+        Err(err) if err.kind() == ErrorKind::AlreadyExists => {
+            Ok(TokenFileCreateResult::AlreadyExists)
+        }
+        Err(err) => Err(format!(
+            "Failed to install websocket auth token file: {err}"
+        )),
+    }
 }
 
 fn write_tokens(path: &Path, tokens: &PersistedWsAuthTokens) -> Result<(), String> {
     let raw = serde_json::to_vec(tokens)
         .map_err(|err| format!("Failed to serialize websocket auth token file: {err}"))?;
-    let temp = path.with_extension("tmp");
+    let temp = unique_temp_path(path);
     fs::write(&temp, raw)
         .map_err(|err| format!("Failed to write websocket auth token temp file: {err}"))?;
     fs::rename(&temp, path)
         .map_err(|err| format!("Failed to install websocket auth token file: {err}"))?;
     Ok(())
+}
+
+fn unique_temp_path(path: &Path) -> PathBuf {
+    path.with_extension(format!("tmp.{}", std::process::id()))
 }
 
 fn validate_tokens(tokens: PersistedWsAuthTokens) -> Option<PersistedWsAuthTokens> {
@@ -177,4 +227,46 @@ fn validate_tokens(tokens: PersistedWsAuthTokens) -> Option<PersistedWsAuthToken
         host_ws_token: host.to_string(),
         wsl_ws_token: wsl.to_string(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{read_or_create_tokens, PersistedWsAuthTokens};
+    use std::fs;
+
+    #[test]
+    fn read_or_create_tokens_preserves_existing_valid_auth_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("ws_auth.json");
+        fs::write(
+            &path,
+            r#"{"hostWsToken":"existing-host","wslWsToken":"existing-wsl"}"#,
+        )
+        .expect("write auth");
+
+        let tokens = read_or_create_tokens(&path).expect("tokens");
+
+        assert_eq!(tokens.host_ws_token, "existing-host");
+        assert_eq!(tokens.wsl_ws_token, "existing-wsl");
+        assert_eq!(
+            fs::read_to_string(&path).expect("read auth"),
+            r#"{"hostWsToken":"existing-host","wslWsToken":"existing-wsl"}"#
+        );
+    }
+
+    #[test]
+    fn read_or_create_tokens_replaces_invalid_existing_auth_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("ws_auth.json");
+        fs::write(&path, r#"{"hostWsToken":"","wslWsToken":""}"#).expect("write auth");
+
+        let tokens = read_or_create_tokens(&path).expect("tokens");
+
+        assert!(!tokens.host_ws_token.is_empty());
+        assert!(!tokens.wsl_ws_token.is_empty());
+        let raw = fs::read_to_string(&path).expect("read auth");
+        let persisted: PersistedWsAuthTokens = serde_json::from_str(&raw).expect("parse auth");
+        assert_eq!(persisted.host_ws_token, tokens.host_ws_token);
+        assert_eq!(persisted.wsl_ws_token, tokens.wsl_ws_token);
+    }
 }

@@ -128,15 +128,31 @@ create_ws_auth_file() {
   auth_dir="$(dirname "${auth_file}")"
   mkdir -p "${auth_dir}"
 
+  if [[ -f "${auth_file}" ]]; then
+    return 0
+  fi
+
   local host_token=""
   local wsl_token=""
   host_token="$(generate_ws_token)"
   wsl_token="$(generate_ws_token)"
 
-  local temp_file="${auth_file}.tmp.$$"
+  local temp_file=""
+  temp_file="$(mktemp "${auth_dir}/ws_auth.json.tmp.XXXXXX")"
   printf '{"hostWsToken":"%s","wslWsToken":"%s"}\n' "${host_token}" "${wsl_token}" >"${temp_file}"
-  mv "${temp_file}" "${auth_file}"
-  echo "Created websocket auth state at ${auth_file}" >&2
+  if ln "${temp_file}" "${auth_file}" 2>/dev/null; then
+    rm -f "${temp_file}"
+    echo "Created websocket auth state at ${auth_file}" >&2
+    return 0
+  fi
+
+  rm -f "${temp_file}"
+  if [[ -f "${auth_file}" ]]; then
+    return 0
+  fi
+
+  echo "Failed to create websocket auth state at ${auth_file}" >&2
+  return 1
 }
 
 resolve_ws_auth_file() {

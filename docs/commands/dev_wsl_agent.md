@@ -25,7 +25,7 @@ pnpm run agent:dev
 4. Existing production, legacy, then dev app-local auth files under the active Windows `%LOCALAPPDATA%` profile (override lookup with `INTERMEDIARY_WINDOWS_LOCALAPPDATA` if needed)
 5. Fallback `im_dev_wsl_token` (with warning; this typically means websocket auth will fail until token source is corrected)
 
-When `INTERMEDIARY_WS_AUTH_APP_ID` is set and that app auth file does not exist yet, the launcher creates it before starting the WSL backend. The VS Code Windows dev task sets this to the app-local identity used by the Windows Tauri task so the backend and app share the same WSL token even when the backend task starts first.
+When `INTERMEDIARY_WS_AUTH_APP_ID` is set and that app auth file does not exist yet, the launcher creates it before starting the WSL backend. The VS Code Windows dev task sets this to the app-local identity used by the Windows Tauri task so the backend and app share the same WSL token even when the backend task starts first. Auth file creation is create-if-absent on both sides, so concurrent watcher/task startup preserves the first valid `ws_auth.json` instead of racing two token sets.
 
 If port `3142` is already listening but rejects the selected token, the launcher retires the listener only when `/proc` identifies it as an Intermediary `im_agent` for the same `INTERMEDIARY_AGENT_PORT`; unrelated listeners are left alone and the task fails.
 

@@ -93,6 +93,7 @@ The launcher resolves `INTERMEDIARY_WSL_WS_TOKEN` in this order:
 5. Fallback dev token (`im_dev_wsl_token`) with a warning (this usually indicates auth drift and will cause websocket `invalid_token` failures until corrected)
 
 The VS Code `WSL Agent: dev` task sets `INTERMEDIARY_WS_AUTH_APP_ID` to the app-local identity used by the Windows Tauri task and the launcher creates that auth file if needed before the app starts.
+Auth file creation is create-if-absent on both the app and WSL launcher sides, so concurrent watcher/task startup preserves the first valid `ws_auth.json` instead of racing two token sets.
 If an existing listener on port `3142` rejects the selected token, the launcher only retires it when it is an Intermediary `im_agent` for the same backend port.
 
 ## Environment Variables
