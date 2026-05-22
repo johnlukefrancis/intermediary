@@ -148,15 +148,16 @@ fn read_or_create_tokens(path: &Path) -> Result<PersistedWsAuthTokens, String> {
         wsl_ws_token: generate_ws_token(),
     };
 
-    if path.exists() {
-        write_tokens(path, &created)?;
-        return Ok(created);
-    }
-
     match create_tokens_if_absent(path, &created)? {
         TokenFileCreateResult::Created => Ok(created),
-        TokenFileCreateResult::AlreadyExists => read_valid_tokens(path)?.ok_or_else(|| {
-            "Websocket auth token file was created concurrently but is invalid".to_string()
+        TokenFileCreateResult::AlreadyExists => read_valid_tokens(path).and_then(|tokens| {
+            tokens.map_or_else(
+                || {
+                    write_tokens(path, &created)?;
+                    Ok(created)
+                },
+                Ok,
+            )
         }),
     }
 }
@@ -231,7 +232,7 @@ fn validate_tokens(tokens: PersistedWsAuthTokens) -> Option<PersistedWsAuthToken
 
 #[cfg(test)]
 mod tests {
-    use super::{read_or_create_tokens, PersistedWsAuthTokens};
+    use super::{create_tokens_if_absent, read_or_create_tokens, PersistedWsAuthTokens};
     use std::fs;
 
     #[test]
@@ -268,5 +269,25 @@ mod tests {
         let persisted: PersistedWsAuthTokens = serde_json::from_str(&raw).expect("parse auth");
         assert_eq!(persisted.host_ws_token, tokens.host_ws_token);
         assert_eq!(persisted.wsl_ws_token, tokens.wsl_ws_token);
+    }
+
+    #[test]
+    fn read_or_create_tokens_uses_concurrently_created_valid_auth_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("ws_auth.json");
+        let concurrent = PersistedWsAuthTokens {
+            host_ws_token: "concurrent-host".to_string(),
+            wsl_ws_token: "concurrent-wsl".to_string(),
+        };
+        create_tokens_if_absent(&path, &concurrent).expect("create concurrent auth");
+
+        let tokens = read_or_create_tokens(&path).expect("tokens");
+
+        assert_eq!(tokens.host_ws_token, "concurrent-host");
+        assert_eq!(tokens.wsl_ws_token, "concurrent-wsl");
+        assert_eq!(
+            fs::read_to_string(&path).expect("read auth"),
+            r#"{"hostWsToken":"concurrent-host","wslWsToken":"concurrent-wsl"}"#
+        );
     }
 }
