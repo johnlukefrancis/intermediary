@@ -156,7 +156,7 @@ export const GetRepoTopLevelResultSchema = z.object({
   repoId: z.string(),
   dirs: z.array(z.string()),
   files: z.array(z.string()),
-  /** Subdirectories within each top-level dir (depth-2) */
+  /** Nested subdirectory paths within each top-level dir, up to repo depth 4 */
   subdirs: z.record(z.string(), z.array(z.string())).optional(),
   /** Dir names that are excluded by default (e.g. node_modules, .git, target) */
   defaultExcluded: z.array(z.string()).default([]),

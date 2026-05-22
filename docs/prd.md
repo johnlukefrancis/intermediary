@@ -202,7 +202,7 @@ Each repo has:
 Per repo, user can define multiple presets:
 
 * Preset name, description
-* **v0 selection UI:** top-level folders only (no nested subfolder selection). User toggles which top-level folders to include.
+* **Selection UI:** top-level folders plus nested subdirectory exclusions up to repo depth 4. Users toggle top-level folders to include and untick nested folders to exclude from the zip.
 * **Include root files toggle:** single boolean, default ON. When ON, includes files at repo root (README, package.json, etc.).
 * Recommended global excludes seed new or omitted bundle config: `node_modules`, `.git`, `dist`, `build`, `target`, `.next`, `.cache`, `logs`, `.turbo`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `coverage`, common cache dirs, generated artifacts, binary/model-weight extensions, and local env/cache files.
 * Explicit user-configured `globalExcludes` are authoritative after normalization; recommended entries are not hidden mandatory filters.
@@ -219,7 +219,7 @@ Every generated zip includes:
   * `generatedAt` (ISO timestamp)
   * `repoId`, `repoRoot`
   * `presetId`, `presetName`
-  * `selection` (includeRoot + topLevelDirsIncluded)
+  * `selection` (includeRoot + topLevelDirsIncluded + excludedSubdirs)
   * `effectiveGlobalExcludes` used by the scan
   * `git` info (headSha/shortSha/branch, best-effort)
   * `fileCount`, `totalBytesBestEffort`
@@ -416,7 +416,7 @@ The following assumptions are locked for v0:
 * **Repo location:** Repos may be in WSL Linux FS or on Windows drives (user adds via directory picker). Host agent is always required; WSL backend is required only when at least one WSL root exists.
 * **Initial repo set:** Empty by default. Users add repos via the "+" button in the tab bar.
 * **Grouped repos:** Repos with matching `groupId` share a tab with a dropdown. Useful for worktrees of the same project.
-* **Bundle selection UI:** Top-level folders only + "include root files" toggle (default ON). No nested subfolder selection in v0.
+* **Bundle selection UI:** Top-level folders + nested subdirectory exclusions up to repo depth 4 + "include root files" toggle (default ON).
 * **Staging strategy:** Auto-stage on change is default ON. Boolean toggle (global + per-repo) to disable; stage-on-drag is fallback when off.
 
 ---

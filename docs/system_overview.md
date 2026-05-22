@@ -125,7 +125,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 **Agent → UI events:**
 - `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
 - `snapshot { repoId, recent: FileEntry[] }`
-- `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or depth-2 subdirectory metadata
+- `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or bundle-selector subdirectory metadata up to repo depth 4
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
 - `error { scope, message, details? }`
 - `wslBackendStatus { status: "online" | "offline", generation }` emitted on WSL transport transitions; generation increments on each successful reconnect
@@ -185,7 +185,7 @@ Contents:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
 - **Classifier config:** Global classification excludes (parallel to bundle excludes)
 - **UI state:** Last active repo (by repoId) + last active worktree per group + persisted window opacity and texture intensity
-- **Bundle selections:** Per-repo, per-preset directory selections
+- **Bundle selections:** Per-repo, per-preset top-level directory selections and nested subdirectory exclusions
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
 The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles, recent-file caches, and local notes without deleting repository files.

@@ -42,6 +42,10 @@
       "summary": "Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)"
     },
     {
+      "path": "app/src/components/bundles/bundle_subdir_tree.tsx",
+      "summary": "Nested subdirectory checkbox rows for bundle selection"
+    },
+    {
       "path": "app/src/components/bundles/indeterminate_checkbox.tsx",
       "summary": "Checkbox component that supports the DOM indeterminate state"
     },
@@ -727,7 +731,7 @@
     },
     {
       "path": "crates/im_agent/src/repos/repo_top_level.rs",
-      "summary": "Scan top-level directories and files in a repo"
+      "summary": "Scan top-level entries and bounded nested bundle-selector directory paths"
     },
     {
       "path": "crates/im_agent/src/repos/repo_topology_change.rs",

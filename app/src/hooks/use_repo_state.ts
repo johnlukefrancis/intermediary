@@ -34,7 +34,7 @@ export interface RepoState {
   hydrationStatus: RepoHydrationStatus;
   topLevelDirs: string[];
   topLevelFiles: string[];
-  /** Subdirectories within each top-level dir (depth-2) */
+  /** Nested subdirectory paths within each top-level dir, up to repo depth 4 */
   topLevelSubdirs: Record<string, string[]>;
   /** Dir names excluded by default (e.g. node_modules, .git, target) */
   defaultExcluded: string[];

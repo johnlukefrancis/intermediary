@@ -40,6 +40,11 @@ export function normalizeTopLevelDirs(dirs: string[], available: string[] = []):
   return unique.filter((dir) => allowed.has(dir)).sort();
 }
 
+function subdirBaseName(path: string): string {
+  const parts = path.split("/").filter(Boolean);
+  return parts[parts.length - 1] ?? path;
+}
+
 export function computeDefaultExcludedSubdirs(
   selectedDirs: string[],
   topLevelSubdirs: Record<string, string[]>,
@@ -52,7 +57,7 @@ export function computeDefaultExcludedSubdirs(
     const subs = topLevelSubdirs[dir];
     if (!subs) continue;
     for (const sub of subs) {
-      if (excludedSet.has(sub)) {
+      if (excludedSet.has(subdirBaseName(sub))) {
         result.push(`${dir}/${sub}`);
       }
     }

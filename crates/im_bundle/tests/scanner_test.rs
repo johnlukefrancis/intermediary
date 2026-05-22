@@ -57,6 +57,49 @@ fn scan_respects_ignore_and_exclude() {
 }
 
 #[test]
+fn scan_respects_nested_subdir_exclude() {
+    let dir = tempdir().unwrap();
+    let repo_root = dir.path();
+
+    std::fs::create_dir_all(repo_root.join("app/src/components")).unwrap();
+    std::fs::create_dir_all(repo_root.join("app/src/lib")).unwrap();
+    std::fs::write(repo_root.join("app/src/components/secret.ts"), "skip").unwrap();
+    std::fs::write(repo_root.join("app/src/lib/index.ts"), "keep").unwrap();
+
+    let plan = BundlePlan {
+        output_path: repo_root.join("out.zip"),
+        repo_root: repo_root.to_path_buf(),
+        repo_id: "repo".to_string(),
+        preset_id: "full".to_string(),
+        preset_name: "Full".to_string(),
+        selection: BundleSelection {
+            include_root: false,
+            top_level_dirs: vec!["app".to_string()],
+            excluded_subdirs: vec!["app/src/components".to_string()],
+        },
+        git: BundleGitInfo {
+            head_sha: None,
+            short_sha: None,
+            branch: None,
+        },
+        built_at_iso: "2026-01-31T00:00:00Z".to_string(),
+        global_excludes: GlobalExcludes::default(),
+    };
+
+    let mut progress = ProgressEmitter::new();
+    let result = scan_bundle(&plan, &mut progress).unwrap();
+
+    let archive_paths: std::collections::HashSet<_> = result
+        .entries
+        .iter()
+        .map(|entry| entry.archive_path.as_str())
+        .collect();
+
+    assert!(archive_paths.contains("app/src/lib/index.ts"));
+    assert!(!archive_paths.contains("app/src/components/secret.ts"));
+}
+
+#[test]
 fn reject_invalid_top_level_dir() {
     let dir = tempdir().unwrap();
     let repo_root = dir.path();

@@ -5,6 +5,7 @@ import React from "react";
 import { useCallback, useState } from "react";
 import type { BundleBuildPhase, BundleSelection } from "../../shared/protocol.js";
 import { BuildProgressButton } from "./build_progress_button.js";
+import { BundleSubdirTree } from "./bundle_subdir_tree.js";
 import { IndeterminateCheckbox } from "./indeterminate_checkbox.js";
 
 interface BundleSelectionPanelProps {
@@ -101,8 +102,7 @@ export function BundleSelectionPanel({
   }, []);
 
   const handleSubdirToggle = useCallback(
-    (parentDir: string, subdir: string) => {
-      const subdirPath = `${parentDir}/${subdir}`;
+    (subdirPath: string) => {
       const currentExcluded = new Set(selection.excludedSubdirs);
 
       if (currentExcluded.has(subdirPath)) {
@@ -217,34 +217,13 @@ export function BundleSelectionPanel({
                   <label className="dir-label" htmlFor={checkboxId}>{dir}</label>
                 </div>
                 {isExpanded && subdirs.length > 0 && (
-                  <div className="subdir-list">
-                    {subdirs.map((subdir) => {
-                      const subdirPath = `${dir}/${subdir}`;
-                      const subdirCheckboxId = `subdir-checkbox-${subdirPath.replace(/[^a-zA-Z0-9]/g, "-")}`;
-                      const isIncluded = !excludedSubdirs.has(subdirPath);
-
-                      return (
-                        <div key={subdirPath} className="subdir-row">
-                          <label className="vintage-toggle">
-                            <input
-                              id={subdirCheckboxId}
-                              type="checkbox"
-                              checked={isSelected && isIncluded}
-                              disabled={!isSelected}
-                              onChange={() => { handleSubdirToggle(dir, subdir); }}
-                            />
-                            <span className="vintage-toggle-track" />
-                          </label>
-                          <label
-                            className={`subdir-label${!isSelected ? " disabled" : ""}`}
-                            htmlFor={subdirCheckboxId}
-                          >
-                            {subdir}
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <BundleSubdirTree
+                    parentDir={dir}
+                    subdirs={subdirs}
+                    isParentSelected={isSelected}
+                    excludedSubdirs={excludedSubdirs}
+                    onSubdirToggle={handleSubdirToggle}
+                  />
                 )}
               </div>
             );

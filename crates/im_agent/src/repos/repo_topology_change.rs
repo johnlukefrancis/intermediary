@@ -5,20 +5,28 @@ use notify::event::{CreateKind, ModifyKind, RemoveKind};
 use notify::{Event, EventKind};
 use std::path::{Path, PathBuf};
 
+const ROOT_FILE_METADATA_DEPTH: usize = 1;
+const DIRECTORY_SELECTOR_METADATA_DEPTH: usize = 4;
+
 pub(crate) async fn event_affects_top_level_metadata(root_path: &Path, event: &Event) -> bool {
     match &event.kind {
         EventKind::Create(CreateKind::Folder) | EventKind::Remove(RemoveKind::Folder) => {
-            any_path_at_or_above_depth(root_path, &event.paths, 2)
+            any_path_at_or_above_depth(root_path, &event.paths, DIRECTORY_SELECTOR_METADATA_DEPTH)
         }
         EventKind::Create(CreateKind::File) | EventKind::Remove(RemoveKind::File) => {
-            any_path_at_or_above_depth(root_path, &event.paths, 1)
+            any_path_at_or_above_depth(root_path, &event.paths, ROOT_FILE_METADATA_DEPTH)
         }
         EventKind::Create(CreateKind::Any) => {
-            any_path_at_or_above_depth(root_path, &event.paths, 1)
-                || any_existing_dir_at_or_above_depth(root_path, &event.paths, 2).await
+            any_path_at_or_above_depth(root_path, &event.paths, ROOT_FILE_METADATA_DEPTH)
+                || any_existing_dir_at_or_above_depth(
+                    root_path,
+                    &event.paths,
+                    DIRECTORY_SELECTOR_METADATA_DEPTH,
+                )
+                .await
         }
         EventKind::Remove(RemoveKind::Any) | EventKind::Modify(ModifyKind::Name(_)) => {
-            any_path_at_or_above_depth(root_path, &event.paths, 2)
+            any_path_at_or_above_depth(root_path, &event.paths, DIRECTORY_SELECTOR_METADATA_DEPTH)
         }
         _ => false,
     }
@@ -92,5 +100,21 @@ mod tests {
             .add_path("/repo/Docs/New".into());
 
         assert!(event_affects_top_level_metadata(Path::new("/repo"), &event).await);
+    }
+
+    #[tokio::test]
+    async fn depth_four_folder_create_invalidates_selector_metadata() {
+        let event = Event::new(EventKind::Create(CreateKind::Folder))
+            .add_path("/repo/Docs/Architecture/ADRs/Drafts".into());
+
+        assert!(event_affects_top_level_metadata(Path::new("/repo"), &event).await);
+    }
+
+    #[tokio::test]
+    async fn depth_five_folder_create_does_not_invalidate_selector_metadata() {
+        let event = Event::new(EventKind::Create(CreateKind::Folder))
+            .add_path("/repo/Docs/Architecture/ADRs/Drafts/Archive".into());
+
+        assert!(!event_affects_top_level_metadata(Path::new("/repo"), &event).await);
     }
 }

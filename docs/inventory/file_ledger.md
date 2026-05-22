@@ -13,6 +13,7 @@ app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
+app/src/components/bundles/bundle_subdir_tree.tsx - Nested subdirectory checkbox rows for bundle selection
 app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that supports the DOM indeterminate state
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
@@ -184,7 +185,7 @@ crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watch
 crates/im_agent/src/repos/mod.rs - Repository scanning module exports
 crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
 crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debounced atomic writes
-crates/im_agent/src/repos/repo_top_level.rs - Scan top-level directories and files in a repo
+crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded nested bundle-selector directory paths
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
