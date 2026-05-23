@@ -69,10 +69,10 @@ Intermediary uses a **host-routed architecture**:
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
-  - Shared workspace replaces the Auto Files panel for supported UTF-8 file scratch buffers or supported image previews; scratch edits never write back to repo files
+  - Shared workspace replaces the Auto Files panel for supported UTF-8 file scratch buffers or supported image previews; scratch edits never write back to repo files, and Markdown-like text buffers render a live semantic editor layer
   - Auto Files exposes Auto/Latest/Active sort modes plus All/Documents/Code/Images icon filters; rows render last active time, update count, and one consolidated left-to-right activity telemetry column with a weighted waveform and top-left 24-hour pulse strip
   - Auto Files is scoped by the active Zip Bundles preset after repo topology is ready: files excluded by the visible bundle selection are hidden from the left picker until the active preset selection includes them again
-  - File-row right-click context menu with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
+  - File-row and opened text-file title right-click context menus with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
   - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as Auto Files rows
   - Image previews render from Blob URLs created from agent-provided bytes; raw filesystem paths and `file://` sources are not used in the webview

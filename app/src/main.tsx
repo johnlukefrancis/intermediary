@@ -27,6 +27,7 @@ import "./styles/scrollbars.css";
 import "./styles/chrome.css";
 import "./styles/bundle_column.css";
 import "./styles/text_workspace.css";
+import "./styles/text_workspace_semantics.css";
 
 const container = document.getElementById("root");
 if (!container) {

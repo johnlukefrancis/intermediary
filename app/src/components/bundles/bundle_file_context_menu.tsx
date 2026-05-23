@@ -2,7 +2,8 @@
 // Description: Context menu actions for bundle explorer file rows
 
 import type React from "react";
-import { ContextMenu, type ContextMenuItem } from "../context_menu.js";
+import { buildSingleFileContextMenuItems } from "../file_context_menu_items.js";
+import { ContextMenu } from "../context_menu.js";
 import { useFileActions } from "../../hooks/use_file_actions.js";
 import type { RepoRoot } from "../../shared/config.js";
 
@@ -22,24 +23,12 @@ export function BundleFileContextMenu({
   onClose,
 }: BundleFileContextMenuProps): React.JSX.Element {
   const fileActions = useFileActions();
-  const items: ContextMenuItem[] = [
-    {
-      label: "Open Containing Folder",
-      onClick: () => { void fileActions.revealInFileManager(repoRoot, path); },
-    },
-    {
-      label: "Open File",
-      onClick: () => { void fileActions.openFile(repoRoot, path); },
-    },
-    {
-      label: "Copy Relative Path",
-      onClick: () => {
-        void navigator.clipboard.writeText(path).catch((error: unknown) => {
-          console.error("[BundleFileContextMenu] copy_relative_path failed:", error);
-        });
-      },
-    },
-  ];
+  const items = buildSingleFileContextMenuItems({
+    repoRoot,
+    path,
+    fileActions,
+    logScope: "BundleFileContextMenu",
+  });
 
   return <ContextMenu x={x} y={y} items={items} onClose={onClose} />;
 }

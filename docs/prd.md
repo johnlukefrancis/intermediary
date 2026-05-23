@@ -138,7 +138,9 @@ Auto Files rows can open a minimal workspace for supported text and image files.
 
 * Text file workspace buffers are scratch-only: typing is allowed, but there is no save action and no source-file write-back.
 * Opening another file or closing the workspace discards scratch edits.
+* Text workspaces use a muted grey editor surface with live Markdown semantics for notes and Markdown-like doc files, while code and other text files remain plain scratch buffers.
 * Text workspaces show live line and character counts in the bottom-right corner.
+* Opened text-file workspace titles are handoff surfaces: dragging the title stages and starts native drag-out, and right-clicking the title exposes the same single-file actions as Auto Files rows.
 * Image workspaces support PNG, JPEG, WebP, GIF, BMP, and AVIF previews. Images are rendered from agent-provided preview bytes and can be dragged from the preview surface using the same staged-file drag path as file rows.
 * Unsupported files, binary files, invalid UTF-8 text files, oversized text files, and oversized image files do not open as editable text or image previews.
 

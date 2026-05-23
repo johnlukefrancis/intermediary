@@ -185,6 +185,9 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       isHandset={isHandset}
       onClose={repoWorkspace.closeWorkspace}
       onTextChange={repoWorkspace.updateTextScratch}
+      onTextFileDragStart={(path) => {
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }}
       onImageDragStart={(path) => {
         void handleDragStart(repoId, path, stagedByPath.get(path));
       }}

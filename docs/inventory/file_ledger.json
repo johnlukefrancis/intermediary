@@ -98,6 +98,10 @@
       "summary": "Empty state UI when no repos are configured"
     },
     {
+      "path": "app/src/components/file_context_menu_items.ts",
+      "summary": "Shared context-menu item builders for repo-relative file actions"
+    },
+    {
       "path": "app/src/components/group_remove_button.tsx",
       "summary": "Remove button for grouped repos with confirmation"
     },
@@ -206,8 +210,12 @@
       "summary": "\"x\" button for removing repos with confirmation"
     },
     {
+      "path": "app/src/components/text_workspace_semantics.tsx",
+      "summary": "Theme-aware semantic text layer for the workspace editor"
+    },
+    {
       "path": "app/src/components/text_workspace.tsx",
-      "summary": "Shared minimal textarea surface for notes and scratch file viewing"
+      "summary": "Shared textarea surface for notes and scratch file viewing"
     },
     {
       "path": "app/src/hooks/agent/agent_context_types.ts",
@@ -628,6 +636,10 @@
     {
       "path": "app/src/styles/tab_bar.css",
       "summary": "Tab bar navigation with ASCII-instrument bracketed labels"
+    },
+    {
+      "path": "app/src/styles/text_workspace_semantics.css",
+      "summary": "Semantic Markdown rendering layer for workspace text editors"
     },
     {
       "path": "app/src/styles/text_workspace.css",

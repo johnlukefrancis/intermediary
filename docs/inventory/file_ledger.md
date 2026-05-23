@@ -27,6 +27,7 @@ app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal r
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
+app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
 app/src/components/layout/handset_deck.tsx - Handset deck layout for Auto files and zip bundles
@@ -54,7 +55,8 @@ app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown suppo
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
-app/src/components/text_workspace.tsx - Shared minimal textarea surface for notes and scratch file viewing
+app/src/components/text_workspace_semantics.tsx - Theme-aware semantic text layer for the workspace editor
+app/src/components/text_workspace.tsx - Shared textarea surface for notes and scratch file viewing
 app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
 app/src/hooks/agent/agent_diagnostics.ts - Agent diagnostics model and helpers for connection-state-driven status bar details
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
@@ -160,6 +162,7 @@ app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
+app/src/styles/text_workspace_semantics.css - Semantic Markdown rendering layer for workspace text editors
 app/src/styles/text_workspace.css - Shared workspace layout and editor/viewer styling for notes, text, and images
 app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
 app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token slots

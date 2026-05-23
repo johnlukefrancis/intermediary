@@ -137,6 +137,19 @@
   --glass-border: var(--theme-glass-border);
   --glass-blur: var(--blur-lg);
 
+  /* Editor surface */
+  --color-editor-bg: var(--theme-editor-bg);
+  --color-editor-bg-rail: var(--theme-editor-bg-rail);
+  --color-editor-text: var(--theme-editor-text);
+  --color-editor-muted: var(--theme-editor-muted);
+  --color-editor-heading: var(--theme-editor-heading);
+  --color-editor-marker: var(--theme-editor-marker);
+  --color-editor-link: var(--theme-editor-link);
+  --color-editor-code: var(--theme-editor-code);
+  --color-editor-code-bg: var(--theme-editor-code-bg);
+  --color-editor-quote: var(--theme-editor-quote);
+  --color-editor-quote-bg: var(--theme-editor-quote-bg);
+
   /* Vintage glass (transparent panels with dithering) */
   --glass-vintage-bg: var(--theme-glass-vintage-bg);
   --glass-vintage-header: var(--theme-glass-vintage-header);

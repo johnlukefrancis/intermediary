@@ -58,6 +58,19 @@
   --theme-glass-bg: rgb(106 68 32 / calc(0.9 * var(--window-opacity-alpha)));
   --theme-glass-border: rgba(248, 220, 160, 0.16);
 
+  /* ===== EDITOR SURFACE ===== */
+  --theme-editor-bg: rgb(82 70 56 / calc(0.96 * var(--window-opacity-alpha)));
+  --theme-editor-bg-rail: var(--color-accent-soft);
+  --theme-editor-text: #f0e4d0;
+  --theme-editor-muted: #b8ad91;
+  --theme-editor-heading: #ffe4a8;
+  --theme-editor-marker: #d4a85a;
+  --theme-editor-link: #b7c7dc;
+  --theme-editor-code: #f0c96f;
+  --theme-editor-code-bg: rgba(248, 220, 160, 0.08);
+  --theme-editor-quote: #d4c7a5;
+  --theme-editor-quote-bg: rgba(248, 220, 160, 0.055);
+
   /* ===== VINTAGE GLASS ===== */
   --theme-glass-vintage-bg: rgb(96 60 28 / calc(0.68 * var(--window-opacity-alpha)));
   --theme-glass-vintage-header: rgb(106 68 32 / calc(0.72 * var(--window-opacity-alpha)));

@@ -183,8 +183,10 @@ The shared workspace is the clean, full-pane surface used for per-repo notes, op
 
 - Standard layout: one workspace panel replaces Auto Files while the Zips panel remains visible.
 - Handset layout: the workspace replaces the active deck content until closed.
-- Editor text uses `--font-mono`, `--color-text-primary`, and active accent variables for caret, selection, focus rail, and title brackets.
+- Editor text uses `--font-mono`, theme-owned grey editor tokens, and active accent variables for caret, selection, focus rail, and title brackets.
+- Notes and Markdown-like text files render a live semantic Markdown layer over the textarea; the textarea remains the editing authority and no rendered HTML is injected.
 - Workspace controls use existing deck panel headers and `panel-header-icon` buttons; text file buffers have no save action because they never write back to repository files.
+- Opened text-file titles support the same staged drag-out and single-file context-menu actions as Auto Files rows; repo notes do not expose file actions.
 - Line and character counts sit inside text editors at bottom-right using muted mono metadata styling.
 - Image previews use the same panel footprint, center the image with `object-fit: contain`, and keep drag-out on the preview surface without exposing filesystem paths in the DOM.
 

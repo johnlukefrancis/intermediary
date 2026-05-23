@@ -4,6 +4,7 @@
 import type React from "react";
 import { useCallback, useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "./context_menu.js";
+import { buildSingleFileContextMenuItems } from "./file_context_menu_items.js";
 import { AutoFilesHeader } from "./auto_files_header.js";
 import { AutoFilesRow } from "./auto_files_row.js";
 import { useConfig } from "../hooks/use_config.js";
@@ -147,21 +148,12 @@ function buildContextMenuItems(input: {
   const { file } = contextMenu;
   const isMulti = selectedPaths.has(file.path) && selectedPaths.size > 1;
   if (!isMulti) {
-    return [
-      {
-        label: "Open Containing Folder",
-        onClick: () => { void fileActions.revealInFileManager(repoRoot, file.path); },
-      },
-      { label: "Open File", onClick: () => { void fileActions.openFile(repoRoot, file.path); } },
-      {
-        label: "Copy Relative Path",
-        onClick: () => {
-          void navigator.clipboard.writeText(file.path).catch((err: unknown) => {
-            console.error("[ContextMenu] copy_relative_path failed:", err);
-          });
-        },
-      },
-    ];
+    return buildSingleFileContextMenuItems({
+      repoRoot,
+      path: file.path,
+      fileActions,
+      logScope: "AutoFilesPanel",
+    });
   }
 
   const selected = files.map((entry) => entry.path).filter((path) => selectedPaths.has(path));

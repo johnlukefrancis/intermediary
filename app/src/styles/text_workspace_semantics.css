@@ -1,0 +1,87 @@
+/*
+ * Path: app/src/styles/text_workspace_semantics.css
+ * Description: Semantic Markdown rendering layer for workspace text editors
+ */
+
+.text-workspace-semantic-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  padding: var(--text-workspace-editor-padding);
+  padding-bottom: var(--text-workspace-editor-padding-bottom);
+  color: var(--color-editor-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  letter-spacing: 0;
+  pointer-events: none;
+  tab-size: 2;
+}
+
+.text-workspace-semantic-content {
+  min-height: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  transform: translate(var(--text-workspace-scroll-x), var(--text-workspace-scroll-y));
+  transform-origin: 0 0;
+}
+
+.text-workspace-semantic-layer[data-empty] {
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tw-md-line {
+  color: var(--color-editor-text);
+}
+
+.tw-md-heading {
+  color: var(--color-editor-heading);
+}
+
+.tw-md-marker {
+  color: var(--color-editor-marker);
+  font-weight: var(--weight-normal);
+}
+
+.tw-md-quote {
+  background: linear-gradient(90deg, var(--color-editor-quote-bg), transparent 72%);
+  color: var(--color-editor-quote);
+}
+
+.tw-md-list {
+  color: var(--color-editor-text);
+}
+
+.tw-md-rule,
+.tw-md-code-fence {
+  color: var(--color-editor-muted);
+}
+
+.tw-md-code-block {
+  color: var(--color-editor-code);
+  background: var(--color-editor-code-bg);
+}
+
+.tw-md-inline-text {
+  color: inherit;
+}
+
+.tw-md-inline-code {
+  color: var(--color-editor-code);
+  background: var(--color-editor-code-bg);
+}
+
+.tw-md-inline-link {
+  color: var(--color-editor-link);
+}
+
+.tw-md-inline-emphasis {
+  color: var(--color-editor-quote);
+}
+
+.tw-md-inline-strong {
+  color: var(--color-editor-heading);
+}
