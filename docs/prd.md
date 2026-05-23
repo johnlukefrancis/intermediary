@@ -112,6 +112,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 * Each preset has a **Build** button.
 * Built bundles appear as the latest bundle row for the preset (single row).
 * The built bundle row is draggable.
+* The built bundle row includes a right-side location/download button that reveals the generated ZIP in the host file manager.
 
 ### Visual style
 

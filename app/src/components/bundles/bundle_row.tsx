@@ -3,6 +3,8 @@
 
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useConfig } from "../../hooks/use_config.js";
 import type { BundleInfo } from "../../shared/protocol.js";
 
 /** Duration (ms) for the "freshly built" pulse animation */
@@ -36,6 +38,9 @@ function formatRelativeTime(mtimeMs: number): string {
 }
 
 export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProps): React.JSX.Element {
+  const {
+    config: { agentDistro },
+  } = useConfig();
   const [isDragging, setIsDragging] = useState(false);
   const [isFresh, setIsFresh] = useState(false);
 
@@ -59,10 +64,8 @@ export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProp
     return () => { clearTimeout(timer); };
   }, [freshlyBuiltAt]);
 
-  const handleMouseDown = useCallback(
-    async (e: React.MouseEvent) => {
-      if (e.button !== 0) return;
-
+  const startBundleDrag = useCallback(
+    async () => {
       // Copy context text to clipboard for pasting after drop
       const contextText = `Latest bundle: ${bundle.fileName}`;
       void navigator.clipboard.writeText(contextText);
@@ -77,6 +80,34 @@ export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProp
     [bundle.hostPath, bundle.fileName, onDragStart]
   );
 
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      void startBundleDrag();
+    },
+    [startBundleDrag]
+  );
+
+  const handleDownloadMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+    },
+    []
+  );
+
+  const handleDownloadClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      void invoke("reveal_host_file_in_file_manager", {
+        hostPath: bundle.hostPath,
+        distroOverride: agentDistro,
+      }).catch((err: unknown) => {
+        console.error("[BundleRow] Failed to reveal bundle:", err);
+      });
+    },
+    [agentDistro, bundle.hostPath]
+  );
+
   const className = [
     "bundle-row",
     isDragging && "dragging",
@@ -86,7 +117,7 @@ export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProp
   return (
     <div
       className={className}
-      onMouseDown={(e) => void handleMouseDown(e)}
+      onMouseDown={handleMouseDown}
       title="Drag to share (filename copied to clipboard)"
     >
       <span className={`bundle-state-marker${bundle.isLatestAlias ? " bundle-state-marker--latest" : ""}`} />
@@ -100,6 +131,26 @@ export function BundleRow({ bundle, onDragStart, freshlyBuiltAt }: BundleRowProp
           )}
         </span>
       </div>
+      <button
+        type="button"
+        className="bundle-download-button"
+        title="Open bundle location"
+        aria-label={`Open ${bundle.fileName} location`}
+        onMouseDown={handleDownloadMouseDown}
+        onClick={handleDownloadClick}
+      >
+        <DownloadIcon />
+      </button>
     </div>
+  );
+}
+
+function DownloadIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 4v10" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M5 20h14" />
+    </svg>
   );
 }
