@@ -1,0 +1,161 @@
+/*
+ * Path: app/src/styles/bundle_file_explorer.css
+ * Description: Lazy bundle file explorer rows and file include glow states
+ */
+
+.bundle-file-explorer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bundle-explorer-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--glass-vintage-content);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.bundle-explorer-file-row,
+.bundle-explorer-dir-row {
+  display: grid;
+  grid-template-columns: 18px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  min-width: 0;
+  border-radius: var(--radius-deck-xs);
+}
+
+.bundle-explorer-file-row {
+  grid-template-columns: 28px minmax(0, 1fr);
+  cursor: default;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    opacity var(--duration-normal) var(--ease-out);
+}
+
+.bundle-explorer-file-row:hover {
+  background: var(--color-bg-hover);
+}
+
+.bundle-explorer-row--depth-1 { padding-left: var(--space-4); }
+.bundle-explorer-row--depth-2 { padding-left: calc(var(--space-4) * 2); }
+.bundle-explorer-row--depth-3 { padding-left: calc(var(--space-4) * 3); }
+.bundle-explorer-row--depth-4 { padding-left: calc(var(--space-4) * 4); }
+
+.bundle-explorer-file-row[data-disabled],
+.bundle-explorer-dir-row[data-disabled] {
+  opacity: 0.5;
+}
+
+.bundle-explorer-file-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-deck-xs);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    filter var(--duration-normal) var(--ease-out),
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.bundle-explorer-file-toggle .file-icon {
+  opacity: 0.82;
+  filter:
+    drop-shadow(0 0 1.5px currentColor)
+    drop-shadow(0 0 5px currentColor);
+}
+
+.bundle-explorer-file-row:not([data-included]) .bundle-explorer-file-toggle .file-icon {
+  opacity: 0.5;
+  filter: drop-shadow(0 0 1px currentColor);
+}
+
+.bundle-explorer-file-toggle:hover:not(:disabled) .file-icon {
+  opacity: 0.9;
+  filter:
+    drop-shadow(0 0 2px currentColor)
+    drop-shadow(0 0 6px currentColor);
+}
+
+.bundle-explorer-file-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.bundle-explorer-file-toggle:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.bundle-explorer-file-toggle:focus {
+  outline: none;
+}
+
+.bundle-explorer-file-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.bundle-explorer-file-name,
+.bundle-explorer-dir-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.bundle-explorer-file-name {
+  color: var(--color-text-secondary);
+}
+
+.bundle-explorer-file-row[data-included] .bundle-explorer-file-name {
+  color: var(--color-text-primary);
+}
+
+.bundle-explorer-dir-name {
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.bundle-explorer-children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.bundle-explorer-status {
+  margin-left: calc(28px + var(--space-4));
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.bundle-explorer-status--error {
+  color: var(--color-error);
+  text-transform: none;
+}
+
+.vintage-toggle input:disabled + .vintage-toggle-track {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

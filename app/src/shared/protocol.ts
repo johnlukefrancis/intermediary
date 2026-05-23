@@ -17,6 +17,12 @@ import {
   TrFleetActionCommandSchema,
   TrFleetActionResultSchema,
 } from "./protocol_tr_fleet.js";
+import {
+  GetRepoTopLevelCommandSchema,
+  GetRepoTopLevelResultSchema,
+  ListRepoDirectoryCommandSchema,
+  ListRepoDirectoryResultSchema,
+} from "./protocol_repo_topology.js";
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
   BundleBuiltEventSchema, ErrorEventSchema, FileChangeTypeSchema, FileChangedEventSchema,
@@ -43,6 +49,12 @@ export {
   type TrFleetEndpointError, type TrFleetEndpointErrorCode, type TrFleetPort,
   type TrFleetTargetStatus, type TrFleetWatchBackend,
 } from "./protocol_tr_fleet.js";
+export {
+  GetRepoTopLevelCommandSchema, GetRepoTopLevelResultSchema,
+  ListRepoDirectoryCommandSchema, ListRepoDirectoryResultSchema,
+  type GetRepoTopLevelCommand, type GetRepoTopLevelResult,
+  type ListRepoDirectoryCommand, type ListRepoDirectoryResult,
+} from "./protocol_repo_topology.js";
 
 // -----------------------------------------------------------------------------
 // UI -> Agent commands (payloads)
@@ -97,12 +109,6 @@ export const SetOptionsCommandSchema = z.object({
   autoStageOnChange: z.boolean().optional(),
 });
 
-/** Request top-level directory listing for a repo */
-export const GetRepoTopLevelCommandSchema = z.object({
-  type: z.literal("getRepoTopLevel"),
-  repoId: z.string(),
-});
-
 /** Request list of existing bundles for a preset */
 export const ListBundlesCommandSchema = z.object({
   type: z.literal("listBundles"),
@@ -121,6 +127,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   ClientHelloCommandSchema,
   SetOptionsCommandSchema,
   GetRepoTopLevelCommandSchema,
+  ListRepoDirectoryCommandSchema,
   ListBundlesCommandSchema,
   GetTrFleetStatusCommandSchema,
   TrFleetActionCommandSchema,
@@ -184,18 +191,6 @@ export const SetOptionsResultSchema = z.object({
   autoStageOnChange: z.boolean(),
 });
 
-/** Top-level directories and files for a repo */
-export const GetRepoTopLevelResultSchema = z.object({
-  type: z.literal("getRepoTopLevelResult"),
-  repoId: z.string(),
-  dirs: z.array(z.string()),
-  files: z.array(z.string()),
-  /** Nested subdirectory paths within each top-level dir, up to repo depth 4 */
-  subdirs: z.record(z.string(), z.array(z.string())).optional(),
-  /** Dir names that are excluded by default (e.g. node_modules, .git, target) */
-  defaultExcluded: z.array(z.string()).default([]),
-});
-
 export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
   RefreshResultSchema,
@@ -207,6 +202,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   ClientHelloResultSchema,
   SetOptionsResultSchema,
   GetRepoTopLevelResultSchema,
+  ListRepoDirectoryResultSchema,
   ListBundlesResultSchema,
   GetTrFleetStatusResultSchema,
   TrFleetActionResultSchema,
@@ -221,7 +217,6 @@ export type ReadTextFileResult = z.infer<typeof ReadTextFileResultSchema>;
 export type ReadImageFileResult = z.infer<typeof ReadImageFileResultSchema>;
 export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
 export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
-export type GetRepoTopLevelResult = z.infer<typeof GetRepoTopLevelResultSchema>;
 
 // -----------------------------------------------------------------------------
 // Protocol envelopes

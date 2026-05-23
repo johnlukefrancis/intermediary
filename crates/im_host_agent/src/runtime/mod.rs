@@ -4,6 +4,7 @@
 mod host_runtime;
 mod host_runtime_helpers;
 mod local_host_backend;
+mod local_host_repo_backend;
 mod repo_backend;
 mod router;
 mod tr_fleet_service;

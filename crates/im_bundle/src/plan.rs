@@ -12,7 +12,10 @@ use crate::error::{BundleError, Result};
 pub struct BundleSelection {
     pub include_root: bool,
     pub top_level_dirs: Vec<String>,
+    #[serde(default)]
     pub excluded_subdirs: Vec<String>,
+    #[serde(default)]
+    pub excluded_files: Vec<String>,
 }
 
 /// Global excludes for bundle building (user-configurable)
@@ -130,7 +133,8 @@ mod tests {
             "selection": {
               "includeRoot": true,
               "topLevelDirs": ["app"],
-              "excludedSubdirs": []
+              "excludedSubdirs": [],
+              "excludedFiles": []
             },
             "git": {"headSha": null, "shortSha": null, "branch": null},
             "builtAtIso": "2026-01-31T00:00:00Z"
@@ -142,6 +146,7 @@ mod tests {
         let plan = BundlePlan::load(file.path()).unwrap();
         assert_eq!(plan.repo_id, "intermediary");
         assert!(plan.selection.include_root);
+        assert!(plan.selection.excluded_files.is_empty());
         assert!(plan
             .global_excludes
             .dir_names

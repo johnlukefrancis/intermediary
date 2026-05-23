@@ -33,6 +33,7 @@ fn caps_file_reads_to_initial_length() {
             include_root: true,
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         git: BundleGitInfo {
             head_sha: None,

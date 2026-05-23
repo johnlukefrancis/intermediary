@@ -6,10 +6,9 @@ use crate::bundles::{
 };
 use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
-use crate::repos::{get_repo_top_level, read_image_file, read_text_file};
 use crate::staging::{stage_file, StagingRootKind};
 
-use super::ConnectionContext;
+use super::{repo_commands, ConnectionContext};
 
 pub async fn dispatch_command(
     command: UiCommand,
@@ -52,7 +51,7 @@ pub async fn dispatch_command(
                 })?;
                 (
                     staging,
-                    resolve_wsl_repo_root(&command.repo_id, repo_config)?,
+                    repo_commands::resolve_wsl_repo_root(&command.repo_id, repo_config)?,
                 )
             };
 
@@ -71,46 +70,10 @@ pub async fn dispatch_command(
             ))
         }
         UiCommand::ReadTextFile(command) => {
-            let repo_root = {
-                let state = ctx.runtime.read().await;
-                let repo_config = state.repo_configs.get(&command.repo_id).ok_or_else(|| {
-                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
-                })?;
-                resolve_wsl_repo_root(&command.repo_id, repo_config)?
-            };
-
-            let result = read_text_file(&repo_root, &command.path).await?;
-            Ok(UiResponse::ReadTextFileResult(
-                crate::protocol::ReadTextFileResult {
-                    repo_id: command.repo_id,
-                    path: command.path,
-                    content: result.content,
-                    bytes: result.bytes,
-                    mtime_ms: result.mtime_ms,
-                    encoding: "utf-8".to_string(),
-                },
-            ))
+            repo_commands::read_text_file_command(command, ctx).await
         }
         UiCommand::ReadImageFile(command) => {
-            let repo_root = {
-                let state = ctx.runtime.read().await;
-                let repo_config = state.repo_configs.get(&command.repo_id).ok_or_else(|| {
-                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
-                })?;
-                resolve_wsl_repo_root(&command.repo_id, repo_config)?
-            };
-
-            let result = read_image_file(&repo_root, &command.path).await?;
-            Ok(UiResponse::ReadImageFileResult(
-                crate::protocol::ReadImageFileResult {
-                    repo_id: command.repo_id,
-                    path: command.path,
-                    data_base64: result.data_base64,
-                    mime_type: result.mime_type,
-                    bytes: result.bytes,
-                    mtime_ms: result.mtime_ms,
-                },
-            ))
+            repo_commands::read_image_file_command(command, ctx).await
         }
         UiCommand::BuildBundle(command) => {
             let (staging, repo_config) = {
@@ -143,7 +106,7 @@ pub async fn dispatch_command(
                     )
                 })?
                 .clone();
-            let repo_root = resolve_wsl_repo_root(&command.repo_id, &repo_config)?;
+            let repo_root = repo_commands::resolve_wsl_repo_root(&command.repo_id, &repo_config)?;
 
             let result = build_bundle(
                 BuildBundleOptions {
@@ -203,27 +166,10 @@ pub async fn dispatch_command(
             ))
         }
         UiCommand::GetRepoTopLevel(command) => {
-            let repo_root = {
-                let state = ctx.runtime.read().await;
-                let repo_config = state.repo_configs.get(&command.repo_id).ok_or_else(|| {
-                    AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
-                })?;
-                resolve_wsl_repo_root(&command.repo_id, repo_config)?
-            };
-
-            let result = get_repo_top_level(&repo_root)
-                .await
-                .map_err(|err| AgentError::internal(format!("Failed to scan repo: {err}")))?;
-
-            Ok(UiResponse::GetRepoTopLevelResult(
-                crate::protocol::GetRepoTopLevelResult {
-                    repo_id: command.repo_id,
-                    dirs: result.dirs,
-                    files: result.files,
-                    subdirs: Some(result.subdirs),
-                    default_excluded: result.default_excluded,
-                },
-            ))
+            repo_commands::get_repo_top_level_command(command, ctx).await
+        }
+        UiCommand::ListRepoDirectory(command) => {
+            repo_commands::list_repo_directory_command(command, ctx).await
         }
         UiCommand::ListBundles(command) => {
             let staging =
@@ -257,22 +203,4 @@ pub async fn dispatch_command(
         )),
         UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
     }
-}
-
-fn resolve_wsl_repo_root(
-    repo_id: &str,
-    repo_config: &crate::runtime::RepoConfig,
-) -> Result<String, AgentError> {
-    repo_config
-        .wsl_root_path()
-        .map(str::to_string)
-        .ok_or_else(|| {
-            AgentError::new(
-                "UNSUPPORTED_REPO_ROOT",
-                format!(
-                    "Repo {repo_id} uses unsupported root kind: {}",
-                    repo_config.root.kind()
-                ),
-            )
-        })
 }

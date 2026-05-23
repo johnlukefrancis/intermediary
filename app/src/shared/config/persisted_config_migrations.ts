@@ -21,8 +21,8 @@ import type { PersistedConfig } from "./persisted_config.js";
  * Apply migrations to bring config to current version
  */
 export function migrateConfig(config: PersistedConfig): PersistedConfig {
-  // Migration: v1 -> v2: Add excludedSubdirs to bundle selections
-  // Zod schema's .default([]) already ensures excludedSubdirs exists after parsing.
+  // Migration: v1 -> v2: Add excludedSubdirs to bundle selections.
+  // Later bundle selection fields also use schema defaults for legacy config.
 
   // Migration: v2 -> v3: Remove worktree fields, use repoId for tab identity
   // Old lastActiveTabId values (e.g. "texture-portal") won't match repoIds,
@@ -60,6 +60,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v21 -> v22: Add windowOpacityPercent (schema default handles missing field).
   // Migration: v22 -> v23: Add textureIntensityPercent (schema default handles missing field).
   // Migration: v23 -> v24: Remove legacy model-dir path excludes from the recommended baseline.
+  // Migration: v24 -> v25: Add bundle selection excludedFiles (schema default handles missing field).
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }

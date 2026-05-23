@@ -42,8 +42,11 @@ pub fn scan_bundle_with_cancel(
     }
     check_cancelled(cancel_token)?;
 
-    let excluded = normalize_excluded(&plan.selection.excluded_subdirs)?;
-    let excluded_set: HashSet<String> = excluded.into_iter().collect();
+    let excluded_subdirs =
+        normalize_excluded_paths(&plan.selection.excluded_subdirs, "excludedSubdirs")?;
+    let excluded_subdir_set: HashSet<String> = excluded_subdirs.into_iter().collect();
+    let excluded_files = normalize_excluded_paths(&plan.selection.excluded_files, "excludedFiles")?;
+    let excluded_file_set: HashSet<String> = excluded_files.into_iter().collect();
     let global_excludes = normalize_global_excludes(&plan.global_excludes);
 
     let mut entries = Vec::new();
@@ -74,7 +77,8 @@ pub fn scan_bundle_with_cancel(
             }
             if file_type.is_file() {
                 let archive_path = name_str.to_string();
-                if is_globally_excluded_file_name(&name_str, &global_excludes)
+                if excluded_file_set.contains(&archive_path)
+                    || is_globally_excluded_file_name(&name_str, &global_excludes)
                     || is_globally_excluded_path(&archive_path, &global_excludes)
                 {
                     continue;
@@ -104,7 +108,8 @@ pub fn scan_bundle_with_cancel(
             &mut entries,
             &dir_path,
             dir,
-            &excluded_set,
+            &excluded_subdir_set,
+            &excluded_file_set,
             &global_excludes,
             &mut files_scanned,
             progress,
@@ -162,14 +167,15 @@ fn collect_dir_entries(
     entries: &mut Vec<ScanEntry>,
     dir_path: &Path,
     archive_root: &str,
-    excluded_set: &HashSet<String>,
+    excluded_subdir_set: &HashSet<String>,
+    excluded_file_set: &HashSet<String>,
     global_excludes: &NormalizedGlobalExcludes,
     files_scanned: &mut u64,
     progress: &mut ProgressEmitter,
     cancel_token: Option<&BundleCancelToken>,
 ) -> Result<()> {
     check_cancelled(cancel_token)?;
-    if excluded_set.contains(archive_root) {
+    if excluded_subdir_set.contains(archive_root) {
         return Ok(());
     }
 
@@ -213,7 +219,8 @@ fn collect_dir_entries(
                 entries,
                 &entry.path(),
                 &next_archive,
-                excluded_set,
+                excluded_subdir_set,
+                excluded_file_set,
                 global_excludes,
                 files_scanned,
                 progress,
@@ -223,7 +230,8 @@ fn collect_dir_entries(
         }
 
         if file_type.is_file() {
-            if is_globally_excluded_file_name(&name_str, global_excludes)
+            if excluded_file_set.contains(&next_archive)
+                || is_globally_excluded_file_name(&name_str, global_excludes)
                 || is_globally_excluded_path(&next_archive, global_excludes)
             {
                 continue;
@@ -248,7 +256,7 @@ fn join_archive(root: &str, name: &str) -> String {
     }
 }
 
-fn normalize_excluded(excluded: &[String]) -> Result<Vec<String>> {
+fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec<String>> {
     let mut normalized = Vec::new();
     for item in excluded {
         let trimmed = item.trim();
@@ -258,12 +266,12 @@ fn normalize_excluded(excluded: &[String]) -> Result<Vec<String>> {
         let normalized_item = trimmed.replace('\\', "/");
         if normalized_item.starts_with('/') {
             return Err(BundleError::InvalidPlan(format!(
-                "excludedSubdirs must be relative: {trimmed}"
+                "{field_name} must be relative: {trimmed}"
             )));
         }
         if normalized_item.split('/').any(|part| part == "..") {
             return Err(BundleError::InvalidPlan(format!(
-                "excludedSubdirs cannot contain '..': {trimmed}"
+                "{field_name} cannot contain '..': {trimmed}"
             )));
         }
         normalized.push(normalized_item);

@@ -19,6 +19,7 @@ use crate::runtime::AgentRuntime;
 use crate::server::EventBus;
 
 mod dispatch;
+mod repo_commands;
 use crate::server::handshake_auth::{
     unauthorized_handshake_response, ConnectionHandshakeAuth, HandshakeRejectReason,
 };

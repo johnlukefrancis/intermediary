@@ -276,6 +276,7 @@ mod tests {
                 include_root: true,
                 top_level_dirs: vec!["app".to_string(), "models".to_string()],
                 excluded_subdirs: vec![],
+                excluded_files: vec![],
             },
             git: BundleGitInfo {
                 head_sha: None,
@@ -332,6 +333,7 @@ mod tests {
                 include_root: false,
                 top_level_dirs: vec!["app".to_string(), "models".to_string()],
                 excluded_subdirs: vec![],
+                excluded_files: vec![],
             },
             git: BundleGitInfo {
                 head_sha: None,
@@ -375,6 +377,7 @@ mod tests {
                 include_root: false,
                 top_level_dirs: vec!["TriangleRain".to_string()],
                 excluded_subdirs: vec![],
+                excluded_files: vec![],
             },
             git: BundleGitInfo {
                 head_sha: None,
@@ -420,6 +423,7 @@ mod tests {
                 include_root: false,
                 top_level_dirs: vec!["TriangleRain".to_string()],
                 excluded_subdirs: vec![],
+                excluded_files: vec![],
             },
             git: BundleGitInfo {
                 head_sha: None,

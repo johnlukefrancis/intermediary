@@ -61,6 +61,7 @@ fn failed_build_keeps_last_good_bundle() {
             include_root: false,
             top_level_dirs: vec!["missing-dir".to_string()],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         staging: PathBridgeConfig {
             staging_host_root: staging_root.to_string_lossy().to_string(),
@@ -113,6 +114,7 @@ fn successful_build_replaces_then_cleans_older_bundles() {
             include_root: true,
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         staging: PathBridgeConfig {
             staging_host_root: staging_root.to_string_lossy().to_string(),
@@ -175,6 +177,7 @@ fn cancelled_build_keeps_last_good_bundle_and_removes_temp_output() {
             include_root: true,
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         staging: PathBridgeConfig {
             staging_host_root: staging_root.to_string_lossy().to_string(),
@@ -236,6 +239,7 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
             include_root: false,
             top_level_dirs: vec!["Scripts".to_string(), "node_modules".to_string()],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         staging: PathBridgeConfig {
             staging_host_root: staging_root.to_string_lossy().to_string(),

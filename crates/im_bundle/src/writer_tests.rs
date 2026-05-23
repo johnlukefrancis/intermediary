@@ -22,6 +22,7 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
     std::fs::create_dir_all(repo_root.join("dist")).unwrap();
     std::fs::write(repo_root.join("README.md"), "root").unwrap();
     std::fs::write(repo_root.join("app/src/main.ts"), "code").unwrap();
+    std::fs::write(repo_root.join("app/src/secret.ts"), "skip").unwrap();
     std::fs::write(repo_root.join("dist/bundle.js"), "ignored").unwrap();
 
     let output_path = repo_root.join("bundle.zip");
@@ -35,6 +36,7 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
             include_root: true,
             top_level_dirs: vec!["app".to_string()],
             excluded_subdirs: vec![],
+            excluded_files: vec!["app/src/secret.ts".to_string()],
         },
         git: BundleGitInfo {
             head_sha: None,
@@ -52,6 +54,7 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
     let mut archive = zip::ZipArchive::new(file).unwrap();
     assert!(archive.by_name("README.md").is_ok());
     assert!(archive.by_name("app/src/main.ts").is_ok());
+    assert!(archive.by_name("app/src/secret.ts").is_err());
     assert!(archive.by_name("dist/bundle.js").is_err());
 
     let mut manifest = archive.by_name("BUNDLE_MANIFEST.json").unwrap();
@@ -62,6 +65,8 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
     assert!(manifest_content.contains("\"fileCount\""));
     assert!(manifest_content.contains("\"totalBytesBestEffort\""));
     assert!(manifest_content.contains("\"effectiveGlobalExcludes\""));
+    assert!(manifest_content.contains("\"excludedFiles\""));
+    assert!(manifest_content.contains("app/src/secret.ts"));
 }
 
 #[test]
@@ -81,6 +86,7 @@ fn progress_callbacks_follow_phase_order() {
             include_root: true,
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         git: BundleGitInfo {
             head_sha: None,
@@ -136,6 +142,7 @@ fn cancelled_bundle_write_stops_before_output_creation() {
             include_root: true,
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
+            excluded_files: vec![],
         },
         git: BundleGitInfo {
             head_sha: None,

@@ -8,7 +8,7 @@ mod validation;
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 24;
+pub const CONFIG_VERSION: u32 = 25;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -159,6 +159,9 @@ pub struct BundleSelection {
     /// Subdirectories to exclude (e.g. "TriangleRain/Assets")
     #[serde(default)]
     pub excluded_subdirs: Vec<String>,
+    /// Repo-relative files to exclude from selected roots/directories
+    #[serde(default)]
+    pub excluded_files: Vec<String>,
 }
 
 /// Per-tab theme configuration

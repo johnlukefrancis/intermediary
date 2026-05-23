@@ -60,6 +60,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     isLoading,
     hydrationStatus,
     topLevelDirs,
+    topLevelFiles,
     topLevelSubdirs,
     defaultExcluded,
     registerStaged,
@@ -230,7 +231,9 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     <BundleColumn
       repoId={repoId}
       bundleState={bundleState}
+      topLevelFiles={topLevelFiles}
       onDragStart={handleBundleDragStart}
+      onOpenFile={repoWorkspace.openFile}
       emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
     />
   );

@@ -10,14 +10,18 @@ import type { BundleState } from "../../hooks/use_bundle_state.js";
 interface BundleColumnProps {
   repoId: string;
   bundleState: BundleState;
+  topLevelFiles: string[];
   onDragStart: (hostPath: string) => Promise<void>;
+  onOpenFile: (path: string) => void;
   emptyMessage?: string;
 }
 
 export function BundleColumn({
-  repoId: _repoId,
+  repoId,
   bundleState,
+  topLevelFiles,
   onDragStart,
+  onOpenFile,
   emptyMessage = "No bundles yet",
 }: BundleColumnProps): React.JSX.Element {
   const activePreset = bundleState.presets.get(bundleState.activePresetId);
@@ -39,9 +43,10 @@ export function BundleColumn({
       />
 
       <BundleSelectionPanel
+        repoId={repoId}
         selection={activePreset.selection}
         topLevelDirs={bundleState.topLevelDirs}
-        topLevelSubdirs={bundleState.topLevelSubdirs}
+        topLevelFiles={topLevelFiles}
         isBuilding={activePreset.isBuilding}
         isCancelling={activePreset.isCancelling}
         buildProgress={activePreset.buildProgress}
@@ -49,6 +54,7 @@ export function BundleColumn({
         onSelectionChange={(sel) => { bundleState.setSelection(activePreset.presetId, sel); }}
         onBuild={() => { void bundleState.buildBundle(activePreset.presetId); }}
         onCancelBuild={() => { void bundleState.cancelBundleBuild(activePreset.presetId); }}
+        onOpenFile={onOpenFile}
       />
 
       <BundleList

@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-05-22 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace)
+Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -178,6 +178,16 @@ The shared workspace is the clean, full-pane surface used for per-repo notes, op
 - Workspace controls use existing deck panel headers and `panel-header-icon` buttons; text file buffers have no save action because they never write back to repository files.
 - Line and character counts sit inside text editors at bottom-right using muted mono metadata styling.
 - Image previews use the same panel footprint, center the image with `object-fit: contain`, and keep drag-out on the preview surface without exposing filesystem paths in the DOM.
+
+## Bundle File Explorer
+
+The Zip Bundles selection surface is a compact file explorer, not a directory-only checklist.
+
+- Root-level files are visible beside top-level directories; expanding a directory lazily fetches only that directory's direct files and subdirectories.
+- Directory toggles remain the authority for including top-level directories and excluding nested subdirectories.
+- File rows use the same `FileIcon` family/color system as Docs/Code rows; the icon is the include/exclude toggle for that file.
+- Included file icons carry a strong `currentColor` glow derived from the icon color; excluded files keep the same icon color with lower opacity and a softer glow.
+- File-name right-click menus reuse the existing file actions (`Open Containing Folder`, `Open File`, `Copy Relative Path`), and double-click opens through the shared workspace.
 
 ---
 

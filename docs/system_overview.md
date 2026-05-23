@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-05-22
+Updated on: 2026-05-23
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -72,6 +72,7 @@ Intermediary uses a **host-routed architecture**:
   - Shared workspace replaces Docs+Code for per-repo notes, supported UTF-8 file scratch buffers, or supported image previews; scratch edits never write back to repo files
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
+  - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as Docs/Code rows
   - Image previews render from Blob URLs created from agent-provided bytes; raw filesystem paths and `file://` sources are not used in the webview
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
@@ -143,6 +144,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `stageFile { repoId, path } → stageFileResult`
 - `readTextFile { repoId, path } → readTextFileResult`
 - `readImageFile { repoId, path } → readImageFileResult`
+- `listRepoDirectory { repoId, path } → listRepoDirectoryResult`; `path` is repo-relative and `""` lists the repo root, while non-root paths return direct child directories/files as repo-relative paths
 - `buildBundle { repoId, presetId, buildId, selection } → buildBundleResult`
 - `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
@@ -190,7 +192,7 @@ Contents:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
 - **Classifier config:** Global classification excludes (parallel to bundle excludes)
 - **UI state:** Last active repo (by repoId) + last active worktree per group + persisted window opacity and texture intensity
-- **Bundle selections:** Per-repo, per-preset top-level directory selections and nested subdirectory exclusions
+- **Bundle selections:** Per-repo, per-preset root-file toggle, top-level directory selections, nested subdirectory exclusions, and explicit per-file exclusions
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
 The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles, recent-file caches, and local notes without deleting repository files.
@@ -250,9 +252,9 @@ intermediary/
 
 ## Key Workflows
 
-1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list; topology-changing directory events also refresh bundle directory selection metadata
+1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
-3. **Bundle Build:** User clicks Build → host agent routes by repo kind → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
+3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → backend scans selected roots while honoring subdirectory and file exclusions → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 
 ## Related docs
 

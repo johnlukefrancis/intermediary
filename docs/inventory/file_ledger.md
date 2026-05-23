@@ -10,10 +10,14 @@ app/src/components/add_repo_button.tsx - "+" button for adding new repositories 
 app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
 app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel button with inline progress details
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
+app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer
+app/src/components/bundles/bundle_explorer_file_row.tsx - File row for the bundle explorer with icon-driven include/exclude toggle
+app/src/components/bundles/bundle_explorer_selection.ts - Selection helpers for the bundle file explorer
+app/src/components/bundles/bundle_file_context_menu.tsx - Context menu actions for bundle explorer file rows
+app/src/components/bundles/bundle_file_explorer.tsx - Lazy file explorer for bundle directory and file inclusion
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
-app/src/components/bundles/bundle_selection_panel.tsx - Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)
-app/src/components/bundles/bundle_subdir_tree.tsx - Nested subdirectory checkbox rows for bundle selection
+app/src/components/bundles/bundle_selection_panel.tsx - Bundle build controls and file explorer selection panel
 app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that supports the DOM indeterminate state
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
@@ -116,6 +120,7 @@ app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
+app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
 app/src/shared/protocol_tr_fleet.ts - TR fleet command/response schemas for build-server status and recovery controls
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
@@ -126,8 +131,9 @@ app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main win
 app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
 app/src/styles/bundle_column_layout.css - Bundle column layout and preset selector styles
 app/src/styles/bundle_column.css - Bundle column style entrypoint
+app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and file include glow states
 app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
-app/src/styles/bundle_selection_panel.css - Bundle selection panel, directory, and subdirectory controls
+app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and shared file explorer controls
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Docs | Code | Zips)
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
@@ -180,6 +186,7 @@ crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/
 crates/im_agent/src/protocol/events_runtime.rs - Runtime status and error event payloads
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
+crates/im_agent/src/protocol/responses_repo.rs - Repository topology and directory listing response payloads
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization and backward-compat tests
@@ -191,6 +198,7 @@ crates/im_agent/src/repos/image_file_reader.rs - Repo-relative image file reader
 crates/im_agent/src/repos/mod.rs - Repository scanning module exports
 crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
 crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debounced atomic writes
+crates/im_agent/src/repos/repo_directory_listing.rs - Lazy repo-relative directory listing for file explorer views
 crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded nested bundle-selector directory paths
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
@@ -204,6 +212,7 @@ crates/im_agent/src/runtime/state_watchers.rs - Watcher lifecycle helpers for ag
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
+crates/im_agent/src/server/connection/repo_commands.rs - Repo file-read and topology command handlers for WebSocket dispatch
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
@@ -238,6 +247,7 @@ crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command rout
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
+crates/im_host_agent/src/runtime/local_host_repo_backend.rs - Host-native repo read and topology operations
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
 crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection
@@ -306,6 +316,7 @@ src-tauri/src/lib/commands/startup.rs - Startup readiness command for splashscre
 src-tauri/src/lib/commands/wsl_distro.rs - Resolve WSL distro override from persisted app config for command-time path conversion
 src-tauri/src/lib/config/generated_code_globs.rs - Generated default code globs for Rust-side persisted config migration. Generated by: scripts/classification/generate_...
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
+src-tauri/src/lib/config/io/migration_tests.rs - Focused config migration regression tests
 src-tauri/src/lib/config/io/tests.rs - Unit tests for config I/O and migration behavior
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/path.rs - Resolve persisted config file location for app commands and setup

@@ -27,6 +27,7 @@ pub struct ManifestSelection {
     pub include_root: bool,
     pub top_level_dirs_included: Vec<String>,
     pub excluded_subdirs: Vec<String>,
+    pub excluded_files: Vec<String>,
 }
 
 pub fn build_manifest(
@@ -52,6 +53,7 @@ pub fn build_manifest(
             include_root: selection.include_root,
             top_level_dirs_included: top_level_dirs_included.to_vec(),
             excluded_subdirs: selection.excluded_subdirs.clone(),
+            excluded_files: selection.excluded_files.clone(),
         },
         effective_global_excludes: normalized_global_excludes_summary(global_excludes),
         git: BundleGitInfo {

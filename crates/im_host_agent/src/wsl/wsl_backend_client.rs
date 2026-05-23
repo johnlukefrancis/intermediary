@@ -121,6 +121,7 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
         | UiCommand::ReadImageFile(_)
         | UiCommand::CancelBundleBuild(_)
         | UiCommand::GetRepoTopLevel(_)
+        | UiCommand::ListRepoDirectory(_)
         | UiCommand::ListBundles(_)
         | UiCommand::GetTrFleetStatus(_)
         | UiCommand::TrFleetAction(_)

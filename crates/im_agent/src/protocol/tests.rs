@@ -284,6 +284,42 @@ fn read_image_file_command_and_result_roundtrip() {
 }
 
 #[test]
+fn list_repo_directory_command_and_result_roundtrip() {
+    let command_json = json!({
+        "type": "listRepoDirectory",
+        "repoId": "repo",
+        "path": "app/src"
+    });
+    let command: UiCommand = serde_json::from_value(command_json).expect("parse listRepoDirectory");
+    match command {
+        UiCommand::ListRepoDirectory(command) => {
+            assert_eq!(command.repo_id, "repo");
+            assert_eq!(command.path, "app/src");
+        }
+        _ => panic!("expected ListRepoDirectory"),
+    }
+
+    let response_json = json!({
+        "type": "listRepoDirectoryResult",
+        "repoId": "repo",
+        "path": "app/src",
+        "dirs": ["app/src/components"],
+        "files": ["app/src/main.ts"]
+    });
+    let response: UiResponse =
+        serde_json::from_value(response_json).expect("parse listRepoDirectoryResult");
+    match response {
+        UiResponse::ListRepoDirectoryResult(result) => {
+            assert_eq!(result.repo_id, "repo");
+            assert_eq!(result.path, "app/src");
+            assert_eq!(result.dirs, vec!["app/src/components".to_string()]);
+            assert_eq!(result.files, vec!["app/src/main.ts".to_string()]);
+        }
+        _ => panic!("expected ListRepoDirectoryResult"),
+    }
+}
+
+#[test]
 fn legacy_build_bundle_result_windows_aliases() {
     let json = json!({
         "type": "buildBundleResult",

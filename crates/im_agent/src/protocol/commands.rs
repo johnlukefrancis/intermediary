@@ -107,6 +107,8 @@ pub struct BundleSelection {
     pub top_level_dirs: Vec<String>,
     #[serde(default)]
     pub excluded_subdirs: Vec<String>,
+    #[serde(default)]
+    pub excluded_files: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -147,6 +149,13 @@ pub struct CancelBundleBuildCommand {
 #[serde(rename_all = "camelCase")]
 pub struct GetRepoTopLevelCommand {
     pub repo_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListRepoDirectoryCommand {
+    pub repo_id: String,
+    pub path: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -212,6 +221,8 @@ pub enum UiCommand {
     CancelBundleBuild(CancelBundleBuildCommand),
     #[serde(rename = "getRepoTopLevel")]
     GetRepoTopLevel(GetRepoTopLevelCommand),
+    #[serde(rename = "listRepoDirectory")]
+    ListRepoDirectory(ListRepoDirectoryCommand),
     #[serde(rename = "listBundles")]
     ListBundles(ListBundlesCommand),
     #[serde(rename = "getTrFleetStatus")]
@@ -235,6 +246,7 @@ impl UiCommand {
             UiCommand::BuildBundle(_) => "buildBundle",
             UiCommand::CancelBundleBuild(_) => "cancelBundleBuild",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
+            UiCommand::ListRepoDirectory(_) => "listRepoDirectory",
             UiCommand::ListBundles(_) => "listBundles",
             UiCommand::GetTrFleetStatus(_) => "getTrFleetStatus",
             UiCommand::TrFleetAction(_) => "trFleetAction",

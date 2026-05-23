@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 use super::responses_tr_fleet::{GetTrFleetStatusResult, TrFleetActionResult};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -91,18 +92,6 @@ pub struct CancelBundleBuildResult {
     pub preset_id: String,
     pub build_id: String,
     pub cancelled: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetRepoTopLevelResult {
-    pub repo_id: String,
-    pub dirs: Vec<String>,
-    pub files: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub subdirs: Option<std::collections::HashMap<String, Vec<String>>>,
-    #[serde(default)]
-    pub default_excluded: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +281,8 @@ pub enum UiResponse {
     CancelBundleBuildResult(CancelBundleBuildResult),
     #[serde(rename = "getRepoTopLevelResult")]
     GetRepoTopLevelResult(GetRepoTopLevelResult),
+    #[serde(rename = "listRepoDirectoryResult")]
+    ListRepoDirectoryResult(ListRepoDirectoryResult),
     #[serde(rename = "listBundlesResult")]
     ListBundlesResult(ListBundlesResult),
     #[serde(rename = "getTrFleetStatusResult")]

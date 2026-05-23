@@ -30,6 +30,26 @@
       "summary": "Main bundles column component"
     },
     {
+      "path": "app/src/components/bundles/bundle_explorer_directory.tsx",
+      "summary": "Recursive directory node for the lazy bundle file explorer"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_explorer_file_row.tsx",
+      "summary": "File row for the bundle explorer with icon-driven include/exclude toggle"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_explorer_selection.ts",
+      "summary": "Selection helpers for the bundle file explorer"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_file_context_menu.tsx",
+      "summary": "Context menu actions for bundle explorer file rows"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_file_explorer.tsx",
+      "summary": "Lazy file explorer for bundle directory and file inclusion"
+    },
+    {
       "path": "app/src/components/bundles/bundle_list.tsx",
       "summary": "Single LATEST bundle row (inline, no header)"
     },
@@ -39,11 +59,7 @@
     },
     {
       "path": "app/src/components/bundles/bundle_selection_panel.tsx",
-      "summary": "Selection UI for bundle building (root toggle, dir checkboxes, subdir exclusions)"
-    },
-    {
-      "path": "app/src/components/bundles/bundle_subdir_tree.tsx",
-      "summary": "Nested subdirectory checkbox rows for bundle selection"
+      "summary": "Bundle build controls and file explorer selection panel"
     },
     {
       "path": "app/src/components/bundles/indeterminate_checkbox.tsx",
@@ -454,6 +470,10 @@
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
     {
+      "path": "app/src/shared/protocol_repo_topology.ts",
+      "summary": "Repo topology and lazy directory listing protocol schemas"
+    },
+    {
       "path": "app/src/shared/protocol_tr_fleet.ts",
       "summary": "TR fleet command/response schemas for build-server status and recovery controls"
     },
@@ -494,12 +514,16 @@
       "summary": "Bundle column style entrypoint"
     },
     {
+      "path": "app/src/styles/bundle_file_explorer.css",
+      "summary": "Lazy bundle file explorer rows and file include glow states"
+    },
+    {
       "path": "app/src/styles/bundle_list.css",
       "summary": "Bundle list rows, ready pulse, and metadata styles"
     },
     {
       "path": "app/src/styles/bundle_selection_panel.css",
-      "summary": "Bundle selection panel, directory, and subdirectory controls"
+      "summary": "Bundle selection panel shell and shared file explorer controls"
     },
     {
       "path": "app/src/styles/chrome.css",
@@ -710,6 +734,10 @@
       "summary": "WebSocket protocol types for the agent"
     },
     {
+      "path": "crates/im_agent/src/protocol/responses_repo.rs",
+      "summary": "Repository topology and directory listing response payloads"
+    },
+    {
       "path": "crates/im_agent/src/protocol/responses_tr_fleet.rs",
       "summary": "TR fleet response payload types for host-agent build-server control"
     },
@@ -752,6 +780,10 @@
     {
       "path": "crates/im_agent/src/repos/recent_files_store.rs",
       "summary": "Persist recent files with debounced atomic writes"
+    },
+    {
+      "path": "crates/im_agent/src/repos/repo_directory_listing.rs",
+      "summary": "Lazy repo-relative directory listing for file explorer views"
     },
     {
       "path": "crates/im_agent/src/repos/repo_top_level.rs",
@@ -804,6 +836,10 @@
     {
       "path": "crates/im_agent/src/server/connection/dispatch.rs",
       "summary": "Command dispatch for WebSocket request handling"
+    },
+    {
+      "path": "crates/im_agent/src/server/connection/repo_commands.rs",
+      "summary": "Repo file-read and topology command handlers for WebSocket dispatch"
     },
     {
       "path": "crates/im_agent/src/server/event_bus.rs",
@@ -940,6 +976,10 @@
     {
       "path": "crates/im_host_agent/src/runtime/local_host_backend.rs",
       "summary": "Host-native local backend for repo watch, staging, and bundle operations"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/local_host_repo_backend.rs",
+      "summary": "Host-native repo read and topology operations"
     },
     {
       "path": "crates/im_host_agent/src/runtime/mod.rs",
@@ -1212,6 +1252,10 @@
     {
       "path": "src-tauri/src/lib/config/io.rs",
       "summary": "Config file I/O with atomic writes and error handling"
+    },
+    {
+      "path": "src-tauri/src/lib/config/io/migration_tests.rs",
+      "summary": "Focused config migration regression tests"
     },
     {
       "path": "src-tauri/src/lib/config/io/tests.rs",

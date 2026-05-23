@@ -90,6 +90,7 @@ impl HostRuntime {
             | UiCommand::BuildBundle(_)
             | UiCommand::CancelBundleBuild(_)
             | UiCommand::GetRepoTopLevel(_)
+            | UiCommand::ListRepoDirectory(_)
             | UiCommand::ListBundles(_) => self.dispatch_repo_command(command, event_bus).await,
             UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
@@ -247,6 +248,10 @@ impl HostRuntime {
             UiCommand::GetRepoTopLevel(command) => {
                 let result = self.local_backend.get_repo_top_level(command).await?;
                 Ok(UiResponse::GetRepoTopLevelResult(result))
+            }
+            UiCommand::ListRepoDirectory(command) => {
+                let result = self.local_backend.list_repo_directory(command).await?;
+                Ok(UiResponse::ListRepoDirectoryResult(result))
             }
             UiCommand::ListBundles(command) => {
                 let result = self.local_backend.list_bundles(command).await?;

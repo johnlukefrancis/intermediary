@@ -26,7 +26,8 @@ export function buildSelectionKey(selections: Record<string, BundleSelection>): 
       }
       const dirs = selection.topLevelDirs.join(",");
       const excluded = selection.excludedSubdirs.join(",");
-      return `${presetId}:${selection.includeRoot}:${dirs}:${excluded}`;
+      const excludedFiles = selection.excludedFiles.join(",");
+      return `${presetId}:${selection.includeRoot}:${dirs}:${excluded}:${excludedFiles}`;
     });
   return entries.join("|");
 }
@@ -126,6 +127,7 @@ export function createPresetState(
         includeRoot: savedSelection.includeRoot,
         topLevelDirs: normalizedDirs,
         excludedSubdirs: mergedExcluded.sort(),
+        excludedFiles: [...savedSelection.excludedFiles].sort(),
       },
       true
     );
@@ -142,6 +144,7 @@ export function createPresetState(
         excludedSubdirs: computeDefaultExcludedSubdirs(
           selectedDirs, topLevelSubdirs, defaultExcluded
         ),
+        excludedFiles: [],
       },
       true
     );
@@ -158,6 +161,7 @@ export function createPresetState(
       excludedSubdirs: computeDefaultExcludedSubdirs(
         selectedDirs, topLevelSubdirs, defaultExcluded
       ),
+      excludedFiles: [],
     },
     topLevelDirs.length > 0
   );

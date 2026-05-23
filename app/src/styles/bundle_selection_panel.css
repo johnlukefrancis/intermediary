@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/bundle_selection_panel.css
- * Description: Bundle selection panel, directory, and subdirectory controls
+ * Description: Bundle selection panel shell and shared file explorer controls
  */
 
 .bundle-selection-panel {
@@ -32,15 +32,6 @@
   font-size: var(--text-base);
   color: var(--color-text-secondary);
   cursor: pointer;
-}
-
-.dir-selection {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  flex: 1 1 0;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .dir-selection-header {
@@ -93,36 +84,6 @@
   outline-offset: 2px;
 }
 
-.dir-checkbox-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  overflow-y: auto;
-  padding: var(--space-2);
-  background: var(--glass-vintage-content);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-deck-xs);
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-.dir-checkbox {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.dir-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.dir-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .dir-expand-btn {
   width: 16px;
   height: 16px;
@@ -149,61 +110,6 @@
 .dir-expand-btn:focus-visible {
   outline: 1px solid var(--color-accent);
   border-radius: 2px;
-}
-
-.dir-expand-spacer {
-  width: 16px;
-  flex-shrink: 0;
-}
-
-.dir-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.subdir-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-left: calc(16px + var(--space-2));
-  padding-left: var(--space-3);
-  border-left: 1px solid var(--color-border-subtle);
-  margin-top: var(--space-1);
-}
-
-.subdir-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.subdir-row--depth-2 {
-  padding-left: var(--space-4);
-}
-
-.subdir-row--depth-3 {
-  padding-left: calc(var(--space-4) * 2);
-}
-
-.subdir-row--disabled {
-  opacity: 0.72;
-}
-
-.subdir-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.subdir-label.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .vintage-toggle-track.indeterminate {

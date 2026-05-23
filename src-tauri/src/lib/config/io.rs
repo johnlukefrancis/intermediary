@@ -164,6 +164,8 @@ fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     if config.config_version < 24 {
         migrate_legacy_model_dir_patterns(&mut config);
     }
+    // Version 24 -> 25: Add bundle selection excluded_files
+    // (serde default handles missing field).
 
     config.config_version = CONFIG_VERSION;
     config
@@ -405,6 +407,10 @@ fn root_json_for_kind(kind: RepoRootKind, path: String) -> Value {
         RepoRootKind::Host => json!({ "kind": "host", "path": path }),
     }
 }
+
+#[cfg(test)]
+#[path = "io/migration_tests.rs"]
+mod migration_tests;
 
 #[cfg(test)]
 #[path = "io/tests.rs"]

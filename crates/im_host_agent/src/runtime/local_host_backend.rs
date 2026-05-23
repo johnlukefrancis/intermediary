@@ -8,12 +8,9 @@ use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
     BuildBundleCommand, BundleBuiltEvent, BundleInfo, ClientHelloCommand, ClientHelloResult,
-    GetRepoTopLevelCommand, ListBundlesCommand, ReadImageFileCommand, ReadImageFileResult,
-    ReadTextFileCommand, ReadTextFileResult, RefreshCommand, RefreshResult, SetOptionsCommand,
-    SetOptionsResult, StageFileCommand, StageFileResult, UiResponse, WatchRepoCommand,
-    WatchRepoResult,
+    ListBundlesCommand, RefreshCommand, RefreshResult, SetOptionsCommand, SetOptionsResult,
+    StageFileCommand, StageFileResult, UiResponse, WatchRepoCommand, WatchRepoResult,
 };
-use im_agent::repos::{get_repo_top_level, read_image_file, read_text_file};
 use im_agent::runtime::{AgentRuntime, RepoConfig, RepoRootKind};
 use im_agent::server::EventBus;
 use im_agent::staging::{stage_file_for_kind, StagingRootKind};
@@ -90,40 +87,6 @@ impl LocalHostBackend {
             legacy_windows_path: Some(result.host_path),
             wsl_path: result.wsl_path,
             bytes_copied: result.bytes_copied,
-            mtime_ms: result.mtime_ms,
-        })
-    }
-
-    pub async fn read_text_file(
-        &self,
-        command: ReadTextFileCommand,
-    ) -> Result<ReadTextFileResult, AgentError> {
-        let repo_root = self.host_repo_root(&command.repo_id)?;
-        let result = read_text_file(repo_root, &command.path).await?;
-
-        Ok(ReadTextFileResult {
-            repo_id: command.repo_id,
-            path: command.path,
-            content: result.content,
-            bytes: result.bytes,
-            mtime_ms: result.mtime_ms,
-            encoding: "utf-8".to_string(),
-        })
-    }
-
-    pub async fn read_image_file(
-        &self,
-        command: ReadImageFileCommand,
-    ) -> Result<ReadImageFileResult, AgentError> {
-        let repo_root = self.host_repo_root(&command.repo_id)?;
-        let result = read_image_file(repo_root, &command.path).await?;
-
-        Ok(ReadImageFileResult {
-            repo_id: command.repo_id,
-            path: command.path,
-            data_base64: result.data_base64,
-            mime_type: result.mime_type,
-            bytes: result.bytes,
             mtime_ms: result.mtime_ms,
         })
     }
@@ -216,25 +179,6 @@ impl LocalHostBackend {
         }
     }
 
-    pub async fn get_repo_top_level(
-        &self,
-        command: GetRepoTopLevelCommand,
-    ) -> Result<im_agent::protocol::GetRepoTopLevelResult, AgentError> {
-        let repo_root = self.host_repo_root(&command.repo_id)?;
-
-        let result = get_repo_top_level(repo_root)
-            .await
-            .map_err(|err| AgentError::internal(format!("Failed to scan repo: {err}")))?;
-
-        Ok(im_agent::protocol::GetRepoTopLevelResult {
-            repo_id: command.repo_id,
-            dirs: result.dirs,
-            files: result.files,
-            subdirs: Some(result.subdirs),
-            default_excluded: result.default_excluded,
-        })
-    }
-
     pub async fn list_bundles(
         &self,
         command: ListBundlesCommand,
@@ -262,14 +206,14 @@ impl LocalHostBackend {
         })
     }
 
-    fn repo_config(&self, repo_id: &str) -> Result<&RepoConfig, AgentError> {
+    pub(crate) fn repo_config(&self, repo_id: &str) -> Result<&RepoConfig, AgentError> {
         self.runtime
             .repo_configs
             .get(repo_id)
             .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))
     }
 
-    fn host_repo_root(&self, repo_id: &str) -> Result<&str, AgentError> {
+    pub(crate) fn host_repo_root(&self, repo_id: &str) -> Result<&str, AgentError> {
         let repo = self.repo_config(repo_id)?;
         repo.host_root_path().ok_or_else(|| {
             AgentError::new(

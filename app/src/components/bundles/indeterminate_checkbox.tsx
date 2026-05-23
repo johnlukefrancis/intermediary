@@ -7,6 +7,7 @@ interface IndeterminateCheckboxProps {
   id: string;
   checked: boolean;
   indeterminate: boolean;
+  disabled?: boolean;
   onChange: () => void;
 }
 
@@ -14,6 +15,7 @@ export function IndeterminateCheckbox({
   id,
   checked,
   indeterminate,
+  disabled = false,
   onChange,
 }: IndeterminateCheckboxProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +33,7 @@ export function IndeterminateCheckbox({
         id={id}
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={onChange}
       />
       <span className={`vintage-toggle-track${indeterminate ? " indeterminate" : ""}`} />

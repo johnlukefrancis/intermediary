@@ -11,6 +11,8 @@ export const BundleSelectionSchema = z.object({
   topLevelDirs: z.array(z.string().min(1)),
   /** Repo-relative subdirectory paths to exclude (e.g. "TriangleRain/Assets") */
   excludedSubdirs: z.array(z.string().min(1)).default([]),
+  /** Repo-relative file paths to exclude inside the selected roots/directories */
+  excludedFiles: z.array(z.string().min(1)).default([]),
 });
 export type BundleSelection = z.infer<typeof BundleSelectionSchema>;
 

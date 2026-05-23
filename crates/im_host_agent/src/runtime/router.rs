@@ -35,6 +35,7 @@ fn repo_id_for_command(command: &UiCommand) -> Option<&str> {
         UiCommand::BuildBundle(command) => Some(&command.repo_id),
         UiCommand::CancelBundleBuild(command) => Some(&command.repo_id),
         UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),
+        UiCommand::ListRepoDirectory(command) => Some(&command.repo_id),
         UiCommand::ListBundles(command) => Some(&command.repo_id),
         UiCommand::ClientHello(_)
         | UiCommand::SetOptions(_)

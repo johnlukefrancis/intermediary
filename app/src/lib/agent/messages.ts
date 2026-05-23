@@ -11,6 +11,7 @@ import type {
   SetOptionsResult,
   WatchRepoResult,
   GetRepoTopLevelResult,
+  ListRepoDirectoryResult,
   RefreshResult,
   BuildBundleResult,
   CancelBundleBuildResult,
@@ -151,6 +152,18 @@ export async function sendGetRepoTopLevel(
   return client.send<GetRepoTopLevelResult>({
     type: "getRepoTopLevel",
     repoId,
+  });
+}
+
+export async function sendListRepoDirectory(
+  client: AgentClient,
+  repoId: string,
+  path: string
+): Promise<ListRepoDirectoryResult> {
+  return client.send<ListRepoDirectoryResult>({
+    type: "listRepoDirectory",
+    repoId,
+    path,
   });
 }
 

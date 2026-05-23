@@ -55,6 +55,7 @@ export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   topLevelDirs: z.array(z.string()),
   excludedSubdirs: z.array(z.string()).default([]),
+  excludedFiles: z.array(z.string()).default([]),
 });
 
 export type BundleSelection = z.infer<typeof BundleSelectionSchema>;

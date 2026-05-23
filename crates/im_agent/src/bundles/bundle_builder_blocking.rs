@@ -153,6 +153,7 @@ fn build_plan(
             include_root: options.selection.include_root,
             top_level_dirs: options.selection.top_level_dirs.clone(),
             excluded_subdirs: options.selection.excluded_subdirs.clone(),
+            excluded_files: options.selection.excluded_files.clone(),
         },
         git: im_bundle::plan::BundleGitInfo {
             head_sha: git_info.head_sha,
