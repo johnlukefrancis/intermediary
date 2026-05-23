@@ -13,13 +13,13 @@
 }
 
 .auto-files-table {
-  min-width: 720px;
+  min-width: 680px;
   font-family: var(--font-mono);
 }
 
 .auto-files-table-head, .auto-files-row {
   display: grid;
-  grid-template-columns: 42px minmax(260px, 1fr) 120px 44px 92px 50px 72px;
+  grid-template-columns: 42px minmax(320px, 1fr) 92px 50px 150px;
   align-items: center;
 }
 

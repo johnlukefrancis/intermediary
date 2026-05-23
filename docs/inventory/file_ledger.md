@@ -8,6 +8,7 @@ app/splashscreen.html - Deck-themed boot screen shown before main window is read
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
 app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
+app/src/components/auto_files_activity_stack.tsx - Consolidated activity waveform and pulse strip for Auto files rows
 app/src/components/auto_files_header.tsx - Header controls for the unified Auto files panel
 app/src/components/auto_files_panel.tsx - Unified Auto files panel with ranked telemetry table
 app/src/components/auto_files_row.tsx - Single Auto files table row with activity telemetry

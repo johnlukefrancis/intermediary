@@ -7,7 +7,6 @@ export type VisibleFileKind = "docs" | "code" | "image";
 export type FileTypeFilter = "all" | VisibleFileKind;
 export type FileSortMode = "auto" | "latest" | "active";
 export type FileActivityBadge = "hot" | "rising";
-export type FileActivityTrend = "up" | "flat" | "down";
 export type FileActivityGraphBand = "low" | "mid" | "high" | "hot";
 
 export interface FileActivityGraphColumn {
@@ -22,7 +21,6 @@ export interface FeedFileEntry extends FileEntry {
   recencyScore: number;
   autoScore: number;
   activityBadge: FileActivityBadge | null;
-  trend: FileActivityTrend;
   activityGraph: FileActivityGraphColumn[];
   pulse: number[];
 }
@@ -81,7 +79,6 @@ function decorateFiles(files: readonly FileEntry[], nowMs: number): FeedFileEntr
       recencyScore: scoreRecency(activity, nowMs),
       autoScore: scoreAuto(activity, nowMs),
       activityBadge: badgeActivity(activity, nowMs),
-      trend: trendActivity(activity, nowMs),
       activityGraph: activityGraphColumns(file.path, activityLevel),
       pulse: pulseSegments(activity, nowMs),
     };
@@ -140,14 +137,6 @@ function badgeActivity(activity: FileActivity, nowMs: number): FileActivityBadge
   if (isFresh && activity.burstCount >= 3) return "hot";
   if (nowMs - firstSeenMs <= RISING_WINDOW_MS && activity.updateCount >= 3) return "rising";
   return null;
-}
-
-function trendActivity(activity: FileActivity, nowMs: number): FileActivityTrend {
-  const recent = bucketCountBetween(activity.history, nowMs - 6 * HOUR_MS, nowMs);
-  const previous = bucketCountBetween(activity.history, nowMs - 12 * HOUR_MS, nowMs - 6 * HOUR_MS);
-  if (recent > previous) return "up";
-  if (previous > recent) return "down";
-  return activity.burstCount >= 3 ? "up" : "flat";
 }
 
 function pulseSegments(activity: FileActivity, nowMs: number): number[] {

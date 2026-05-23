@@ -22,6 +22,10 @@
       "summary": "Banner with diagnostics when the host agent endpoint is offline"
     },
     {
+      "path": "app/src/components/auto_files_activity_stack.tsx",
+      "summary": "Consolidated activity waveform and pulse strip for Auto files rows"
+    },
+    {
       "path": "app/src/components/auto_files_header.tsx",
       "summary": "Header controls for the unified Auto files panel"
     },

@@ -94,6 +94,8 @@ export function AutoFilesPanel({
             <div className="auto-files-table-head" role="row">
               <span>#</span>
               <span>File</span>
+              <span data-emphasis={sortMode === "latest" ? true : undefined}>Last Active</span>
+              <span aria-label="Update count">Count</span>
               <span
                 data-emphasis={
                   sortMode === "active" || sortMode === "auto" ? true : undefined
@@ -101,10 +103,6 @@ export function AutoFilesPanel({
               >
                 Activity
               </span>
-              <span aria-label="Trend" />
-              <span data-emphasis={sortMode === "latest" ? true : undefined}>Last Active</span>
-              <span> </span>
-              <span aria-label="24-hour pulse" />
             </div>
             <div className="auto-files-table-body">
               {files.map((file, index) => (
