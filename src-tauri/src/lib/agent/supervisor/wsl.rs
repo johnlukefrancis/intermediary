@@ -86,13 +86,13 @@ impl AgentSupervisor {
             }
 
             if !remediated_current_listener {
+                self.set_wsl_launch_target(Some(target.clone()))?;
                 if let Some(error) =
                     self.wsl_auth_failure_error(backend_mode, owner, wsl_port, &target)
                 {
                     return Err(error);
                 }
 
-                self.set_wsl_launch_target(Some(target.clone()))?;
                 self.remediate_stale_wsl_port(wsl_port, &target, owner, "auth_probe_failed")
                     .await?;
             }

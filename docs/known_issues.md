@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-05-22
+Updated on: 2026-05-23
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -44,6 +44,7 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-05-23: Settings Restart Agent could no-op after `WSL backend port 3142 is occupied by an external process that rejected the current websocket token` because the auto-mode error path cleared the WSL launch target before returning. Fixed by preserving the configured launch target before surfacing the auto-mode refusal, allowing Restart Agent to terminate the exact app-local backend path when it is the stale listener.
 - 2026-05-22: Opening files in the containing folder could fail for Windows-path files. Fixed by passing Explorer's reveal selection and target path as one `/select,<path>` argument.
 - 2026-05-22: Removing a folder or subfolder from the app could stall after confirmation because tab-dropdown outside-click handling could unmount portal confirmations before the confirm click ran. Fixed by making modal portals an explicit dropdown exclusion.
 - 2026-05-22: Newly created folders inside a watched repo, for example `Docs/Screenshots`, could be missing until app restart. Fixed by adding a watcher topology-change event and refreshing the repo top-level directory model on that event.
