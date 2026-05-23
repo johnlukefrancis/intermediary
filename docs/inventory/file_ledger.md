@@ -15,7 +15,6 @@ app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel butto
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer
 app/src/components/bundles/bundle_explorer_file_row.tsx - File row for the bundle explorer with icon-driven include/exclude toggle
-app/src/components/bundles/bundle_explorer_selection.ts - Selection helpers for the bundle file explorer
 app/src/components/bundles/bundle_file_context_menu.tsx - Context menu actions for bundle explorer file rows
 app/src/components/bundles/bundle_file_explorer.tsx - Lazy file explorer for bundle directory and file inclusion
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
@@ -94,6 +93,7 @@ app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
+app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons

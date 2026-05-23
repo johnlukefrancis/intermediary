@@ -22,6 +22,7 @@ export interface BundlePresetState {
   presetName: string;
   selection: BundleSelection;
   isSelectionInitialized: boolean;
+  isSelectionTopologyReady: boolean;
   isBuilding: boolean;
   isCancelling: boolean;
   activeBuildId: string | null;

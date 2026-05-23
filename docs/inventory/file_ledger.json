@@ -50,10 +50,6 @@
       "summary": "File row for the bundle explorer with icon-driven include/exclude toggle"
     },
     {
-      "path": "app/src/components/bundles/bundle_explorer_selection.ts",
-      "summary": "Selection helpers for the bundle file explorer"
-    },
-    {
       "path": "app/src/components/bundles/bundle_file_context_menu.tsx",
       "summary": "Context menu actions for bundle explorer file rows"
     },
@@ -364,6 +360,10 @@
     {
       "path": "app/src/lib/agent/transient_wsl_error.ts",
       "summary": "Detect transient WSL transport/bootstrap failures and compute retry delays"
+    },
+    {
+      "path": "app/src/lib/bundles/bundle_selection_visibility.ts",
+      "summary": "Shared path visibility helpers for bundle selection state"
     },
     {
       "path": "app/src/lib/files/file_feed.ts",

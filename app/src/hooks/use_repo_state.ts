@@ -36,6 +36,7 @@ export interface RepoState {
   topLevelFiles: string[];
   /** Nested subdirectory paths within each top-level dir, up to repo depth 4 */
   topLevelSubdirs: Record<string, string[]>;
+  isTopologyReady: boolean;
   /** Dir names excluded by default (e.g. node_modules, .git, target) */
   defaultExcluded: string[];
   registerStaged: (relativePath: string, stagedInfo: StagedInfo) => void;
@@ -77,6 +78,7 @@ export function useRepoState(repoId: string): RepoState {
   const [topLevelDirs, setTopLevelDirs] = useState<string[]>([]);
   const [topLevelFiles, setTopLevelFiles] = useState<string[]>([]);
   const [topLevelSubdirs, setTopLevelSubdirs] = useState<Record<string, string[]>>({});
+  const [topologyReadyRepoId, setTopologyReadyRepoId] = useState<string | null>(null);
   const [defaultExcluded, setDefaultExcluded] = useState<string[]>([]);
   const lastHelloRefreshKeyRef = useRef<string | null>(null);
   const refreshInFlightKeyRef = useRef<string | null>(null);
@@ -126,7 +128,6 @@ export function useRepoState(repoId: string): RepoState {
           ));
         }
 
-        // Cached staged entries are only valid for the latest known file version.
         setStagedByPath((prev) => {
           const next = new Map(prev);
           if (event.changeType === "unlink" || !event.staged) {
@@ -150,6 +151,7 @@ export function useRepoState(repoId: string): RepoState {
             setTopLevelFiles(result.files);
             setTopLevelSubdirs(result.subdirs ?? {});
             setDefaultExcluded(result.defaultExcluded);
+            setTopologyReadyRepoId(requestRepoId);
           })
           .catch((err: unknown) => {
             if (isStaleTopologyRefresh()) return;
@@ -161,7 +163,6 @@ export function useRepoState(repoId: string): RepoState {
   );
 
   useEffect(() => {
-    // Reset state when repoId changes
     setRecentFiles([]);
     setStagedByPath(new Map());
     setIsLoading(true);
@@ -169,6 +170,7 @@ export function useRepoState(repoId: string): RepoState {
     setTopLevelDirs([]);
     setTopLevelFiles([]);
     setTopLevelSubdirs({});
+    setTopologyReadyRepoId(null);
     setDefaultExcluded([]);
     lastHelloRefreshKeyRef.current = null;
     refreshInFlightKeyRef.current = null;
@@ -234,6 +236,7 @@ export function useRepoState(repoId: string): RepoState {
         setTopLevelFiles(result.files);
         setTopLevelSubdirs(result.subdirs ?? {});
         setDefaultExcluded(result.defaultExcluded);
+        setTopologyReadyRepoId(repoId);
         lastHelloRefreshKeyRef.current = refreshKey;
         clearRetryTimeout();
         setHydrationStatus("ready");
@@ -289,6 +292,7 @@ export function useRepoState(repoId: string): RepoState {
     topLevelDirs,
     topLevelFiles,
     topLevelSubdirs,
+    isTopologyReady: topologyReadyRepoId === repoId,
     defaultExcluded,
     registerStaged,
   };

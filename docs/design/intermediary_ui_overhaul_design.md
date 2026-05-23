@@ -207,7 +207,8 @@ The left deck surface is a single Auto Files table matching `docs/screenshots/un
 - The same header exposes icon filters for all files, documents, code, and images.
 - Image files are a first-class feed kind and use the image icon/color family.
 - Favourites are not part of the current UI; legacy starred config remains loadable but ignored by the feed surface.
-- Rows show rank, file kind, path, quiet activity dots, trend, last active time, update count, and a 24-hour pulse strip.
+- Rows show rank, file kind, path, a quiet left-to-right activity waveform, trend, last active time, update count, and a 24-hour pulse strip.
+- The activity waveform reveals more of a rough ascending curve along the x-axis as recent weighted activity increases; it should not read like a vertical bar meter.
 - Bursty or rising files get subtle warm activity treatment without changing row height, and selected rows keep the active accent state.
 
 ---

@@ -29,7 +29,8 @@ export function useBundleState(
   repoId: string,
   topLevelDirs: string[],
   topLevelSubdirs: Record<string, string[]>,
-  defaultExcluded: string[] = []
+  defaultExcluded: string[] = [],
+  isTopologyReady = topLevelDirs.length > 0
 ): BundleState {
   const {
     subscribe,
@@ -42,7 +43,6 @@ export function useBundleState(
   } = useAgent();
   const { config: persistedConfig, setBundleSelection: persistSelection } = useConfig();
 
-  // Get saved selections for this repo
   const savedSelections = useMemo(
     () => persistedConfig.bundleSelections[repoId] ?? EMPTY_SAVED_SELECTIONS,
     [persistedConfig.bundleSelections, repoId]
@@ -58,7 +58,7 @@ export function useBundleState(
     for (const preset of repoPresets) {
       const saved = savedSelections[preset.presetId];
       initial.set(preset.presetId, createPresetState(
-        preset, topLevelDirs, saved, defaultExcluded, topLevelSubdirs
+        preset, topLevelDirs, saved, defaultExcluded, topLevelSubdirs, isTopologyReady
       ));
     }
     return initial;
@@ -84,6 +84,7 @@ export function useBundleState(
           ...preset,
           selection,
           isSelectionInitialized: true,
+          isSelectionTopologyReady: isTopologyReady,
           lastBuildError: null,
         });
       }
@@ -91,7 +92,7 @@ export function useBundleState(
     });
     // Persist to config
     persistSelection(repoId, presetId, selection);
-  }, [repoId, persistSelection]);
+  }, [isTopologyReady, repoId, persistSelection]);
 
   const { clearAllRefreshRetries, refreshBundles } = useBundleRefresh({
     client,
@@ -123,7 +124,6 @@ export function useBundleState(
     lastProgressUpdateRef,
   });
 
-  // Subscribe to events
   useEffect(() => {
     const unsubscribe = subscribe(handleEvent);
     return unsubscribe;
@@ -146,7 +146,6 @@ export function useBundleState(
     };
   }, [clearAllRefreshRetries]);
 
-  // Reset state when repoId changes
   useEffect(() => {
     const resetKey = `${repoId}|${buildPresetKey(repoPresets)}|${buildSelectionKey(
       savedSelections
@@ -159,22 +158,54 @@ export function useBundleState(
     const next = new Map<string, BundlePresetState>();
     for (const preset of repoPresets) {
       const saved = savedSelections[preset.presetId];
-      next.set(preset.presetId, createPresetState(preset, [], saved, defaultExcluded));
+      next.set(preset.presetId, createPresetState(
+        preset, topLevelDirs, saved, defaultExcluded, topLevelSubdirs, isTopologyReady
+      ));
     }
     setPresets(next);
     setActivePresetId(repoPresets[0]?.presetId ?? DEFAULT_BUNDLE_PRESET.presetId);
     lastRefreshKeyRef.current = null;
-  }, [repoId, repoPresets, savedSelections, defaultExcluded]);
+  }, [
+    repoId,
+    repoPresets,
+    savedSelections,
+    defaultExcluded,
+    topLevelDirs,
+    topLevelSubdirs,
+    isTopologyReady,
+  ]);
 
   useEffect(() => {
-    if (topLevelDirs.length === 0) {
+    if (!isTopologyReady) {
       return;
     }
     const excludedSet = new Set(defaultExcluded);
     setPresets((prev) => {
       let changed = false;
       const next = new Map(prev);
-      for (const preset of next.values()) {
+      for (const [presetId, preset] of next) {
+        if (!preset.isSelectionTopologyReady) {
+          const presetConfig = repoPresets.find((candidate) => candidate.presetId === presetId);
+          if (!presetConfig) continue;
+          const saved = savedSelections[presetId];
+          const initialized = createPresetState(
+            presetConfig,
+            topLevelDirs,
+            saved,
+            defaultExcluded,
+            topLevelSubdirs,
+            true
+          );
+          next.set(presetId, {
+            ...preset,
+            selection: initialized.selection,
+            isSelectionInitialized: initialized.isSelectionInitialized,
+            isSelectionTopologyReady: true,
+          });
+          changed = true;
+          continue;
+        }
+
         if (!preset.isSelectionInitialized) {
           const selectedDirs = [...topLevelDirs].filter((d) => !excludedSet.has(d)).sort();
           const autoExcludedSubs = computeDefaultExcludedSubdirs(
@@ -189,6 +220,7 @@ export function useBundleState(
               excludedFiles: preset.selection.excludedFiles,
             },
             isSelectionInitialized: true,
+            isSelectionTopologyReady: true,
           });
           changed = true;
           continue;
@@ -215,9 +247,15 @@ export function useBundleState(
       }
       return changed ? next : prev;
     });
-  }, [topLevelDirs, defaultExcluded, topLevelSubdirs]);
+  }, [
+    topLevelDirs,
+    defaultExcluded,
+    topLevelSubdirs,
+    isTopologyReady,
+    repoPresets,
+    savedSelections,
+  ]);
 
-  // Refresh bundles on connect
   useEffect(() => {
     if (
       connectionState.status !== "connected" ||

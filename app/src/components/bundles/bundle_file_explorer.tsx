@@ -16,7 +16,7 @@ import {
   isSelfOrDescendant,
   sortedWith,
   withoutPath,
-} from "./bundle_explorer_selection.js";
+} from "../../lib/bundles/bundle_selection_visibility.js";
 
 interface BundleFileExplorerProps {
   repoId: string;

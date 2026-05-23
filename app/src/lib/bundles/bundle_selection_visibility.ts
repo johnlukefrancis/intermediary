@@ -1,5 +1,5 @@
-// Path: app/src/components/bundles/bundle_explorer_selection.ts
-// Description: Selection helpers for the bundle file explorer
+// Path: app/src/lib/bundles/bundle_selection_visibility.ts
+// Description: Shared path visibility helpers for bundle selection state
 
 import type { BundleSelection } from "../../shared/protocol.js";
 
@@ -36,7 +36,10 @@ function hasExcludedAncestor(path: string, excludedSubdirs: readonly string[]): 
 export function isDirectoryEnabled(path: string, selection: BundleSelection): boolean {
   if (isTopLevelPath(path)) return true;
   const topLevel = path.split("/")[0] ?? path;
-  return selection.topLevelDirs.includes(topLevel) && !hasExcludedAncestor(path, selection.excludedSubdirs);
+  return (
+    selection.topLevelDirs.includes(topLevel) &&
+    !hasExcludedAncestor(path, selection.excludedSubdirs)
+  );
 }
 
 export function isDirectoryIncluded(path: string, selection: BundleSelection): boolean {

@@ -4,7 +4,7 @@
 import type React from "react";
 import { useCallback } from "react";
 import { FileIcon, getFileFamily } from "../../lib/icons/index.js";
-import { baseName } from "./bundle_explorer_selection.js";
+import { baseName } from "../../lib/bundles/bundle_selection_visibility.js";
 
 interface BundleExplorerFileRowProps {
   path: string;

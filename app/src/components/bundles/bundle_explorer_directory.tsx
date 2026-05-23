@@ -13,7 +13,7 @@ import {
   isDirectoryIncluded,
   isFileEnabled,
   isFileIncluded,
-} from "./bundle_explorer_selection.js";
+} from "../../lib/bundles/bundle_selection_visibility.js";
 
 export interface DirectoryListingState {
   status: "idle" | "loading" | "ready" | "error";

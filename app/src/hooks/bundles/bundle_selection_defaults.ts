@@ -83,13 +83,15 @@ export function mergeExcludedSubdirs(existing: string[], autoExcluded: string[])
 function createEmptyPresetState(
   preset: BundlePreset,
   selection: BundleSelection,
-  isSelectionInitialized: boolean
+  isSelectionInitialized: boolean,
+  isSelectionTopologyReady: boolean
 ): BundlePresetState {
   return {
     presetId: preset.presetId,
     presetName: preset.presetName,
     selection,
     isSelectionInitialized,
+    isSelectionTopologyReady,
     isBuilding: false,
     isCancelling: false,
     activeBuildId: null,
@@ -105,52 +107,58 @@ export function createPresetState(
   topLevelDirs: string[] = [],
   savedSelection?: BundleSelection,
   defaultExcluded: string[] = [],
-  topLevelSubdirs: Record<string, string[]> = {}
+  topLevelSubdirs: Record<string, string[]> = {},
+  isTopologyReady = topLevelDirs.length > 0
 ): BundlePresetState {
-  const excludedSet = new Set(defaultExcluded);
+  const activeDefaultExcluded = isTopologyReady ? defaultExcluded : [];
+  const excludedSet = new Set(activeDefaultExcluded);
 
   if (savedSelection) {
-    const normalizedDirs = normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs);
-    const autoExcludedSubs = computeDefaultExcludedSubdirs(
-      normalizedDirs, topLevelSubdirs, defaultExcluded
+    const normalizedDirs = isTopologyReady
+      ? normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs)
+      : normalizeTopLevelDirs(savedSelection.topLevelDirs);
+    const selectedDirs = normalizedDirs.filter((d) => !excludedSet.has(d));
+    const autoExcludedSubs = isTopologyReady
+      ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
+      : [];
+    const mergedExcluded = mergeExcludedSubdirs(
+      savedSelection.excludedSubdirs,
+      autoExcludedSubs
     );
-    const existingExcluded = new Set(savedSelection.excludedSubdirs);
-    const mergedExcluded = [...savedSelection.excludedSubdirs];
-    for (const sub of autoExcludedSubs) {
-      if (!existingExcluded.has(sub)) {
-        mergedExcluded.push(sub);
-      }
-    }
     return createEmptyPresetState(
       preset,
       {
         includeRoot: savedSelection.includeRoot,
-        topLevelDirs: normalizedDirs,
+        topLevelDirs: selectedDirs,
         excludedSubdirs: mergedExcluded.sort(),
         excludedFiles: [...savedSelection.excludedFiles].sort(),
       },
-      true
+      true,
+      isTopologyReady
     );
   }
 
   if (preset.topLevelDirs.length > 0) {
-    const normalizedDirs = normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs);
+    const normalizedDirs = isTopologyReady
+      ? normalizeTopLevelDirs(preset.topLevelDirs, topLevelDirs)
+      : normalizeTopLevelDirs(preset.topLevelDirs);
     const selectedDirs = normalizedDirs.filter((d) => !excludedSet.has(d));
     return createEmptyPresetState(
       preset,
       {
         includeRoot: preset.includeRoot,
         topLevelDirs: selectedDirs,
-        excludedSubdirs: computeDefaultExcludedSubdirs(
-          selectedDirs, topLevelSubdirs, defaultExcluded
-        ),
+        excludedSubdirs: isTopologyReady
+          ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
+          : [],
         excludedFiles: [],
       },
-      true
+      isTopologyReady,
+      isTopologyReady
     );
   }
 
-  const selectedDirs = topLevelDirs.length > 0
+  const selectedDirs = isTopologyReady
     ? [...topLevelDirs].filter((d) => !excludedSet.has(d)).sort()
     : [];
   return createEmptyPresetState(
@@ -158,12 +166,13 @@ export function createPresetState(
     {
       includeRoot: preset.includeRoot,
       topLevelDirs: selectedDirs,
-      excludedSubdirs: computeDefaultExcludedSubdirs(
-        selectedDirs, topLevelSubdirs, defaultExcluded
-      ),
+      excludedSubdirs: isTopologyReady
+        ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
+        : [],
       excludedFiles: [],
     },
-    topLevelDirs.length > 0
+    isTopologyReady,
+    isTopologyReady
   );
 }
 

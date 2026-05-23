@@ -22,6 +22,7 @@ import {
   type FileSortMode,
   type FileTypeFilter,
 } from "../lib/files/file_feed.js";
+import { isFileIncluded } from "../lib/bundles/bundle_selection_visibility.js";
 import type { UiMode } from "../shared/config.js";
 
 interface RepoTabProps {
@@ -39,10 +40,17 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     topLevelDirs,
     topLevelFiles,
     topLevelSubdirs,
+    isTopologyReady,
     defaultExcluded,
     registerStaged,
   } = useRepoState(repoId);
-  const bundleState = useBundleState(repoId, topLevelDirs, topLevelSubdirs, defaultExcluded);
+  const bundleState = useBundleState(
+    repoId,
+    topLevelDirs,
+    topLevelSubdirs,
+    defaultExcluded,
+    isTopologyReady
+  );
   const { dragState, handleDragStart, handleMultiDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
@@ -50,10 +58,22 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const repoWorkspace = useRepoWorkspace(repoId);
   const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
   const [sortMode, setSortMode] = useState<FileSortMode>("auto");
+  const activePreset = bundleState.presets.get(bundleState.activePresetId);
+  const activeBundleSelection =
+    activePreset?.isSelectionInitialized && activePreset.isSelectionTopologyReady
+    ? activePreset.selection
+    : null;
+
+  const bundleVisibleRecentFiles = useMemo(
+    () => activeBundleSelection
+      ? recentFiles.filter((file) => isFileIncluded(file.path, activeBundleSelection))
+      : recentFiles,
+    [activeBundleSelection, recentFiles]
+  );
 
   const feedFiles = useMemo(
-    () => buildAutoFileFeed(recentFiles, fileFilter, sortMode),
-    [fileFilter, recentFiles, sortMode]
+    () => buildAutoFileFeed(bundleVisibleRecentFiles, fileFilter, sortMode),
+    [bundleVisibleRecentFiles, fileFilter, sortMode]
   );
 
   const fileSelection = useFileSelection(feedFiles);
@@ -121,10 +141,11 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           ? "Unable to load files"
           : "No recent files";
 
-  const fileEmptyMessage =
-    recentFiles.length > 0 && feedFiles.length === 0
-      ? "No matching files"
-      : recentEmptyMessage;
+  const fileEmptyMessage = recentFiles.length > 0 && feedFiles.length === 0
+    ? activeBundleSelection && bundleVisibleRecentFiles.length === 0
+      ? "Hidden by ZIP selection"
+      : "No matching files"
+    : recentEmptyMessage;
 
   const isHandset = uiMode === "handset";
 

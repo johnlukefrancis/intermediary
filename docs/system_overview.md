@@ -70,7 +70,8 @@ Intermediary uses a **host-routed architecture**:
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
   - Shared workspace replaces the Auto Files panel for supported UTF-8 file scratch buffers or supported image previews; scratch edits never write back to repo files
-  - Auto Files exposes Auto/Latest/Active sort modes plus All/Documents/Code/Images icon filters; rows render persisted activity dots, trend, last active time, update count, and a 24-hour pulse strip
+  - Auto Files exposes Auto/Latest/Active sort modes plus All/Documents/Code/Images icon filters; rows render a recent weighted left-to-right activity waveform, trend, last active time, update count, and a 24-hour pulse strip
+  - Auto Files is scoped by the active Zip Bundles preset after repo topology is ready: files excluded by the visible bundle selection are hidden from the left picker until the active preset selection includes them again
   - File-row right-click context menu with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
   - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as Auto Files rows
@@ -208,7 +209,7 @@ Per-repo notes are stored outside config under `<app_local_data>/notes/`, keyed 
   3) `codeGlobs`
   4) fallback extension classifier (generated broad-language list)
 - Classification excludes are applied at watcher time to suppress noisy/generated files in Auto Files.
-- Bundle excludes remain separate and affect only zip build contents.
+- Classification excludes affect watcher history, while the topology-ready active Zip Bundles selection is a UI visibility filter for Auto Files and the content contract for bundle builds.
 
 ## Why This Architecture?
 
@@ -254,7 +255,7 @@ intermediary/
 
 ## Key Workflows
 
-1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates the Auto Files table from the unified recent list; topology-changing directory events also refresh bundle explorer root metadata
+1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates the Auto Files table from the unified recent list after applying the topology-ready active Zip Bundles selection; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
 3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → backend scans selected roots while honoring subdirectory and file exclusions → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 
