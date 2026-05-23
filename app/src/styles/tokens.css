@@ -122,6 +122,16 @@
   --color-info-soft: var(--theme-info-soft);
   --color-info-muted: var(--theme-info-muted);
 
+  /* Activity telemetry */
+  --color-activity-idle: var(--theme-activity-idle);
+  --color-activity-low: var(--theme-activity-low);
+  --color-activity-mid: var(--theme-activity-mid);
+  --color-activity-high: var(--theme-activity-high);
+  --color-activity-hot: var(--theme-activity-hot);
+  --color-activity-glow: var(--theme-activity-glow);
+  --color-activity-hot-glow: var(--theme-activity-hot-glow);
+  --color-activity-row-soft: var(--theme-activity-row-soft);
+
   /* Glass surface */
   --glass-bg: var(--theme-glass-bg);
   --glass-border: var(--theme-glass-border);

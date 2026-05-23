@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/three_column.tsx
-// Description: Standard layout component with File Intelligence and zip bundles
+// Description: Standard layout component with Auto files and zip bundles
 
 import type React from "react";
 import "../../styles/columns.css";

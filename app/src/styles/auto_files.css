@@ -1,0 +1,122 @@
+/*
+ * Path: app/src/styles/auto_files.css
+ * Description: Unified Auto files table matching the ranked mockup reference
+ */
+
+.auto-files-panel {
+  min-width: 0;
+}
+
+.auto-files-content {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.auto-files-table {
+  min-width: 720px;
+  font-family: var(--font-mono);
+}
+
+.auto-files-table-head, .auto-files-row {
+  display: grid;
+  grid-template-columns: 42px minmax(260px, 1fr) 120px 44px 92px 50px 72px;
+  align-items: center;
+}
+
+.auto-files-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: rgba(6, 6, 10, 0.84);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.auto-files-table-head [data-emphasis] {
+  color: var(--color-accent);
+}
+
+.auto-files-row {
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  color: var(--color-text-secondary);
+  cursor: grab;
+  user-select: none;
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.auto-files-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
+}
+
+.auto-files-row[data-selected] {
+  background:
+    linear-gradient(90deg, var(--color-accent-soft), transparent 44%),
+    rgba(255, 255, 255, 0.045);
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
+}
+
+.auto-files-rank, .auto-files-last, .auto-files-count {
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+}
+
+.auto-files-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.auto-files-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 30px;
+  height: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-xs);
+  color: var(--color-text-secondary);
+  font-size: 8px;
+  line-height: 1;
+}
+
+.auto-files-kind .file-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.auto-files-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auto-files-name {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auto-files-dir {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -7,6 +7,7 @@ mod generated_code_extensions;
 mod ignore_matcher;
 mod image_file_reader;
 mod mru_index;
+mod recent_files_normalizer;
 mod recent_files_store;
 #[cfg(test)]
 mod recent_files_store_tests;

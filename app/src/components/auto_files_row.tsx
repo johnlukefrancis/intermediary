@@ -1,5 +1,5 @@
-// Path: app/src/components/file_intelligence_row.tsx
-// Description: Single File Intelligence table row with activity telemetry
+// Path: app/src/components/auto_files_row.tsx
+// Description: Single Auto files table row with activity telemetry
 
 import type React from "react";
 import { useCallback, useRef } from "react";
@@ -12,7 +12,7 @@ import type {
 
 const DRAG_START_DISTANCE_PX = 6;
 
-interface FileIntelligenceRowProps {
+interface AutoFilesRowProps {
   file: FeedFileEntry;
   rank: number;
   isSelected: boolean;
@@ -66,7 +66,7 @@ function pulseStyle(count: number, pulseMax: number): React.CSSProperties & {
   return { "--pulse-alpha": String(0.22 + (count / pulseMax) * 0.78) };
 }
 
-export function FileIntelligenceRow({
+export function AutoFilesRow({
   file,
   rank,
   isSelected,
@@ -75,7 +75,7 @@ export function FileIntelligenceRow({
   onSelect,
   onOpen,
   onContextMenu,
-}: FileIntelligenceRowProps): React.JSX.Element {
+}: AutoFilesRowProps): React.JSX.Element {
   const dragStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
   const clearPointerCapture = useCallback((target: Element, pointerId: number): void => {
@@ -139,7 +139,7 @@ export function FileIntelligenceRow({
 
   return (
     <div
-      className="file-intelligence-row"
+      className="auto-files-row"
       data-selected={isSelected || undefined}
       data-activity={file.activityBadge ?? undefined}
       data-emphasis={sortMode}
@@ -154,41 +154,41 @@ export function FileIntelligenceRow({
       }}
       title="Double-click to preview supported files; drag to stage for handoff; right-click for file actions"
     >
-      <span className="file-intelligence-rank">{rank.toString().padStart(2, "0")}</span>
-      <div className="file-intelligence-file">
-        <span className="file-intelligence-kind">
+      <span className="auto-files-rank">{rank.toString().padStart(2, "0")}</span>
+      <div className="auto-files-file">
+        <span className="auto-files-kind">
           <FileIcon family={getFileFamily(file.path)} />
           <span>{getExtensionLabel(file.path)}</span>
         </span>
-        <span className="file-intelligence-copy">
-          <span className="file-intelligence-name">{getFileName(file.path)}</span>
-          {directory && <span className="file-intelligence-dir">{directory}</span>}
+        <span className="auto-files-copy">
+          <span className="auto-files-name">{getFileName(file.path)}</span>
+          {directory && <span className="auto-files-dir">{directory}</span>}
         </span>
       </div>
-      <div className="file-intelligence-activity" aria-label="Activity intensity">
+      <div className="auto-files-activity" aria-label="Activity intensity">
         {Array.from({ length: 10 }, (_, index) => (
           <span
             key={index}
-            className="file-intelligence-activity-cell"
+            className="auto-files-activity-cell"
             data-lit={index < file.activityBlocks || undefined}
             data-level={index}
           />
         ))}
       </div>
       <span
-        className="file-intelligence-trend"
+        className="auto-files-trend"
         data-trend={file.trend}
         aria-label={trendLabel(file.trend)}
       >
         {file.trend === "up" ? "↑" : file.trend === "down" ? "↓" : "–"}
       </span>
-      <span className="file-intelligence-last">{formatRelativeTime(file.activity.lastSeenAtIso)}</span>
-      <span className="file-intelligence-count">{file.activity.updateCount}</span>
-      <div className="file-intelligence-pulse" aria-label="24-hour pulse">
+      <span className="auto-files-last">{formatRelativeTime(file.activity.lastSeenAtIso)}</span>
+      <span className="auto-files-count">{file.activity.updateCount}</span>
+      <div className="auto-files-pulse" aria-label="24-hour pulse">
         {file.pulse.map((count, index) => (
           <span
             key={index}
-            className="file-intelligence-pulse-dot"
+            className="auto-files-pulse-dot"
             style={pulseStyle(count, pulseMax)}
             data-lit={count > 0 || undefined}
           />

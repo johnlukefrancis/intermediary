@@ -44,3 +44,39 @@ fn v24_bundle_selection_without_excluded_files_gets_default() {
     );
     assert!(selection.excluded_files.is_empty());
 }
+
+#[test]
+fn v25_default_recent_files_limit_migrates_to_200() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(25_u64.into());
+    config_json["recentFilesLimit"] = Value::Number(40_u64.into());
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert_eq!(result.config.recent_files_limit, 200);
+}
+
+#[test]
+fn v25_custom_recent_files_limit_is_preserved() {
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("config.json");
+
+    let mut config_json = serde_json::to_value(PersistedConfig::default()).unwrap();
+    config_json["configVersion"] = Value::Number(25_u64.into());
+    config_json["recentFilesLimit"] = Value::Number(120_u64.into());
+
+    let mut file = fs::File::create(&path).unwrap();
+    writeln!(file, "{config_json}").unwrap();
+
+    let result = load_from_disk(&path).unwrap();
+    assert!(result.migration_applied);
+    assert_eq!(result.config.config_version, CONFIG_VERSION);
+    assert_eq!(result.config.recent_files_limit, 120);
+}

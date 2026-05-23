@@ -1,12 +1,12 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with File Intelligence and zip bundles
+// Description: Generic repo tab component with Auto files and zip bundles
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
-import { FileIntelligencePanel } from "../components/file_intelligence_panel.js";
+import { AutoFilesPanel } from "../components/auto_files_panel.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
@@ -18,7 +18,7 @@ import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
 import {
-  buildFileIntelligenceFeed,
+  buildAutoFileFeed,
   type FileSortMode,
   type FileTypeFilter,
 } from "../lib/files/file_feed.js";
@@ -49,14 +49,14 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const noteState = useNotes(repoId);
   const repoWorkspace = useRepoWorkspace(repoId);
   const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
-  const [sortMode, setSortMode] = useState<FileSortMode>("intelligence");
+  const [sortMode, setSortMode] = useState<FileSortMode>("auto");
 
-  const intelligenceFiles = useMemo(
-    () => buildFileIntelligenceFeed(recentFiles, fileFilter, sortMode),
+  const feedFiles = useMemo(
+    () => buildAutoFileFeed(recentFiles, fileFilter, sortMode),
     [fileFilter, recentFiles, sortMode]
   );
 
-  const fileSelection = useFileSelection(intelligenceFiles);
+  const fileSelection = useFileSelection(feedFiles);
 
   const handleBundleDragStart = useCallback(
     async (hostPath: string) => {
@@ -122,15 +122,15 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           : "No recent files";
 
   const fileEmptyMessage =
-    recentFiles.length > 0 && intelligenceFiles.length === 0
+    recentFiles.length > 0 && feedFiles.length === 0
       ? "No matching files"
       : recentEmptyMessage;
 
   const isHandset = uiMode === "handset";
 
   const renderFilePanel = (headerPrefix?: React.ReactNode): React.JSX.Element => (
-    <FileIntelligencePanel
-      files={intelligenceFiles}
+    <AutoFilesPanel
+      files={feedFiles}
       repoId={repoId}
       emptyMessage={fileEmptyMessage}
       filter={fileFilter}

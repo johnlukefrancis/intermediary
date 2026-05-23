@@ -1,0 +1,105 @@
+/*
+ * Path: app/src/styles/auto_files_telemetry.css
+ * Description: Activity and pulse telemetry for Auto files rows
+ */
+
+.auto-files-row[data-activity="hot"],
+.auto-files-row[data-activity="rising"] {
+  background:
+    linear-gradient(90deg, var(--color-activity-row-soft), transparent 40%),
+    rgba(255, 255, 255, 0.018);
+}
+
+.auto-files-row[data-selected][data-activity] {
+  background:
+    linear-gradient(90deg, var(--color-accent-soft), transparent 44%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.auto-files-activity {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 16px;
+}
+
+.auto-files-pulse {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.auto-files-activity-cell {
+  --activity-cell-color: var(--color-activity-low);
+  --activity-cell-rise: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-activity-idle);
+  opacity: 0.42;
+  transform: translateY(calc(var(--activity-cell-rise) * -1px));
+}
+
+.auto-files-activity-cell[data-lit] {
+  background: color-mix(in srgb, var(--activity-cell-color) 64%, transparent);
+  box-shadow: 0 0 4px 0 var(--color-activity-glow);
+  opacity: 0.78;
+}
+
+.auto-files-activity-cell[data-lit][data-level="0"],
+.auto-files-activity-cell[data-lit][data-level="1"] {
+  --activity-cell-color: var(--color-activity-low);
+  --activity-cell-rise: 0;
+}
+
+.auto-files-activity-cell[data-lit][data-level="2"],
+.auto-files-activity-cell[data-lit][data-level="3"],
+.auto-files-activity-cell[data-lit][data-level="4"] {
+  --activity-cell-color: var(--color-activity-mid);
+  --activity-cell-rise: 1;
+}
+
+.auto-files-activity-cell[data-lit][data-level="5"],
+.auto-files-activity-cell[data-lit][data-level="6"],
+.auto-files-activity-cell[data-lit][data-level="7"] {
+  --activity-cell-color: var(--color-activity-high);
+  --activity-cell-rise: 2;
+}
+
+.auto-files-activity-cell[data-lit][data-level="8"],
+.auto-files-activity-cell[data-lit][data-level="9"] {
+  --activity-cell-color: var(--color-activity-hot);
+  --activity-cell-rise: 3;
+}
+
+.auto-files-row[data-activity] .auto-files-activity-cell[data-lit] {
+  background: var(--activity-cell-color);
+  box-shadow: 0 0 6px 0 var(--color-activity-hot-glow);
+  opacity: 0.92;
+}
+
+.auto-files-trend {
+  font-size: var(--text-md);
+  text-align: center;
+}
+
+.auto-files-trend[data-trend="up"] {
+  color: var(--color-success);
+}
+
+.auto-files-trend[data-trend="down"] {
+  color: var(--color-activity-hot);
+}
+
+.auto-files-pulse-dot {
+  width: 3px;
+  height: 3px;
+  background: var(--color-activity-idle);
+  border-radius: 50%;
+}
+
+.auto-files-pulse-dot[data-lit] {
+  background: var(--color-activity-low);
+  box-shadow: 0 0 5px 0 var(--color-activity-glow);
+  opacity: var(--pulse-alpha, 0.6);
+}

@@ -1,10 +1,10 @@
-// Path: app/src/components/file_intelligence_header.tsx
-// Description: Header controls for the unified File Intelligence panel
+// Path: app/src/components/auto_files_header.tsx
+// Description: Header controls for the unified Auto files panel
 
 import type React from "react";
 import type { FileSortMode, FileTypeFilter } from "../lib/files/file_feed.js";
 
-interface FileIntelligenceHeaderProps {
+interface AutoFilesHeaderProps {
   filter: FileTypeFilter;
   sortMode: FileSortMode;
   prefix?: React.ReactNode;
@@ -13,7 +13,7 @@ interface FileIntelligenceHeaderProps {
 }
 
 const SORT_MODES: ReadonlyArray<{ value: FileSortMode; label: string; icon: React.ReactNode }> = [
-  { value: "intelligence", label: "Intelligence", icon: <GridIcon /> },
+  { value: "auto", label: "Auto", icon: <GridIcon /> },
   { value: "latest", label: "Latest", icon: <ListIcon /> },
   { value: "active", label: "Active", icon: <PulseIcon /> },
 ];
@@ -25,50 +25,47 @@ const FILTERS: ReadonlyArray<{ value: FileTypeFilter; label: string; icon: React
   { value: "image", label: "Images", icon: <ImageIcon /> },
 ];
 
-export function FileIntelligenceHeader({
+export function AutoFilesHeader({
   filter,
   sortMode,
   prefix,
   onFilterChange,
   onSortModeChange,
-}: FileIntelligenceHeaderProps): React.JSX.Element {
+}: AutoFilesHeaderProps): React.JSX.Element {
   return (
-    <div className="file-intelligence-header">
+    <div className="auto-files-header">
       {prefix}
-      <h2 className="panel-title">File Intelligence</h2>
-      <div className="file-intelligence-controls">
-        <div className="file-intelligence-mode" role="toolbar" aria-label="File sort modes">
-          {SORT_MODES.map((entry) => (
-            <button
-              key={entry.value}
-              type="button"
-              className={`file-intelligence-icon-button${
-                sortMode === entry.value ? " file-intelligence-icon-button--active" : ""
-              }`}
-              aria-label={`${entry.label} sort`}
-              title={`${entry.label} sort`}
-              onClick={() => { onSortModeChange(entry.value); }}
-            >
-              {entry.icon}
-            </button>
-          ))}
-        </div>
-        <div className="file-intelligence-filter" role="toolbar" aria-label="File type filters">
-          {FILTERS.map((entry) => (
-            <button
-              key={entry.value}
-              type="button"
-              className={`file-intelligence-filter-button${
-                filter === entry.value ? " file-intelligence-filter-button--active" : ""
-              }`}
-              onClick={() => { onFilterChange(entry.value); }}
-              aria-label={`Show ${entry.label}`}
-            >
-              {entry.icon}
-              <span>{entry.label}</span>
-            </button>
-          ))}
-        </div>
+      <div className="auto-files-mode" role="toolbar" aria-label="File sort modes">
+        {SORT_MODES.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            className={`auto-files-icon-button${
+              sortMode === entry.value ? " auto-files-icon-button--active" : ""
+            }`}
+            aria-label={`${entry.label} sort`}
+            title={`${entry.label} sort`}
+            onClick={() => { onSortModeChange(entry.value); }}
+          >
+            {entry.icon}
+          </button>
+        ))}
+      </div>
+      <div className="auto-files-filter" role="toolbar" aria-label="File type filters">
+        {FILTERS.map((entry) => (
+          <button
+            key={entry.value}
+            type="button"
+            className={`auto-files-filter-button${
+              filter === entry.value ? " auto-files-filter-button--active" : ""
+            }`}
+            onClick={() => { onFilterChange(entry.value); }}
+            aria-label={`Show ${entry.label}`}
+          >
+            {entry.icon}
+            <span>{entry.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

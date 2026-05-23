@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer + File Intelligence)
+Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer + Auto Files)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -136,6 +136,15 @@ Per-tab accent colors are now **config-driven** rather than hardcoded in CSS:
 | Info | `#93c5fd` | `#1a2a3d` | `#23324d` |
 | Warning | `#fbbf24` | `#2a2414` | `#7a5c1d` |
 
+### Activity Telemetry
+
+Activity meters use dedicated semantic tokens instead of component-local colors:
+
+- `--color-activity-idle`, `--color-activity-low`, `--color-activity-mid`, `--color-activity-high`, and `--color-activity-hot`
+- `--color-activity-glow`, `--color-activity-hot-glow`, and `--color-activity-row-soft`
+
+Normal rows should stay muted. Hot/rising rows are the only rows that should make the warm/high activity colors visually prominent.
+
 ---
 
 ## Spacing Scale
@@ -172,7 +181,7 @@ Based on 4px unit:
 
 The shared workspace is the clean, full-pane surface used for per-repo notes, opened file scratch buffers, and image previews.
 
-- Standard layout: one workspace panel replaces File Intelligence while the Zips panel remains visible.
+- Standard layout: one workspace panel replaces Auto Files while the Zips panel remains visible.
 - Handset layout: the workspace replaces the active deck content until closed.
 - Editor text uses `--font-mono`, `--color-text-primary`, and active accent variables for caret, selection, focus rail, and title brackets.
 - Workspace controls use existing deck panel headers and `panel-header-icon` buttons; text file buffers have no save action because they never write back to repository files.
@@ -185,20 +194,20 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
 
 - Root-level files are visible beside top-level directories; expanding a directory lazily fetches only that directory's direct files and subdirectories.
 - Directory toggles remain the authority for including top-level directories and excluding nested subdirectories.
-- File rows use the same `FileIcon` family/color system as File Intelligence rows; the icon is the include/exclude toggle for that file.
+- File rows use the same `FileIcon` family/color system as Auto Files rows; the icon is the include/exclude toggle for that file.
 - Included file icons carry a strong `currentColor` glow derived from the icon color; excluded files keep the same icon color with lower opacity and a softer glow.
 - File-name right-click menus reuse the existing file actions (`Open Containing Folder`, `Open File`, `Copy Relative Path`), and double-click opens through the shared workspace.
 
-## File Intelligence
+## Auto Files
 
-The left deck surface is a single File Intelligence table matching `docs/screenshots/unified_files_ref.png`.
+The left deck surface is a single Auto Files table matching `docs/screenshots/unified_files_ref.png`.
 
 - The table spans the former Latest and Active lane width while Zips remains a separate right panel.
-- The header exposes three sort modes: Intelligence, Latest, and Active.
+- The header exposes three sort modes: Auto, Latest, and Active.
 - The same header exposes icon filters for all files, documents, code, and images.
 - Image files are a first-class feed kind and use the image icon/color family.
 - Favourites are not part of the current UI; legacy starred config remains loadable but ignored by the feed surface.
-- Rows show rank, file kind, path, activity blocks, trend, last active time, update count, and a 24-hour pulse strip.
+- Rows show rank, file kind, path, quiet activity dots, trend, last active time, update count, and a 24-hour pulse strip.
 - Bursty or rising files get subtle warm activity treatment without changing row height, and selected rows keep the active accent state.
 
 ---
@@ -437,7 +446,7 @@ Phase 2: Wiring (complete)
 Phase 3: Migration (complete)
 - [x] Refactor `main.css` to layout-only
 - [x] Migrate `status_bar.css` (fix --bg-hover bug)
-- [x] Replace `file_row.css` with `file_intelligence.css`
+- [x] Replace `file_row.css` with `auto_files.css`
 - [x] Migrate `bundle_column.css`
 - [x] Migrate `offline_banner.css`
 - [x] Migrate `drag_error_notice.css`

@@ -1,11 +1,11 @@
-// Path: app/src/components/file_intelligence_panel.tsx
-// Description: Unified File Intelligence panel with ranked telemetry table
+// Path: app/src/components/auto_files_panel.tsx
+// Description: Unified Auto files panel with ranked telemetry table
 
 import type React from "react";
 import { useCallback, useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "./context_menu.js";
-import { FileIntelligenceHeader } from "./file_intelligence_header.js";
-import { FileIntelligenceRow } from "./file_intelligence_row.js";
+import { AutoFilesHeader } from "./auto_files_header.js";
+import { AutoFilesRow } from "./auto_files_row.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useFileActions } from "../hooks/use_file_actions.js";
 import type {
@@ -15,7 +15,7 @@ import type {
 } from "../lib/files/file_feed.js";
 import type { RepoRoot } from "../shared/config.js";
 
-interface FileIntelligencePanelProps {
+interface AutoFilesPanelProps {
   files: FeedFileEntry[];
   repoId: string;
   emptyMessage?: string;
@@ -39,7 +39,7 @@ interface ContextMenuState {
   file: FeedFileEntry;
 }
 
-export function FileIntelligencePanel({
+export function AutoFilesPanel({
   files,
   repoId,
   emptyMessage = "No files",
@@ -52,7 +52,7 @@ export function FileIntelligencePanel({
   onSelect,
   onDragStart,
   onOpen,
-}: FileIntelligencePanelProps): React.JSX.Element {
+}: AutoFilesPanelProps): React.JSX.Element {
   const { config } = useConfig();
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -74,9 +74,9 @@ export function FileIntelligencePanel({
   const isWaiting = emptyMessage.toLowerCase().includes("waiting");
 
   return (
-    <section className="panel file-intelligence-panel" data-panel="file-intelligence">
-      <header className="panel-header file-intelligence-panel-header">
-        <FileIntelligenceHeader
+    <section className="panel auto-files-panel" data-panel="auto-files">
+      <header className="panel-header auto-files-panel-header">
+        <AutoFilesHeader
           filter={filter}
           sortMode={sortMode}
           prefix={headerPrefix}
@@ -84,19 +84,19 @@ export function FileIntelligencePanel({
           onSortModeChange={onSortModeChange}
         />
       </header>
-      <div className="panel-content file-intelligence-content">
+      <div className="panel-content auto-files-content">
         {files.length === 0 ? (
           <p className={isWaiting ? "empty-state empty-state--waiting" : "empty-state"}>
             {emptyMessage}
           </p>
         ) : (
-          <div className="file-intelligence-table" role="table" aria-label="File Intelligence">
-            <div className="file-intelligence-table-head" role="row">
+          <div className="auto-files-table" role="table" aria-label="Files">
+            <div className="auto-files-table-head" role="row">
               <span>#</span>
               <span>File</span>
               <span
                 data-emphasis={
-                  sortMode === "active" || sortMode === "intelligence" ? true : undefined
+                  sortMode === "active" || sortMode === "auto" ? true : undefined
                 }
               >
                 Activity
@@ -104,11 +104,11 @@ export function FileIntelligencePanel({
               <span aria-label="Trend" />
               <span data-emphasis={sortMode === "latest" ? true : undefined}>Last Active</span>
               <span> </span>
-              <span aria-label="Pulse">~</span>
+              <span aria-label="24-hour pulse" />
             </div>
-            <div className="file-intelligence-table-body">
+            <div className="auto-files-table-body">
               {files.map((file, index) => (
-                <FileIntelligenceRow
+                <AutoFilesRow
                   key={file.path}
                   file={file}
                   rank={index + 1}

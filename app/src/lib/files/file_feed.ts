@@ -1,11 +1,11 @@
 // Path: app/src/lib/files/file_feed.ts
-// Description: File intelligence filtering, ranking, and row metric helpers
+// Description: Auto file feed filtering, ranking, and row metric helpers
 
 import type { FileActivity, FileActivityBucket, FileEntry, FileKind } from "../../shared/protocol.js";
 
 export type VisibleFileKind = "docs" | "code" | "image";
 export type FileTypeFilter = "all" | VisibleFileKind;
-export type FileSortMode = "intelligence" | "latest" | "active";
+export type FileSortMode = "auto" | "latest" | "active";
 export type FileActivityBadge = "hot" | "rising";
 export type FileActivityTrend = "up" | "flat" | "down";
 
@@ -13,7 +13,7 @@ export interface FeedFileEntry extends FileEntry {
   activity: FileActivity;
   activityScore: number;
   recencyScore: number;
-  intelligenceScore: number;
+  autoScore: number;
   activityBadge: FileActivityBadge | null;
   trend: FileActivityTrend;
   activityBlocks: number;
@@ -41,16 +41,16 @@ export function filterFeedFiles(
   ));
 }
 
-export function buildFileIntelligenceFeed(
+export function buildAutoFileFeed(
   files: readonly FileEntry[],
   filter: FileTypeFilter,
   sortMode: FileSortMode,
   nowMs = Date.now()
 ): FeedFileEntry[] {
-  return sortFileIntelligenceFeed(filterFeedFiles(files, filter), sortMode, nowMs);
+  return sortAutoFileFeed(filterFeedFiles(files, filter), sortMode, nowMs);
 }
 
-export function sortFileIntelligenceFeed(
+export function sortAutoFileFeed(
   files: readonly FileEntry[],
   sortMode: FileSortMode,
   nowMs = Date.now()
@@ -68,7 +68,7 @@ function decorateFiles(files: readonly FileEntry[], nowMs: number): FeedFileEntr
       activity,
       activityScore,
       recencyScore: scoreRecency(activity, nowMs),
-      intelligenceScore: scoreIntelligence(activity, nowMs),
+      autoScore: scoreAuto(activity, nowMs),
       activityBadge: badgeActivity(activity, nowMs),
       trend: trendActivity(activity, nowMs),
       activityBlocks: activityBlockCount(activity, nowMs),
@@ -97,12 +97,12 @@ function compareByMode(a: FeedFileEntry, b: FeedFileEntry, sortMode: FileSortMod
     return compareNewest(a, b);
   }
 
-  const intelligenceDiff = b.intelligenceScore - a.intelligenceScore;
-  if (intelligenceDiff !== 0) return intelligenceDiff;
+  const autoDiff = b.autoScore - a.autoScore;
+  if (autoDiff !== 0) return autoDiff;
   return compareNewest(a, b);
 }
 
-function scoreIntelligence(activity: FileActivity, nowMs: number): number {
+function scoreAuto(activity: FileActivity, nowMs: number): number {
   return scoreActivity(activity, nowMs) + scoreRecency(activity, nowMs) * 0.85;
 }
 

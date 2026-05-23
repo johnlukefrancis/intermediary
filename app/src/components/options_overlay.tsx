@@ -250,7 +250,7 @@ export function OptionsOverlay({
             {/* Classification Excludes */}
             <ExcludesSection
               title="Classification Excludes"
-              hint="Hide noisy or generated files from File Intelligence without affecting bundles"
+              hint="Hide noisy or generated files from Auto files without affecting bundles"
               recommendedLabel="Recommended classification excludes"
               excludes={classificationExcludes}
               setExcludes={setClassificationExcludes}

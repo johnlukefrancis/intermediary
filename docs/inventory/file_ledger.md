@@ -8,6 +8,9 @@ app/splashscreen.html - Deck-themed boot screen shown before main window is read
 app/src/app.tsx - Root component with config-driven tab state management
 app/src/components/add_repo_button.tsx - "+" button for adding new repositories via directory picker
 app/src/components/agent_offline_banner.tsx - Banner with diagnostics when the host agent endpoint is offline
+app/src/components/auto_files_header.tsx - Header controls for the unified Auto files panel
+app/src/components/auto_files_panel.tsx - Unified Auto files panel with ranked telemetry table
+app/src/components/auto_files_row.tsx - Single Auto files table row with activity telemetry
 app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel button with inline progress details
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer
@@ -24,15 +27,12 @@ app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal r
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
-app/src/components/file_intelligence_header.tsx - Header controls for the unified File Intelligence panel
-app/src/components/file_intelligence_panel.tsx - Unified File Intelligence panel with ranked telemetry table
-app/src/components/file_intelligence_row.tsx - Single File Intelligence table row with activity telemetry
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
-app/src/components/layout/handset_deck.tsx - Handset deck layout for File Intelligence and zip bundles
+app/src/components/layout/handset_deck.tsx - Handset deck layout for Auto files and zip bundles
 app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Files | Zips)
-app/src/components/layout/three_column.tsx - Standard layout component with File Intelligence and zip bundles
-app/src/components/layout/workspace_layout.tsx - Layout that replaces File Intelligence with a shared workspace
+app/src/components/layout/three_column.tsx - Standard layout component with Auto files and zip bundles
+app/src/components/layout/workspace_layout.tsx - Layout that replaces Auto files with a shared workspace
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
@@ -94,7 +94,7 @@ app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
-app/src/lib/files/file_feed.ts - File intelligence filtering, ranking, and row metric helpers
+app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
@@ -126,6 +126,10 @@ app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod valida
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
 app/src/styles/agent_offline_banner.css - Banner styling for offline WSL agent diagnostics
+app/src/styles/auto_files_controls.css - Header controls for the Auto files panel
+app/src/styles/auto_files_responsive.css - Responsive rules for the Auto files panel
+app/src/styles/auto_files_telemetry.css - Activity and pulse telemetry for Auto files rows
+app/src/styles/auto_files.css - Unified Auto files table matching the ranked mockup reference
 app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
 app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main window becomes ready
 app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
@@ -135,13 +139,12 @@ app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and fil
 app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
 app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and shared file explorer controls
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
-app/src/styles/columns.css - Standard deck grid layout with File Intelligence and Zips
+app/src/styles/columns.css - Standard deck grid layout with Auto files and Zips
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
-app/src/styles/file_intelligence.css - Unified File Intelligence table matching the ranked mockup reference
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
@@ -162,7 +165,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/repo_tab.tsx - Generic repo tab component with File Intelligence and zip bundles
+app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files and zip bundles
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
@@ -198,6 +201,7 @@ crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watch
 crates/im_agent/src/repos/image_file_reader.rs - Repo-relative image file reader for in-app preview workspaces
 crates/im_agent/src/repos/mod.rs - Repository scanning module exports
 crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
+crates/im_agent/src/repos/recent_files_normalizer.rs - Normalize persisted recent-file entries against current filters
 crates/im_agent/src/repos/recent_files_store_tests.rs - Recent files persistence migration regression tests
 crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debounced atomic writes
 crates/im_agent/src/repos/repo_directory_listing.rs - Lazy repo-relative directory listing for file explorer views
@@ -319,10 +323,13 @@ src-tauri/src/lib/commands/wsl_distro.rs - Resolve WSL distro override from pers
 src-tauri/src/lib/config/generated_code_globs.rs - Generated default code globs for Rust-side persisted config migration. Generated by: scripts/classification/generate_...
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
 src-tauri/src/lib/config/io/migration_tests.rs - Focused config migration regression tests
+src-tauri/src/lib/config/io/repo_root_migration.rs - Legacy repository root migration helpers for config loading
+src-tauri/src/lib/config/io/schema_migrations.rs - Versioned persisted-config schema migrations
 src-tauri/src/lib/config/io/tests.rs - Unit tests for config I/O and migration behavior
 src-tauri/src/lib/config/mod.rs - Configuration persistence module
 src-tauri/src/lib/config/path.rs - Resolve persisted config file location for app commands and setup
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
+src-tauri/src/lib/config/types/model.rs - Supporting persisted configuration model types
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration

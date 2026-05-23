@@ -11,9 +11,10 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 use crate::logging::Logger;
-use crate::protocol::{FileEntry, FileKind};
-use crate::repos::categorizer::is_image_path;
-use crate::repos::{activity_from_mtime, normalize_activity_history};
+use crate::protocol::FileEntry;
+use crate::repos::categorizer::Categorizer;
+use crate::repos::ignore_matcher::IgnoreMatcher;
+use crate::repos::recent_files_normalizer::normalize_persisted_entries;
 
 const PERSIST_DEBOUNCE_MS: u64 = 500;
 const SCHEMA_VERSION: u32 = 3;
@@ -52,7 +53,13 @@ impl RecentFilesStore {
         }
     }
 
-    pub async fn load(&self, repo_id: &str, repo_root: &str) -> Vec<FileEntry> {
+    pub(crate) async fn load(
+        &self,
+        repo_id: &str,
+        repo_root: &str,
+        categorizer: Option<&Categorizer>,
+        ignore_matcher: Option<&IgnoreMatcher>,
+    ) -> Vec<FileEntry> {
         let file_path = self.file_path(repo_id);
         if fs::metadata(&file_path).await.is_err() {
             return Vec::new();
@@ -95,22 +102,14 @@ impl RecentFilesStore {
             );
         }
 
-        let mut entries = data.entries;
-        let mut needs_save = data.version != SCHEMA_VERSION;
-        for entry in &mut entries {
-            if entry.activity.is_none() {
-                entry.activity = Some(activity_from_mtime(&entry.mtime));
-                needs_save = true;
-            }
-            if let Some(activity) = &mut entry.activity {
-                needs_save = normalize_activity_history(activity, &entry.mtime) || needs_save;
-            }
-            if is_image_path(&entry.path) && entry.kind != FileKind::Image {
-                entry.kind = FileKind::Image;
-                needs_save = true;
-            }
-        }
-        if needs_save {
+        let normalized = normalize_persisted_entries(
+            data.entries,
+            data.version != SCHEMA_VERSION,
+            categorizer,
+            ignore_matcher,
+        );
+        let entries = normalized.entries;
+        if normalized.needs_save {
             self.schedule_save(repo_id.to_string(), repo_root.to_string(), entries.clone())
                 .await;
         }

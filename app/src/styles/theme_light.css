@@ -44,6 +44,16 @@
   --theme-info-soft: #d0e0f0;
   --theme-info-muted: #5888a8;
 
+  /* Activity telemetry */
+  --theme-activity-idle: rgba(104, 96, 84, 0.28);
+  --theme-activity-low: #5d8a61;
+  --theme-activity-mid: #8a8548;
+  --theme-activity-high: #a07142;
+  --theme-activity-hot: #b85858;
+  --theme-activity-glow: rgba(93, 138, 97, 0.2);
+  --theme-activity-hot-glow: rgba(184, 88, 88, 0.28);
+  --theme-activity-row-soft: rgba(160, 113, 66, 0.12);
+
   /* ===== GLASS SURFACE ===== */
   --theme-glass-bg: rgb(232 223 212 / calc(0.9 * var(--window-opacity-alpha)));
   --theme-glass-border: rgba(44, 38, 32, 0.08);

@@ -135,7 +135,7 @@ export const PersistedConfigSchema = z.object({
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
   /** Maximum recent files to track per repo (25-2000) */
-  recentFilesLimit: z.number().int().min(25).max(2000).default(40),
+  recentFilesLimit: z.number().int().min(25).max(2000).default(200),
   /** Remembered UI state */
   uiState: UiStateSchema.default({}),
   /** Bundle selections per repo/preset */
@@ -151,7 +151,7 @@ export const PersistedConfigSchema = z.object({
     ],
       patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     }),
-  /** Global classification excludes (used by File Intelligence only) */
+  /** Global classification excludes (used by Auto files only) */
   classificationExcludes: GlobalExcludesSchema.default({
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],

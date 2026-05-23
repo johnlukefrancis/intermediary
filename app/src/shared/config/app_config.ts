@@ -29,8 +29,8 @@ export const AppConfigSchema = z.object({
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
   /** Maximum recent files to track per repo (25-2000) */
-  recentFilesLimit: z.number().int().min(25).max(2000).default(40),
-  /** Global classification excludes for File Intelligence filtering */
+  recentFilesLimit: z.number().int().min(25).max(2000).default(200),
+  /** Global classification excludes for Auto files filtering */
   classificationExcludes: GlobalExcludesSchema.default({
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
@@ -50,7 +50,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = AppConfigSchema.parse({
   agentPort: DEFAULT_AGENT_PORT,
   autoStageGlobal: true,
   repos: [], // Empty by default - users add repos via the UI
-  recentFilesLimit: 40,
+  recentFilesLimit: 200,
   classificationExcludes: {
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],

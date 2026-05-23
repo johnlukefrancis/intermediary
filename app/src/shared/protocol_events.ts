@@ -39,7 +39,7 @@ export const FileEntrySchema = z.object({
   mtime: z.string(),
   /** Optional file size in bytes */
   sizeBytes: z.number().int().nonnegative().optional(),
-  /** Persisted activity metadata for File Intelligence ranking */
+  /** Persisted activity metadata for Auto files ranking */
   activity: FileActivitySchema.optional(),
 });
 export type FileEntry = z.infer<typeof FileEntrySchema>;
@@ -71,7 +71,7 @@ export const FileChangedEventSchema = z.object({
   kind: FileKindSchema,
   changeType: FileChangeTypeSchema,
   mtime: z.string(),
-  /** Persisted activity metadata for File Intelligence ranking */
+  /** Persisted activity metadata for Auto files ranking */
   activity: FileActivitySchema.optional(),
   /** Present when file was auto-staged */
   staged: StagedInfoSchema.optional(),

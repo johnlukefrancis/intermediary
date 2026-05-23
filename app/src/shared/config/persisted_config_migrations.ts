@@ -61,6 +61,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   // Migration: v22 -> v23: Add textureIntensityPercent (schema default handles missing field).
   // Migration: v23 -> v24: Remove legacy model-dir path excludes from the recommended baseline.
   // Migration: v24 -> v25: Add bundle selection excludedFiles (schema default handles missing field).
+  // Migration: v25 -> v26: Raise default recent file retention to keep filters from starving.
   if (config.configVersion < 18) {
     next = migrateRepoRoots(next);
   }
@@ -70,6 +71,9 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   }
   if (config.configVersion < 24) {
     next = migrateLegacyModelDirPatterns(next);
+  }
+  if (config.configVersion < 26) {
+    next = migrateRecentFilesLimitDefault(next);
   }
 
   return { ...next, configVersion: CONFIG_VERSION };
@@ -133,6 +137,17 @@ function migrateAgentDefaults(config: PersistedConfig): PersistedConfig {
     ...config,
     agentAutoStart: config.agentAutoStart,
     agentDistro: trimmedDistro.length > 0 ? trimmedDistro : null,
+  };
+}
+
+function migrateRecentFilesLimitDefault(config: PersistedConfig): PersistedConfig {
+  if (config.recentFilesLimit !== 40) {
+    return config;
+  }
+
+  return {
+    ...config,
+    recentFilesLimit: 200,
   };
 }
 

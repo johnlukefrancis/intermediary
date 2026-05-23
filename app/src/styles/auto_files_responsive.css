@@ -1,0 +1,20 @@
+/*
+ * Path: app/src/styles/auto_files_responsive.css
+ * Description: Responsive rules for the Auto files panel
+ */
+
+@media (max-width: 980px) {
+  .app[data-ui-mode="handset"] .auto-files-panel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .auto-files-header {
+    flex-wrap: wrap;
+  }
+
+  .auto-files-filter {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

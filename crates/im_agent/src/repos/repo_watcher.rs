@@ -25,7 +25,6 @@ pub struct RepoWatcherConfig {
     pub ignore_globs: Vec<String>,
     pub classification_ignore_globs: Vec<String>,
     pub mru_capacity: usize,
-    pub initial_entries: Vec<FileEntry>,
     pub recent_store: RecentFilesStore,
     pub logger: Logger,
     pub event_bus: EventBus,
@@ -52,7 +51,16 @@ impl RepoWatcher {
 
         let mut mru =
             MruIndex::new(config.mru_capacity).map_err(|err| AgentError::internal(err))?;
-        let initial_entries = filter_initial_entries(config.initial_entries, &ignore_matcher);
+        let initial_entries = config
+            .recent_store
+            .load(
+                &config.repo_id,
+                &config.root_path,
+                Some(&categorizer),
+                Some(&ignore_matcher),
+            )
+            .await;
+        let initial_entries = filter_initial_entries(initial_entries, &ignore_matcher);
         if !initial_entries.is_empty() {
             mru.load_from(initial_entries);
         }

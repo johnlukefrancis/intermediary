@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-02-06
+Updated on: 2026-05-23
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -38,7 +38,7 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 
 ## Completed Features
 
-- Three-column UI (Docs, Code, Bundles) per repo
+- Two-column Auto Files and Zip Bundles deck per repo
 - WSL agent with file watching and auto-staging
 - Windows-native host agent endpoint with per-repo backend routing
 - Native drag-out via tauri-plugin-drag

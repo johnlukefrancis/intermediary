@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/handset_deck.tsx
-// Description: Handset deck layout for File Intelligence and zip bundles
+// Description: Handset deck layout for Auto files and zip bundles
 
 import type React from "react";
 import { useState, useCallback } from "react";

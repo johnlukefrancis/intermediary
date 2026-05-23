@@ -22,6 +22,18 @@
       "summary": "Banner with diagnostics when the host agent endpoint is offline"
     },
     {
+      "path": "app/src/components/auto_files_header.tsx",
+      "summary": "Header controls for the unified Auto files panel"
+    },
+    {
+      "path": "app/src/components/auto_files_panel.tsx",
+      "summary": "Unified Auto files panel with ranked telemetry table"
+    },
+    {
+      "path": "app/src/components/auto_files_row.tsx",
+      "summary": "Single Auto files table row with activity telemetry"
+    },
+    {
       "path": "app/src/components/bundles/build_progress_button.tsx",
       "summary": "Bundle build/cancel button with inline progress details"
     },
@@ -86,18 +98,6 @@
       "summary": "Empty state UI when no repos are configured"
     },
     {
-      "path": "app/src/components/file_intelligence_header.tsx",
-      "summary": "Header controls for the unified File Intelligence panel"
-    },
-    {
-      "path": "app/src/components/file_intelligence_panel.tsx",
-      "summary": "Unified File Intelligence panel with ranked telemetry table"
-    },
-    {
-      "path": "app/src/components/file_intelligence_row.tsx",
-      "summary": "Single File Intelligence table row with activity telemetry"
-    },
-    {
       "path": "app/src/components/group_remove_button.tsx",
       "summary": "Remove button for grouped repos with confirmation"
     },
@@ -107,7 +107,7 @@
     },
     {
       "path": "app/src/components/layout/handset_deck.tsx",
-      "summary": "Handset deck layout for File Intelligence and zip bundles"
+      "summary": "Handset deck layout for Auto files and zip bundles"
     },
     {
       "path": "app/src/components/layout/handset_section_switcher.tsx",
@@ -115,11 +115,11 @@
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
-      "summary": "Standard layout component with File Intelligence and zip bundles"
+      "summary": "Standard layout component with Auto files and zip bundles"
     },
     {
       "path": "app/src/components/layout/workspace_layout.tsx",
-      "summary": "Layout that replaces File Intelligence with a shared workspace"
+      "summary": "Layout that replaces Auto files with a shared workspace"
     },
     {
       "path": "app/src/components/options_overlay.tsx",
@@ -367,7 +367,7 @@
     },
     {
       "path": "app/src/lib/files/file_feed.ts",
-      "summary": "File intelligence filtering, ranking, and row metric helpers"
+      "summary": "Auto file feed filtering, ranking, and row metric helpers"
     },
     {
       "path": "app/src/lib/icons/file_family.ts",
@@ -494,6 +494,22 @@
       "summary": "Banner styling for offline WSL agent diagnostics"
     },
     {
+      "path": "app/src/styles/auto_files_controls.css",
+      "summary": "Header controls for the Auto files panel"
+    },
+    {
+      "path": "app/src/styles/auto_files_responsive.css",
+      "summary": "Responsive rules for the Auto files panel"
+    },
+    {
+      "path": "app/src/styles/auto_files_telemetry.css",
+      "summary": "Activity and pulse telemetry for Auto files rows"
+    },
+    {
+      "path": "app/src/styles/auto_files.css",
+      "summary": "Unified Auto files table matching the ranked mockup reference"
+    },
+    {
       "path": "app/src/styles/badges.css",
       "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]"
     },
@@ -531,7 +547,7 @@
     },
     {
       "path": "app/src/styles/columns.css",
-      "summary": "Standard deck grid layout with File Intelligence and Zips"
+      "summary": "Standard deck grid layout with Auto files and Zips"
     },
     {
       "path": "app/src/styles/confirm_modal.css",
@@ -552,10 +568,6 @@
     {
       "path": "app/src/styles/empty_repo_state.css",
       "summary": "Empty state display when no repositories are configured"
-    },
-    {
-      "path": "app/src/styles/file_intelligence.css",
-      "summary": "Unified File Intelligence table matching the ranked mockup reference"
     },
     {
       "path": "app/src/styles/handset_chassis.css",
@@ -639,7 +651,7 @@
     },
     {
       "path": "app/src/tabs/repo_tab.tsx",
-      "summary": "Generic repo tab component with File Intelligence and zip bundles"
+      "summary": "Generic repo tab component with Auto files and zip bundles"
     },
     {
       "path": "app/src/types/agent_supervisor.ts",
@@ -780,6 +792,10 @@
     {
       "path": "crates/im_agent/src/repos/mru_index.rs",
       "summary": "MRU index for recent file changes"
+    },
+    {
+      "path": "crates/im_agent/src/repos/recent_files_normalizer.rs",
+      "summary": "Normalize persisted recent-file entries against current filters"
     },
     {
       "path": "crates/im_agent/src/repos/recent_files_store_tests.rs",
@@ -1266,6 +1282,14 @@
       "summary": "Focused config migration regression tests"
     },
     {
+      "path": "src-tauri/src/lib/config/io/repo_root_migration.rs",
+      "summary": "Legacy repository root migration helpers for config loading"
+    },
+    {
+      "path": "src-tauri/src/lib/config/io/schema_migrations.rs",
+      "summary": "Versioned persisted-config schema migrations"
+    },
+    {
       "path": "src-tauri/src/lib/config/io/tests.rs",
       "summary": "Unit tests for config I/O and migration behavior"
     },
@@ -1280,6 +1304,10 @@
     {
       "path": "src-tauri/src/lib/config/types.rs",
       "summary": "Persisted configuration types for Intermediary"
+    },
+    {
+      "path": "src-tauri/src/lib/config/types/model.rs",
+      "summary": "Supporting persisted configuration model types"
     },
     {
       "path": "src-tauri/src/lib/config/types/tests.rs",
