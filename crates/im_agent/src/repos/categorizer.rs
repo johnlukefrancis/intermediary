@@ -8,7 +8,7 @@ use crate::error::AgentError;
 use crate::protocol::FileKind;
 
 const DOC_EXTENSIONS: &[&str] = &[".md", ".txt", ".rst", ".adoc", ".asciidoc", ".wiki"];
-const DOC_IMAGE_EXTENSIONS: &[&str] = &[
+const IMAGE_EXTENSIONS: &[&str] = &[
     ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif", ".heic", ".heif", ".tiff", ".tif",
 ];
 
@@ -39,6 +39,10 @@ impl Categorizer {
 
     pub fn categorize(&self, relative_path: &str) -> FileKind {
         let normalized = relative_path.replace('\\', "/");
+
+        if is_image_path(&normalized) {
+            return FileKind::Image;
+        }
 
         if let Some(docs) = &self.docs {
             if docs.is_match(&normalized) {
@@ -83,6 +87,10 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
     let parts: Vec<&str> = lower.split('/').collect();
     let file_name = parts.last().copied().unwrap_or_default();
 
+    if has_extension(file_name, IMAGE_EXTENSIONS) {
+        return FileKind::Image;
+    }
+
     for part in parts.iter().take(parts.len().saturating_sub(1)) {
         if DOC_DIRS.iter().any(|dir| dir == part) {
             return FileKind::Docs;
@@ -92,9 +100,6 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
     if let Some(ext) = file_name.rsplit_once('.') {
         let ext = format!(".{}", ext.1);
         if DOC_EXTENSIONS.contains(&ext.as_str()) {
-            return FileKind::Docs;
-        }
-        if DOC_IMAGE_EXTENSIONS.contains(&ext.as_str()) {
             return FileKind::Docs;
         }
         if GENERATED_CODE_EXTENSIONS.contains(&ext.as_str()) {
@@ -111,6 +116,22 @@ fn fallback_categorize(relative_path: &str) -> FileKind {
     }
 
     FileKind::Other
+}
+
+pub(crate) fn is_image_path(relative_path: &str) -> bool {
+    let lower = relative_path.to_lowercase();
+    let file_name = lower.rsplit('/').next().unwrap_or_default();
+    has_extension(file_name, IMAGE_EXTENSIONS)
+}
+
+fn has_extension(file_name: &str, extensions: &[&str]) -> bool {
+    file_name
+        .rsplit_once('.')
+        .map(|(_, extension)| {
+            let normalized = format!(".{extension}");
+            extensions.contains(&normalized.as_str())
+        })
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -132,13 +153,28 @@ mod tests {
     }
 
     #[test]
-    fn fallback_classifies_images_as_docs() {
+    fn fallback_classifies_images_as_image() {
         assert_eq!(
             fallback_categorize("Screenshots/Capture.png"),
-            FileKind::Docs
+            FileKind::Image
         );
-        assert_eq!(fallback_categorize("captures/IMG_0001.JPG"), FileKind::Docs);
-        assert_eq!(fallback_categorize("notes/snip.webp"), FileKind::Docs);
-        assert_eq!(fallback_categorize("exports/frame.avif"), FileKind::Docs);
+        assert_eq!(
+            fallback_categorize("captures/IMG_0001.JPG"),
+            FileKind::Image
+        );
+        assert_eq!(fallback_categorize("notes/snip.webp"), FileKind::Image);
+        assert_eq!(fallback_categorize("exports/frame.avif"), FileKind::Image);
+    }
+
+    #[test]
+    fn image_classification_wins_over_globs() {
+        let categorizer = Categorizer::new(&["docs/**".to_string()], &["app/**".to_string()])
+            .expect("valid globs");
+
+        assert_eq!(categorizer.categorize("docs/screen.png"), FileKind::Image);
+        assert_eq!(
+            categorizer.categorize("app/assets/logo.webp"),
+            FileKind::Image
+        );
     }
 }

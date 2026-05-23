@@ -1,5 +1,5 @@
 // Path: app/src/hooks/use_config_actions_extended.ts
-// Description: Extended config actions for theme, starred files, and recent files limit
+// Description: Extended config actions for theme, legacy starred files, and recent files limit
 
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import {
@@ -313,7 +313,7 @@ export function useToggleStarredFile(
           // Remove - unstar
           newList = currentList.filter((p) => p !== path);
         } else {
-          // Add at front - most recently starred first (MRU order)
+          // Legacy config compatibility: add at front in MRU order.
           newList = [path, ...currentList];
         }
 

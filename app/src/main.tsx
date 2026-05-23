@@ -19,6 +19,7 @@ import "./styles/a11y.css";
 import "./styles/badges.css";
 import "./styles/main.css";
 import "./styles/panels.css";
+import "./styles/file_feed_header.css";
 import "./styles/scrollbars.css";
 import "./styles/chrome.css";
 import "./styles/bundle_column.css";

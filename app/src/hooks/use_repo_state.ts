@@ -18,6 +18,7 @@ import {
   computeTransientRetryDelayMs,
   isTransientWslTransportError,
 } from "../lib/agent/transient_wsl_error.js";
+import { isVisibleFileKind } from "../lib/files/file_feed.js";
 
 export type RepoHydrationStatus =
   | "waiting_for_agent"
@@ -27,8 +28,7 @@ export type RepoHydrationStatus =
   | "error";
 
 export interface RepoState {
-  recentDocs: FileEntry[];
-  recentCode: FileEntry[];
+  recentFiles: FileEntry[];
   stagedByPath: Map<string, StagedInfo>;
   isLoading: boolean;
   hydrationStatus: RepoHydrationStatus;
@@ -57,13 +57,16 @@ function upsertFile(files: FileEntry[], entry: FileEntry, limit: number): FileEn
   return updated.sort(sortByMtimeDesc).slice(0, limit);
 }
 
+function removeFile(files: FileEntry[], path: string): FileEntry[] {
+  return files.filter((file) => file.path !== path);
+}
+
 export function useRepoState(repoId: string): RepoState {
   const { subscribe, client, connectionState, helloState, rehydrateEpoch } = useAgent();
   const { config } = useConfig();
   const recentFilesLimit = config.recentFilesLimit;
 
-  const [recentDocs, setRecentDocs] = useState<FileEntry[]>([]);
-  const [recentCode, setRecentCode] = useState<FileEntry[]>([]);
+  const [recentFiles, setRecentFiles] = useState<FileEntry[]>([]);
   const [stagedByPath, setStagedByPath] = useState<Map<string, StagedInfo>>(
     () => new Map()
   );
@@ -97,17 +100,12 @@ export function useRepoState(repoId: string): RepoState {
   const handleEvent = useCallback(
     (event: AgentEvent) => {
       if (event.type === "snapshot" && event.repoId === repoId) {
-        const docs = event.recent
-          .filter((f) => f.kind === "docs")
-          .sort(sortByMtimeDesc)
-          .slice(0, recentFilesLimit);
-        const code = event.recent
-          .filter((f) => f.kind === "code")
+        const files = event.recent
+          .filter((file) => isVisibleFileKind(file.kind))
           .sort(sortByMtimeDesc)
           .slice(0, recentFilesLimit);
 
-        setRecentDocs(docs);
-        setRecentCode(code);
+        setRecentFiles(files);
         setStagedByPath(new Map());
         setIsLoading(false);
         setHydrationStatus("ready");
@@ -117,12 +115,15 @@ export function useRepoState(repoId: string): RepoState {
           kind: event.kind,
           changeType: event.changeType,
           mtime: event.mtime,
+          activity: event.activity,
         };
 
-        if (event.kind === "docs") {
-          setRecentDocs((prev) => upsertFile(prev, entry, recentFilesLimit));
-        } else if (event.kind === "code") {
-          setRecentCode((prev) => upsertFile(prev, entry, recentFilesLimit));
+        if (isVisibleFileKind(event.kind)) {
+          setRecentFiles((prev) => (
+            event.changeType === "unlink"
+              ? removeFile(prev, event.path)
+              : upsertFile(prev, entry, recentFilesLimit)
+          ));
         }
 
         // Cached staged entries are only valid for the latest known file version.
@@ -161,8 +162,7 @@ export function useRepoState(repoId: string): RepoState {
 
   useEffect(() => {
     // Reset state when repoId changes
-    setRecentDocs([]);
-    setRecentCode([]);
+    setRecentFiles([]);
     setStagedByPath(new Map());
     setIsLoading(true);
     setHydrationStatus("waiting_for_agent");
@@ -282,8 +282,7 @@ export function useRepoState(repoId: string): RepoState {
   ]);
 
   return {
-    recentDocs,
-    recentCode,
+    recentFiles,
     stagedByPath,
     isLoading,
     hydrationStatus,

@@ -1,20 +1,18 @@
 // Path: app/src/components/file_list_column.tsx
-// Description: Column wrapper that renders a list of FileRow components with context menu
+// Description: Column wrapper that renders file feed rows with context menu actions
 
 import type React from "react";
 import { useCallback, useState } from "react";
 import { FileRow } from "./file_row.js";
 import { ContextMenu } from "./context_menu.js";
 import type { ContextMenuItem } from "./context_menu.js";
-import type { FileEntry } from "../shared/protocol.js";
-import { useStarredFiles } from "../hooks/use_starred_files.js";
+import type { FeedFileEntry } from "../lib/files/file_feed.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useFileActions } from "../hooks/use_file_actions.js";
 
 interface FileListColumnProps {
-  files: FileEntry[];
+  files: FeedFileEntry[];
   repoId: string;
-  kind: "docs" | "code";
   emptyMessage?: string;
   selectedPaths: ReadonlySet<string>;
   onSelect: (
@@ -28,20 +26,18 @@ interface FileListColumnProps {
 interface ContextMenuState {
   x: number;
   y: number;
-  file: FileEntry;
+  file: FeedFileEntry;
 }
 
 export function FileListColumn({
   files,
   repoId,
-  kind,
   emptyMessage = "No files",
   selectedPaths,
   onSelect,
   onDragStart,
   onOpen,
 }: FileListColumnProps): React.JSX.Element {
-  const { isStarred, toggle } = useStarredFiles(repoId);
   const { config } = useConfig();
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -49,7 +45,7 @@ export function FileListColumn({
   const repoRoot = config.repos.find((r) => r.repoId === repoId)?.root;
 
   const handleContextMenu = useCallback(
-    (e: React.MouseEvent, file: FileEntry) => {
+    (e: React.MouseEvent, file: FeedFileEntry) => {
       setContextMenu({ x: e.clientX, y: e.clientY, file });
     },
     []
@@ -72,7 +68,6 @@ export function FileListColumn({
       const selected = files
         .map((entry) => entry.path)
         .filter((path) => selectedPaths.has(path));
-      const allSelectedStarred = selected.every((path) => isStarred(kind, path));
       contextMenuItems.push(
         {
           label: `${selected.length} files selected`,
@@ -109,17 +104,6 @@ export function FileListColumn({
               console.error("[ContextMenu] copy_relative_paths failed:", err);
             });
           },
-        },
-        {
-          label: allSelectedStarred ? "Unfavourite All" : "Favourite All",
-          onClick: () => {
-            for (const path of selected) {
-              const selectedPathIsStarred = isStarred(kind, path);
-              if (allSelectedStarred ? selectedPathIsStarred : !selectedPathIsStarred) {
-                toggle(kind, path);
-              }
-            }
-          },
         }
       );
     } else {
@@ -139,10 +123,6 @@ export function FileListColumn({
               console.error("[ContextMenu] copy_relative_path failed:", err);
             });
           },
-        },
-        {
-          label: isStarred(kind, file.path) ? "Unfavourite" : "Favourite",
-          onClick: () => { toggle(kind, file.path); },
         }
       );
     }
@@ -154,12 +134,11 @@ export function FileListColumn({
         <FileRow
           key={file.path}
           file={file}
-          isStarred={isStarred(kind, file.path)}
           isSelected={selectedPaths.has(file.path)}
+          activityBadge={file.activityBadge}
           onDragStart={onDragStart}
           onSelect={onSelect}
           onOpen={onOpen}
-          onToggleStar={() => { toggle(kind, file.path); }}
           onContextMenu={handleContextMenu}
         />
       ))}

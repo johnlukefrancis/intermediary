@@ -1,26 +1,25 @@
 // Path: app/src/components/file_row.tsx
-// Description: Draggable file row with file-type icon, context menu, and star toggle
+// Description: Draggable file row with file-type icon, context menu, and activity heat
 
 import type React from "react";
 import { useCallback, useRef } from "react";
-import type { FileEntry } from "../shared/protocol.js";
 import { getFileFamily, FileIcon } from "../lib/icons/index.js";
+import type { FeedFileEntry, FileActivityBadge } from "../lib/files/file_feed.js";
 import "../styles/file_row.css";
 
 const DRAG_START_DISTANCE_PX = 6;
 
 interface FileRowProps {
-  file: FileEntry;
-  isStarred: boolean;
+  file: FeedFileEntry;
   isSelected: boolean;
+  activityBadge: FileActivityBadge | null;
   onDragStart: (path: string) => void | Promise<void>;
   onSelect: (
     path: string,
     event: Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">
   ) => void;
   onOpen: (path: string) => void;
-  onToggleStar: () => void;
-  onContextMenu: (e: React.MouseEvent, file: FileEntry) => void;
+  onContextMenu: (e: React.MouseEvent, file: FeedFileEntry) => void;
 }
 
 function formatRelativeTime(isoDate: string): string {
@@ -55,12 +54,11 @@ function getDirectory(path: string): string {
 
 export function FileRow({
   file,
-  isStarred,
   isSelected,
+  activityBadge,
   onDragStart,
   onSelect,
   onOpen,
-  onToggleStar,
   onContextMenu,
 }: FileRowProps): React.JSX.Element {
   const dragStartRef = useRef<{
@@ -135,15 +133,6 @@ export function FileRow({
     [file.path, onOpen]
   );
 
-  // Star button click -> toggle starred (no copy, no drag)
-  const handleStarClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onToggleStar();
-    },
-    [onToggleStar]
-  );
-
   // Right-click -> context menu
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -162,6 +151,7 @@ export function FileRow({
       className="file-row"
       data-change-type={file.changeType}
       data-selected={isSelected || undefined}
+      data-activity={activityBadge ?? undefined}
       onPointerDown={handleRowPointerDown}
       onPointerMove={handleRowPointerMove}
       onPointerUp={handleRowPointerEnd}
@@ -176,16 +166,7 @@ export function FileRow({
         {directory && <span className="file-dir">{directory}</span>}
       </div>
       <span className="file-time">{formatRelativeTime(file.mtime)}</span>
-      <button
-        type="button"
-        className={`file-star-button${isStarred ? " file-star-button--active" : ""}`}
-        onClick={handleStarClick}
-        title={isStarred ? "Unfavourite file" : "Favourite file"}
-        aria-label={isStarred ? "Unfavourite file" : "Favourite file"}
-        aria-pressed={isStarred}
-      >
-        ★
-      </button>
+      <span className="file-heat-badge" aria-hidden="true" />
     </div>
   );
 }

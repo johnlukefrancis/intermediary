@@ -10,6 +10,7 @@ use super::events_runtime::{AgentErrorEvent, WslBackendStatusEvent};
 pub enum FileKind {
     Docs,
     Code,
+    Image,
     Other,
 }
 
@@ -21,6 +22,15 @@ pub enum FileChangeType {
     Unlink,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileActivity {
+    pub first_seen_at_iso: String,
+    pub last_seen_at_iso: String,
+    pub update_count: u32,
+    pub burst_count: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileEntry {
@@ -30,6 +40,8 @@ pub struct FileEntry {
     pub mtime: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub size_bytes: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activity: Option<FileActivity>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +64,8 @@ pub struct FileChangedEvent {
     pub kind: FileKind,
     pub change_type: FileChangeType,
     pub mtime: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub activity: Option<FileActivity>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub staged: Option<StagedInfo>,
 }
@@ -237,6 +251,7 @@ impl FileChangedEvent {
         kind: FileKind,
         change_type: FileChangeType,
         mtime: String,
+        activity: Option<FileActivity>,
     ) -> Self {
         Self {
             repo_id,
@@ -244,6 +259,7 @@ impl FileChangedEvent {
             kind,
             change_type,
             mtime,
+            activity,
             staged: None,
         }
     }

@@ -53,7 +53,7 @@
   user-select: none;
 }
 
-/* Bracketed style: [ DOCS ] */
+/* Bracketed section labels */
 .app[data-ui-mode="handset"] .handset-switcher__tab::before {
   content: '[ ';
   font-weight: var(--weight-normal);

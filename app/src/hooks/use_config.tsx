@@ -69,7 +69,7 @@ interface ConfigContextValue {
   ) => void;
   /** Update global excludes (extensions and patterns) */
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
-  /** Update classification excludes used by Docs/Code panes */
+  /** Update classification excludes used by file feeds */
   setClassificationExcludes: (excludes: GlobalExcludes) => void;
   /** Add a new repo to config */
   addRepo: (repo: RepoConfig) => void;
@@ -82,9 +82,9 @@ interface ConfigContextValue {
   renameRepoLabel: (repoId: string, label: string) => void;
   /** Rename a group label */
   renameGroupLabel: (groupId: string, label: string) => void;
-  /** Remove a repo by repoId (also cleans up bundleSelections, starredFiles) */
+  /** Remove a repo by repoId (also cleans up bundleSelections and legacy starredFiles) */
   removeRepo: (repoId: string) => void;
-  /** Remove all repos in a group (also cleans up themes and starredFiles) */
+  /** Remove all repos in a group (also cleans up themes and legacy starredFiles) */
   removeGroup: (groupId: string) => void;
   /** Set custom output folder override (null to reset to default) */
   setOutputWindowsRoot: (path: string | null) => void;
@@ -100,7 +100,7 @@ interface ConfigContextValue {
   clearTabTheme: (tabKey: string) => void;
   /** Set maximum recent files to track (clamped to 25-2000) */
   setRecentFilesLimit: (value: number) => void;
-  /** Toggle a file's starred status for a repo */
+  /** Legacy starred-file toggle retained for config compatibility */
   toggleStarredFile: (
     repoId: string,
     kind: "docs" | "code",

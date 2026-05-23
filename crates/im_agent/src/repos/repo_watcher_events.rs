@@ -87,14 +87,16 @@ impl<'a> EventContext<'a> {
             change_type,
             mtime: mtime.to_rfc3339(),
             size_bytes: None,
+            activity: None,
         };
 
+        let mut updated_entry = entry.clone();
         let entries = {
             let mut guard = self.mru.write().await;
             if change_type == FileChangeType::Unlink {
                 guard.remove(&relative_str);
             } else {
-                guard.upsert(entry.clone());
+                updated_entry = guard.upsert(entry);
             }
             guard.entries()
         };
@@ -112,6 +114,7 @@ impl<'a> EventContext<'a> {
             kind,
             change_type,
             mtime.to_rfc3339(),
+            updated_entry.activity,
         );
         self.event_bus
             .broadcast_event(AgentEvent::FileChanged(event_payload));

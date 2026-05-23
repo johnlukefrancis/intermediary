@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-05-22
+Updated on: 2026-05-23
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -19,11 +19,11 @@ Depends on: ADR-000, ADR-006, ADR-007
 1. **Zero-Explorer workflow** for the “share context with ChatGPT” loop.
 2. **One-click bundle generation** with configurable excludes/includes.
 3. **Reliable ‘latest’ semantics** (no accidental stale bundles, no manual renaming).
-4. **Fast access to relevant docs/code** via a “recently changed” feed.
+4. **Fast access to relevant docs/code/images** via latest and activity-ranked feeds.
 
 ### Success metrics
 
-* Time from “agent made changes” → “user shares correct bundle/docs with ChatGPT” reduced to < 30 seconds.
+* Time from “agent made changes” → “user shares correct bundle/files with ChatGPT” reduced to < 30 seconds.
 * < 1% incidence of “wrong bundle/version uploaded” in normal usage.
 * Bundle creation consistency: every bundle includes a manifest with provenance.
 
@@ -73,8 +73,8 @@ Depends on: ADR-000, ADR-006, ADR-007
 * **Top tab bar:** one tab per repo. Repos with matching `groupId` and `groupLabel` are shown as a single tab with a dropdown switcher (useful for worktrees). A "+" button adds new repos.
 * **Three columns per tab:**
 
-  1. **Docs** (recently changed doc-like files)
-  2. **Code** (recently changed code-like files)
+  1. **Latest** (recently changed docs, code, and images; newest first)
+  2. **Active** (docs, code, and images ranked by persisted activity)
   3. **Zip bundles** (bundle presets + recently built outputs)
 
 ### Responsive mode behavior
@@ -97,12 +97,10 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 * **Drag row** → stages file / starts OS drag behavior (no clipboard copy)
 * **Double-click row** → opens supported files in the in-app workspace: UTF-8 text files as scratch buffers and common image files as fit-to-panel previews
-* **Star button** → toggles starred status (does not copy or drag)
 * **Right-click row** → opens context menu with:
   * Open Containing Folder
   * Open File
   * Copy Relative Path
-  * Favourite / Unfavourite
 
 ### Drag interaction
 
@@ -122,27 +120,25 @@ Depends on: ADR-000, ADR-006, ADR-007
 * Glassmorphic panel styling, rounded corners, subtle borders, neon accent per tab.
 * No UI clutter: the app is a staging deck, not a file explorer.
 
-### Pane views (Recent / Starred)
+### File feed filters and ranking
 
-Each Docs and Code pane has two views:
+The Latest and Active panes are both unified file feeds, not separate Docs and Code sections.
 
-* **Recent** (default): Shows recently changed files
-* **Starred**: Shows user-starred files
+* **Latest** sorts by newest observed change time.
+* **Active** sorts by persisted activity score using update count, recency, same-sequence burst count, and a rising-file boost for new files updated repeatedly.
+* Both panes default to **All** and expose independent icon filters for documents, code, and images.
+* Activity metadata is agent-owned and persists with recent-file history so ranking survives app and agent restarts.
+* Rows with bursty or rising activity receive a subtle heat mark.
 
-Header controls:
-
-* `[DOCS]`/`[CODE]` title is a button → returns to Recent view
-* Star icon button on right → switches to Starred view (disabled when empty)
-
-If starred count becomes zero, pane auto-switches back to Recent.
+Legacy starred-file config may still exist in older user configs, but the current UI no longer exposes favourites.
 
 ### Workspace previews
 
-Docs and Code rows can open a minimal workspace for supported text and image files. In standard layout, the workspace replaces the Docs and Code panes while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
+File feed rows can open a minimal workspace for supported text and image files. In standard layout, the workspace replaces the Latest and Active panes while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
 
 * Text file workspace buffers are scratch-only: typing is allowed, but there is no save action and no source-file write-back.
 * Opening another file or closing the workspace discards scratch edits.
-* The Docs header note button opens the same workspace using the existing one-note-per-repo note storage.
+* The Latest header note button opens the same workspace using the existing one-note-per-repo note storage.
 * Text workspaces show live line and character counts in the bottom-right corner.
 * Image workspaces support PNG, JPEG, WebP, GIF, BMP, and AVIF previews. Images are rendered from agent-provided preview bytes and can be dragged from the preview surface using the same staged-file drag path as file rows.
 * Unsupported files, binary files, invalid UTF-8 text files, oversized text files, and oversized image files do not open as editable text or image previews.
@@ -175,16 +171,17 @@ Each repo has:
 
   * Store last N (configurable via Options, default 200, range 25-2000)
   * Debounce rapid consecutive writes (default 250ms)
-* Show lists filtered into Docs/Code columns by globs + fallback extension classifier.
+* Show Latest and Active feeds with independent All/Documents/Code/Images filters.
+* Classify image extensions as a first-class `image` file kind before docs/code globs are applied.
 * Persist recent-file history under `staging/state/recent_files/<repoId>.json` to survive app/agent restarts.
-* Global **classification excludes** (Options) suppress noisy/generated files from Docs/Code panes without affecting bundle contents.
+* Persist activity metadata with recent-file history: first seen, last seen, update count, and current burst count.
+* Global **classification excludes** (Options) suppress noisy/generated files from file feeds without affecting bundle contents.
 
-### 7.2.1 Starred files
+### 7.2.1 Activity ranking
 
-* Users can star/unstar any file in Docs or Code columns
-* Starred files persist in config per repo: `{ docs: string[], code: string[] }`
-* Starred files that aren't in the recent list show "—" for modification time
-* Dragging a starred file stages and drags normally (staging uses current file state)
+* Active ranking combines capped update frequency, recency decay, burst count, and a rising boost for files first seen within the recent activity window and updated repeatedly.
+* The ranking is deterministic from agent-provided metadata; the frontend does not persist its own ranking state.
+* Deleted files are removed from the recent index and no longer appear in either feed.
 
 ### 7.3 Staging system
 
@@ -332,7 +329,7 @@ Requests use `{ kind: "request", requestId, payload }` and responses use `{ kind
 
 Host agent → UI events:
 
-* `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
+* `fileChanged { repoId, path, kind, changeType, mtime, activity?, staged? }`
 * `snapshot { repoId, recent: FileEntry[] }`
 * `repoTopologyChanged { repoId }`
 * `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`

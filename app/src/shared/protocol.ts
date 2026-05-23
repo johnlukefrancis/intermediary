@@ -25,12 +25,13 @@ import {
 } from "./protocol_repo_topology.js";
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
-  BundleBuiltEventSchema, ErrorEventSchema, FileChangeTypeSchema, FileChangedEventSchema,
+  BundleBuiltEventSchema, ErrorEventSchema, FileActivitySchema, FileChangeTypeSchema,
+  FileChangedEventSchema,
   FileEntrySchema, FileKindSchema, HelloEventSchema, RepoTopologyChangedEventSchema,
   SnapshotEventSchema, StagedInfoSchema, WslBackendConnectionStatusSchema,
   WslBackendStatusEventSchema, type AgentErrorCode, type AgentErrorEvent, type AgentEvent,
   type BundleBuildPhase, type BundleBuildProgressEvent, type BundleBuiltEvent,
-  type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
+  type FileActivity, type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
   type RepoTopologyChangedEvent, type StagedInfo, type WslBackendConnectionStatus,
   type WslBackendStatusEvent,
 } from "./protocol_events.js";
@@ -99,7 +100,7 @@ export const ClientHelloCommandSchema = z.object({
   stagingWinRoot: z.string().optional(),
   /** Optional WSL path for staging files (Windows + WSL bridge only). */
   stagingWslRoot: z.string().optional(),
-  /** Whether to auto-stage docs/code files on change */
+  /** Whether to auto-stage classified feed files on change */
   autoStageOnChange: z.boolean().optional(),
 });
 

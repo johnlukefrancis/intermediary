@@ -52,4 +52,5 @@
 .file-icon--astro       { color: #cf7030; }
 .file-icon--docker      { color: #4a8cc9; }
 .file-icon--makefile    { color: #8a8a8a; }
+.file-icon--image       { color: #b58a4a; }
 .file-icon--generic     { color: var(--color-text-muted); }

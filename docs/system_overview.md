@@ -20,8 +20,8 @@ Intermediary uses a **host-routed architecture**:
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │              Tauri App (Host UI)                    │    │
 │  │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │    │
-│  │  │  Docs   │  │  Code   │  │    Zip Bundles      │  │    │
-│  │  │ Column  │  │ Column  │  │      Column         │  │    │
+│  │  │ Latest  │  │ Active  │  │    Zip Bundles      │  │    │
+│  │  │  Feed   │  │  Feed   │  │      Column         │  │    │
 │  │  └────┬────┘  └────┬────┘  └─────────┬───────────┘  │    │
 │  │       │            │                 │              │    │
 │  │       └────────────┴─────────────────┘              │    │
@@ -65,14 +65,15 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
   - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
-  - Three-column layout per repo: Docs, Code, Zip Bundles
+  - Three-column layout per repo: Latest file feed, Active file feed, Zip Bundles
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
-  - Shared workspace replaces Docs+Code for per-repo notes, supported UTF-8 file scratch buffers, or supported image previews; scratch edits never write back to repo files
-  - File-row right-click context menu with `Open File`, `Open Containing Folder`, `Copy Relative Path`, and `Favourite/Unfavourite`
+  - Shared workspace replaces the file feed panes for per-repo notes, supported UTF-8 file scratch buffers, or supported image previews; scratch edits never write back to repo files
+  - Latest and Active feeds both expose independent All/Documents/Code/Images icon filters; Active uses persisted file activity metadata for ranking and subtle heat marks for bursty/rising files
+  - File-row right-click context menu with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
-  - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as Docs/Code rows
+  - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as file feed rows
   - Image previews render from Blob URLs created from agent-provided bytes; raw filesystem paths and `file://` sources are not used in the webview
   - Native drag-out via `tauri-plugin-drag`
   - Dark mode, glassmorphic styling
@@ -111,7 +112,7 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** File watching and bundle generation for WSL roots
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
-  - Recent changes feed with 250ms debouncing and persisted history under `staging/state/recent_files/<repoId>.json`
+  - Recent changes feed with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Active feed ranking
   - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; last-good bundle remains on build failure)
   - Atomic file staging for WSL repo operations
   - Auto-stage on change (configurable)
@@ -127,7 +128,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - Event: `{ kind: "event", eventId, payload }`
 
 **Agent → UI events:**
-- `fileChanged { repoId, path, kind, changeType, mtime, staged? }`
+- `fileChanged { repoId, path, kind, changeType, mtime, activity?, staged? }`
 - `snapshot { repoId, recent: FileEntry[] }`
 - `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or bundle-selector subdirectory metadata up to repo depth 4
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
@@ -202,10 +203,11 @@ Per-repo notes are stored outside config under `<app_local_data>/notes/`, keyed 
 ## File Classification
 
 - Repo watchers classify files in this order:
-  1) `docsGlobs`
-  2) `codeGlobs`
-  3) fallback extension classifier (generated broad-language list)
-- Classification excludes are applied at watcher time to suppress noisy/generated files in Docs/Code panes.
+  1) image extension classifier
+  2) `docsGlobs`
+  3) `codeGlobs`
+  4) fallback extension classifier (generated broad-language list)
+- Classification excludes are applied at watcher time to suppress noisy/generated files in file feeds.
 - Bundle excludes remain separate and affect only zip build contents.
 
 ## Why This Architecture?
@@ -252,7 +254,7 @@ intermediary/
 
 ## Key Workflows
 
-1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates recent list; topology-changing directory events also refresh bundle explorer root metadata
+1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates Latest and Active feeds from the unified recent list; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
 3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → backend scans selected roots while honoring subdirectory and file exclusions → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
 

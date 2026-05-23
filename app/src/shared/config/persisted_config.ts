@@ -90,7 +90,7 @@ export const UiModeSchema = z
 
 export type UiMode = z.infer<typeof UiModeSchema>;
 
-/** Starred files for a single repo */
+/** Legacy starred files for a single repo */
 export const StarredFilesEntrySchema = z.object({
   docs: z.array(z.string()).default([]),
   code: z.array(z.string()).default([]),
@@ -98,7 +98,7 @@ export const StarredFilesEntrySchema = z.object({
 
 export type StarredFilesEntry = z.infer<typeof StarredFilesEntrySchema>;
 
-/** Starred files map: repoId -> { docs, code } */
+/** Legacy starred files map: repoId -> { docs, code } */
 export const StarredFilesSchema = z.record(z.string(), StarredFilesEntrySchema);
 
 export type StarredFiles = z.infer<typeof StarredFilesSchema>;
@@ -151,7 +151,7 @@ export const PersistedConfigSchema = z.object({
     ],
       patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     }),
-  /** Global classification excludes (used by Docs/Code panes only) */
+  /** Global classification excludes (used by file feeds only) */
   classificationExcludes: GlobalExcludesSchema.default({
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],
@@ -166,7 +166,7 @@ export const PersistedConfigSchema = z.object({
   outputWindowsRoot: z.string().nullable().default(null),
   /** Per-tab theme overrides, keyed by tabKey */
   tabThemes: z.record(z.string(), TabThemeSchema).default({}),
-  /** Starred files per repo */
+  /** Legacy starred files per repo, retained for config compatibility */
   starredFiles: StarredFilesSchema.default({}),
   /** Global theme mode (dark/warm) */
   themeMode: ThemeModeSchema.default("dark"),

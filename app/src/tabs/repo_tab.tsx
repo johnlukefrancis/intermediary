@@ -1,61 +1,40 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with conditional layout (3-column or handset)
+// Description: Generic repo tab component with latest and active file feeds
 
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
 import { FileListColumn } from "../components/file_list_column.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
-import {
-  CodeHeaderLeft,
-  CodeHeaderRight,
-  DocsHeaderLeft,
-  DocsHeaderRight,
-  type FilePaneView,
-} from "../components/repo_pane_headers.js";
+import { FileFeedHeader } from "../components/repo_pane_headers.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
-import { useStarredFiles } from "../hooks/use_starred_files.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
+import {
+  filterFeedFiles,
+  sortActiveFeed,
+  sortLatestFeed,
+  type FileTypeFilter,
+} from "../lib/files/file_feed.js";
 import type { UiMode } from "../shared/config.js";
-import type { FileEntry } from "../shared/protocol.js";
 
 interface RepoTabProps {
   repoId: string;
   uiMode: UiMode;
 }
 
-/**
- * Build FileEntry[] from starred paths, reusing recent entries where available.
- * For paths not in the recent list, creates a placeholder with empty mtime.
- */
-function buildStarredEntries(
-  starredPaths: readonly string[],
-  recentFiles: FileEntry[],
-  kind: "docs" | "code"
-): FileEntry[] {
-  const recentByPath = new Map(recentFiles.map((f) => [f.path, f]));
-  return starredPaths.map((path) => {
-    const existing = recentByPath.get(path);
-    if (existing) return existing;
-    // Placeholder for files not in recent list (FileRow shows "—" for empty mtime)
-    return { path, kind, changeType: "change", mtime: "" };
-  });
-}
-
 export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
   const {
-    recentDocs,
-    recentCode,
+    recentFiles,
     stagedByPath,
     isLoading,
     hydrationStatus,
@@ -69,13 +48,22 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const { dragState, handleDragStart, handleMultiDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
-  const { starredDocsPaths, starredCodePaths } = useStarredFiles(repoId);
   const noteState = useNotes(repoId);
   const repoWorkspace = useRepoWorkspace(repoId);
+  const [latestFilter, setLatestFilter] = useState<FileTypeFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<FileTypeFilter>("all");
 
-  // View state for docs and code panes
-  const [docsView, setDocsView] = useState<FilePaneView>("recent");
-  const [codeView, setCodeView] = useState<FilePaneView>("recent");
+  const latestFiles = useMemo(
+    () => sortLatestFeed(filterFeedFiles(recentFiles, latestFilter)),
+    [latestFilter, recentFiles]
+  );
+  const activeFiles = useMemo(
+    () => sortActiveFeed(filterFeedFiles(recentFiles, activeFilter)),
+    [activeFilter, recentFiles]
+  );
+
+  const latestSelection = useFileSelection(latestFiles);
+  const activeSelection = useFileSelection(activeFiles);
 
   const handleBundleDragStart = useCallback(
     async (hostPath: string) => {
@@ -88,6 +76,65 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     [appPaths]
   );
 
+  const handleLatestDrag = useCallback(
+    (path: string) => {
+      if (latestSelection.isSelected(path) && latestSelection.selectionCount > 1) {
+        const files = [...latestSelection.selectedPaths].map((p) => ({
+          path: p,
+          stagedInfo: stagedByPath.get(p),
+        }));
+        void handleMultiDragStart(repoId, files);
+      } else {
+        latestSelection.clearSelection();
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }
+    },
+    [repoId, latestSelection, stagedByPath, handleDragStart, handleMultiDragStart]
+  );
+
+  const handleActiveDrag = useCallback(
+    (path: string) => {
+      if (activeSelection.isSelected(path) && activeSelection.selectionCount > 1) {
+        const files = [...activeSelection.selectedPaths].map((p) => ({
+          path: p,
+          stagedInfo: stagedByPath.get(p),
+        }));
+        void handleMultiDragStart(repoId, files);
+      } else {
+        activeSelection.clearSelection();
+        void handleDragStart(repoId, path, stagedByPath.get(path));
+      }
+    },
+    [repoId, activeSelection, stagedByPath, handleDragStart, handleMultiDragStart]
+  );
+
+  const handleLatestFilterChange = useCallback(
+    (filter: FileTypeFilter) => {
+      setLatestFilter(filter);
+      latestSelection.clearSelection();
+    },
+    [latestSelection]
+  );
+
+  const handleActiveFilterChange = useCallback(
+    (filter: FileTypeFilter) => {
+      setActiveFilter(filter);
+      activeSelection.clearSelection();
+    },
+    [activeSelection]
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        latestSelection.clearSelection();
+        activeSelection.clearSelection();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => { document.removeEventListener("keydown", handleKeyDown); };
+  }, [latestSelection, activeSelection]);
+
   const isConnected = connectionState.status === "connected";
   const recentEmptyMessage =
     !isConnected || hydrationStatus === "waiting_for_agent"
@@ -98,132 +145,50 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           ? "Unable to load files"
           : "No recent files";
 
-  // Build file lists based on view.
-  const docsFiles =
-    docsView === "starred"
-      ? buildStarredEntries(starredDocsPaths, recentDocs, "docs")
-      : recentDocs;
-  const codeFiles =
-    codeView === "starred"
-      ? buildStarredEntries(starredCodePaths, recentCode, "code")
-      : recentCode;
-
-  // Selection hooks — must be after file lists are computed
-  const docsSelection = useFileSelection(docsFiles);
-  const codeSelection = useFileSelection(codeFiles);
-
-  // Per-pane drag handlers: multi-drag if file is in multi-selection, else single
-  const handleDocsDrag = useCallback(
-    (path: string) => {
-      if (docsSelection.isSelected(path) && docsSelection.selectionCount > 1) {
-        const files = [...docsSelection.selectedPaths].map((p) => ({
-          path: p,
-          stagedInfo: stagedByPath.get(p),
-        }));
-        void handleMultiDragStart(repoId, files);
-      } else {
-        docsSelection.clearSelection();
-        void handleDragStart(repoId, path, stagedByPath.get(path));
-      }
-    },
-    [repoId, docsSelection, stagedByPath, handleDragStart, handleMultiDragStart]
-  );
-
-  const handleCodeDrag = useCallback(
-    (path: string) => {
-      if (codeSelection.isSelected(path) && codeSelection.selectionCount > 1) {
-        const files = [...codeSelection.selectedPaths].map((p) => ({
-          path: p,
-          stagedInfo: stagedByPath.get(p),
-        }));
-        void handleMultiDragStart(repoId, files);
-      } else {
-        codeSelection.clearSelection();
-        void handleDragStart(repoId, path, stagedByPath.get(path));
-      }
-    },
-    [repoId, codeSelection, stagedByPath, handleDragStart, handleMultiDragStart]
-  );
-
-  // View-switch handlers: clear selection when switching views
-  const handleDocsViewChange = useCallback(
-    (view: FilePaneView) => {
-      setDocsView(view);
-      docsSelection.clearSelection();
-    },
-    [docsSelection]
-  );
-
-  const handleCodeViewChange = useCallback(
-    (view: FilePaneView) => {
-      setCodeView(view);
-      codeSelection.clearSelection();
-    },
-    [codeSelection]
-  );
-
-  // Escape to clear all selection
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        docsSelection.clearSelection();
-        codeSelection.clearSelection();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => { document.removeEventListener("keydown", handleKeyDown); };
-  }, [docsSelection, codeSelection]);
-
-  // Empty messages per view
-  const docsEmptyMessage =
-    docsView === "starred" ? "No starred files" : recentEmptyMessage;
-  const codeEmptyMessage =
-    codeView === "starred" ? "No starred files" : recentEmptyMessage;
+  const latestEmptyMessage =
+    recentFiles.length > 0 && latestFiles.length === 0 ? "No matching files" : recentEmptyMessage;
+  const activeEmptyMessage =
+    recentFiles.length > 0 && activeFiles.length === 0 ? "No matching files" : recentEmptyMessage;
 
   const isHandset = uiMode === "handset";
 
-  const docsHeaderLeft = (
-    <DocsHeaderLeft onRecent={() => { handleDocsViewChange("recent"); }} />
-  );
-  const docsHeaderRight = (
-    <DocsHeaderRight
-      view={docsView}
-      onViewChange={handleDocsViewChange}
+  const latestHeader = (
+    <FileFeedHeader
+      title="Latest"
+      filter={latestFilter}
+      onFilterChange={handleLatestFilterChange}
       onOpenNote={repoWorkspace.openNote}
+      showTitle={!isHandset}
     />
   );
-  const codeHeaderLeft = (
-    <CodeHeaderLeft
-      view={codeView}
-      onRecent={() => { handleCodeViewChange("recent"); }}
+  const activeHeader = (
+    <FileFeedHeader
+      title="Active"
+      filter={activeFilter}
+      onFilterChange={handleActiveFilterChange}
+      showTitle={!isHandset}
     />
-  );
-  const codeHeaderRight = (
-    <CodeHeaderRight view={codeView} onViewChange={handleCodeViewChange} />
   );
 
-  // Content blocks — shared between layouts
-  const docsContent = (
+  const latestContent = (
     <FileListColumn
-      files={docsFiles}
+      files={latestFiles}
       repoId={repoId}
-      kind="docs"
-      emptyMessage={docsEmptyMessage}
-      selectedPaths={docsSelection.selectedPaths}
-      onSelect={docsSelection.handleSelect}
-      onDragStart={handleDocsDrag}
+      emptyMessage={latestEmptyMessage}
+      selectedPaths={latestSelection.selectedPaths}
+      onSelect={latestSelection.handleSelect}
+      onDragStart={handleLatestDrag}
       onOpen={repoWorkspace.openFile}
     />
   );
-  const codeContent = (
+  const activeContent = (
     <FileListColumn
-      files={codeFiles}
+      files={activeFiles}
       repoId={repoId}
-      kind="code"
-      emptyMessage={codeEmptyMessage}
-      selectedPaths={codeSelection.selectedPaths}
-      onSelect={codeSelection.handleSelect}
-      onDragStart={handleCodeDrag}
+      emptyMessage={activeEmptyMessage}
+      selectedPaths={activeSelection.selectedPaths}
+      onSelect={activeSelection.handleSelect}
+      onDragStart={handleActiveDrag}
       onOpen={repoWorkspace.openFile}
     />
   );
@@ -260,20 +225,18 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       )}
       {workspaceLayout ?? (isHandset ? (
         <HandsetDeck
-          docsHeaderRight={docsHeaderRight}
-          codeHeaderRight={codeHeaderRight}
-          docsContent={docsContent}
-          codeContent={codeContent}
+          latestHeader={latestHeader}
+          activeHeader={activeHeader}
+          latestContent={latestContent}
+          activeContent={activeContent}
           zipsContent={zipsContent}
         />
       ) : (
         <ThreeColumn
-          docsHeaderLeft={docsHeaderLeft}
-          docsHeaderRight={docsHeaderRight}
-          docsContent={docsContent}
-          codeHeaderLeft={codeHeaderLeft}
-          codeHeaderRight={codeHeaderRight}
-          codeContent={codeContent}
+          latestHeaderLeft={latestHeader}
+          latestContent={latestContent}
+          activeHeaderLeft={activeHeader}
+          activeContent={activeContent}
           zipsContent={zipsContent}
         />
       ))}

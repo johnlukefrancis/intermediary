@@ -188,6 +188,7 @@ mod tests {
                 change_type: FileChangeType::Add,
                 mtime: "2026-02-06T00:00:00Z".to_string(),
                 size_bytes: Some(8),
+                activity: None,
             },
             FileEntry {
                 path: "docs/readme.md".to_string(),
@@ -195,6 +196,7 @@ mod tests {
                 change_type: FileChangeType::Add,
                 mtime: "2026-02-06T00:00:00Z".to_string(),
                 size_bytes: Some(12),
+                activity: None,
             },
         ];
 

@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer)
+Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer + ranked file feeds)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -172,7 +172,7 @@ Based on 4px unit:
 
 The shared workspace is the clean, full-pane surface used for per-repo notes, opened file scratch buffers, and image previews.
 
-- Standard layout: one workspace panel spans the Docs+Code area while the Zips panel remains visible.
+- Standard layout: one workspace panel spans the Latest+Active feed area while the Zips panel remains visible.
 - Handset layout: the workspace replaces the active deck content until closed.
 - Editor text uses `--font-mono`, `--color-text-primary`, and active accent variables for caret, selection, focus rail, and title brackets.
 - Workspace controls use existing deck panel headers and `panel-header-icon` buttons; text file buffers have no save action because they never write back to repository files.
@@ -185,9 +185,20 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
 
 - Root-level files are visible beside top-level directories; expanding a directory lazily fetches only that directory's direct files and subdirectories.
 - Directory toggles remain the authority for including top-level directories and excluding nested subdirectories.
-- File rows use the same `FileIcon` family/color system as Docs/Code rows; the icon is the include/exclude toggle for that file.
+- File rows use the same `FileIcon` family/color system as file feed rows; the icon is the include/exclude toggle for that file.
 - Included file icons carry a strong `currentColor` glow derived from the icon color; excluded files keep the same icon color with lower opacity and a softer glow.
 - File-name right-click menus reuse the existing file actions (`Open Containing Folder`, `Open File`, `Copy Relative Path`), and double-click opens through the shared workspace.
+
+## Ranked File Feeds
+
+The two left deck panels are now unified file feeds rather than separate Docs and Code panes.
+
+- **Latest** shows the unified classified feed sorted by newest observed change.
+- **Active** shows the same feed sorted by persisted activity score from update frequency, recency, current burst count, and rising-file boost.
+- Both feeds expose independent icon filters for all files, documents, code, and images.
+- Image files are a first-class feed kind and use the image icon/color family.
+- Favourites are not part of the current UI; legacy starred config remains loadable but ignored by the feed surface.
+- Bursty or rising files get a subtle warm row rail and compact heat mark without changing row height.
 
 ---
 

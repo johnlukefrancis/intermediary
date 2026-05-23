@@ -11,10 +11,13 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 use crate::logging::Logger;
-use crate::protocol::FileEntry;
+use crate::protocol::{FileEntry, FileKind};
+use crate::repos::activity_from_mtime;
+use crate::repos::categorizer::is_image_path;
 
 const PERSIST_DEBOUNCE_MS: u64 = 500;
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
+const LEGACY_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,7 +79,7 @@ impl RecentFilesStore {
             }
         };
 
-        if data.version != SCHEMA_VERSION {
+        if data.version != SCHEMA_VERSION && data.version != LEGACY_SCHEMA_VERSION {
             self.logger.warn(
                 "Unsupported recent files schema",
                 Some(serde_json::json!({"repoId": repo_id, "found": data.version, "expected": SCHEMA_VERSION})),
@@ -91,7 +94,23 @@ impl RecentFilesStore {
             );
         }
 
-        data.entries
+        let mut entries = data.entries;
+        let mut needs_save = data.version != SCHEMA_VERSION;
+        for entry in &mut entries {
+            if entry.activity.is_none() {
+                entry.activity = Some(activity_from_mtime(&entry.mtime));
+                needs_save = true;
+            }
+            if is_image_path(&entry.path) && entry.kind != FileKind::Image {
+                entry.kind = FileKind::Image;
+                needs_save = true;
+            }
+        }
+        if needs_save {
+            self.schedule_save(repo_id.to_string(), repo_root.to_string(), entries.clone())
+                .await;
+        }
+        entries
     }
 
     pub async fn schedule_save(&self, repo_id: String, repo_root: String, entries: Vec<FileEntry>) {

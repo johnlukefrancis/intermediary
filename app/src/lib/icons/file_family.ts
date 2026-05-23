@@ -39,6 +39,7 @@ export type FileFamily =
   | "astro"
   | "docker"
   | "makefile"
+  | "image"
   | "generic";
 
 const EXT_MAP: Map<string, FileFamily> = new Map([
@@ -107,6 +108,11 @@ const EXT_MAP: Map<string, FileFamily> = new Map([
   // Markdown / text
   [".md", "markdown"], [".txt", "markdown"], [".rst", "markdown"],
   [".adoc", "markdown"], [".asciidoc", "markdown"], [".wiki", "markdown"],
+  // Images
+  [".png", "image"], [".jpg", "image"], [".jpeg", "image"],
+  [".webp", "image"], [".gif", "image"], [".bmp", "image"],
+  [".avif", "image"], [".heic", "image"], [".heif", "image"],
+  [".tif", "image"], [".tiff", "image"],
   // R
   [".r", "r"],
   // Julia

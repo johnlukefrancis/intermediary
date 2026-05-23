@@ -1,50 +1,40 @@
 // Path: app/src/components/layout/three_column.tsx
-// Description: Three-column layout component with modular deck panels (Docs | Code | Zips)
+// Description: Three-column layout component with file feeds and zip bundles
 
 import type React from "react";
 import "../../styles/columns.css";
 
 interface ThreeColumnProps {
-  docsContent?: React.ReactNode;
-  codeContent?: React.ReactNode;
+  latestContent?: React.ReactNode;
+  activeContent?: React.ReactNode;
   zipsContent?: React.ReactNode;
-  /** Override for docs panel header left (defaults to h2 title) */
-  docsHeaderLeft?: React.ReactNode;
-  /** Override for docs panel header right (defaults to empty cue) */
-  docsHeaderRight?: React.ReactNode;
-  /** Override for code panel header left (defaults to h2 title) */
-  codeHeaderLeft?: React.ReactNode;
-  /** Override for code panel header right (defaults to empty cue) */
-  codeHeaderRight?: React.ReactNode;
+  latestHeaderLeft?: React.ReactNode;
+  activeHeaderLeft?: React.ReactNode;
 }
 
 export function ThreeColumn({
-  docsContent,
-  codeContent,
+  latestContent,
+  activeContent,
   zipsContent,
-  docsHeaderLeft,
-  docsHeaderRight,
-  codeHeaderLeft,
-  codeHeaderRight,
+  latestHeaderLeft,
+  activeHeaderLeft,
 }: ThreeColumnProps): React.JSX.Element {
   return (
     <div className="three-column">
-      <section className="panel" data-panel="docs">
+      <section className="panel" data-panel="latest">
         <header className="panel-header">
-          {docsHeaderLeft ?? <h2 className="panel-title">Docs</h2>}
-          {docsHeaderRight ?? <span className="panel-cue" aria-hidden="true" />}
+          {latestHeaderLeft ?? <h2 className="panel-title">Latest</h2>}
         </header>
         <div className="panel-content">
-          {docsContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
+          {latestContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
         </div>
       </section>
-      <section className="panel" data-panel="code">
+      <section className="panel" data-panel="active">
         <header className="panel-header">
-          {codeHeaderLeft ?? <h2 className="panel-title">Code</h2>}
-          {codeHeaderRight ?? <span className="panel-cue" aria-hidden="true" />}
+          {activeHeaderLeft ?? <h2 className="panel-title">Active</h2>}
         </header>
         <div className="panel-content">
-          {codeContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
+          {activeContent ?? <p className="empty-state empty-state--waiting">Waiting for agent</p>}
         </div>
       </section>
       <section className="panel" data-panel="zips">

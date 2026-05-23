@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/handset_deck.tsx
-// Description: Single-panel vertical deck layout for handset mode with chassis framing
+// Description: Single-panel vertical deck layout for file feeds and zip bundles
 
 import type React from "react";
 import { useState, useCallback } from "react";
@@ -11,47 +11,40 @@ import "../../styles/handset_deck.css";
 import "../../styles/handset_chassis.css";
 
 interface HandsetDeckProps {
-  /** Star toggle for docs pane */
-  docsHeaderRight: React.ReactNode;
-  /** Star toggle for code pane */
-  codeHeaderRight: React.ReactNode;
-  /** FileListColumn for docs */
-  docsContent: React.ReactNode;
-  /** FileListColumn for code */
-  codeContent: React.ReactNode;
-  /** BundleColumn */
+  latestHeader: React.ReactNode;
+  activeHeader: React.ReactNode;
+  latestContent: React.ReactNode;
+  activeContent: React.ReactNode;
   zipsContent: React.ReactNode;
 }
 
 export function HandsetDeck({
-  docsHeaderRight,
-  codeHeaderRight,
-  docsContent,
-  codeContent,
+  latestHeader,
+  activeHeader,
+  latestContent,
+  activeContent,
   zipsContent,
 }: HandsetDeckProps): React.JSX.Element {
-  const [activeSection, setActiveSection] = useState<HandsetSection>("docs");
+  const [activeSection, setActiveSection] = useState<HandsetSection>("latest");
 
   const handleSectionChange = useCallback((section: HandsetSection) => {
     setActiveSection(section);
   }, []);
 
-  // Resolve section-specific header control
   let headerRight: React.ReactNode;
-  if (activeSection === "docs") {
-    headerRight = docsHeaderRight;
-  } else if (activeSection === "code") {
-    headerRight = codeHeaderRight;
+  if (activeSection === "latest") {
+    headerRight = latestHeader;
+  } else if (activeSection === "active") {
+    headerRight = activeHeader;
   } else {
     headerRight = <span className="panel-cue" aria-hidden="true" />;
   }
 
-  // Resolve active content
   let content: React.ReactNode;
-  if (activeSection === "docs") {
-    content = docsContent;
-  } else if (activeSection === "code") {
-    content = codeContent;
+  if (activeSection === "latest") {
+    content = latestContent;
+  } else if (activeSection === "active") {
+    content = activeContent;
   } else {
     content = zipsContent;
   }

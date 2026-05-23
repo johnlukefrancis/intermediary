@@ -7,11 +7,19 @@ import { z } from "zod";
 // File metadata
 // -----------------------------------------------------------------------------
 
-export const FileKindSchema = z.enum(["docs", "code", "other"]);
+export const FileKindSchema = z.enum(["docs", "code", "image", "other"]);
 export type FileKind = z.infer<typeof FileKindSchema>;
 
 export const FileChangeTypeSchema = z.enum(["add", "change", "unlink"]);
 export type FileChangeType = z.infer<typeof FileChangeTypeSchema>;
+
+export const FileActivitySchema = z.object({
+  firstSeenAtIso: z.string(),
+  lastSeenAtIso: z.string(),
+  updateCount: z.number().int().nonnegative(),
+  burstCount: z.number().int().nonnegative(),
+});
+export type FileActivity = z.infer<typeof FileActivitySchema>;
 
 export const FileEntrySchema = z.object({
   /** Relative path from repo root */
@@ -24,6 +32,8 @@ export const FileEntrySchema = z.object({
   mtime: z.string(),
   /** Optional file size in bytes */
   sizeBytes: z.number().int().nonnegative().optional(),
+  /** Persisted activity metadata for active-feed ranking */
+  activity: FileActivitySchema.optional(),
 });
 export type FileEntry = z.infer<typeof FileEntrySchema>;
 
@@ -54,6 +64,8 @@ export const FileChangedEventSchema = z.object({
   kind: FileKindSchema,
   changeType: FileChangeTypeSchema,
   mtime: z.string(),
+  /** Persisted activity metadata for active-feed ranking */
+  activity: FileActivitySchema.optional(),
   /** Present when file was auto-staged */
   staged: StagedInfoSchema.optional(),
 });

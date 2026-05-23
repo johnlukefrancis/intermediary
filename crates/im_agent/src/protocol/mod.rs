@@ -23,8 +23,8 @@ pub use envelopes::{
     EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
 };
 pub use events::{
-    AgentEvent, BundleBuildProgressEvent, BundleBuiltEvent, FileChangeType, FileChangedEvent,
-    FileEntry, FileKind, RepoTopologyChangedEvent, SnapshotEvent, StagedInfo,
+    AgentEvent, BundleBuildProgressEvent, BundleBuiltEvent, FileActivity, FileChangeType,
+    FileChangedEvent, FileEntry, FileKind, RepoTopologyChangedEvent, SnapshotEvent, StagedInfo,
 };
 pub use events_runtime::{
     AgentErrorCode, AgentErrorDetails, AgentErrorEvent, WslBackendConnectionStatus,

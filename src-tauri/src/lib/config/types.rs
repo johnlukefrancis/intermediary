@@ -40,7 +40,7 @@ pub struct PersistedConfig {
     /// Global bundle excludes (extensions and patterns)
     #[serde(default)]
     pub global_excludes: GlobalExcludes,
-    /// Global classification excludes (used by Docs/Code panes only)
+    /// Global classification excludes (used by file feeds only)
     #[serde(default)]
     pub classification_excludes: GlobalExcludes,
     /// Custom output folder override (host-native absolute path)
@@ -49,7 +49,7 @@ pub struct PersistedConfig {
     /// Per-tab accent colors, keyed by tabKey
     #[serde(default)]
     pub tab_themes: HashMap<String, TabTheme>,
-    /// Starred files per repo
+    /// Legacy starred files per repo
     #[serde(default)]
     pub starred_files: HashMap<String, StarredFilesEntry>,
     /// Global theme mode (dark/warm)
@@ -255,7 +255,7 @@ where
     })
 }
 
-/// Starred files for a single repo
+/// Legacy starred files for a single repo
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StarredFilesEntry {

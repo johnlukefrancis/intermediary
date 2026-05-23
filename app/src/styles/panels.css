@@ -52,7 +52,7 @@
   box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
 }
 
-/* Bracketed title [ DOCS ] — h2 for a11y, reset browser defaults */
+/* Bracketed title — h2 for a11y, reset browser defaults */
 .panel-title {
   margin: 0;
   font-family: var(--font-mono);
@@ -81,75 +81,9 @@
   min-width: 1em;
 }
 
-.panel-header-icons {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* ===== PANEL HEADER BUTTONS ===== */
 
-/* Title as clickable button — inherits bracketed style */
-.panel-title-button {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  border-radius: var(--radius-deck-xs);
-  transition:
-    color var(--duration-normal) var(--ease-out),
-    background var(--duration-normal) var(--ease-out);
-}
-
-.panel-title-button::before {
-  content: '[ ';
-  color: var(--color-text-muted);
-  font-weight: var(--weight-normal);
-}
-
-.panel-title-button::after {
-  content: ' ]';
-  color: var(--color-text-muted);
-  font-weight: var(--weight-normal);
-}
-
-.panel-title-button:hover {
-  color: var(--color-accent);
-}
-
-.panel-title-button:hover::before,
-.panel-title-button:hover::after {
-  color: var(--color-accent);
-}
-
-.panel-title-button:focus {
-  outline: none;
-}
-
-.panel-title-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-/* Dimmed state when favourites view is active */
-.panel-title-button--dimmed {
-  color: var(--color-text-muted);
-}
-
-.panel-title-button--dimmed::before,
-.panel-title-button--dimmed::after {
-  color: var(--color-text-muted);
-  opacity: 0.6;
-}
-
-/* Header icon button (star toggle) */
+/* Header icon button */
 .panel-header-icon {
   display: flex;
   align-items: center;

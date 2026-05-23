@@ -2,11 +2,14 @@
 // Description: Repository scanning module exports
 
 mod categorizer;
+mod file_activity;
 mod generated_code_extensions;
 mod ignore_matcher;
 mod image_file_reader;
 mod mru_index;
 mod recent_files_store;
+#[cfg(test)]
+mod recent_files_store_tests;
 mod repo_directory_listing;
 mod repo_top_level;
 mod repo_topology_change;
@@ -16,6 +19,7 @@ mod text_file_reader;
 mod watcher_error;
 
 pub use categorizer::Categorizer;
+pub(crate) use file_activity::{activity_from_mtime, observed_at_from_mtime, update_activity};
 pub use image_file_reader::{read_image_file, ImageFileReadResult};
 pub use mru_index::MruIndex;
 pub use recent_files_store::RecentFilesStore;
