@@ -10,7 +10,7 @@ use crate::repos::RecentFilesStore;
 
 #[tokio::test]
 async fn load_reclassifies_stale_image_entries_for_supported_schemas() {
-    for version in [1, 2] {
+    for version in [1, 2, 3] {
         let temp = tempdir().expect("temp dir");
         let state_dir = temp.path().join("state");
         let cache_dir = state_dir.join("recent_files");
@@ -39,8 +39,9 @@ async fn load_reclassifies_stale_image_entries_for_supported_schemas() {
 
         store.flush_repo(&repo_id).await;
         let saved = read_saved_cache(&cache_path).await;
-        assert_eq!(saved["version"], 2);
+        assert_eq!(saved["version"], 3);
         assert_eq!(saved["entries"][0]["kind"], "image");
+        assert_eq!(saved["entries"][0]["activity"]["history"][0]["count"], 1);
     }
 }
 

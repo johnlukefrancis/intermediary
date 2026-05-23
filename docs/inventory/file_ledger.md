@@ -24,14 +24,15 @@ app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal r
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
-app/src/components/file_list_column.tsx - Column wrapper that renders file feed rows with context menu actions
-app/src/components/file_row.tsx - Draggable file row with file-type icon, context menu, and activity heat
+app/src/components/file_intelligence_header.tsx - Header controls for the unified File Intelligence panel
+app/src/components/file_intelligence_panel.tsx - Unified File Intelligence panel with ranked telemetry table
+app/src/components/file_intelligence_row.tsx - Single File Intelligence table row with activity telemetry
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
-app/src/components/layout/handset_deck.tsx - Single-panel vertical deck layout for file feeds and zip bundles
-app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Latest | Active | Zips)
-app/src/components/layout/three_column.tsx - Three-column layout component with file feeds and zip bundles
-app/src/components/layout/workspace_layout.tsx - Layout that replaces file feed panes with a shared workspace
+app/src/components/layout/handset_deck.tsx - Handset deck layout for File Intelligence and zip bundles
+app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Files | Zips)
+app/src/components/layout/three_column.tsx - Standard layout component with File Intelligence and zip bundles
+app/src/components/layout/workspace_layout.tsx - Layout that replaces File Intelligence with a shared workspace
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
@@ -47,7 +48,6 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
-app/src/components/repo_pane_headers.tsx - Header controls for ranked repo file feeds
 app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text scratch buffers, and image previews
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
@@ -94,7 +94,7 @@ app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
-app/src/lib/files/file_feed.ts - File feed filtering and activity ranking helpers
+app/src/lib/files/file_feed.ts - File intelligence filtering, ranking, and row metric helpers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
@@ -135,14 +135,13 @@ app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and fil
 app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
 app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and shared file explorer controls
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
-app/src/styles/columns.css - Three-column deck grid layout with intentional gutters (Latest | Active | Zips)
+app/src/styles/columns.css - Standard deck grid layout with File Intelligence and Zips
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
-app/src/styles/file_feed_header.css - Header title and filter controls for ranked file feeds
-app/src/styles/file_row.css - File row with file-type icon, activity heat, and full-row drag
+app/src/styles/file_intelligence.css - Unified File Intelligence table matching the ranked mockup reference
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
 app/src/styles/main.css - Global layout reset and base structure
@@ -163,7 +162,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/repo_tab.tsx - Generic repo tab component with latest and active file feeds
+app/src/tabs/repo_tab.tsx - Generic repo tab component with File Intelligence and zip bundles
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations

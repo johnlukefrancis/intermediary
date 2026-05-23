@@ -2,7 +2,9 @@
 // Description: MRU index for recent file changes
 
 use crate::protocol::FileEntry;
-use crate::repos::{activity_from_mtime, observed_at_from_mtime, update_activity};
+use crate::repos::{
+    activity_from_mtime, normalize_activity_history, observed_at_from_mtime, update_activity,
+};
 
 #[derive(Debug)]
 pub struct MruIndex {
@@ -59,6 +61,9 @@ impl MruIndex {
             }
             if entry.activity.is_none() {
                 entry.activity = Some(activity_from_mtime(&entry.mtime));
+            }
+            if let Some(activity) = &mut entry.activity {
+                normalize_activity_history(activity, &entry.mtime);
             }
             entries.push(entry);
             if entries.len() == self.capacity {

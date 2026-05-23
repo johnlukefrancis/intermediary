@@ -25,14 +25,15 @@ import {
 } from "./protocol_repo_topology.js";
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
-  BundleBuiltEventSchema, ErrorEventSchema, FileActivitySchema, FileChangeTypeSchema,
-  FileChangedEventSchema,
+  BundleBuiltEventSchema, ErrorEventSchema, FileActivityBucketSchema, FileActivitySchema,
+  FileChangeTypeSchema, FileChangedEventSchema,
   FileEntrySchema, FileKindSchema, HelloEventSchema, RepoTopologyChangedEventSchema,
   SnapshotEventSchema, StagedInfoSchema, WslBackendConnectionStatusSchema,
   WslBackendStatusEventSchema, type AgentErrorCode, type AgentErrorEvent, type AgentEvent,
   type BundleBuildPhase, type BundleBuildProgressEvent, type BundleBuiltEvent,
-  type FileActivity, type FileChangeType, type FileChangedEvent, type FileEntry, type FileKind,
-  type RepoTopologyChangedEvent, type StagedInfo, type WslBackendConnectionStatus,
+  type FileActivity, type FileActivityBucket, type FileChangeType, type FileChangedEvent,
+  type FileEntry, type FileKind, type RepoTopologyChangedEvent, type StagedInfo,
+  type WslBackendConnectionStatus,
   type WslBackendStatusEvent,
 } from "./protocol_events.js";
 export {

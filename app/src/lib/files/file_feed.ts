@@ -1,21 +1,32 @@
 // Path: app/src/lib/files/file_feed.ts
-// Description: File feed filtering and activity ranking helpers
+// Description: File intelligence filtering, ranking, and row metric helpers
 
-import type { FileActivity, FileEntry, FileKind } from "../../shared/protocol.js";
+import type { FileActivity, FileActivityBucket, FileEntry, FileKind } from "../../shared/protocol.js";
 
 export type VisibleFileKind = "docs" | "code" | "image";
 export type FileTypeFilter = "all" | VisibleFileKind;
+export type FileSortMode = "intelligence" | "latest" | "active";
 export type FileActivityBadge = "hot" | "rising";
+export type FileActivityTrend = "up" | "flat" | "down";
 
 export interface FeedFileEntry extends FileEntry {
+  activity: FileActivity;
   activityScore: number;
+  recencyScore: number;
+  intelligenceScore: number;
   activityBadge: FileActivityBadge | null;
+  trend: FileActivityTrend;
+  activityBlocks: number;
+  pulse: number[];
 }
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const RISING_WINDOW_MS = DAY_MS;
 const HOT_WINDOW_MS = 2 * HOUR_MS;
+const ACTIVITY_BLOCKS = 10;
+const PULSE_SEGMENTS = 12;
+const PULSE_SEGMENT_MS = 2 * HOUR_MS;
 
 export function isVisibleFileKind(kind: FileKind): kind is VisibleFileKind {
   return kind === "docs" || kind === "code" || kind === "image";
@@ -30,16 +41,22 @@ export function filterFeedFiles(
   ));
 }
 
-export function sortLatestFeed(files: readonly FileEntry[], nowMs = Date.now()): FeedFileEntry[] {
-  return decorateFiles(files, nowMs).sort((a, b) => compareNewest(a, b));
+export function buildFileIntelligenceFeed(
+  files: readonly FileEntry[],
+  filter: FileTypeFilter,
+  sortMode: FileSortMode,
+  nowMs = Date.now()
+): FeedFileEntry[] {
+  return sortFileIntelligenceFeed(filterFeedFiles(files, filter), sortMode, nowMs);
 }
 
-export function sortActiveFeed(files: readonly FileEntry[], nowMs = Date.now()): FeedFileEntry[] {
-  return decorateFiles(files, nowMs).sort((a, b) => {
-    const scoreDiff = b.activityScore - a.activityScore;
-    if (scoreDiff !== 0) return scoreDiff;
-    return compareNewest(a, b);
-  });
+export function sortFileIntelligenceFeed(
+  files: readonly FileEntry[],
+  sortMode: FileSortMode,
+  nowMs = Date.now()
+): FeedFileEntry[] {
+  const decorated = decorateFiles(files, nowMs);
+  return decorated.sort((a, b) => compareByMode(a, b, sortMode));
 }
 
 function decorateFiles(files: readonly FileEntry[], nowMs: number): FeedFileEntry[] {
@@ -48,8 +65,14 @@ function decorateFiles(files: readonly FileEntry[], nowMs: number): FeedFileEntr
     const activityScore = scoreActivity(activity, nowMs);
     return {
       ...file,
+      activity,
       activityScore,
+      recencyScore: scoreRecency(activity, nowMs),
+      intelligenceScore: scoreIntelligence(activity, nowMs),
       activityBadge: badgeActivity(activity, nowMs),
+      trend: trendActivity(activity, nowMs),
+      activityBlocks: activityBlockCount(activity, nowMs),
+      pulse: pulseSegments(activity, nowMs),
     };
   });
 }
@@ -62,20 +85,41 @@ function normalizeActivity(file: FileEntry): FileActivity {
     lastSeenAtIso: fallbackIso,
     updateCount: 1,
     burstCount: 1,
+    history: [{ bucketStartIso: fallbackIso, count: 1 }],
   };
 }
 
+function compareByMode(a: FeedFileEntry, b: FeedFileEntry, sortMode: FileSortMode): number {
+  if (sortMode === "latest") return compareNewest(a, b);
+  if (sortMode === "active") {
+    const activityDiff = b.activityScore - a.activityScore;
+    if (activityDiff !== 0) return activityDiff;
+    return compareNewest(a, b);
+  }
+
+  const intelligenceDiff = b.intelligenceScore - a.intelligenceScore;
+  if (intelligenceDiff !== 0) return intelligenceDiff;
+  return compareNewest(a, b);
+}
+
+function scoreIntelligence(activity: FileActivity, nowMs: number): number {
+  return scoreActivity(activity, nowMs) + scoreRecency(activity, nowMs) * 0.85;
+}
+
 function scoreActivity(activity: FileActivity, nowMs: number): number {
-  const lastSeenMs = parseIsoMs(activity.lastSeenAtIso);
   const firstSeenMs = parseIsoMs(activity.firstSeenAtIso);
-  const ageHours = Math.max(0, (nowMs - lastSeenMs) / HOUR_MS);
-  const recencyScore = Math.exp(-ageHours / 72) * 50;
   const frequencyScore = Math.min(activity.updateCount, 25) * 4;
   const burstScore = Math.min(Math.max(0, activity.burstCount - 1), 8) * 8;
   const risingScore =
     nowMs - firstSeenMs <= RISING_WINDOW_MS && activity.updateCount >= 3 ? 35 : 0;
 
-  return recencyScore + frequencyScore + burstScore + risingScore;
+  return frequencyScore + burstScore + risingScore + recentHistoryCount(activity, nowMs) * 5;
+}
+
+function scoreRecency(activity: FileActivity, nowMs: number): number {
+  const lastSeenMs = parseIsoMs(activity.lastSeenAtIso);
+  const ageHours = Math.max(0, (nowMs - lastSeenMs) / HOUR_MS);
+  return Math.exp(-ageHours / 72) * 50;
 }
 
 function badgeActivity(activity: FileActivity, nowMs: number): FileActivityBadge | null {
@@ -85,6 +129,43 @@ function badgeActivity(activity: FileActivity, nowMs: number): FileActivityBadge
   if (isFresh && activity.burstCount >= 3) return "hot";
   if (nowMs - firstSeenMs <= RISING_WINDOW_MS && activity.updateCount >= 3) return "rising";
   return null;
+}
+
+function trendActivity(activity: FileActivity, nowMs: number): FileActivityTrend {
+  const recent = bucketCountBetween(activity.history, nowMs - 6 * HOUR_MS, nowMs);
+  const previous = bucketCountBetween(activity.history, nowMs - 12 * HOUR_MS, nowMs - 6 * HOUR_MS);
+  if (recent > previous) return "up";
+  if (previous > recent) return "down";
+  return activity.burstCount >= 3 ? "up" : "flat";
+}
+
+function activityBlockCount(activity: FileActivity, nowMs: number): number {
+  const score = scoreActivity(activity, nowMs);
+  return Math.max(0, Math.min(ACTIVITY_BLOCKS, Math.ceil(score / 12)));
+}
+
+function pulseSegments(activity: FileActivity, nowMs: number): number[] {
+  return Array.from({ length: PULSE_SEGMENTS }, (_, index) => {
+    const start = nowMs - (PULSE_SEGMENTS - index) * PULSE_SEGMENT_MS;
+    const end = start + PULSE_SEGMENT_MS;
+    return bucketCountBetween(activity.history, start, end);
+  });
+}
+
+function recentHistoryCount(activity: FileActivity, nowMs: number): number {
+  return bucketCountBetween(activity.history, nowMs - DAY_MS, nowMs);
+}
+
+function bucketCountBetween(
+  history: readonly FileActivityBucket[],
+  startMs: number,
+  endMs: number
+): number {
+  return history.reduce((total, bucket) => {
+    const bucketMs = parseIsoMs(bucket.bucketStartIso);
+    if (bucketMs < startMs || bucketMs >= endMs) return total;
+    return total + bucket.count;
+  }, 0);
 }
 
 function compareNewest(a: FileEntry, b: FileEntry): number {

@@ -12,7 +12,7 @@
   transition: opacity var(--duration-normal) var(--ease-out);
 }
 
-.file-row:hover .file-icon { opacity: 1; }
+.file-intelligence-row:hover .file-icon { opacity: 1; }
 
 /* ===== FAMILY COLORS — muted brand-adjacent tones ===== */
 .file-icon--typescript  { color: #5c9bcf; }

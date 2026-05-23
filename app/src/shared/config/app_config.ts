@@ -30,7 +30,7 @@ export const AppConfigSchema = z.object({
   repos: z.array(RepoConfigSchema).default([]),
   /** Maximum recent files to track per repo (25-2000) */
   recentFilesLimit: z.number().int().min(25).max(2000).default(40),
-  /** Global classification excludes for file feed filtering */
+  /** Global classification excludes for File Intelligence filtering */
   classificationExcludes: GlobalExcludesSchema.default({
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],

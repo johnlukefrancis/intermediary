@@ -1,13 +1,11 @@
 /*
  * Path: app/src/styles/columns.css
- * Description: Three-column deck grid layout with intentional gutters (Latest | Active | Zips)
+ * Description: Standard deck grid layout with File Intelligence and Zips
  */
 
 .three-column {
   display: grid;
-  /* Slightly wider Zips column for visual balance */
-  grid-template-columns: 1fr 1fr 1.1fr;
-  /* Deck gutters: wider spacing for module separation */
+  grid-template-columns: minmax(0, 1.85fr) minmax(360px, 1fr);
   gap: var(--space-4);
   flex: 1;
   min-height: 0;

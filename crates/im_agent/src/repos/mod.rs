@@ -19,7 +19,9 @@ mod text_file_reader;
 mod watcher_error;
 
 pub use categorizer::Categorizer;
-pub(crate) use file_activity::{activity_from_mtime, observed_at_from_mtime, update_activity};
+pub(crate) use file_activity::{
+    activity_from_mtime, normalize_activity_history, observed_at_from_mtime, update_activity,
+};
 pub use image_file_reader::{read_image_file, ImageFileReadResult};
 pub use mru_index::MruIndex;
 pub use recent_files_store::RecentFilesStore;

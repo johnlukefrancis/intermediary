@@ -19,7 +19,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 1. **Zero-Explorer workflow** for the “share context with ChatGPT” loop.
 2. **One-click bundle generation** with configurable excludes/includes.
 3. **Reliable ‘latest’ semantics** (no accidental stale bundles, no manual renaming).
-4. **Fast access to relevant docs/code/images** via latest and activity-ranked feeds.
+4. **Fast access to relevant docs/code/images** via a unified File Intelligence panel.
 
 ### Success metrics
 
@@ -71,11 +71,10 @@ Depends on: ADR-000, ADR-006, ADR-007
 ### Layout (single window)
 
 * **Top tab bar:** one tab per repo. Repos with matching `groupId` and `groupLabel` are shown as a single tab with a dropdown switcher (useful for worktrees). A "+" button adds new repos.
-* **Three columns per tab:**
+* **Two main columns per tab:**
 
-  1. **Latest** (recently changed docs, code, and images; newest first)
-  2. **Active** (docs, code, and images ranked by persisted activity)
-  3. **Zip bundles** (bundle presets + recently built outputs)
+  1. **File Intelligence** (docs, code, and images ranked by intelligence, latest, or activity mode)
+  2. **Zip bundles** (bundle presets + recently built outputs)
 
 ### Responsive mode behavior
 
@@ -88,8 +87,8 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 ### File item row
 
-* Filename + relative path
-* Last modified time (relative: "2m ago")
+* Rank, filename, relative path, and file-kind icon
+* Activity block bar, trend marker, last active time, update count, and 24-hour pulse strip
 * Size (optional)
 * Status badge: `staged` / `source-only` / `building...` / `error`
 
@@ -120,25 +119,25 @@ Depends on: ADR-000, ADR-006, ADR-007
 * Glassmorphic panel styling, rounded corners, subtle borders, neon accent per tab.
 * No UI clutter: the app is a staging deck, not a file explorer.
 
-### File feed filters and ranking
+### File Intelligence filters and ranking
 
-The Latest and Active panes are both unified file feeds, not separate Docs and Code sections.
+File Intelligence is one unified table, not separate Docs and Code or Latest and Active lanes.
 
-* **Latest** sorts by newest observed change time.
-* **Active** sorts by persisted activity score using update count, recency, same-sequence burst count, and a rising-file boost for new files updated repeatedly.
-* Both panes default to **All** and expose independent icon filters for documents, code, and images.
-* Activity metadata is agent-owned and persists with recent-file history so ranking survives app and agent restarts.
-* Rows with bursty or rising activity receive a subtle heat mark.
+* **Intelligence** is the default mode and blends recency, update frequency, burst activity, and rising-file momentum.
+* **Latest** sorts by newest observed activity.
+* **Active** sorts by persisted activity strength.
+* The table defaults to **All** and exposes icon filters for documents, code, and images.
+* Activity metadata is agent-owned and persists with recent-file history so ranking and row telemetry survive app and agent restarts.
+* Rows show activity bars, trend arrows, last active time, update count, and a 24-hour pulse strip.
 
 Legacy starred-file config may still exist in older user configs, but the current UI no longer exposes favourites.
 
 ### Workspace previews
 
-File feed rows can open a minimal workspace for supported text and image files. In standard layout, the workspace replaces the Latest and Active panes while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
+File Intelligence rows can open a minimal workspace for supported text and image files. In standard layout, the workspace replaces the File Intelligence panel while Zip bundles remain visible. In handset layout, the workspace replaces the deck content until closed.
 
 * Text file workspace buffers are scratch-only: typing is allowed, but there is no save action and no source-file write-back.
 * Opening another file or closing the workspace discards scratch edits.
-* The Latest header note button opens the same workspace using the existing one-note-per-repo note storage.
 * Text workspaces show live line and character counts in the bottom-right corner.
 * Image workspaces support PNG, JPEG, WebP, GIF, BMP, and AVIF previews. Images are rendered from agent-provided preview bytes and can be dragged from the preview surface using the same staged-file drag path as file rows.
 * Unsupported files, binary files, invalid UTF-8 text files, oversized text files, and oversized image files do not open as editable text or image previews.
@@ -171,17 +170,17 @@ Each repo has:
 
   * Store last N (configurable via Options, default 200, range 25-2000)
   * Debounce rapid consecutive writes (default 250ms)
-* Show Latest and Active feeds with independent All/Documents/Code/Images filters.
+* Show one File Intelligence table with Intelligence/Latest/Active sort modes and All/Documents/Code/Images filters.
 * Classify image extensions as a first-class `image` file kind before docs/code globs are applied.
 * Persist recent-file history under `staging/state/recent_files/<repoId>.json` to survive app/agent restarts.
-* Persist activity metadata with recent-file history: first seen, last seen, update count, and current burst count.
-* Global **classification excludes** (Options) suppress noisy/generated files from file feeds without affecting bundle contents.
+* Persist activity metadata with recent-file history: first seen, last seen, update count, current burst count, and 24-hour bucket history.
+* Global **classification excludes** (Options) suppress noisy/generated files from File Intelligence without affecting bundle contents.
 
-### 7.2.1 Activity ranking
+### 7.2.1 File Intelligence ranking
 
-* Active ranking combines capped update frequency, recency decay, burst count, and a rising boost for files first seen within the recent activity window and updated repeatedly.
+* Intelligence ranking combines capped update frequency, recency decay, burst count, 24-hour bucket activity, and a rising boost for files first seen within the recent activity window and updated repeatedly.
 * The ranking is deterministic from agent-provided metadata; the frontend does not persist its own ranking state.
-* Deleted files are removed from the recent index and no longer appear in either feed.
+* Deleted files are removed from the recent index and no longer appear in File Intelligence.
 
 ### 7.3 Staging system
 

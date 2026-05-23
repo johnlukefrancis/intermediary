@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/workspace_layout.tsx
-// Description: Layout that replaces file feed panes with a shared workspace
+// Description: Layout that replaces File Intelligence with a shared workspace
 
 import type React from "react";
 import "../../styles/handset_deck.css";

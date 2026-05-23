@@ -69,7 +69,7 @@ interface ConfigContextValue {
   ) => void;
   /** Update global excludes (extensions and patterns) */
   setGlobalExcludes: (excludes: GlobalExcludes) => void;
-  /** Update classification excludes used by file feeds */
+  /** Update classification excludes used by File Intelligence */
   setClassificationExcludes: (excludes: GlobalExcludes) => void;
   /** Add a new repo to config */
   addRepo: (repo: RepoConfig) => void;

@@ -5,7 +5,7 @@ Depends on: ADR-000, ADR-007
 
 ---
 
-Status: Superseded by the unified Latest/Active file feeds. The app no longer exposes favourites in the file-feed UI, though legacy `starredFiles` config remains loadable for compatibility.
+Status: Superseded by File Intelligence. The app no longer exposes favourites in the file UI, though legacy `starredFiles` config remains loadable for compatibility.
 
 ---
 

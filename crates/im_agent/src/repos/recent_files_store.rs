@@ -12,11 +12,12 @@ use tokio::time::sleep;
 
 use crate::logging::Logger;
 use crate::protocol::{FileEntry, FileKind};
-use crate::repos::activity_from_mtime;
 use crate::repos::categorizer::is_image_path;
+use crate::repos::{activity_from_mtime, normalize_activity_history};
 
 const PERSIST_DEBOUNCE_MS: u64 = 500;
-const SCHEMA_VERSION: u32 = 2;
+const SCHEMA_VERSION: u32 = 3;
+const RANKED_FEED_SCHEMA_VERSION: u32 = 2;
 const LEGACY_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,7 +80,7 @@ impl RecentFilesStore {
             }
         };
 
-        if data.version != SCHEMA_VERSION && data.version != LEGACY_SCHEMA_VERSION {
+        if !is_supported_schema(data.version) {
             self.logger.warn(
                 "Unsupported recent files schema",
                 Some(serde_json::json!({"repoId": repo_id, "found": data.version, "expected": SCHEMA_VERSION})),
@@ -100,6 +101,9 @@ impl RecentFilesStore {
             if entry.activity.is_none() {
                 entry.activity = Some(activity_from_mtime(&entry.mtime));
                 needs_save = true;
+            }
+            if let Some(activity) = &mut entry.activity {
+                needs_save = normalize_activity_history(activity, &entry.mtime) || needs_save;
             }
             if is_image_path(&entry.path) && entry.kind != FileKind::Image {
                 entry.kind = FileKind::Image;
@@ -245,4 +249,10 @@ impl RecentFilesStore {
             .join("recent_files")
             .join(format!("{repo_id}.json"))
     }
+}
+
+fn is_supported_schema(version: u32) -> bool {
+    version == SCHEMA_VERSION
+        || version == RANKED_FEED_SCHEMA_VERSION
+        || version == LEGACY_SCHEMA_VERSION
 }

@@ -1,15 +1,14 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with latest and active file feeds
+// Description: Generic repo tab component with File Intelligence and zip bundles
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
-import { FileListColumn } from "../components/file_list_column.js";
+import { FileIntelligencePanel } from "../components/file_intelligence_panel.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
-import { FileFeedHeader } from "../components/repo_pane_headers.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
@@ -19,9 +18,8 @@ import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
 import {
-  filterFeedFiles,
-  sortActiveFeed,
-  sortLatestFeed,
+  buildFileIntelligenceFeed,
+  type FileSortMode,
   type FileTypeFilter,
 } from "../lib/files/file_feed.js";
 import type { UiMode } from "../shared/config.js";
@@ -50,20 +48,15 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   });
   const noteState = useNotes(repoId);
   const repoWorkspace = useRepoWorkspace(repoId);
-  const [latestFilter, setLatestFilter] = useState<FileTypeFilter>("all");
-  const [activeFilter, setActiveFilter] = useState<FileTypeFilter>("all");
+  const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
+  const [sortMode, setSortMode] = useState<FileSortMode>("intelligence");
 
-  const latestFiles = useMemo(
-    () => sortLatestFeed(filterFeedFiles(recentFiles, latestFilter)),
-    [latestFilter, recentFiles]
-  );
-  const activeFiles = useMemo(
-    () => sortActiveFeed(filterFeedFiles(recentFiles, activeFilter)),
-    [activeFilter, recentFiles]
+  const intelligenceFiles = useMemo(
+    () => buildFileIntelligenceFeed(recentFiles, fileFilter, sortMode),
+    [fileFilter, recentFiles, sortMode]
   );
 
-  const latestSelection = useFileSelection(latestFiles);
-  const activeSelection = useFileSelection(activeFiles);
+  const fileSelection = useFileSelection(intelligenceFiles);
 
   const handleBundleDragStart = useCallback(
     async (hostPath: string) => {
@@ -76,64 +69,47 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     [appPaths]
   );
 
-  const handleLatestDrag = useCallback(
+  const handleFileDrag = useCallback(
     (path: string) => {
-      if (latestSelection.isSelected(path) && latestSelection.selectionCount > 1) {
-        const files = [...latestSelection.selectedPaths].map((p) => ({
+      if (fileSelection.isSelected(path) && fileSelection.selectionCount > 1) {
+        const files = [...fileSelection.selectedPaths].map((p) => ({
           path: p,
           stagedInfo: stagedByPath.get(p),
         }));
         void handleMultiDragStart(repoId, files);
       } else {
-        latestSelection.clearSelection();
+        fileSelection.clearSelection();
         void handleDragStart(repoId, path, stagedByPath.get(path));
       }
     },
-    [repoId, latestSelection, stagedByPath, handleDragStart, handleMultiDragStart]
+    [repoId, fileSelection, stagedByPath, handleDragStart, handleMultiDragStart]
   );
 
-  const handleActiveDrag = useCallback(
-    (path: string) => {
-      if (activeSelection.isSelected(path) && activeSelection.selectionCount > 1) {
-        const files = [...activeSelection.selectedPaths].map((p) => ({
-          path: p,
-          stagedInfo: stagedByPath.get(p),
-        }));
-        void handleMultiDragStart(repoId, files);
-      } else {
-        activeSelection.clearSelection();
-        void handleDragStart(repoId, path, stagedByPath.get(path));
-      }
-    },
-    [repoId, activeSelection, stagedByPath, handleDragStart, handleMultiDragStart]
-  );
-
-  const handleLatestFilterChange = useCallback(
+  const handleFilterChange = useCallback(
     (filter: FileTypeFilter) => {
-      setLatestFilter(filter);
-      latestSelection.clearSelection();
+      setFileFilter(filter);
+      fileSelection.clearSelection();
     },
-    [latestSelection]
+    [fileSelection]
   );
 
-  const handleActiveFilterChange = useCallback(
-    (filter: FileTypeFilter) => {
-      setActiveFilter(filter);
-      activeSelection.clearSelection();
+  const handleSortModeChange = useCallback(
+    (mode: FileSortMode) => {
+      setSortMode(mode);
+      fileSelection.clearSelection();
     },
-    [activeSelection]
+    [fileSelection]
   );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
-        latestSelection.clearSelection();
-        activeSelection.clearSelection();
+        fileSelection.clearSelection();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => { document.removeEventListener("keydown", handleKeyDown); };
-  }, [latestSelection, activeSelection]);
+  }, [fileSelection]);
 
   const isConnected = connectionState.status === "connected";
   const recentEmptyMessage =
@@ -145,50 +121,26 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
           ? "Unable to load files"
           : "No recent files";
 
-  const latestEmptyMessage =
-    recentFiles.length > 0 && latestFiles.length === 0 ? "No matching files" : recentEmptyMessage;
-  const activeEmptyMessage =
-    recentFiles.length > 0 && activeFiles.length === 0 ? "No matching files" : recentEmptyMessage;
+  const fileEmptyMessage =
+    recentFiles.length > 0 && intelligenceFiles.length === 0
+      ? "No matching files"
+      : recentEmptyMessage;
 
   const isHandset = uiMode === "handset";
 
-  const latestHeader = (
-    <FileFeedHeader
-      title="Latest"
-      filter={latestFilter}
-      onFilterChange={handleLatestFilterChange}
-      onOpenNote={repoWorkspace.openNote}
-      showTitle={!isHandset}
-    />
-  );
-  const activeHeader = (
-    <FileFeedHeader
-      title="Active"
-      filter={activeFilter}
-      onFilterChange={handleActiveFilterChange}
-      showTitle={!isHandset}
-    />
-  );
-
-  const latestContent = (
-    <FileListColumn
-      files={latestFiles}
+  const renderFilePanel = (headerPrefix?: React.ReactNode): React.JSX.Element => (
+    <FileIntelligencePanel
+      files={intelligenceFiles}
       repoId={repoId}
-      emptyMessage={latestEmptyMessage}
-      selectedPaths={latestSelection.selectedPaths}
-      onSelect={latestSelection.handleSelect}
-      onDragStart={handleLatestDrag}
-      onOpen={repoWorkspace.openFile}
-    />
-  );
-  const activeContent = (
-    <FileListColumn
-      files={activeFiles}
-      repoId={repoId}
-      emptyMessage={activeEmptyMessage}
-      selectedPaths={activeSelection.selectedPaths}
-      onSelect={activeSelection.handleSelect}
-      onDragStart={handleActiveDrag}
+      emptyMessage={fileEmptyMessage}
+      filter={fileFilter}
+      sortMode={sortMode}
+      selectedPaths={fileSelection.selectedPaths}
+      headerPrefix={headerPrefix}
+      onFilterChange={handleFilterChange}
+      onSortModeChange={handleSortModeChange}
+      onSelect={fileSelection.handleSelect}
+      onDragStart={handleFileDrag}
       onOpen={repoWorkspace.openFile}
     />
   );
@@ -225,18 +177,12 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       )}
       {workspaceLayout ?? (isHandset ? (
         <HandsetDeck
-          latestHeader={latestHeader}
-          activeHeader={activeHeader}
-          latestContent={latestContent}
-          activeContent={activeContent}
+          filePanel={renderFilePanel}
           zipsContent={zipsContent}
         />
       ) : (
         <ThreeColumn
-          latestHeaderLeft={latestHeader}
-          latestContent={latestContent}
-          activeHeaderLeft={activeHeader}
-          activeContent={activeContent}
+          fileContent={renderFilePanel()}
           zipsContent={zipsContent}
         />
       ))}

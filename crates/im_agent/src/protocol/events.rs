@@ -24,11 +24,20 @@ pub enum FileChangeType {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct FileActivityBucket {
+    pub bucket_start_iso: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FileActivity {
     pub first_seen_at_iso: String,
     pub last_seen_at_iso: String,
     pub update_count: u32,
     pub burst_count: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub history: Vec<FileActivityBucket>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

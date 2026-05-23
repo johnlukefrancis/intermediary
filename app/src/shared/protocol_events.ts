@@ -13,11 +13,18 @@ export type FileKind = z.infer<typeof FileKindSchema>;
 export const FileChangeTypeSchema = z.enum(["add", "change", "unlink"]);
 export type FileChangeType = z.infer<typeof FileChangeTypeSchema>;
 
+export const FileActivityBucketSchema = z.object({
+  bucketStartIso: z.string(),
+  count: z.number().int().nonnegative(),
+});
+export type FileActivityBucket = z.infer<typeof FileActivityBucketSchema>;
+
 export const FileActivitySchema = z.object({
   firstSeenAtIso: z.string(),
   lastSeenAtIso: z.string(),
   updateCount: z.number().int().nonnegative(),
   burstCount: z.number().int().nonnegative(),
+  history: z.array(FileActivityBucketSchema).default([]),
 });
 export type FileActivity = z.infer<typeof FileActivitySchema>;
 
@@ -32,7 +39,7 @@ export const FileEntrySchema = z.object({
   mtime: z.string(),
   /** Optional file size in bytes */
   sizeBytes: z.number().int().nonnegative().optional(),
-  /** Persisted activity metadata for active-feed ranking */
+  /** Persisted activity metadata for File Intelligence ranking */
   activity: FileActivitySchema.optional(),
 });
 export type FileEntry = z.infer<typeof FileEntrySchema>;
@@ -64,7 +71,7 @@ export const FileChangedEventSchema = z.object({
   kind: FileKindSchema,
   changeType: FileChangeTypeSchema,
   mtime: z.string(),
-  /** Persisted activity metadata for active-feed ranking */
+  /** Persisted activity metadata for File Intelligence ranking */
   activity: FileActivitySchema.optional(),
   /** Present when file was auto-staged */
   staged: StagedInfoSchema.optional(),

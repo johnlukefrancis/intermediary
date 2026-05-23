@@ -151,7 +151,7 @@ export const PersistedConfigSchema = z.object({
     ],
       patterns: [...GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS],
     }),
-  /** Global classification excludes (used by file feeds only) */
+  /** Global classification excludes (used by File Intelligence only) */
   classificationExcludes: GlobalExcludesSchema.default({
     dirNames: [...GLOBAL_EXCLUDE_RECOMMENDED_DIRS],
     dirSuffixes: [...GLOBAL_EXCLUDE_RECOMMENDED_DIR_SUFFIXES],

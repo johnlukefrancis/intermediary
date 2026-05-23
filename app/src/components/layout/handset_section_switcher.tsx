@@ -1,13 +1,12 @@
 // Path: app/src/components/layout/handset_section_switcher.tsx
-// Description: Bracketed tab switcher for handset mode sections (Latest | Active | Zips)
+// Description: Bracketed tab switcher for handset mode sections (Files | Zips)
 
 import type React from "react";
 
-export type HandsetSection = "latest" | "active" | "zips";
+export type HandsetSection = "files" | "zips";
 
 const SECTIONS: ReadonlyArray<{ value: HandsetSection; label: string }> = [
-  { value: "latest", label: "LATEST" },
-  { value: "active", label: "ACTIVE" },
+  { value: "files", label: "FILES" },
   { value: "zips", label: "ZIPS" },
 ];
 
