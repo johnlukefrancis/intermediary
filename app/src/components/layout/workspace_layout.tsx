@@ -126,10 +126,6 @@ function WorkspacePanel({
 function ZipsPanel({ zipsContent }: { zipsContent: React.ReactNode }): React.JSX.Element {
   return (
     <section className="panel" data-panel="zips">
-      <header className="panel-header">
-        <h2 className="panel-title">Zips</h2>
-        <span className="panel-cue" aria-hidden="true" />
-      </header>
       <div className="panel-content">{zipsContent}</div>
     </section>
   );

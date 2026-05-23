@@ -52,20 +52,27 @@ export function AutoFilesHeader({
         ))}
       </div>
       <div className="auto-files-filter" role="toolbar" aria-label="File type filters">
-        {FILTERS.map((entry) => (
-          <button
-            key={entry.value}
-            type="button"
-            className={`auto-files-filter-button${
-              filter === entry.value ? " auto-files-filter-button--active" : ""
-            }`}
-            onClick={() => { onFilterChange(entry.value); }}
-            aria-label={`Show ${entry.label}`}
-          >
-            {entry.icon}
-            <span>{entry.label}</span>
-          </button>
-        ))}
+        {FILTERS.map((entry) => {
+          const isIconOnly = entry.value !== "all";
+          return (
+            <button
+              key={entry.value}
+              type="button"
+              className={[
+                "auto-files-filter-button",
+                isIconOnly ? "auto-files-filter-button--icon-only" : "auto-files-filter-button--with-label",
+                filter === entry.value ? "auto-files-filter-button--active" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => { onFilterChange(entry.value); }}
+              aria-label={`Show ${entry.label}`}
+              aria-pressed={filter === entry.value}
+              title={`Show ${entry.label}`}
+            >
+              {entry.icon}
+              {!isIconOnly && <span>{entry.label}</span>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

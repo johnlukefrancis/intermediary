@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
+  height: 32px;
   border: 1px solid var(--color-border);
   background: rgba(8, 8, 14, 0.76);
   color: var(--color-text-secondary);
@@ -47,18 +47,28 @@
 
 .auto-files-icon-button {
   width: 28px;
+  height: 28px;
   padding: 0;
 }
 
 .auto-files-filter-button {
   gap: var(--space-2);
-  min-width: 86px;
+  min-width: 0;
   padding: 0 var(--space-3);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.auto-files-filter-button--with-label {
+  min-width: 72px;
+}
+
+.auto-files-filter-button--icon-only {
+  width: 40px;
+  padding: 0;
 }
 
 .auto-files-icon-button svg, .auto-files-filter-button svg {
@@ -71,11 +81,21 @@
   stroke-linejoin: round;
 }
 
+.auto-files-filter-button svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.85;
+}
+
 .auto-files-icon-button:hover, .auto-files-filter-button:hover,
 .auto-files-icon-button--active, .auto-files-filter-button--active {
   color: var(--color-accent);
   border-color: color-mix(in srgb, var(--color-accent) 76%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 18%, transparent), transparent),
+    rgba(8, 8, 14, 0.82);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 color-mix(in srgb, var(--color-accent) 18%, transparent),
     0 0 10px 0 var(--color-accent-glow);
 }
