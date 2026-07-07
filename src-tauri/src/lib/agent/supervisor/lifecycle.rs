@@ -110,7 +110,7 @@ impl AgentSupervisor {
             false
         };
 
-        if host_auth_ok && host_origin_compat_ok && !requires_wsl {
+        if !force && host_auth_ok && host_origin_compat_ok && !requires_wsl {
             self.stop_process(ProcessKind::Wsl).await?;
             self.set_last_error(None)?;
             return Ok(build_result(
@@ -124,6 +124,7 @@ impl AgentSupervisor {
             ));
         }
         if should_short_circuit_already_running_with_wsl(
+            force,
             host_auth_ok,
             host_origin_compat_ok,
             requires_wsl,
@@ -240,13 +241,20 @@ fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Optio
 }
 
 fn should_short_circuit_already_running_with_wsl(
+    force: bool,
     host_auth_ok: bool,
     host_origin_compat_ok: bool,
     requires_wsl: bool,
     wsl_auth_ok: bool,
     managed_owner_required: bool,
 ) -> bool {
-    host_auth_ok && host_origin_compat_ok && requires_wsl && wsl_auth_ok && !managed_owner_required
+    // A forced restart never short-circuits: it always proceeds to tear down and respawn.
+    !force
+        && host_auth_ok
+        && host_origin_compat_ok
+        && requires_wsl
+        && wsl_auth_ok
+        && !managed_owner_required
 }
 
 #[cfg(test)]
@@ -256,21 +264,29 @@ mod tests {
     #[test]
     fn managed_mode_disables_wsl_already_running_fast_path() {
         assert!(!should_short_circuit_already_running_with_wsl(
-            true, true, true, true, true
+            false, true, true, true, true, true
         ));
     }
 
     #[test]
     fn non_managed_mode_keeps_wsl_already_running_fast_path() {
         assert!(should_short_circuit_already_running_with_wsl(
-            true, true, true, true, false
+            false, true, true, true, true, false
         ));
     }
 
     #[test]
     fn origin_mismatch_disables_wsl_already_running_fast_path() {
         assert!(!should_short_circuit_already_running_with_wsl(
-            true, false, true, true, false
+            false, true, false, true, true, false
+        ));
+    }
+
+    #[test]
+    fn force_disables_wsl_already_running_fast_path() {
+        // Even a fully healthy host+WSL must respawn under a forced restart.
+        assert!(!should_short_circuit_already_running_with_wsl(
+            true, true, true, true, true, false
         ));
     }
 }

@@ -177,18 +177,30 @@ resolve_ws_auth_file() {
 
   local explicit_app_id="${INTERMEDIARY_WS_AUTH_APP_ID:-}"
   if [[ -n "${explicit_app_id}" ]]; then
-    local explicit_candidate="${local_app_data_wsl}/${explicit_app_id}/agent/ws_auth.json"
-    if [[ ! -f "${explicit_candidate}" ]]; then
-      create_ws_auth_file "${explicit_candidate}"
+    # Durable location (outside the installer-wiped agent/ dir) is authoritative; the legacy
+    # agent/ path is only read when a pre-relocation token file still lives there.
+    local explicit_candidate="${local_app_data_wsl}/${explicit_app_id}/ws_auth.json"
+    local explicit_legacy="${local_app_data_wsl}/${explicit_app_id}/agent/ws_auth.json"
+    if [[ -f "${explicit_candidate}" ]]; then
+      printf '%s\n' "${explicit_candidate}"
+      return 0
     fi
+    if [[ -f "${explicit_legacy}" ]]; then
+      printf '%s\n' "${explicit_legacy}"
+      return 0
+    fi
+    create_ws_auth_file "${explicit_candidate}"
     printf '%s\n' "${explicit_candidate}"
     return 0
   fi
 
   local candidate
   for candidate in \
+    "${local_app_data_wsl}/com.johnf.intermediary/ws_auth.json" \
     "${local_app_data_wsl}/com.johnf.intermediary/agent/ws_auth.json" \
+    "${local_app_data_wsl}/Intermediary/ws_auth.json" \
     "${local_app_data_wsl}/Intermediary/agent/ws_auth.json" \
+    "${local_app_data_wsl}/com.johnf.intermediary.dev/ws_auth.json" \
     "${local_app_data_wsl}/com.johnf.intermediary.dev/agent/ws_auth.json"; do
     if [[ -f "${candidate}" ]]; then
       printf '%s\n' "${candidate}"

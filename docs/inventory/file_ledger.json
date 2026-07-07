@@ -1190,6 +1190,10 @@
       "summary": "Supervisor runtime path, port, and installed-bundle preference helpers"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/shutdown.rs",
+      "summary": "App-exit teardown: stop agents, then free WSL VM RAM when the distro is idle"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/state.rs",
       "summary": "Shared supervisor process state and process-kind labels"
     },
@@ -1236,6 +1240,10 @@
     {
       "path": "src-tauri/src/lib/agent/wsl_process_control.rs",
       "summary": "WSL agent launch target resolution, spawning, and in-WSL termination helpers"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_shutdown.rs",
+      "summary": "Conditional WSL distro teardown to free VM RAM when no interactive session remains"
     },
     {
       "path": "src-tauri/src/lib/commands/agent_control.rs",

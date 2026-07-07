@@ -5,7 +5,8 @@ use super::install::AgentBundlePaths;
 use super::wsl_command_runner::{run_wsl_bash, run_wsl_signal_command, sanitize_stream_text};
 use super::wsl_process_control_commands::{
     build_wsl_bash_args, build_wsl_list_exact_pids_command_line,
-    build_wsl_list_intermediary_agent_pids_command_line, build_wsl_signal_pids_command_line,
+    build_wsl_list_intermediary_agent_pids_command_line,
+    build_wsl_list_port_listener_pids_command_line, build_wsl_signal_pids_command_line,
     build_wsl_spawn_command_line, distro_label, normalize_distro,
 };
 use crate::paths::wsl_convert::windows_to_wsl_path;
@@ -102,7 +103,7 @@ pub fn terminate_wsl_agent_process(
     }
 
     terminate_matching_wsl_agent_processes(
-        target,
+        target.distro.as_deref(),
         term_grace,
         poll,
         || list_exact_wsl_agent_pids(target),
@@ -120,17 +121,40 @@ pub fn terminate_intermediary_wsl_agent_processes_by_port(
         return Ok(WslTerminateOutcome::NoMatch);
     }
 
+    let distro = target.distro.clone();
     terminate_matching_wsl_agent_processes(
-        target,
+        distro.as_deref(),
         term_grace,
         poll,
-        || list_intermediary_wsl_agent_pids_by_port(target, wsl_port),
-        &format!("INTERMEDIARY_AGENT_PORT={wsl_port}"),
+        || list_reclaimable_wsl_agent_pids_by_port(target, wsl_port),
+        &format!("INTERMEDIARY_AGENT_PORT={wsl_port} or port-listener :{wsl_port}"),
+    )
+}
+
+/// Reclaims (TERM→KILL) any Intermediary `im_agent` bound to `wsl_port`, using only the
+/// port-listener probe. Used by config-less callers (`stop`, app exit) that know the distro and
+/// port but may not hold a full launch target for the running backend.
+pub fn terminate_wsl_agent_by_port_listener(
+    distro: Option<&str>,
+    wsl_port: u16,
+    term_grace: Duration,
+    poll: Duration,
+) -> Result<WslTerminateOutcome, String> {
+    if !cfg!(target_os = "windows") {
+        return Ok(WslTerminateOutcome::NoMatch);
+    }
+
+    terminate_matching_wsl_agent_processes(
+        distro,
+        term_grace,
+        poll,
+        || list_wsl_agent_pids_by_port_listener(distro, wsl_port),
+        &format!("port-listener :{wsl_port}"),
     )
 }
 
 fn terminate_matching_wsl_agent_processes<F>(
-    target: &WslLaunchTarget,
+    distro: Option<&str>,
     term_grace: Duration,
     poll: Duration,
     mut list_pids: F,
@@ -147,7 +171,7 @@ where
     let mut signal_errors: Vec<String> = Vec::new();
 
     let term_command = build_wsl_signal_pids_command_line(&matching_pids, "TERM");
-    if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &term_command, "TERM")? {
+    if let Some(error) = run_wsl_signal_command(distro, &term_command, "TERM")? {
         signal_errors.push(error);
     }
     if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
@@ -160,7 +184,7 @@ where
     }
 
     let kill_command = build_wsl_signal_pids_command_line(&matching_pids, "KILL");
-    if let Some(error) = run_wsl_signal_command(target.distro.as_deref(), &kill_command, "KILL")? {
+    if let Some(error) = run_wsl_signal_command(distro, &kill_command, "KILL")? {
         signal_errors.push(error);
     }
     if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
@@ -220,6 +244,48 @@ pub fn list_intermediary_wsl_agent_pids_by_port(
     }
 
     parse_pid_list(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// Lists PIDs that are (a) TCP listeners on `wsl_port` and (b) confirmed Intermediary `im_agent`
+/// processes. Uses `ss` inside the distro; if `ss` is unavailable it yields an empty list rather
+/// than erroring, so callers degrade to the path/env detectors.
+pub fn list_wsl_agent_pids_by_port_listener(
+    distro: Option<&str>,
+    wsl_port: u16,
+) -> Result<Vec<u32>, String> {
+    let command_line = build_wsl_list_port_listener_pids_command_line(wsl_port);
+    let output = run_wsl_bash(distro, &command_line)?;
+    if !output.status.success() {
+        let status = output
+            .status
+            .code()
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "signal".to_string());
+        let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
+        return Err(format!(
+            "Failed to list WSL agent port listeners (exit={status}, port={wsl_port}, distro={}): {stderr}",
+            distro_label(distro)
+        ));
+    }
+
+    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// Union of the env-signature detector and the port-listener detector: every Intermediary
+/// `im_agent` reachable on `wsl_port`, regardless of how it was launched. This is the authoritative
+/// reclamation set for a stale/mismatched backend occupying our reserved port.
+pub fn list_reclaimable_wsl_agent_pids_by_port(
+    target: &WslLaunchTarget,
+    wsl_port: u16,
+) -> Result<Vec<u32>, String> {
+    let mut pids = list_intermediary_wsl_agent_pids_by_port(target, wsl_port)?;
+    pids.extend(list_wsl_agent_pids_by_port_listener(
+        target.distro.as_deref(),
+        wsl_port,
+    )?);
+    pids.sort_unstable();
+    pids.dedup();
+    Ok(pids)
 }
 
 fn wait_for_wsl_agent_exit<F>(

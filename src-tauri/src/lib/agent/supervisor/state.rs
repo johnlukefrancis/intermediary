@@ -33,11 +33,22 @@ pub(super) struct ManagedProcessState {
     pub last_spawn_at: Option<Instant>,
 }
 
+/// Durable identity of the WSL backend we manage this session (distro + reserved port). Unlike
+/// `wsl_launch_target` — which is cleared and re-derived on every ensure pass — this survives so
+/// config-less callers (`stop`, app exit) can reclaim the backend by port even when they hold no
+/// launch target (adopted/reconnected backend, or a health-check race).
+#[derive(Debug, Clone)]
+pub(super) struct WslBackendHandle {
+    pub distro: Option<String>,
+    pub port: u16,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct AgentSupervisorState {
     pub host: ManagedProcessState,
     pub wsl: ManagedProcessState,
     pub wsl_launch_target: Option<WslLaunchTarget>,
+    pub last_wsl_backend: Option<WslBackendHandle>,
     pub last_error: Option<String>,
 }
 

@@ -27,6 +27,11 @@ impl AgentSupervisor {
         let target = build_wsl_launch_target(bundle, distro)?;
         let (backend_mode, invalid_mode_raw) = resolve_wsl_backend_mode();
         self.set_wsl_launch_target(None)?;
+        // Clear ownership records at the start of every pass; they are re-committed only once
+        // ownership is confirmed reclaimable (record_owned_wsl_backend). A foreign/ExternalUnmanaged
+        // occupant therefore never leaves a durable handle behind — so app-exit teardown can never
+        // terminate a foreign distro (ADR-013 boundary).
+        self.set_last_wsl_backend(None)?;
         if let Some(invalid) = invalid_mode_raw {
             logging::log(
                 "warn",
@@ -58,41 +63,52 @@ impl AgentSupervisor {
                 return Err(message);
             }
 
+            // Reclaimable = a backend we may terminate: one of our own agents (installed or
+            // same-port Intermediary), outside external mode.
+            let reclaimable_owner = !matches!(owner, WslBackendOwner::ExternalUnmanaged)
+                && !matches!(backend_mode, WslBackendMode::External);
+
             let mut remediated_current_listener = false;
             if self
                 .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
                 .await?
             {
-                if owner == WslBackendOwner::SamePortIntermediary
-                    && matches!(backend_mode, WslBackendMode::Managed)
-                {
-                    self.set_wsl_launch_target(Some(target.clone()))?;
-                    self.remediate_stale_wsl_port(
-                        wsl_port,
-                        &target,
-                        owner,
-                        "managed_owner_mismatch",
-                    )
-                    .await?;
+                // A forced restart must tear a healthy backend down and respawn it — otherwise
+                // "Restart Agent" silently no-ops. Managed mode also remediates a same-port owner
+                // to converge on the installed backend.
+                let force_respawn = force && reclaimable_owner;
+                let managed_owner_remediation = owner == WslBackendOwner::SamePortIntermediary
+                    && matches!(backend_mode, WslBackendMode::Managed);
+                if force_respawn || managed_owner_remediation {
+                    self.record_owned_wsl_backend(&target, wsl_port)?;
+                    let reason = if force_respawn {
+                        "force_restart"
+                    } else {
+                        "managed_owner_mismatch"
+                    };
+                    self.remediate_stale_wsl_port(wsl_port, &target, owner, reason)
+                        .await?;
                     remediated_current_listener = true;
                 } else {
-                    if owner == WslBackendOwner::InstalledManaged
-                        && !matches!(backend_mode, WslBackendMode::External)
-                    {
-                        self.set_wsl_launch_target(Some(target.clone()))?;
+                    // Adopt the healthy running backend as ours to manage, recording the kill
+                    // target so stop/exit can terminate it. Skipped in external mode.
+                    if reclaimable_owner {
+                        self.record_owned_wsl_backend(&target, wsl_port)?;
                     }
                     return Ok(EnsureProcessResult::AlreadyRunning);
                 }
             }
 
             if !remediated_current_listener {
-                self.set_wsl_launch_target(Some(target.clone()))?;
+                // Check ownership BEFORE recording it: a foreign occupant must return here with no
+                // durable handle recorded, so exit teardown never touches its distro.
                 if let Some(error) =
                     self.wsl_auth_failure_error(backend_mode, owner, wsl_port, &target)
                 {
                     return Err(error);
                 }
 
+                self.record_owned_wsl_backend(&target, wsl_port)?;
                 self.remediate_stale_wsl_port(wsl_port, &target, owner, "auth_probe_failed")
                     .await?;
             }
@@ -103,7 +119,9 @@ impl AgentSupervisor {
             ));
         }
 
-        self.set_wsl_launch_target(Some(target.clone()))?;
+        // Reached only when spawning our own backend (port free, or occupant remediated). Commit
+        // ownership so stop/exit can reclaim the process we are about to launch.
+        self.record_owned_wsl_backend(&target, wsl_port)?;
         self.reconcile_recorded_child(ProcessKind::Wsl, "port_probe_failed")
             .await?;
         if !force && self.is_in_backoff(ProcessKind::Wsl)? {

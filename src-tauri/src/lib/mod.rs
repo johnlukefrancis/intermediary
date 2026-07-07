@@ -79,7 +79,7 @@ pub fn run() {
         }
         if matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
             let supervisor = app_handle.state::<AgentSupervisor>();
-            if let Err(err) = tauri::async_runtime::block_on(supervisor.stop()) {
+            if let Err(err) = tauri::async_runtime::block_on(supervisor.shutdown_on_exit()) {
                 logging::log("error", "agent", "stop_on_exit_failed", &err);
             }
             stopped = true;

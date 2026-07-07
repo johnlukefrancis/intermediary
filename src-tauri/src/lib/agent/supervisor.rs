@@ -46,6 +46,7 @@ mod managed_processes;
 mod probes;
 mod process_kill;
 mod runtime;
+mod shutdown;
 mod state;
 mod websocket_probe;
 mod wsl;

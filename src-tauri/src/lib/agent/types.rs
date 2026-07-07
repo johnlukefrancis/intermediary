@@ -98,11 +98,16 @@ impl AgentWebSocketAuthState {
             .path()
             .app_local_data_dir()
             .map_err(|_| "Failed to resolve app local data directory".to_string())?;
-        let agent_dir = app_local_data.join("agent");
-        fs::create_dir_all(&agent_dir)
-            .map_err(|err| format!("Failed to create agent directory: {err}"))?;
+        fs::create_dir_all(&app_local_data)
+            .map_err(|err| format!("Failed to create app local data directory: {err}"))?;
 
-        let auth_path = agent_dir.join(WS_AUTH_STATE_FILE);
+        // The auth token lives directly under app-local data — NOT under `agent/`, which the
+        // installer wipes on every version-bump reinstall. Keeping it outside that directory means
+        // reinstalls reuse the same token, so a surviving WSL backend still authenticates instead
+        // of wedging the port with a mismatched token.
+        let auth_path = app_local_data.join(WS_AUTH_STATE_FILE);
+        let legacy_auth_path = app_local_data.join("agent").join(WS_AUTH_STATE_FILE);
+        migrate_legacy_auth_file(&legacy_auth_path, &auth_path)?;
         let persisted = read_or_create_tokens(&auth_path)?;
 
         Ok(Self {
@@ -136,6 +141,28 @@ fn default_host_allowed_origins() -> Vec<String> {
     }
 
     host_allowed_origins
+}
+
+/// Adopts a token file written by an earlier build (under `agent/`) into its durable location the
+/// first time the new build runs. Only a file that parses to valid tokens is adopted; anything
+/// else is ignored so `read_or_create_tokens` mints fresh tokens at the new path.
+fn migrate_legacy_auth_file(legacy_path: &Path, new_path: &Path) -> Result<(), String> {
+    if new_path.is_file() || !legacy_path.is_file() {
+        return Ok(());
+    }
+    if read_valid_tokens(legacy_path)?.is_none() {
+        return Ok(());
+    }
+
+    if fs::rename(legacy_path, new_path).is_ok() {
+        return Ok(());
+    }
+
+    // Cross-directory rename can fail on some filesystems; fall back to copy-then-remove.
+    fs::copy(legacy_path, new_path)
+        .map_err(|err| format!("Failed to migrate websocket auth token file: {err}"))?;
+    let _ = fs::remove_file(legacy_path);
+    Ok(())
 }
 
 fn read_or_create_tokens(path: &Path) -> Result<PersistedWsAuthTokens, String> {
@@ -232,7 +259,10 @@ fn validate_tokens(tokens: PersistedWsAuthTokens) -> Option<PersistedWsAuthToken
 
 #[cfg(test)]
 mod tests {
-    use super::{create_tokens_if_absent, read_or_create_tokens, PersistedWsAuthTokens};
+    use super::{
+        create_tokens_if_absent, migrate_legacy_auth_file, read_or_create_tokens,
+        PersistedWsAuthTokens,
+    };
     use std::fs;
 
     #[test]
@@ -269,6 +299,50 @@ mod tests {
         let persisted: PersistedWsAuthTokens = serde_json::from_str(&raw).expect("parse auth");
         assert_eq!(persisted.host_ws_token, tokens.host_ws_token);
         assert_eq!(persisted.wsl_ws_token, tokens.wsl_ws_token);
+    }
+
+    #[test]
+    fn migrate_legacy_auth_file_adopts_valid_legacy_tokens() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let legacy = dir.path().join("agent").join("ws_auth.json");
+        fs::create_dir_all(legacy.parent().expect("legacy parent")).expect("mkdir legacy");
+        fs::write(
+            &legacy,
+            r#"{"hostWsToken":"legacy-host","wslWsToken":"legacy-wsl"}"#,
+        )
+        .expect("write legacy");
+        let new_path = dir.path().join("ws_auth.json");
+
+        migrate_legacy_auth_file(&legacy, &new_path).expect("migrate");
+
+        let tokens = read_or_create_tokens(&new_path).expect("tokens");
+        assert_eq!(tokens.host_ws_token, "legacy-host");
+        assert_eq!(tokens.wsl_ws_token, "legacy-wsl");
+        assert!(!legacy.is_file(), "legacy file should be moved");
+    }
+
+    #[test]
+    fn migrate_legacy_auth_file_keeps_existing_new_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let legacy = dir.path().join("agent").join("ws_auth.json");
+        fs::create_dir_all(legacy.parent().expect("legacy parent")).expect("mkdir legacy");
+        fs::write(
+            &legacy,
+            r#"{"hostWsToken":"legacy-host","wslWsToken":"legacy-wsl"}"#,
+        )
+        .expect("write legacy");
+        let new_path = dir.path().join("ws_auth.json");
+        fs::write(
+            &new_path,
+            r#"{"hostWsToken":"current-host","wslWsToken":"current-wsl"}"#,
+        )
+        .expect("write current");
+
+        migrate_legacy_auth_file(&legacy, &new_path).expect("migrate");
+
+        let tokens = read_or_create_tokens(&new_path).expect("tokens");
+        assert_eq!(tokens.host_ws_token, "current-host");
+        assert!(legacy.is_file(), "legacy file must be left untouched");
     }
 
     #[test]

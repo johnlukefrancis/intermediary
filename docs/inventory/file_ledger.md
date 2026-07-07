@@ -300,6 +300,7 @@ src-tauri/src/lib/agent/supervisor/managed_processes.rs - Supervisor-owned child
 src-tauri/src/lib/agent/supervisor/probes.rs - Async supervisor probe helpers for port, websocket auth, and origin compatibility
 src-tauri/src/lib/agent/supervisor/process_kill.rs - Blocking child-process termination helpers for supervisor-owned processes
 src-tauri/src/lib/agent/supervisor/runtime.rs - Supervisor runtime path, port, and installed-bundle preference helpers
+src-tauri/src/lib/agent/supervisor/shutdown.rs - App-exit teardown: stop agents, then free WSL VM RAM when the distro is idle
 src-tauri/src/lib/agent/supervisor/state.rs - Shared supervisor process state and process-kind labels
 src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth and origin probes used by the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
@@ -312,6 +313,7 @@ src-tauri/src/lib/agent/wsl_command_runner.rs - Bounded WSL command execution he
 src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
 src-tauri/src/lib/agent/wsl_process_control_tests.rs - Tests for WSL process-control parsing helpers
 src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution, spawning, and in-WSL termination helpers
+src-tauri/src/lib/agent/wsl_shutdown.rs - Conditional WSL distro teardown to free VM RAM when no interactive session remains
 src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics
 src-tauri/src/lib/commands/config.rs - Tauri commands for config persistence

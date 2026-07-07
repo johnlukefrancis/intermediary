@@ -11,6 +11,7 @@ pub mod types;
 mod wsl_command_runner;
 mod wsl_process_control;
 mod wsl_process_control_commands;
+mod wsl_shutdown;
 
 pub use supervisor::AgentSupervisor;
 pub use types::{AgentSupervisorConfig, AgentSupervisorResult, AgentWebSocketAuthState};

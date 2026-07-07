@@ -1,7 +1,8 @@
 // Path: src-tauri/src/lib/agent/wsl_command_runner.rs
 // Description: Bounded WSL command execution helpers for agent process control
 
-use super::wsl_process_control_commands::{build_wsl_bash_args, distro_label};
+use super::wsl_process_control_commands::{build_wsl_bash_stdin_args, distro_label};
+use std::io::Write;
 use std::process::{Child, Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -32,14 +33,34 @@ pub(super) fn run_wsl_signal_command(
 }
 
 pub(super) fn run_wsl_bash(distro: Option<&str>, command_line: &str) -> Result<Output, String> {
-    let mut command = build_wsl_bash_command(distro, command_line);
-    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut command = build_wsl_bash_command(distro);
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|err| {
         format!(
             "Failed to execute WSL command (distro={}): {err}",
             distro_label(distro)
         )
     })?;
+
+    // Feed the script over stdin (bash -s) rather than as a wsl.exe argument. The script is small
+    // (a few KB), so writing it fully before draining stdout cannot deadlock. Dropping the handle
+    // sends EOF so bash runs and exits.
+    {
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| "Failed to open WSL command stdin".to_string())?;
+        stdin.write_all(command_line.as_bytes()).map_err(|err| {
+            format!(
+                "Failed to write WSL command to stdin (distro={}): {err}",
+                distro_label(distro)
+            )
+        })?;
+    }
+
     let start = Instant::now();
 
     loop {
@@ -85,7 +106,7 @@ fn timeout_wsl_command(mut child: Child, distro: Option<&str>) -> Result<Output,
     ))
 }
 
-fn build_wsl_bash_command(distro: Option<&str>, command_line: &str) -> Command {
+fn build_wsl_bash_command(distro: Option<&str>) -> Command {
     let mut command = Command::new("wsl.exe");
     #[cfg(windows)]
     {
@@ -93,7 +114,7 @@ fn build_wsl_bash_command(distro: Option<&str>, command_line: &str) -> Command {
         command.creation_flags(CREATE_NO_WINDOW);
     }
 
-    command.args(build_wsl_bash_args(distro, command_line));
+    command.args(build_wsl_bash_stdin_args(distro));
     command
 }
 

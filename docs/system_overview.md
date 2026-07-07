@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-05-23
+Updated on: 2026-07-07
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -94,7 +94,9 @@ Intermediary uses a **host-routed architecture**:
   - Restart command and diagnostics surfaced in the UI
   - Spawns managed host/WSL agents with stdio logging disabled and null stdio streams to avoid undrained pipe-buffer stalls; early-exit diagnostics read bounded tails from `agent_latest.log`
   - Reconciles tracked host/WSL child processes before spawn/replace/stop, and stops tracked children on app exit to enforce a no-orphan-process boundary for supervisor-owned processes
-  - Remediates stale WSL backend port occupants only when ownership is proven by the configured installed agent path or same-port Intermediary agent environment; `external` mode remains user-managed
+  - Reclaims the reserved WSL backend port from any confirmed Intermediary `im_agent` — the owning PID(s) are found by port listener (via `ss` inside the distro) and verified by `/proc/<pid>/comm`, executable basename, or `INTERMEDIARY_WSL_WS_TOKEN` in the process environment — so a stale agent from a prior install or a closed dev task is reclaimed even when it was launched from a different path or token; a genuinely foreign (non-Intermediary) listener is never terminated and still errors in `mode=auto`. `external` mode remains user-managed
+  - **Restart Agent** forces a real teardown: it bypasses the "already running" short-circuit and always reclaims the port and respawns the backend, even when the backend is healthy (no more silent no-op)
+  - On app exit, stops the agents by port, then frees the WSL VM RAM only when the distro is otherwise idle — no interactive `pts/*` session is open (console gettys on `hvc0`/`tty1` and headless services are ignored) — by running `wsl --terminate <distro>` (targeted to the one distro, never `wsl --shutdown`); when any interactive WSL shell/tab is open the distro is left running, and in `external` mode nothing is terminated
 
 ### Host Agent
 
@@ -123,6 +125,7 @@ Intermediary uses a **host-routed architecture**:
 
 UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, with request/response envelopes and event envelopes:
 - The handshake requires an app-scoped query token loaded from app-local auth state (`ws://127.0.0.1:<hostPort>/?token=...`).
+- The app-scoped token lives in `ws_auth.json` directly under app-local data (`%LOCALAPPDATA%\com.johnf.intermediary\ws_auth.json`), outside the `agent/` subdirectory that the installer wipes on every version-bump reinstall; a one-time migration adopts any legacy `agent/ws_auth.json`, so reinstalls reuse the same token and a surviving backend still authenticates instead of wedging.
 - Host-agent validates token for every upgrade and enforces origin allowlisting when an `Origin` header is present.
 - Host→WSL backend forwarding uses a separate internal token not exposed to the UI.
 - Request: `{ kind: "request", requestId, payload }`
@@ -187,7 +190,7 @@ User preferences are persisted to `<app_local_data>/config.json`:
 
 | Platform | Default config location |
 |----------|----------------------|
-| Windows  | `%LOCALAPPDATA%\Intermediary\config.json` |
+| Windows  | `%LOCALAPPDATA%\com.johnf.intermediary\config.json` |
 | macOS    | `~/Library/Application Support/Intermediary/config.json` |
 | Linux    | `~/.local/share/intermediary/config.json` (or `$XDG_DATA_HOME`) |
 
@@ -201,6 +204,8 @@ Config is loaded on app startup via Tauri command and saved with debounce (500ms
 The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles, recent-file caches, and local notes without deleting repository files.
 
 Per-repo notes are stored outside config under `<app_local_data>/notes/`, keyed by a collision-safe repoId-derived filename. Removing a repo or group triggers best-effort note deletion for removed repoIds.
+
+The websocket auth token is stored separately in `<app_local_data>/ws_auth.json` (for example `%LOCALAPPDATA%\com.johnf.intermediary\ws_auth.json`), deliberately outside the `agent/` directory the installer wipes on every version-bump reinstall. The token therefore survives reinstalls, so a surviving backend re-authenticates instead of wedging; a one-time migration adopts any legacy `agent/ws_auth.json`.
 
 ## File Classification
 

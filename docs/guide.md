@@ -30,6 +30,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [ADR-009](compliance/adr_009_rust_concurrency_and_io_boundary_rules.md) | Rust Concurrency and IO Boundary Rules |
 | [ADR-010](compliance/adr_010_tauri_security_baseline.md) | Tauri Security Baseline |
 | [ADR-012](compliance/adr_012_copy_safe_command_delivery.md) | Copy-safe Command Delivery |
+| [ADR-013](compliance/adr_013_wsl_agent_lifecycle.md) | WSL Agent Lifecycle, Ownership, and Shutdown |
 
 ## Design
 
@@ -78,6 +79,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/dev_wsl_agent.md](commands/dev_wsl_agent.md) | Start the Rust WSL agent for local development |
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
 | [docs/commands/kill_agent_ports_windows.md](commands/kill_agent_ports_windows.md) | Clear stale Windows or WSL listeners from the Intermediary agent port |
+| [docs/commands/verify_wsl_port_detection.md](commands/verify_wsl_port_detection.md) | Manually verify WSL port-listener detection end-to-end through wsl.exe |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/release_windows.md](commands/release_windows.md) | Windows-first release flow, version bumping, and GitHub release automation |
 | [docs/commands/bundle_cli.md](commands/bundle_cli.md) | Build and verify the Rust bundle CLI |

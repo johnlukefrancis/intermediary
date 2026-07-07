@@ -4,10 +4,11 @@
 use super::wsl_mode::{WslBackendMode, WslBackendOwner};
 use super::wsl_runtime::{WSL_STALE_RETRY_BACKOFF, WSL_TERMINATE_POLL, WSL_TERMINATE_TERM_GRACE};
 use super::AgentSupervisor;
-use crate::agent::supervisor::state::ProcessKind;
+use crate::agent::supervisor::state::{ProcessKind, WslBackendHandle};
 use crate::agent::wsl_process_control::{
-    format_wsl_target, list_exact_wsl_agent_pids, list_intermediary_wsl_agent_pids_by_port,
-    terminate_wsl_agent_process, WslLaunchTarget, WslTerminateOutcome,
+    format_wsl_target, list_exact_wsl_agent_pids, list_reclaimable_wsl_agent_pids_by_port,
+    terminate_wsl_agent_by_port_listener, terminate_wsl_agent_process, WslLaunchTarget,
+    WslTerminateOutcome,
 };
 use crate::obs::logging;
 
@@ -16,10 +17,82 @@ impl AgentSupervisor {
         &self,
         reason: &str,
     ) -> Result<(), String> {
-        let Some(target) = self.wsl_launch_target_snapshot()? else {
-            return Ok(());
-        };
-        self.terminate_wsl_backend_target(&target, reason, 1).await
+        let mut errors: Vec<String> = Vec::new();
+
+        // Precise kill by the exact configured binary path when we recorded a launch target.
+        if let Some(target) = self.wsl_launch_target_snapshot()? {
+            if let Err(err) = self.terminate_wsl_backend_target(&target, reason, 1).await {
+                errors.push(err);
+            }
+        }
+
+        // Robust port reclamation: kill any Intermediary im_agent still bound to our backend port,
+        // even one this session did not spawn (adopted / stale / token-mismatched). This is what
+        // makes `stop`, Restart Agent, and app exit reliable instead of no-ops.
+        if let Some(handle) = self.last_wsl_backend_snapshot()? {
+            if let Err(err) = self
+                .reclaim_wsl_backend_by_port(handle.distro.as_deref(), handle.port, reason)
+                .await
+            {
+                errors.push(err);
+            }
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors.join("; "))
+        }
+    }
+
+    async fn reclaim_wsl_backend_by_port(
+        &self,
+        distro: Option<&str>,
+        wsl_port: u16,
+        reason: &str,
+    ) -> Result<(), String> {
+        let distro_owned = distro.map(str::to_string);
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            terminate_wsl_agent_by_port_listener(
+                distro_owned.as_deref(),
+                wsl_port,
+                WSL_TERMINATE_TERM_GRACE,
+                WSL_TERMINATE_POLL,
+            )
+        })
+        .await
+        .map_err(|err| format!("WSL port reclamation task failed: {err}"))?;
+
+        let distro_label = distro.unwrap_or("default");
+        match result {
+            Ok(outcome) => {
+                let outcome_label = match outcome {
+                    WslTerminateOutcome::NoMatch => "no_match",
+                    WslTerminateOutcome::TerminatedWithTerm => "term",
+                    WslTerminateOutcome::TerminatedWithKill => "kill",
+                };
+                logging::log(
+                    "info",
+                    "agent",
+                    "wsl_port_reclaim_done",
+                    &format!(
+                        "reason={reason} port={wsl_port} outcome={outcome_label} distro={distro_label}"
+                    ),
+                );
+                Ok(())
+            }
+            Err(err) => {
+                logging::log(
+                    "warn",
+                    "agent",
+                    "wsl_port_reclaim_done",
+                    &format!(
+                        "reason={reason} port={wsl_port} outcome=failed distro={distro_label} error={err}"
+                    ),
+                );
+                Err(err)
+            }
+        }
     }
 
     pub(super) fn set_wsl_launch_target(
@@ -32,6 +105,43 @@ impl AgentSupervisor {
             .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
         state.wsl_launch_target = target;
         Ok(())
+    }
+
+    /// Commits this backend as supervisor-owned: records both the exact-path kill target and the
+    /// durable (distro, port) handle used by config-less reclamation. Call ONLY once ownership is
+    /// confirmed reclaimable — adopting a healthy backend, remediating our own occupant, or right
+    /// before a managed spawn — never for a foreign/ExternalUnmanaged occupant, whose distro must
+    /// not be torn down on app exit (ADR-013 boundary).
+    pub(super) fn record_owned_wsl_backend(
+        &self,
+        target: &WslLaunchTarget,
+        wsl_port: u16,
+    ) -> Result<(), String> {
+        self.set_wsl_launch_target(Some(target.clone()))?;
+        self.set_last_wsl_backend(Some(WslBackendHandle {
+            distro: target.distro.clone(),
+            port: wsl_port,
+        }))
+    }
+
+    pub(super) fn set_last_wsl_backend(
+        &self,
+        handle: Option<WslBackendHandle>,
+    ) -> Result<(), String> {
+        let mut state = self
+            .state
+            .lock()
+            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
+        state.last_wsl_backend = handle;
+        Ok(())
+    }
+
+    pub(super) fn last_wsl_backend_snapshot(&self) -> Result<Option<WslBackendHandle>, String> {
+        let state = self
+            .state
+            .lock()
+            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
+        Ok(state.last_wsl_backend.clone())
     }
 
     pub(super) async fn remediate_stale_wsl_port(
@@ -98,7 +208,7 @@ impl AgentSupervisor {
     ) -> Result<usize, String> {
         let target_for_probe = target.clone();
         tauri::async_runtime::spawn_blocking(move || {
-            list_intermediary_wsl_agent_pids_by_port(&target_for_probe, wsl_port)
+            list_reclaimable_wsl_agent_pids_by_port(&target_for_probe, wsl_port)
         })
         .await
         .map_err(|err| format!("WSL same-port owner-detection task failed: {err}"))?
