@@ -2,6 +2,7 @@
 // Description: Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 
 import { useEffect, useRef } from "react";
+import { isForegroundWindow } from "../lib/window/foreground.js";
 
 interface UseResumeDetectorOptions {
   enabled?: boolean;
@@ -14,10 +15,6 @@ interface UseResumeDetectorOptions {
 const DEFAULT_GAP_THRESHOLD_MS = 30_000;
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_COOLDOWN_MS = 15_000;
-
-function isForegroundWindow(): boolean {
-  return !document.hidden && document.visibilityState === "visible" && document.hasFocus();
-}
 
 export function useResumeDetector(options: UseResumeDetectorOptions): void {
   const {

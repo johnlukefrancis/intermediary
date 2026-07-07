@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-05-23 (Config-driven themes + responsive handset override + global opacity + texture intensity + image workspace + bundle file explorer + Auto Files)
+Updated on: 2026-07-07 (Motion governor pauses on any focus loss, not only minimize; universal animation gate)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -356,11 +356,12 @@ This is handled globally in `motion.css` — no per-component opt-out needed.
 
 ### Motion Governor
 
-Substrate animations (`substrate-breathe`, `substrate-drift`) are automatically paused when the window is minimized or hidden. This prevents background GPU usage from continuous compositing.
+**Contract:** ALL animation MUST pause whenever the window is not truly foreground — hidden, minimized, **or visible-but-unfocused** (the user switched to another app). This is not limited to the substrate: decorative animations (`substrate-breathe`, `substrate-drift`) and functional/status animations (connection LED pulse, error marquee, build-progress sweep, waiting-state pulse) all halt so background GPU compositing drops to near-idle when nobody is looking.
 
-- **Detection:** Uses `document.visibilitychange` + Tauri window focus events
-- **CSS gate:** `[data-motion="paused"]` on `.app` element
-- **Behavior:** Animations pause in place (`animation-play-state: paused`) and resume seamlessly when the window becomes visible
+- **Foreground test:** `isForegroundWindow()` (`app/src/lib/window/foreground.ts`) = `!document.hidden && visibilityState === "visible" && document.hasFocus()`. Shared with the resume detector so "foreground" has one definition.
+- **Detection:** `document.visibilitychange` + window `focus`/`blur` (primary, cross-platform) plus Tauri window focus events (secondary, for Windows edge cases). Any focus loss pauses — not only minimize.
+- **CSS gate:** `[data-motion="paused"]` on the `.app` element drives a universal `animation-play-state: paused` rule in `motion.css` (mirrors the reduced-motion block), so every current and future animation is governed without per-component opt-in. The substrate additionally releases `will-change` in `effects.css`.
+- **Behavior:** Animations pause in place and resume seamlessly on refocus.
 - **Implementation:** `app/src/hooks/use_motion_governor.ts`
 
 ---

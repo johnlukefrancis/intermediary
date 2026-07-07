@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-05-23
+Updated on: 2026-07-07
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -37,13 +37,13 @@ Depends on: ADR-000, ADR-007
 
 ## P3 — Minor issues
 
-- 2026-02-02: Background GPU usage from substrate animations when minimized. Motion governor implemented; pending verification that GPU drops to near-idle when minimized.
 - 2026-02-11: After sleep/wake, status can briefly show `Reconnecting (...)` while the client reconnects and rehydrates repo state. This is expected during recovery, but can feel noisy on frequent wake cycles.
 
 ---
 
 ## Resolved (recent)
 
+- 2026-07-07: Background GPU usage from substrate and status animations when the window was unfocused. The motion governor only paused on hide/minimize, and its CSS gate only paused the substrate. Fixed by pausing on any focus loss (shared `isForegroundWindow()` foreground test) and gating all animation via a universal `[data-motion="paused"]` rule, so the whole window's animation halts (GPU → near-idle) when it is not foreground and resumes on refocus.
 - 2026-05-23: Settings Restart Agent could no-op after `WSL backend port 3142 is occupied by an external process that rejected the current websocket token` because the auto-mode error path cleared the WSL launch target before returning. Fixed by preserving the configured launch target before surfacing the auto-mode refusal, allowing Restart Agent to terminate the exact app-local backend path when it is the stale listener.
 - 2026-05-22: Opening files in the containing folder could fail for Windows-path files. Fixed by passing Explorer's reveal selection and target path as one `/select,<path>` argument.
 - 2026-05-22: Removing a folder or subfolder from the app could stall after confirmation because tab-dropdown outside-click handling could unmount portal confirmations before the confirm click ran. Fixed by making modal portals an explicit dropdown exclusion.

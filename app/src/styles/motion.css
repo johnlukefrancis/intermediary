@@ -36,6 +36,20 @@
   transition-timing-function: var(--ease-out);
 }
 
+/* ===== MOTION GOVERNOR ===== */
+/* Pause ALL animation while the window is not foreground (hidden, minimized, or
+ * unfocused). Driven by data-motion="paused" on .app (see use_motion_governor.ts).
+ * A universal selector — mirroring the reduced-motion block below — so every
+ * current and future animation is governed without per-selector opt-in. Paused
+ * animations hold their current frame and resume seamlessly on refocus.
+ * The substrate (.app::before) additionally releases will-change in effects.css. */
+.app[data-motion="paused"],
+.app[data-motion="paused"] *,
+.app[data-motion="paused"] *::before,
+.app[data-motion="paused"] *::after {
+  animation-play-state: paused !important;
+}
+
 /* ===== REDUCED MOTION ===== */
 /* Respects user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {

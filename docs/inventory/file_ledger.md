@@ -82,7 +82,7 @@ app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
 app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
-app/src/hooks/use_motion_governor.ts - Pauses motion when window is hidden/minimized to save GPU
+app/src/hooks/use_motion_governor.ts - Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU
 app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text scratch buffers, and image previews
@@ -105,6 +105,7 @@ app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
 app/src/lib/window/effective_ui_mode_policy.ts - Resolves runtime effective UI mode from preferred mode and window state
+app/src/lib/window/foreground.ts - Shared predicate for whether this window is truly foreground (visible + focused)
 app/src/lib/window/mode_window_bounds.ts - Shared per-mode window bounds defaults, clamping, and resolution helpers
 app/src/main.tsx - React entry point - mounts App with ConfigProvider and AgentProvider
 app/src/shared/config.ts - Shared config barrel exports

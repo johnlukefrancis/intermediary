@@ -319,7 +319,7 @@
     },
     {
       "path": "app/src/hooks/use_motion_governor.ts",
-      "summary": "Pauses motion when window is hidden/minimized to save GPU"
+      "summary": "Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU"
     },
     {
       "path": "app/src/hooks/use_notes.ts",
@@ -408,6 +408,10 @@
     {
       "path": "app/src/lib/window/effective_ui_mode_policy.ts",
       "summary": "Resolves runtime effective UI mode from preferred mode and window state"
+    },
+    {
+      "path": "app/src/lib/window/foreground.ts",
+      "summary": "Shared predicate for whether this window is truly foreground (visible + focused)"
     },
     {
       "path": "app/src/lib/window/mode_window_bounds.ts",
