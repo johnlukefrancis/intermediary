@@ -4,7 +4,9 @@
 mod connection;
 mod event_bus;
 mod handshake_auth;
+mod runtime_identity;
 mod ws_server;
 
 pub use event_bus::EventBus;
+pub use runtime_identity::{attach_runtime_identity_header, runtime_binary_sha256};
 pub use ws_server::{run_server, ServerConfig};

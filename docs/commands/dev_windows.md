@@ -1,5 +1,5 @@
 # Windows Development Commands
-Updated on: 2026-02-12
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -47,6 +47,15 @@ the packaged resources include the latest Rust agent binary without requiring No
 Then runs `scripts/build/ensure_agent_bundle.mjs` on Windows to refresh/verify `im_host_agent.exe` before `pnpm tauri build`.
 
 Task name: `Tauri: build installer (Windows)`
+
+### Tauri: build + launch installer (Windows)
+
+Runs the same authoritative Linux-agent build, WSL-to-Windows sync, host-agent verification, and
+Tauri installer build as the normal installer task. After a successful build, it reads the configured
+product name and version, requires exactly one matching NSIS installer produced by that build, and
+launches that installer. A failed build, missing output, or ambiguous output launches nothing.
+
+Task name: `Tauri: build + launch installer (Windows)`
 
 ## Manual Workflow
 

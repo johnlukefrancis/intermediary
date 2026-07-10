@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use tempfile::tempdir;
 
-use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
+use crate::plan::{BundleSelection, GlobalExcludes};
 use crate::progress::ProgressMessage;
 use crate::progress_sink::CallbackProgressSink;
 use crate::writer::{
@@ -37,11 +37,6 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
             top_level_dirs: vec!["app".to_string()],
             excluded_subdirs: vec![],
             excluded_files: vec!["app/src/secret.ts".to_string()],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
@@ -87,11 +82,6 @@ fn progress_callbacks_follow_phase_order() {
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
@@ -143,11 +133,6 @@ fn cancelled_bundle_write_stops_before_output_creation() {
             top_level_dirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),

@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-05-21
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -37,6 +37,12 @@ Architectural Decision Records — the primary contracts for this codebase.
 | Document | Purpose |
 |----------|---------|
 | [docs/design/intermediary_ui_overhaul_design.md](design/intermediary_ui_overhaul_design.md) | UI design system, tokens, and visual guidelines |
+
+## Architecture
+
+| Document | Purpose |
+|----------|---------|
+| [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) | Bundle v2 generated handoff entries, selection-bounded Git evidence, coherence, and failure semantics |
 
 ## Reports
 
@@ -98,7 +104,7 @@ Intermediary produces timestamped bundles with this pattern:
 
 - Timestamp is UTC (matches manifest's `generatedAt`)
 - One bundle per repo+preset (building a new one replaces the old)
-- Each bundle contains `BUNDLE_MANIFEST.json` with metadata
+- Each bundle contains the bundle v2 generated handoff set: manifest, Git status, selected tracked patch, and orientation note
 
 To find the latest bundle: sort by filename timestamp descending, take first match.
 

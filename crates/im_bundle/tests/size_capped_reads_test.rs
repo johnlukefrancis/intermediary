@@ -3,12 +3,16 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
-use std::thread;
-use std::time::Duration;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use im_bundle::plan::BundlePlan;
-use im_bundle::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
-use im_bundle::writer::write_bundle;
+use im_bundle::plan::{BundleSelection, GlobalExcludes};
+use im_bundle::progress::ProgressMessage;
+use im_bundle::progress_sink::CallbackProgressSink;
+use im_bundle::writer::write_bundle_with_progress;
 use tempfile::tempdir;
 
 #[test]
@@ -35,29 +39,35 @@ fn caps_file_reads_to_initial_length() {
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
     };
 
-    let append_handle = thread::spawn({
+    let appended = Arc::new(AtomicBool::new(false));
+    let sink = CallbackProgressSink::new({
         let file_path = file_path.clone();
-        move || {
-            thread::sleep(Duration::from_millis(10));
+        let appended = Arc::clone(&appended);
+        move |message| {
+            let should_append = matches!(
+                message,
+                ProgressMessage::Progress {
+                    current_file: Some(ref path),
+                    current_bytes_done: Some(0),
+                    ..
+                } if path == "data.dat"
+            );
+            if !should_append || appended.swap(true, Ordering::SeqCst) {
+                return;
+            }
             let mut file = OpenOptions::new().append(true).open(&file_path).unwrap();
             file.write_all(b"EXTRA").unwrap();
             file.flush().unwrap();
         }
     });
 
-    let result = write_bundle(&plan).unwrap();
+    let result = write_bundle_with_progress(&plan, Box::new(sink)).unwrap();
     assert!(result.bytes_written > 0);
-
-    append_handle.join().unwrap();
+    assert!(appended.load(Ordering::SeqCst));
 
     let file = File::open(&output_path).unwrap();
     let mut archive = zip::ZipArchive::new(file).unwrap();

@@ -64,7 +64,14 @@ Intermediary uses a **host-routed architecture**:
 - **Stack:** Tauri + React/TypeScript
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
-  - Two-window startup handshake: static splashscreen shown immediately, main window hidden until frontend signals readiness
+  - Two-window startup handshake: all command-visible Rust state is registered on the Tauri Builder
+    before either configured WebView can load or invoke a command; user setup performs no window RPC;
+    after `RunEvent::Ready`, one runtime-owned transition applies persisted bounds and shows the
+    static splashscreen, while the main window remains hidden until the frontend signals readiness
+  - Resolves `run_latest.txt` and installs a bounded panic hook before Tauri construction; an
+    unusable `INTERMEDIARY_LOG_DIR` emits a diagnostic and falls back to app-local storage before
+    startup continues. Explicit pre-build/setup/build-complete stage markers preserve the payload,
+    source location, process id, and reached lifecycle stage of pre-setup callback failures
   - Two-column layout per repo: Auto Files and Zip Bundles
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
@@ -88,6 +95,10 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** Ensure the host agent is installed and running when the app is open
 - **Key features:**
   - Installs bundled host-agent runtime into the app local data `agent` directory
+  - Validates app-local agent version and binary bytes against packaged resources, then compares an
+    authenticated handshake SHA-256 with the executable bytes actually running before adopting a
+    listener; disk mismatches install the packaged bundle, process mismatches replace the host agent
+    or reclaimable WSL backend, and `external` WSL mode remains untouched
   - Launches the host agent on `agentPort` (UI endpoint)
   - On Windows only: launches the WSL backend agent on `agentPort + 1` when any configured repo has `root.kind = "wsl"`
   - Auto-start toggle with optional distro override (Windows-only control)
@@ -120,7 +131,7 @@ Intermediary uses a **host-routed architecture**:
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recursive native watcher registration/unregistration runs on blocking workers, with independent repo watchers started and reset concurrently during `clientHello` bootstrap
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
-  - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
+  - Bundle building via `im_bundle` with a v2 manifest, selection-bounded captured-HEAD Git status/patch evidence, and generated handoff orientation (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
   - Atomic file staging for WSL repo operations, with cooperative cancellation removing temporary copies before the request completes
   - Auto-stage on change (configurable)
 
@@ -128,6 +139,8 @@ Intermediary uses a **host-routed architecture**:
 
 UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, with request/response envelopes and event envelopes:
 - The handshake requires an app-scoped query token loaded from app-local auth state (`ws://127.0.0.1:<hostPort>/?token=...`).
+- Successful authenticated upgrades include the running executable's SHA-256 for supervisor-only
+  lifecycle coherence checks; unauthenticated requests receive no runtime identity metadata.
 - The app-scoped token lives in `ws_auth.json` directly under app-local data (`%LOCALAPPDATA%\com.johnf.intermediary\ws_auth.json`), outside the `agent/` subdirectory that the installer wipes on every version-bump reinstall; a one-time migration adopts any legacy `agent/ws_auth.json`, so reinstalls reuse the same token and a surviving backend still authenticates instead of wedging.
 - Host-agent validates token for every upgrade and enforces origin allowlisting when an `Origin` header is present.
 - Host→WSL backend forwarding uses a separate internal token not exposed to the UI.
@@ -275,8 +288,9 @@ intermediary/
 
 1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates the Auto Files table from the unified recent list after applying the topology-ready active Zip Bundles selection; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
-3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → backend scans selected roots while honoring subdirectory and file exclusions → backend builds bundle/stages output → host agent forwards `bundleBuilt` event and response
+3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → the shared blocking writer captures HEAD/status, scans current files and Git paths through one selection predicate, reconciles selected Git-ignored ordinary files, writes ordinary files, verifies repeated patch/status/ignore classification and selected bytes, emits manifest/status/patch/handoff entries, then atomically finalizes → host agent forwards `bundleBuilt` event and response
 
 ## Related docs
 
 - [docs/prd.md](prd.md) — Full product requirements
+- [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) — Bundle v2 and captured Git evidence contract

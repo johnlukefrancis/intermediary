@@ -153,8 +153,8 @@ fn quote_bash(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_wsl_bash_args, build_wsl_bash_stdin_args,
-        build_wsl_idle_teardown_probe_command_line, build_wsl_list_exact_pids_command_line,
+        build_wsl_bash_args, build_wsl_bash_stdin_args, build_wsl_idle_teardown_probe_command_line,
+        build_wsl_list_exact_pids_command_line,
         build_wsl_list_intermediary_agent_pids_command_line,
         build_wsl_list_port_listener_pids_command_line, build_wsl_signal_pids_command_line,
         build_wsl_spawn_command_line, normalize_distro,

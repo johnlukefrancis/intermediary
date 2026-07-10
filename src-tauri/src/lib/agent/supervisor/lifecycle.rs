@@ -2,12 +2,14 @@
 // Description: Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 
 use super::{
-    build_result, wsl_mode::wsl_backend_mode_requires_managed_owner, AgentSupervisor,
-    EnsureProcessResult,
+    build_result,
+    wsl_mode::{resolve_wsl_backend_mode, WslBackendMode},
+    AgentSupervisor, EnsureProcessResult,
 };
-use crate::agent::install::resolve_launch_bundle;
+use crate::agent::install::{resolve_launch_bundle, AgentBundleInstallState};
 use crate::agent::supervisor::runtime::{
-    resolve_expected_dirs, resolve_wsl_port, should_prefer_installed_bundle,
+    resolve_expected_dirs, resolve_wsl_port, should_adopt_running_runtime,
+    should_prefer_installed_bundle,
 };
 use crate::agent::supervisor::state::ProcessKind;
 use crate::agent::types::{
@@ -59,7 +61,10 @@ impl AgentSupervisor {
         let requested_wsl = config.wsl.as_ref().is_some_and(|wsl| wsl.required);
         let requires_wsl = supports_wsl && requested_wsl;
         let wsl_port = resolve_wsl_port(config.port, requires_wsl)?;
-        let websocket_auth = app.state::<AgentWebSocketAuthState>().snapshot();
+        let websocket_auth = app
+            .try_state::<AgentWebSocketAuthState>()
+            .ok_or_else(|| "Agent websocket auth state is unavailable".to_string())?
+            .snapshot();
         let wsl_status = wsl_supervisor_status(supports_wsl, requires_wsl, wsl_port);
         let unsupported_wsl_message = requested_wsl
             .then_some("WSL backend launch is only supported on Windows hosts".to_string())
@@ -87,62 +92,6 @@ impl AgentSupervisor {
         } else {
             false
         };
-        let host_auth_ok = if host_listening {
-            self.probe_websocket_auth(config.port, &websocket_auth.host_ws_token)
-                .await?
-        } else {
-            false
-        };
-        let host_origin_compat_ok = if host_auth_ok {
-            self.probe_websocket_origin_compatibility(
-                config.port,
-                &websocket_auth.host_ws_token,
-                &websocket_auth.host_allowed_origins,
-            )
-            .await?
-        } else {
-            false
-        };
-        let wsl_auth_ok = if requires_wsl && wsl_listening {
-            self.probe_websocket_auth(wsl_port, &websocket_auth.wsl_ws_token)
-                .await?
-        } else {
-            false
-        };
-
-        if !force && host_auth_ok && host_origin_compat_ok && !requires_wsl {
-            self.stop_process(ProcessKind::Wsl).await?;
-            self.set_last_error(None)?;
-            return Ok(build_result(
-                AgentSupervisorStatus::AlreadyRunning,
-                config.port,
-                supports_wsl,
-                wsl_status.clone(),
-                agent_dir,
-                log_dir,
-                unsupported_wsl_message.clone(),
-            ));
-        }
-        if should_short_circuit_already_running_with_wsl(
-            force,
-            host_auth_ok,
-            host_origin_compat_ok,
-            requires_wsl,
-            wsl_auth_ok,
-            wsl_backend_mode_requires_managed_owner(),
-        ) {
-            self.set_last_error(None)?;
-            return Ok(build_result(
-                AgentSupervisorStatus::AlreadyRunning,
-                config.port,
-                supports_wsl,
-                wsl_status.clone(),
-                agent_dir,
-                log_dir,
-                unsupported_wsl_message.clone(),
-            ));
-        }
-
         let resource_dir = app
             .path()
             .resource_dir()
@@ -153,14 +102,85 @@ impl AgentSupervisor {
             .map_err(|_| "Failed to resolve app local data directory".to_string())?;
         let prefer_installed_bundle = should_prefer_installed_bundle(host_listening, wsl_listening);
 
-        let bundle = tauri::async_runtime::spawn_blocking(move || {
+        let resolution = tauri::async_runtime::spawn_blocking(move || {
             resolve_launch_bundle(&resource_dir, &app_local_data, prefer_installed_bundle)
         })
         .await
         .map_err(|err| format!("Agent bundle install task failed: {err}"))??;
+        let replace_runtime =
+            force || resolution.install_state == AgentBundleInstallState::Installed;
+        let bundle = resolution.bundle;
+        let host_identity = if host_listening {
+            self.probe_websocket_identity(config.port, &websocket_auth.host_ws_token)
+                .await?
+        } else {
+            Default::default()
+        };
+        let host_origin_compat_ok = if host_identity.authenticated {
+            self.probe_websocket_origin_compatibility(
+                config.port,
+                &websocket_auth.host_ws_token,
+                &websocket_auth.host_allowed_origins,
+            )
+            .await?
+        } else {
+            false
+        };
+        let wsl_identity = if requires_wsl && wsl_listening {
+            self.probe_websocket_identity(wsl_port, &websocket_auth.wsl_ws_token)
+                .await?
+        } else {
+            Default::default()
+        };
+        let (wsl_mode, _) = resolve_wsl_backend_mode();
+        let host_runtime_matches = host_identity.matches_runtime(&bundle.host_agent_sha256);
+        let wsl_runtime_matches = wsl_identity.authenticated
+            && (matches!(wsl_mode, WslBackendMode::External)
+                || bundle
+                    .wsl_agent_sha256
+                    .as_deref()
+                    .is_some_and(|expected| wsl_identity.matches_runtime(expected)));
+
+        if resolution.install_state == AgentBundleInstallState::Installed {
+            logging::log(
+                "info",
+                "agent",
+                "bundle_upgraded",
+                &format!("version={} action=replace_running_runtime", bundle.version),
+            );
+        }
+
+        if should_adopt_running_runtime(
+            replace_runtime,
+            host_runtime_matches,
+            host_origin_compat_ok,
+            requires_wsl,
+            wsl_runtime_matches,
+            matches!(wsl_mode, WslBackendMode::Managed),
+        ) {
+            if !requires_wsl {
+                self.stop_process(ProcessKind::Wsl).await?;
+            }
+            self.set_last_error(None)?;
+            return Ok(build_result(
+                AgentSupervisorStatus::AlreadyRunning,
+                config.port,
+                supports_wsl,
+                wsl_status.clone(),
+                agent_dir,
+                log_dir,
+                unsupported_wsl_message.clone(),
+            ));
+        }
 
         let host_result = self
-            .ensure_host_running(&bundle, config.port, wsl_port, &websocket_auth, force)
+            .ensure_host_running(
+                &bundle,
+                config.port,
+                wsl_port,
+                &websocket_auth,
+                replace_runtime,
+            )
             .await?;
         if host_result == EnsureProcessResult::Backoff {
             return Ok(build_result(
@@ -181,7 +201,7 @@ impl AgentSupervisor {
         if requires_wsl {
             let distro = config.wsl.as_ref().and_then(|wsl| wsl.distro.as_deref());
             wsl_result = self
-                .ensure_wsl_running(&bundle, distro, wsl_port, &websocket_auth, force)
+                .ensure_wsl_running(&bundle, distro, wsl_port, &websocket_auth, replace_runtime)
                 .await?;
             if wsl_result == EnsureProcessResult::Backoff {
                 return Ok(build_result(
@@ -237,56 +257,5 @@ fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Optio
     match secondary {
         Some(secondary) => Some(format!("{primary}. {secondary}")),
         None => Some(primary),
-    }
-}
-
-fn should_short_circuit_already_running_with_wsl(
-    force: bool,
-    host_auth_ok: bool,
-    host_origin_compat_ok: bool,
-    requires_wsl: bool,
-    wsl_auth_ok: bool,
-    managed_owner_required: bool,
-) -> bool {
-    // A forced restart never short-circuits: it always proceeds to tear down and respawn.
-    !force
-        && host_auth_ok
-        && host_origin_compat_ok
-        && requires_wsl
-        && wsl_auth_ok
-        && !managed_owner_required
-}
-
-#[cfg(test)]
-mod tests {
-    use super::should_short_circuit_already_running_with_wsl;
-
-    #[test]
-    fn managed_mode_disables_wsl_already_running_fast_path() {
-        assert!(!should_short_circuit_already_running_with_wsl(
-            false, true, true, true, true, true
-        ));
-    }
-
-    #[test]
-    fn non_managed_mode_keeps_wsl_already_running_fast_path() {
-        assert!(should_short_circuit_already_running_with_wsl(
-            false, true, true, true, true, false
-        ));
-    }
-
-    #[test]
-    fn origin_mismatch_disables_wsl_already_running_fast_path() {
-        assert!(!should_short_circuit_already_running_with_wsl(
-            false, true, false, true, true, false
-        ));
-    }
-
-    #[test]
-    fn force_disables_wsl_already_running_fast_path() {
-        // Even a fully healthy host+WSL must respawn under a forced restart.
-        assert!(!should_short_circuit_already_running_with_wsl(
-            true, true, true, true, true, false
-        ));
     }
 }

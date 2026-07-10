@@ -17,7 +17,16 @@ Depends on: ADR-000, ADR-007
 
 ## P0 — Core workflow blocked
 
-*None*
+- 2026-07-10: The Windows app can intermittently abort during startup before either window becomes
+  usable. Repeated LocalDumps show Rust fast-fail `0xC0000409` on the non-unwinding-panic path; the
+  crash stack enters Rust's cannot-unwind abort through a WebView2 event callback and retains the
+  `StartupWindowState` state key. Tauri creates configured WebViews before calling user setup, so the
+  frontend could race `startup_ready` against setup-time state registration and panic inside the COM
+  callback. The source fix registers every command-visible state on the Builder before WebView
+  creation, keeps readiness lookup fallible, initializes bounded panic/stage logging before Tauri
+  construction with a diagnostic app-local fallback when a configured log directory is unusable,
+  and defers launch window RPC to a one-shot `RunEvent::Ready` transition. A rebuilt
+  Windows repeated-launch witness is still required before moving this issue to Resolved.
 
 ---
 
@@ -29,6 +38,11 @@ Depends on: ADR-000, ADR-007
 
 ## P2 — Degraded but usable
 
+- 2026-07-10: After one Windows reinstall and automatic launch, the app opened with the agent offline;
+  **Restart Agent** did not recover that run, while fully restarting the app restored normal host/WSL
+  connectivity. The failure was intermittent and did not reproduce on the subsequent launch, so the
+  release retains the startup diagnostics and this remains an observed follow-up rather than a
+  claimed resolved path.
 - 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).

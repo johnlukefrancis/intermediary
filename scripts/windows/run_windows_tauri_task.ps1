@@ -13,7 +13,7 @@ param(
   [string]$WslDistro,
 
   [Parameter(Mandatory = $true)]
-  [ValidateSet("dev", "dev-watch-sync", "build-installer")]
+  [ValidateSet("dev", "dev-watch-sync", "build-installer", "build-installer-launch")]
   [string]$Mode
 )
 
@@ -23,8 +23,9 @@ $ErrorActionPreference = "Stop"
 $env:INTERMEDIARY_WIN_PATH = $WindowsMirrorPath
 $env:INTERMEDIARY_WSL_PATH = $WslRepoPath
 $env:INTERMEDIARY_WSL_DISTRO = $WslDistro
+$isInstallerMode = $Mode -in @("build-installer", "build-installer-launch")
 
-if ($Mode -ne "build-installer") {
+if (-not $isInstallerMode) {
   $env:INTERMEDIARY_WSL_BACKEND_MODE = "external"
 }
 
@@ -81,16 +82,51 @@ function Invoke-NativeCommand {
   Exit-OnFailure -ExitCode $LASTEXITCODE
 }
 
-switch ($Mode) {
-  "dev" {
-    Invoke-WslRepoCommand -CommandText "./scripts/windows/sync_to_windows.sh"
+function Resolve-FreshNsisInstaller {
+  param(
+    [Parameter(Mandatory = $true)]
+    [datetime]$BuildStartedUtc
+  )
+
+  $configPath = Join-Path $env:INTERMEDIARY_WIN_PATH "src-tauri/tauri.conf.json"
+  if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
+    throw "Tauri config not found after sync: $configPath"
   }
-  "dev-watch-sync" {
-    Invoke-WslRepoCommand -CommandText "./scripts/windows/sync_to_windows.sh"
-    Start-WslRepoProcess -CommandText "./scripts/windows/watch_sync_to_windows.sh"
+  $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+  $productName = [string]$config.productName
+  $version = [string]$config.version
+  if ([string]::IsNullOrWhiteSpace($productName) -or [string]::IsNullOrWhiteSpace($version)) {
+    throw "Tauri config must define productName and version before installer resolution"
   }
-  "build-installer" {
-    Invoke-WslRepoCommand -CommandText "bash ./scripts/build/build_agent_bundle.sh && ./scripts/windows/sync_to_windows.sh"
+
+  $nsisDir = Join-Path $env:INTERMEDIARY_WIN_PATH "target/release/bundle/nsis"
+  if (-not (Test-Path -LiteralPath $nsisDir -PathType Container)) {
+    throw "NSIS output directory was not created: $nsisDir"
+  }
+  $pattern = "$($productName)_$($version)_*-setup.exe"
+  $minimumWriteTime = $BuildStartedUtc.AddSeconds(-2)
+  $installers = @(
+    Get-ChildItem -LiteralPath $nsisDir -Filter $pattern -File |
+      Where-Object { $_.LastWriteTimeUtc -ge $minimumWriteTime }
+  )
+  if ($installers.Count -ne 1) {
+    throw "Expected exactly one freshly built NSIS installer matching '$pattern'; found $($installers.Count)"
+  }
+
+  return $installers[0]
+}
+
+if ($isInstallerMode) {
+  Invoke-WslRepoCommand -CommandText "bash ./scripts/build/build_agent_bundle.sh && ./scripts/windows/sync_to_windows.sh"
+} else {
+  switch ($Mode) {
+    "dev" {
+      Invoke-WslRepoCommand -CommandText "./scripts/windows/sync_to_windows.sh"
+    }
+    "dev-watch-sync" {
+      Invoke-WslRepoCommand -CommandText "./scripts/windows/sync_to_windows.sh"
+      Start-WslRepoProcess -CommandText "./scripts/windows/watch_sync_to_windows.sh"
+    }
   }
 }
 
@@ -105,7 +141,7 @@ if (-not (Test-Path "node_modules")) {
   Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("install")
 }
 
-if ($Mode -ne "build-installer") {
+if (-not $isInstallerMode) {
   New-Item -ItemType Directory -Force $env:INTERMEDIARY_LOG_DIR | Out-Null
 }
 
@@ -116,11 +152,14 @@ if (-not (Test-Path "src-tauri/resources/agent_bundle/im_host_agent.exe")) {
   exit 1
 }
 
-switch ($Mode) {
-  "build-installer" {
-    Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("tauri", "build")
+if ($isInstallerMode) {
+  $buildStartedUtc = [DateTime]::UtcNow
+  Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("tauri", "build")
+  if ($Mode -eq "build-installer-launch") {
+    $installer = Resolve-FreshNsisInstaller -BuildStartedUtc $buildStartedUtc
+    Write-Host "Launching freshly built installer: $($installer.FullName)"
+    Start-Process -FilePath $installer.FullName | Out-Null
   }
-  default {
-    Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("tauri", "dev")
-  }
+} else {
+  Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("tauri", "dev")
 }

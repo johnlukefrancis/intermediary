@@ -17,6 +17,7 @@ use crate::error::to_response_error;
 use crate::logging::Logger;
 use crate::protocol::{InboundRequestEnvelope, ResponseEnvelope, UiCommand};
 use crate::runtime::AgentRuntime;
+use crate::server::attach_runtime_identity_header;
 use crate::server::EventBus;
 
 mod dispatch;
@@ -34,15 +35,17 @@ pub struct ConnectionContext {
     pub agent_version: String,
     pub event_bus: EventBus,
     pub handshake_auth: ConnectionHandshakeAuth,
+    pub runtime_sha256: String,
 }
 
 pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: ConnectionContext) {
     let handshake_reject_reason = Arc::new(Mutex::new(None::<HandshakeRejectReason>));
     let reject_reason_for_callback = Arc::clone(&handshake_reject_reason);
     let handshake_auth = ctx.handshake_auth.clone();
+    let runtime_sha256 = ctx.runtime_sha256.clone();
     let ws_stream = match accept_hdr_async(stream, move |request: &Request, response: Response| {
         match handshake_auth.validate_request(request) {
-            Ok(()) => Ok(response),
+            Ok(()) => Ok(attach_runtime_identity_header(response, &runtime_sha256)),
             Err(reason) => {
                 if let Ok(mut slot) = reject_reason_for_callback.lock() {
                     *slot = Some(reason);

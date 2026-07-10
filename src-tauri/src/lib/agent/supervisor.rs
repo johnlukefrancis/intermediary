@@ -51,6 +51,7 @@ mod state;
 mod websocket_probe;
 mod wsl;
 mod wsl_control;
+mod wsl_logging;
 mod wsl_mode;
 mod wsl_runtime;
 mod wsl_same_port_termination;

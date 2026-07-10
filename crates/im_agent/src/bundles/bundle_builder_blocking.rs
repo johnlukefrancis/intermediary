@@ -16,8 +16,6 @@ use crate::error::AgentError;
 use crate::protocol::{BundleSelection, GlobalExcludes};
 use crate::staging::{PathBridgeConfig, StagingLayout, StagingRootKind};
 
-use super::git_info::GitInfo;
-
 pub(crate) struct BuildBundleBlockingOptions {
     pub(crate) repo_id: String,
     pub(crate) repo_root: String,
@@ -41,7 +39,6 @@ pub(crate) fn build_bundle_blocking(
     options: BuildBundleBlockingOptions,
     built_at_iso: String,
     timestamp: String,
-    git_info: GitInfo,
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
     cancel_token: im_bundle::cancel::BundleCancelToken,
 ) -> Result<BlockingBundleResult, AgentError> {
@@ -52,21 +49,13 @@ pub(crate) fn build_bundle_blocking(
         .map_err(|err| AgentError::internal(format!("Failed to create bundle directory: {err}")))?;
 
     let base_name = format!("{}_{}_{}", options.repo_id, options.preset_id, timestamp);
-    let file_name = match git_info.short_sha.as_deref() {
-        Some(short_sha) if !short_sha.trim().is_empty() => {
-            format!("{base_name}_{short_sha}.zip")
-        }
-        _ => format!("{base_name}.zip"),
-    };
-
-    let final_path = output_dir.join(file_name);
-    let temp_path = temp_path_for(&final_path);
+    let temp_path = temp_path_for(&output_dir.join(format!("{base_name}.zip")));
 
     let sink = CallbackProgressSink::new(move |message| {
         let _ = progress_tx.send(message);
     });
 
-    let plan = build_plan(&options, &temp_path, &built_at_iso, git_info);
+    let plan = build_plan(&options, &temp_path, &built_at_iso);
 
     let bundle_result =
         match write_bundle_with_progress_and_cancel(&plan, Box::new(sink), &cancel_token) {
@@ -88,6 +77,14 @@ pub(crate) fn build_bundle_blocking(
         let _ = std::fs::remove_file(&temp_path);
         return Err(cancelled);
     }
+
+    let file_name = match bundle_result.git_short_sha.as_deref() {
+        Some(short_sha) if !short_sha.trim().is_empty() => {
+            format!("{base_name}_{short_sha}.zip")
+        }
+        _ => format!("{base_name}.zip"),
+    };
+    let final_path = output_dir.join(file_name);
 
     if let Err(err) = std::fs::rename(&temp_path, &final_path) {
         let _ = std::fs::remove_file(&temp_path);
@@ -159,7 +156,6 @@ fn build_plan(
     options: &BuildBundleBlockingOptions,
     output_path: &Path,
     built_at_iso: &str,
-    git_info: GitInfo,
 ) -> BundlePlan {
     BundlePlan {
         output_path: output_path.to_path_buf(),
@@ -172,11 +168,6 @@ fn build_plan(
             top_level_dirs: options.selection.top_level_dirs.clone(),
             excluded_subdirs: options.selection.excluded_subdirs.clone(),
             excluded_files: options.selection.excluded_files.clone(),
-        },
-        git: im_bundle::plan::BundleGitInfo {
-            head_sha: git_info.head_sha,
-            short_sha: git_info.short_sha,
-            branch: git_info.branch,
         },
         built_at_iso: built_at_iso.to_string(),
         global_excludes: map_global_excludes(options.global_excludes.as_ref()),

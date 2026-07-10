@@ -3,7 +3,8 @@
 
 use super::AgentSupervisor;
 use crate::agent::supervisor::websocket_probe::{
-    probe_websocket_auth_blocking, probe_websocket_origin_compatibility_blocking,
+    probe_websocket_identity_blocking, probe_websocket_origin_compatibility_blocking,
+    WebSocketIdentityProbe,
 };
 use crate::commands::agent_probe::probe_port_blocking;
 
@@ -14,15 +15,17 @@ impl AgentSupervisor {
             .map_err(|err| format!("Agent probe task failed: {err}"))
     }
 
-    pub(super) async fn probe_websocket_auth(
+    pub(super) async fn probe_websocket_identity(
         &self,
         port: u16,
         token: &str,
-    ) -> Result<bool, String> {
+    ) -> Result<WebSocketIdentityProbe, String> {
         let token = token.to_string();
-        tauri::async_runtime::spawn_blocking(move || probe_websocket_auth_blocking(port, &token))
-            .await
-            .map_err(|err| format!("Agent websocket auth probe task failed: {err}"))
+        tauri::async_runtime::spawn_blocking(move || {
+            probe_websocket_identity_blocking(port, &token)
+        })
+        .await
+        .map_err(|err| format!("Agent websocket identity probe task failed: {err}"))
     }
 
     pub(super) async fn probe_websocket_origin_compatibility(

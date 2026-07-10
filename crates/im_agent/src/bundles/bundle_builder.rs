@@ -15,7 +15,6 @@ use super::bundle_builder_blocking::{
     build_bundle_blocking, format_timestamp, BuildBundleBlockingOptions,
 };
 use super::bundle_progress::start_progress_forwarder;
-use super::git_info::get_git_info;
 
 pub struct BuildBundleOptions {
     pub repo_id: String,
@@ -144,7 +143,7 @@ impl From<BuildBundleOptions> for BuildBundleBlockingOptions {
 pub async fn build_bundle(
     options: BuildBundleOptions,
     event_bus: &EventBus,
-    logger: &Logger,
+    _logger: &Logger,
     cancel_token: im_bundle::cancel::BundleCancelToken,
 ) -> Result<BuildBundleResult, AgentError> {
     let build_lock = acquire_build_lock(
@@ -156,8 +155,6 @@ pub async fn build_bundle(
     let built_at = Utc::now();
     let built_at_iso = built_at.to_rfc3339();
     let timestamp = format_timestamp(built_at);
-
-    let git_info = get_git_info(&options.repo_root, logger).await;
 
     let repo_id = options.repo_id.clone();
     let preset_id = options.preset_id.clone();
@@ -171,7 +168,6 @@ pub async fn build_bundle(
             blocking_options,
             built_at_iso,
             timestamp,
-            git_info,
             progress_tx,
             cancel_token,
         )

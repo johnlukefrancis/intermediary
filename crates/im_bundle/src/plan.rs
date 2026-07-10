@@ -45,14 +45,6 @@ impl Default for GlobalExcludes {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct BundleGitInfo {
-    pub head_sha: Option<String>,
-    pub short_sha: Option<String>,
-    pub branch: Option<String>,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BundlePlan {
@@ -62,7 +54,6 @@ pub struct BundlePlan {
     pub preset_id: String,
     pub preset_name: String,
     pub selection: BundleSelection,
-    pub git: BundleGitInfo,
     pub built_at_iso: String,
     /// User-configurable global excludes
     #[serde(default)]
@@ -136,7 +127,6 @@ mod tests {
               "excludedSubdirs": [],
               "excludedFiles": []
             },
-            "git": {"headSha": null, "shortSha": null, "branch": null},
             "builtAtIso": "2026-01-31T00:00:00Z"
         }"#;
 

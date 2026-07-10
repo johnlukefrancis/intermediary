@@ -10,14 +10,24 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, LogicalSize, Manager, Monitor, PhysicalPosition, Position, Size};
 
 pub struct StartupWindowState {
+    launch_window_initialized: AtomicBool,
     transition_completed: AtomicBool,
 }
 
 impl Default for StartupWindowState {
     fn default() -> Self {
         Self {
+            launch_window_initialized: AtomicBool::new(false),
             transition_completed: AtomicBool::new(false),
         }
+    }
+}
+
+impl StartupWindowState {
+    fn claim_launch_window_initialization(&self) -> bool {
+        self.launch_window_initialized
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
     }
 }
 
@@ -87,6 +97,25 @@ fn resolve_launch_center_position(
 }
 
 pub fn apply_launch_window_bounds(app: &AppHandle) {
+    let Some(startup_state) = app.try_state::<StartupWindowState>() else {
+        logging::log(
+            "error",
+            "startup",
+            "launch_state_missing",
+            "Startup window state was unavailable at runtime-ready transition",
+        );
+        return;
+    };
+    if !startup_state.claim_launch_window_initialization() {
+        return;
+    }
+    logging::log(
+        "info",
+        "startup",
+        "launch_window_ready_begin",
+        "Applying launch window state after Tauri runtime readiness",
+    );
+
     let config = match resolve_config_path(app).and_then(|path| {
         load_from_disk(&path)
             .map(|result| result.config)
@@ -143,6 +172,12 @@ pub fn apply_launch_window_bounds(app: &AppHandle) {
             );
         }
     }
+    logging::log(
+        "info",
+        "startup",
+        "launch_window_ready_complete",
+        "Launch window state applied",
+    );
 }
 
 fn ensure_main_window_ready(app: &AppHandle) -> Result<(), String> {
@@ -198,7 +233,15 @@ fn retire_splashscreen(app: &AppHandle) {
 /// Idempotent: safe to call multiple times.
 #[tauri::command]
 pub fn startup_ready(app: AppHandle) -> Result<(), String> {
-    let startup_state = app.state::<StartupWindowState>();
+    let startup_state = app.try_state::<StartupWindowState>().ok_or_else(|| {
+        logging::log(
+            "error",
+            "startup",
+            "ready_state_missing",
+            "Frontend readiness arrived without registered startup state",
+        );
+        "Startup window state is unavailable".to_string()
+    })?;
     if startup_state.transition_completed.load(Ordering::SeqCst) {
         return ensure_main_window_ready(&app);
     }
@@ -210,4 +253,17 @@ pub fn startup_ready(app: AppHandle) -> Result<(), String> {
         .store(true, Ordering::SeqCst);
 
     ensure_main_window_ready(&app)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::StartupWindowState;
+
+    #[test]
+    fn launch_window_initialization_is_claimed_once() {
+        let state = StartupWindowState::default();
+
+        assert!(state.claim_launch_window_initialization());
+        assert!(!state.claim_launch_window_initialization());
+    }
 }

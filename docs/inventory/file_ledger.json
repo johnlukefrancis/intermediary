@@ -706,10 +706,6 @@
       "summary": "Bundle progress forwarding from im_bundle to agent events"
     },
     {
-      "path": "crates/im_agent/src/bundles/git_info.rs",
-      "summary": "Best-effort git info lookup for bundle manifests"
-    },
-    {
       "path": "crates/im_agent/src/bundles/ignore_rules.rs",
       "summary": "Centralized ignore patterns for bundle building and scanning"
     },
@@ -910,6 +906,10 @@
       "summary": "WebSocket server module exports"
     },
     {
+      "path": "crates/im_agent/src/server/runtime_identity.rs",
+      "summary": "Compute and expose the running agent executable identity during WebSocket handshake"
+    },
+    {
       "path": "crates/im_agent/src/server/ws_server.rs",
       "summary": "WebSocket accept loop and connection dispatch"
     },
@@ -940,6 +940,58 @@
     {
       "path": "crates/im_bundle/src/error.rs",
       "summary": "Error types for bundle scanning and zip writing"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command.rs",
+      "summary": "Bounded, cancellable Git subprocess execution for bundle evidence"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/diff.rs",
+      "summary": "Bounded selected-path Git diff, stat, and name-status capture"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/discovery.rs",
+      "summary": "Git discovery failure classification and raw prefix normalization"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/finalize.rs",
+      "summary": "Git artifact finalization and working-tree coherence verdicts"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/ignored.rs",
+      "summary": "Reconcile selected archived files that Git status hides behind ignore rules"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/mod.rs",
+      "summary": "Versioned selection-bounded Git evidence capture for bundle archives"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/path.rs",
+      "summary": "Lossless Git path transport and model-readable quoting helpers"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/porcelain.rs",
+      "summary": "Strict parser for NUL-delimited Git porcelain-v2 records"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/render.rs",
+      "summary": "Selection-safe human-readable Git status and bundle handoff artifacts"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/session.rs",
+      "summary": "Git capture discovery, initial status, and safety-bound setup"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/status.rs",
+      "summary": "Raw porcelain-v2 Git status parsing and selection-safe projection"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/tests.rs",
+      "summary": "Failure, timeout, and drift tests for bounded Git capture"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/verification.rs",
+      "summary": "Streaming selected-file coherence verification for Git bundle capture"
     },
     {
       "path": "crates/im_bundle/src/global_excludes_summary.rs",
@@ -974,6 +1026,10 @@
       "summary": "Bundle scanning logic with ignore rules and exclusions"
     },
     {
+      "path": "crates/im_bundle/src/selection.rs",
+      "summary": "Canonical bundle-selection predicate shared by scanning and Git capture"
+    },
+    {
       "path": "crates/im_bundle/src/writer_tests.rs",
       "summary": "Tests for bundle writer behavior and progress ordering"
     },
@@ -984,6 +1040,10 @@
     {
       "path": "crates/im_bundle/src/zip_entry.rs",
       "summary": "Single file entry writer for bundle zip archives"
+    },
+    {
+      "path": "crates/im_bundle/tests/git_evidence_test.rs",
+      "summary": "End-to-end witness tests for selection-bounded bundle Git evidence"
     },
     {
       "path": "crates/im_bundle/tests/scanner_test.rs",
@@ -1166,6 +1226,10 @@
       "summary": "Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup"
     },
     {
+      "path": "src-tauri/src/lib/agent/install_tests.rs",
+      "summary": "Agent bundle installation and packaged-runtime identity regression tests"
+    },
+    {
       "path": "src-tauri/src/lib/agent/install.rs",
       "summary": "Install bundled agent runtimes into app local data with platform-specific requirements"
     },
@@ -1176,6 +1240,10 @@
     {
       "path": "src-tauri/src/lib/agent/process_control.rs",
       "summary": "Spawn helpers for host/WSL agents and readiness probing"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/runtime_identity.rs",
+      "summary": "Bounded SHA-256 identity for packaged and installed agent executables"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor.rs",
@@ -1222,6 +1290,10 @@
       "summary": "WSL backend termination, stale-port remediation, and launch-target bookkeeping"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_logging.rs",
+      "summary": "Structured WSL backend ownership and authentication lifecycle logging"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/wsl_mode.rs",
       "summary": "WSL backend mode parsing and ownership-policy helpers for the supervisor"
     },
@@ -1240,6 +1312,14 @@
     {
       "path": "src-tauri/src/lib/agent/types.rs",
       "summary": "Types for supervising host agent lifecycle with optional Windows WSL backend"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/websocket_auth_tests.rs",
+      "summary": "Durable websocket authentication token persistence tests"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/websocket_auth.rs",
+      "summary": "Pre-WebView websocket authentication state and durable token persistence"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_command_runner.rs",

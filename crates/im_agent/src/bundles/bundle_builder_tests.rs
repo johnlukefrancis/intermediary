@@ -13,7 +13,6 @@ use crate::staging::{PathBridgeConfig, StagingRootKind};
 use super::bundle_builder_blocking::{
     build_bundle_blocking, cleanup_older_bundles, format_timestamp, BuildBundleBlockingOptions,
 };
-use super::git_info::GitInfo;
 
 #[test]
 fn formats_timestamp_in_utc() {
@@ -76,11 +75,6 @@ fn failed_build_keeps_last_good_bundle() {
         options,
         "2026-02-03T04:05:06Z".to_string(),
         "20260203_040506".to_string(),
-        GitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
         progress_tx,
         im_bundle::cancel::BundleCancelToken::new(),
     ) {
@@ -129,11 +123,6 @@ fn successful_build_replaces_then_cleans_older_bundles() {
         options,
         "2026-02-03T04:05:06Z".to_string(),
         "20260203_040506".to_string(),
-        GitInfo {
-            head_sha: None,
-            short_sha: Some("abc1234".to_string()),
-            branch: None,
-        },
         progress_tx,
         im_bundle::cancel::BundleCancelToken::new(),
     )
@@ -194,11 +183,6 @@ fn cancelled_build_keeps_last_good_bundle_and_removes_temp_output() {
         options,
         "2026-02-03T04:05:06Z".to_string(),
         "20260203_040506".to_string(),
-        GitInfo {
-            head_sha: None,
-            short_sha: Some("abc1234".to_string()),
-            branch: None,
-        },
         progress_tx,
         cancel_token,
     ) {
@@ -260,11 +244,6 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
         options,
         "2026-05-21T22:13:17Z".to_string(),
         "20260521_221317".to_string(),
-        GitInfo {
-            head_sha: None,
-            short_sha: Some("7c3470e".to_string()),
-            branch: None,
-        },
         progress_tx,
         im_bundle::cancel::BundleCancelToken::new(),
     )

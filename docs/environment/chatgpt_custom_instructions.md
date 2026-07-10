@@ -1,6 +1,9 @@
 # Intermediary – GPT Collaboration Rails (bundle-first)
+Updated on: 2026-07-10
+Owners: JL · Agents
+Depends on: ADR-000, ADR-006, ADR-007, ADR-012
 
-Owner: JL · Scope: Intermediary workflow handoff console (Tauri + Rust + TypeScript + WSL agent)
+Scope: Intermediary workflow handoff console (Tauri + Rust + TypeScript + WSL agent)
 
 ## 0. Bundles (canon)
 
@@ -13,9 +16,12 @@ Intermediary is the bundling app for ChatGPT context sharing. It produces single
 
 **Contents:**
 - All selected files from the repo
-- `BUNDLE_MANIFEST.json` with metadata: `generatedAt` (ISO UTC), `repoId`, `presetId`, `git` info, `fileCount`
+- `BUNDLE_MANIFEST.json` with versioned build, selection, accounting, and Git-capture facts
+- `BUNDLE_GIT_STATUS.txt` with selected staging/worktree state and omitted-change orientation
+- `BUNDLE_GIT_DIFF.patch` with the selected tracked final-state delta from captured HEAD
+- `BUNDLE_HANDOFF.md` with the project-neutral read order and operator guidance
 
-**Retention:** One bundle per repo+preset. Building a new bundle deletes the previous one.
+**Retention:** One successful bundle per repo+preset. A new build atomically replaces/prunes the previous bundle only after successful finalize.
 
 ### Determining the latest bundle
 
@@ -28,8 +34,10 @@ The timestamp is UTC. If filename parsing fails, fall back to the manifest's `ge
 ### Using bundles
 
 - Each bundle is self-contained; no separate index file is needed.
-- Open `BUNDLE_MANIFEST.json` first to see repo/preset metadata and file count.
-- Use `docs/guide.md` (if present in bundle) to navigate documentation.
+- Read `BUNDLE_MANIFEST.json`, `BUNDLE_GIT_STATUS.txt`, and `BUNDLE_GIT_DIFF.patch` in that order.
+- Then use `docs/guide.md`, the recent portion of `docs/changelog.md`, and relevant source/docs when present.
+- Treat the archive as captured evidence, not a mutable Git repository; honor partial, unavailable, or unstable capture status.
+- Give operators repo-local paths and never instruct them to open, edit, or run commands against the bundle.
 - Bundles are the source of truth; cite concrete paths used (`app/src/...`, `src-tauri/src/...`, `docs/...`).
 - If the user provides a bundle, use it as the source of truth for that repo.
 

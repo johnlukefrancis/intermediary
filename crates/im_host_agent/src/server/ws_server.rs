@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
+use im_agent::server::runtime_binary_sha256;
 use im_agent::server::EventBus;
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -28,6 +29,8 @@ pub struct ServerConfig {
 }
 
 pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
+    let runtime_sha256 =
+        runtime_binary_sha256().map_err(|err| AgentError::new("RUNTIME_IDENTITY_FAILED", err))?;
     let port = config.port.unwrap_or(DEFAULT_PORT);
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
 
@@ -58,6 +61,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                             agent_version: config.agent_version.clone(),
                             event_bus: event_bus.clone(),
                             handshake_auth: handshake_auth.clone(),
+                            runtime_sha256: runtime_sha256.clone(),
                         };
                         tokio::spawn(handle_connection(stream, peer, ctx));
                     }

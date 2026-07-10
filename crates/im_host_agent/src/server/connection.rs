@@ -8,6 +8,7 @@ use futures_util::{SinkExt, StreamExt};
 use im_agent::error::to_response_error;
 use im_agent::logging::Logger;
 use im_agent::protocol::{EnvelopeKind, RequestEnvelope, ResponseEnvelope};
+use im_agent::server::attach_runtime_identity_header;
 use im_agent::server::EventBus;
 use serde_json::json;
 use tokio::net::TcpStream;
@@ -30,15 +31,17 @@ pub struct ConnectionContext {
     pub agent_version: String,
     pub event_bus: EventBus,
     pub handshake_auth: ConnectionHandshakeAuth,
+    pub runtime_sha256: String,
 }
 
 pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: ConnectionContext) {
     let handshake_reject_reason = Arc::new(Mutex::new(None::<HandshakeRejectReason>));
     let reject_reason_for_callback = Arc::clone(&handshake_reject_reason);
     let handshake_auth = ctx.handshake_auth.clone();
+    let runtime_sha256 = ctx.runtime_sha256.clone();
     let ws_stream = match accept_hdr_async(stream, move |request: &Request, response: Response| {
         match handshake_auth.validate_request(request) {
-            Ok(()) => Ok(response),
+            Ok(()) => Ok(attach_runtime_identity_header(response, &runtime_sha256)),
             Err(reason) => {
                 if let Ok(mut slot) = reject_reason_for_callback.lock() {
                     *slot = Some(reason);

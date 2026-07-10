@@ -3,15 +3,14 @@
 
 use super::host_process_control::{terminate_host_agent_process, HostTerminateOutcome};
 use super::install::AgentBundlePaths;
-use super::install_host_binary::{copy_host_binary, resolve_host_binary_source};
+use super::install_host_binary::{
+    copy_host_binary, ensure_host_agent_permissions, resolve_host_binary_source,
+};
+use super::runtime_identity::executable_sha256;
 use serde::Deserialize;
 use std::fs;
 use std::io::ErrorKind;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-#[cfg(target_os = "macos")]
-use std::process::Command;
 use std::time::Duration;
 
 const HOST_TERMINATE_GRACE: Duration = Duration::from_secs(5);
@@ -155,12 +154,19 @@ pub(super) fn build_bundle_paths(
     };
     let host_agent_binary_host = agent_dir_host.join(host_agent_binary_file);
     ensure_host_agent_permissions(&host_agent_binary_host)?;
+    let host_agent_sha256 = executable_sha256(&host_agent_binary_host)?;
+    let wsl_agent_sha256 = wsl_agent_binary_host
+        .as_deref()
+        .map(executable_sha256)
+        .transpose()?;
 
     Ok(AgentBundlePaths {
         host_agent_binary_host,
+        host_agent_sha256,
         agent_dir_host,
         log_dir_host,
         wsl_agent_binary_host,
+        wsl_agent_sha256,
         version,
     })
 }
@@ -238,62 +244,4 @@ fn remediate_locked_agent_dir(
             installed_host_binary.display()
         )),
     }
-}
-
-#[cfg(unix)]
-fn ensure_host_agent_permissions(host_agent_binary: &Path) -> Result<(), String> {
-    let permissions = fs::Permissions::from_mode(0o755);
-    fs::set_permissions(host_agent_binary, permissions).map_err(|err| {
-        format!(
-            "Failed to set executable permissions on host agent binary ({}): {err}",
-            host_agent_binary.display()
-        )
-    })?;
-
-    #[cfg(target_os = "macos")]
-    {
-        if let Err(err) = clear_macos_quarantine(host_agent_binary) {
-            crate::obs::logging::log(
-                "warn",
-                "agent",
-                "clear_quarantine_failed",
-                &format!(
-                    "Could not clear com.apple.quarantine on {}: {err}",
-                    host_agent_binary.display()
-                ),
-            );
-        }
-    }
-
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn ensure_host_agent_permissions(_host_agent_binary: &Path) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-fn clear_macos_quarantine(host_agent_binary: &Path) -> Result<(), String> {
-    let output = Command::new("xattr")
-        .arg("-d")
-        .arg("com.apple.quarantine")
-        .arg(host_agent_binary)
-        .output()
-        .map_err(|err| format!("Failed to execute xattr: {err}"))?;
-
-    if output.status.success() {
-        return Ok(());
-    }
-
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if stderr.contains("No such xattr") {
-        return Ok(());
-    }
-
-    Err(format!(
-        "xattr exited with status {}. stderr: {}",
-        output.status,
-        stderr.trim()
-    ))
 }

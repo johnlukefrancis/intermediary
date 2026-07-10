@@ -34,9 +34,23 @@ pub(super) fn should_prefer_installed_bundle(host_listening: bool, wsl_listening
     host_listening || wsl_listening
 }
 
+pub(super) fn should_adopt_running_runtime(
+    replace_runtime: bool,
+    host_runtime_matches: bool,
+    host_origin_compat_ok: bool,
+    requires_wsl: bool,
+    wsl_runtime_matches: bool,
+    managed_owner_required: bool,
+) -> bool {
+    !replace_runtime
+        && host_runtime_matches
+        && host_origin_compat_ok
+        && (!requires_wsl || (wsl_runtime_matches && !managed_owner_required))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{resolve_wsl_port, should_prefer_installed_bundle};
+    use super::{resolve_wsl_port, should_adopt_running_runtime, should_prefer_installed_bundle};
 
     #[test]
     fn resolve_wsl_port_for_wsl_repos_uses_next_port() {
@@ -73,5 +87,54 @@ mod tests {
         assert!(!should_prefer_installed_bundle(false, true));
         assert!(!should_prefer_installed_bundle(true, true));
         assert!(!should_prefer_installed_bundle(false, false));
+    }
+
+    #[test]
+    fn managed_mode_disables_wsl_already_running_fast_path() {
+        assert!(!should_adopt_running_runtime(
+            false, true, true, true, true, true
+        ));
+    }
+
+    #[test]
+    fn current_wsl_runtime_keeps_non_managed_fast_path() {
+        assert!(should_adopt_running_runtime(
+            false, true, true, true, true, false
+        ));
+    }
+
+    #[test]
+    fn origin_mismatch_disables_already_running_fast_path() {
+        assert!(!should_adopt_running_runtime(
+            false, true, false, true, true, false
+        ));
+    }
+
+    #[test]
+    fn runtime_replacement_disables_wsl_already_running_fast_path() {
+        assert!(!should_adopt_running_runtime(
+            true, true, true, true, true, false
+        ));
+    }
+
+    #[test]
+    fn current_host_only_runtime_keeps_already_running_fast_path() {
+        assert!(should_adopt_running_runtime(
+            false, true, true, false, false, false
+        ));
+    }
+
+    #[test]
+    fn runtime_replacement_disables_host_only_already_running_fast_path() {
+        assert!(!should_adopt_running_runtime(
+            true, true, true, false, false, false
+        ));
+    }
+
+    #[test]
+    fn stale_host_process_disables_already_running_fast_path() {
+        assert!(!should_adopt_running_runtime(
+            false, false, true, false, false, false
+        ));
     }
 }

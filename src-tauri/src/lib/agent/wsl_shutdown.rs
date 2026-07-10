@@ -2,7 +2,9 @@
 // Description: Conditional WSL distro teardown to free VM RAM when no interactive session remains
 
 use super::wsl_command_runner::{run_wsl_bash, sanitize_stream_text};
-use super::wsl_process_control_commands::{build_wsl_idle_teardown_probe_command_line, distro_label};
+use super::wsl_process_control_commands::{
+    build_wsl_idle_teardown_probe_command_line, distro_label,
+};
 use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -75,9 +77,7 @@ pub fn terminate_wsl_distro(distro_name: &str) -> Result<(), String> {
     }
 
     let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-    Err(format!(
-        "wsl --terminate {distro_name} failed: {stderr}"
-    ))
+    Err(format!("wsl --terminate {distro_name} failed: {stderr}"))
 }
 
 fn parse_idle_probe_output(raw: &str) -> WslDistroIdleStatus {

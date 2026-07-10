@@ -9,7 +9,7 @@ use crate::agent::process_control::{
 };
 use crate::agent::supervisor::process_kill::{KILL_WAIT_POLL, KILL_WAIT_TIMEOUT};
 use crate::agent::supervisor::state::ProcessKind;
-use crate::agent::types::AgentWebSocketAuth;
+use crate::agent::AgentWebSocketAuth;
 use crate::obs::logging;
 use std::path::Path;
 use std::process::Child;
@@ -24,9 +24,11 @@ impl AgentSupervisor {
         force: bool,
     ) -> Result<EnsureProcessResult, String> {
         if self.probe_listening(host_port).await? {
-            let auth_ok = self
-                .probe_websocket_auth(host_port, &auth.host_ws_token)
+            let identity = self
+                .probe_websocket_identity(host_port, &auth.host_ws_token)
                 .await?;
+            let auth_ok = identity.authenticated;
+            let runtime_matches = identity.matches_runtime(&bundle.host_agent_sha256);
             let origin_compat_ok = if auth_ok {
                 self.probe_websocket_origin_compatibility(
                     host_port,
@@ -38,11 +40,15 @@ impl AgentSupervisor {
                 false
             };
 
-            if auth_ok && origin_compat_ok {
+            if should_adopt_running_host(force, auth_ok, origin_compat_ok, runtime_matches) {
                 return Ok(EnsureProcessResult::AlreadyRunning);
             }
 
-            let remediation_reason = if auth_ok {
+            let remediation_reason = if auth_ok && origin_compat_ok && !runtime_matches {
+                "runtime_identity_mismatch"
+            } else if auth_ok && origin_compat_ok {
+                "runtime_replacement"
+            } else if auth_ok {
                 "origin_probe_failed"
             } else {
                 "auth_probe_failed"
@@ -58,7 +64,15 @@ impl AgentSupervisor {
                 .await?;
             }
             if self.probe_listening(host_port).await? {
-                let message = if auth_ok {
+                let message = if auth_ok && origin_compat_ok && !runtime_matches {
+                    format!(
+                        "Host agent port {host_port} is occupied by a process whose executable identity does not match the packaged runtime and could not be retired"
+                    )
+                } else if auth_ok && origin_compat_ok {
+                    format!(
+                        "Host agent port {host_port} is occupied by a process that could not be retired for runtime replacement"
+                    )
+                } else if auth_ok {
                     format!(
                         "Host agent port {host_port} is occupied by a process that rejected the current websocket origin contract"
                     )
@@ -184,5 +198,34 @@ impl AgentSupervisor {
                 Err(err)
             }
         }
+    }
+}
+
+fn should_adopt_running_host(
+    force: bool,
+    auth_ok: bool,
+    origin_compat_ok: bool,
+    runtime_matches: bool,
+) -> bool {
+    !force && auth_ok && origin_compat_ok && runtime_matches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_adopt_running_host;
+
+    #[test]
+    fn healthy_current_host_is_adopted() {
+        assert!(should_adopt_running_host(false, true, true, true));
+    }
+
+    #[test]
+    fn healthy_stale_host_is_retired_for_replacement() {
+        assert!(!should_adopt_running_host(true, true, true, true));
+    }
+
+    #[test]
+    fn healthy_process_with_stale_executable_is_retired() {
+        assert!(!should_adopt_running_host(false, true, true, false));
     }
 }

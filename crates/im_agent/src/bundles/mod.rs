@@ -5,7 +5,6 @@ mod bundle_builder;
 mod bundle_builder_blocking;
 mod bundle_lister;
 mod bundle_progress;
-mod git_info;
 pub mod ignore_rules;
 
 pub use bundle_builder::{

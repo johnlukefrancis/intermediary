@@ -34,6 +34,9 @@ pub enum BundleError {
     #[error("top-level directory is ignored: {dir}")]
     TopLevelDirIgnored { dir: String },
 
+    #[error("repository file collides with reserved bundle metadata entry: {archive_path}")]
+    ReservedEntryCollision { archive_path: String },
+
     #[error("failed to read directory at {path}: {source}")]
     DirReadFailed {
         path: PathBuf,

@@ -179,7 +179,6 @@ crates/im_agent/src/bundles/bundle_builder_tests.rs - Tests for bundle builder h
 crates/im_agent/src/bundles/bundle_builder.rs - Bundle build orchestration using the im_bundle library
 crates/im_agent/src/bundles/bundle_lister.rs - Bundle listing and latest selection logic
 crates/im_agent/src/bundles/bundle_progress.rs - Bundle progress forwarding from im_bundle to agent events
-crates/im_agent/src/bundles/git_info.rs - Best-effort git info lookup for bundle manifests
 crates/im_agent/src/bundles/ignore_rules.rs - Centralized ignore patterns for bundle building and scanning
 crates/im_agent/src/bundles/mod.rs - Bundle helpers for the agent
 crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protocol error responses
@@ -230,6 +229,7 @@ crates/im_agent/src/server/connection/request_cancellation.rs - Cooperative canc
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
+crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running agent executable identity during WebSocket handshake
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
 crates/im_agent/src/staging/mod.rs - Staging module exports
@@ -238,6 +238,19 @@ crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scan
 crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan and zip operations
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
+crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution for bundle evidence
+crates/im_bundle/src/git_capture/diff.rs - Bounded selected-path Git diff, stat, and name-status capture
+crates/im_bundle/src/git_capture/discovery.rs - Git discovery failure classification and raw prefix normalization
+crates/im_bundle/src/git_capture/finalize.rs - Git artifact finalization and working-tree coherence verdicts
+crates/im_bundle/src/git_capture/ignored.rs - Reconcile selected archived files that Git status hides behind ignore rules
+crates/im_bundle/src/git_capture/mod.rs - Versioned selection-bounded Git evidence capture for bundle archives
+crates/im_bundle/src/git_capture/path.rs - Lossless Git path transport and model-readable quoting helpers
+crates/im_bundle/src/git_capture/porcelain.rs - Strict parser for NUL-delimited Git porcelain-v2 records
+crates/im_bundle/src/git_capture/render.rs - Selection-safe human-readable Git status and bundle handoff artifacts
+crates/im_bundle/src/git_capture/session.rs - Git capture discovery, initial status, and safety-bound setup
+crates/im_bundle/src/git_capture/status.rs - Raw porcelain-v2 Git status parsing and selection-safe projection
+crates/im_bundle/src/git_capture/tests.rs - Failure, timeout, and drift tests for bounded Git capture
+crates/im_bundle/src/git_capture/verification.rs - Streaming selected-file coherence verification for Git bundle capture
 crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
@@ -246,9 +259,11 @@ crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
 crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
+crates/im_bundle/src/selection.rs - Canonical bundle-selection predicate shared by scanning and Git capture
 crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and progress ordering
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/src/zip_entry.rs - Single file entry writer for bundle zip archives
+crates/im_bundle/tests/git_evidence_test.rs - End-to-end witness tests for selection-bounded bundle Git evidence
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
 crates/im_host_agent/src/config.rs - Host agent environment configuration parsing
@@ -294,9 +309,11 @@ src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
 src-tauri/src/lib/agent/host_process_control.rs - Windows host-agent process detection and stale-port termination helpers
 src-tauri/src/lib/agent/install_host_binary.rs - Resolve and copy the correct host-agent binary into an install bundle staging directory
 src-tauri/src/lib/agent/install_runtime.rs - Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup
+src-tauri/src/lib/agent/install_tests.rs - Agent bundle installation and packaged-runtime identity regression tests
 src-tauri/src/lib/agent/install.rs - Install bundled agent runtimes into app local data with platform-specific requirements
 src-tauri/src/lib/agent/mod.rs - Host-agent supervisor module exports (with optional Windows WSL backend)
 src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
+src-tauri/src/lib/agent/runtime_identity.rs - Bounded SHA-256 identity for packaged and installed agent executables
 src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
 src-tauri/src/lib/agent/supervisor/host.rs - Host-agent startup and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
@@ -308,11 +325,14 @@ src-tauri/src/lib/agent/supervisor/shutdown.rs - App-exit teardown: stop agents,
 src-tauri/src/lib/agent/supervisor/state.rs - Shared supervisor process state and process-kind labels
 src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth and origin probes used by the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
+src-tauri/src/lib/agent/supervisor/wsl_logging.rs - Structured WSL backend ownership and authentication lifecycle logging
 src-tauri/src/lib/agent/supervisor/wsl_mode.rs - WSL backend mode parsing and ownership-policy helpers for the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_runtime.rs - Shared WSL supervisor timing constants
 src-tauri/src/lib/agent/supervisor/wsl_same_port_termination.rs - Same-port Intermediary WSL agent termination for supervisor remediation
 src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend startup and ownership detection for the supervisor
 src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
+src-tauri/src/lib/agent/websocket_auth_tests.rs - Durable websocket authentication token persistence tests
+src-tauri/src/lib/agent/websocket_auth.rs - Pre-WebView websocket authentication state and durable token persistence
 src-tauri/src/lib/agent/wsl_command_runner.rs - Bounded WSL command execution helpers for agent process control
 src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
 src-tauri/src/lib/agent/wsl_process_control_tests.rs - Tests for WSL process-control parsing helpers

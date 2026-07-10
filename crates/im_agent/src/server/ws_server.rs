@@ -15,6 +15,7 @@ use crate::runtime::AgentRuntime;
 use super::connection::{handle_connection, ConnectionContext};
 use super::event_bus::EventBus;
 use super::handshake_auth::ConnectionHandshakeAuth;
+use super::runtime_identity::runtime_binary_sha256;
 
 const DEFAULT_PORT: u16 = 3141;
 
@@ -27,6 +28,8 @@ pub struct ServerConfig {
 }
 
 pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
+    let runtime_sha256 =
+        runtime_binary_sha256().map_err(|err| AgentError::new("RUNTIME_IDENTITY_FAILED", err))?;
     let port = config.port.unwrap_or(DEFAULT_PORT);
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
 
@@ -55,6 +58,7 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                             agent_version: config.agent_version.clone(),
                             event_bus: event_bus.clone(),
                             handshake_auth: handshake_auth.clone(),
+                            runtime_sha256: runtime_sha256.clone(),
                         };
                         tokio::spawn(handle_connection(stream, peer, ctx));
                     }

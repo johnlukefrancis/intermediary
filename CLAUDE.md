@@ -79,12 +79,6 @@ Skills are global-only (`~/.claude/skills`). Invoke based on task surface—don'
 - For complex problems, throw more compute at it via subagents
 - One task per subagent for focused execution
 
-## Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons.md` with the pattern
-- Write rules for yourself that prevent the same mistake
-- Ruthlessly iterate on these lessons until mistake rate drops
-- Review lessons at session start for relevant project
-
 ## End of turn contract
 - **First line of every reply:** `Skills: …` listing skills used this turn.
 - List files touched (+ why).

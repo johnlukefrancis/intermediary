@@ -76,10 +76,23 @@ There was no compliance-grade contract for backend ownership, reclamation, or sh
    output, which previously defeated every detector. (Agent *launch* is exempt only because its
    command is a fixed, absolute-path string with no such constructs.)
 
+8) **Runtime identity is validated before adoption.**
+   A healthy authenticated listener is reusable only after the supervisor compares the app-local
+   agent bundle with the packaged installer resources **and** verifies the executable bytes of the
+   running process. Each agent hashes its own executable once at startup with bounded streaming IO
+   and returns that SHA-256 only on a successfully authenticated WebSocket upgrade. A missing or
+   mismatched process identity MUST bypass adoption and replace the host agent or reclaimable WSL
+   backend, even when the app-local files already match. A packaged version or byte mismatch MUST
+   install the packaged bundle and force replacement in the same pass. The `external` WSL mode
+   remains user-managed and is never terminated by this upgrade convergence. The already-running
+   fast path MUST never bypass these disk and process identity checks.
+
 ## Consequences
 
 - Reinstalls and closed dev tasks self-heal: the wedge is reclaimed on startup, and (via the relocated
   token) usually avoided entirely by a clean reconnect.
+- A surviving authenticated agent from an older installer cannot pin the app to stale runtime
+  behavior; startup converges it to the packaged version before adoption.
 - "Restart Agent" is a real kill+respawn that recovers a wedged backend without manual port-killing.
 - Closing the app frees WSL RAM when the user is done, without disrupting other WSL shells or builds.
 - Reclamation depends on `ss` (iproute2) inside the distro; when absent it degrades to the prior

@@ -1,7 +1,7 @@
 // Path: crates/im_bundle/tests/scanner_test.rs
 // Description: Integration tests for bundle scanner behavior
 
-use im_bundle::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
+use im_bundle::plan::{BundleSelection, GlobalExcludes};
 use im_bundle::progress::ProgressEmitter;
 use im_bundle::scanner::scan_bundle;
 use im_bundle::BundlePlan;
@@ -32,11 +32,6 @@ fn scan_respects_ignore_and_exclude() {
             top_level_dirs: vec!["app".to_string()],
             excluded_subdirs: vec!["app/skip_me".to_string()],
             excluded_files: vec![],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
@@ -79,11 +74,6 @@ fn scan_respects_nested_subdir_exclude() {
             excluded_subdirs: vec!["app/src/components".to_string()],
             excluded_files: vec![],
         },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
     };
@@ -124,11 +114,6 @@ fn scan_respects_excluded_files() {
             excluded_subdirs: vec![],
             excluded_files: vec!["README.md".to_string(), "app/src/secret.ts".to_string()],
         },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
     };
@@ -165,11 +150,6 @@ fn reject_invalid_top_level_dir() {
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
-        },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
     };
@@ -199,11 +179,6 @@ fn reject_invalid_excluded_file() {
             top_level_dirs: vec!["app".to_string()],
             excluded_subdirs: vec![],
             excluded_files: vec!["../outside.txt".to_string()],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),
@@ -237,11 +212,6 @@ fn ignores_top_level_ignored_dirs_without_error() {
             top_level_dirs: vec!["app".to_string(), "node_modules".to_string()],
             excluded_subdirs: vec![],
             excluded_files: vec![],
-        },
-        git: BundleGitInfo {
-            head_sha: None,
-            short_sha: None,
-            branch: None,
         },
         built_at_iso: "2026-01-31T00:00:00Z".to_string(),
         global_excludes: GlobalExcludes::default(),

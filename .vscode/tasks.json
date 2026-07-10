@@ -217,6 +217,24 @@
       "group": "build"
     },
     {
+      "label": "Tauri: build + launch installer (Windows)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$ErrorActionPreference='Stop'; $wslPathForUnc = '${workspaceFolder}'.TrimStart('/').Replace('/','\\'); $scriptPath = \"\\\\wsl$\\${input:intermediaryWslDistro}\\$wslPathForUnc\\scripts\\windows\\run_windows_tauri_task.ps1\"; & $scriptPath -WindowsMirrorPath '${input:intermediaryWindowsMirrorPath}' -WslRepoPath '${workspaceFolder}' -WslDistro '${input:intermediaryWslDistro}' -Mode 'build-installer-launch'"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "group": "build"
+    },
+    {
       "label": "Zip: bundles",
       "type": "shell",
       "command": "node scripts/zip/zip_bundles.mjs",

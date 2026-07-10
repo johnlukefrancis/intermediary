@@ -230,7 +230,7 @@ pub fn recommended_global_excludes() -> GlobalExcludes {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::plan::{BundleGitInfo, BundlePlan, BundleSelection, GlobalExcludes};
+    use crate::plan::{BundlePlan, BundleSelection, GlobalExcludes};
     use crate::progress::ProgressEmitter;
     use crate::scanner::scan_bundle;
     use tempfile::tempdir;
@@ -277,11 +277,6 @@ mod tests {
                 top_level_dirs: vec!["app".to_string(), "models".to_string()],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
-            },
-            git: BundleGitInfo {
-                head_sha: None,
-                short_sha: None,
-                branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
             global_excludes: GlobalExcludes {
@@ -335,11 +330,6 @@ mod tests {
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
             },
-            git: BundleGitInfo {
-                head_sha: None,
-                short_sha: None,
-                branch: None,
-            },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
             global_excludes: GlobalExcludes {
                 dir_names: vec![],
@@ -378,11 +368,6 @@ mod tests {
                 top_level_dirs: vec!["TriangleRain".to_string()],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
-            },
-            git: BundleGitInfo {
-                head_sha: None,
-                short_sha: None,
-                branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
             global_excludes: recommended_global_excludes(),
@@ -424,11 +409,6 @@ mod tests {
                 top_level_dirs: vec!["TriangleRain".to_string()],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
-            },
-            git: BundleGitInfo {
-                head_sha: None,
-                short_sha: None,
-                branch: None,
             },
             built_at_iso: "2026-01-31T00:00:00Z".to_string(),
             global_excludes: GlobalExcludes {

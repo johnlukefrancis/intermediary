@@ -1577,7 +1577,7 @@ dependencies = [
 
 [[package]]
 name = "im_agent"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1588,6 +1588,7 @@ dependencies = [
  "notify",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 1.0.69",
  "tokio",
@@ -1597,10 +1598,12 @@ dependencies = [
 
 [[package]]
 name = "im_bundle"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "thiserror 1.0.69",
  "zip",
@@ -1608,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "im_host_agent"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "futures-util",
  "im_agent",
@@ -1672,7 +1675,7 @@ dependencies = [
 
 [[package]]
 name = "intermediary"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "chrono",
  "dirs 5.0.1",
@@ -1681,6 +1684,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

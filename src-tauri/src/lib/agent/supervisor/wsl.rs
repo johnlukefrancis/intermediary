@@ -1,6 +1,9 @@
 // Path: src-tauri/src/lib/agent/supervisor/wsl.rs
 // Description: WSL backend startup and ownership detection for the supervisor
 
+use super::wsl_logging::{
+    log_wsl_external_auth_failure, log_wsl_owner_detection, log_wsl_owner_mismatch,
+};
 use super::wsl_mode::{
     backend_mode_allows_owner, resolve_wsl_backend_mode, WslBackendMode, WslBackendOwner,
 };
@@ -8,10 +11,10 @@ use super::{AgentSupervisor, EnsureProcessResult};
 use crate::agent::install::AgentBundlePaths;
 use crate::agent::process_control::{capture_log_cursor, wait_for_agent_ready};
 use crate::agent::supervisor::state::ProcessKind;
-use crate::agent::types::AgentWebSocketAuth;
 use crate::agent::wsl_process_control::{
     build_wsl_launch_target, format_wsl_target, spawn_wsl_agent_process,
 };
+use crate::agent::AgentWebSocketAuth;
 use crate::obs::logging;
 use std::process::Child;
 
@@ -53,12 +56,16 @@ impl AgentSupervisor {
             log_wsl_owner_detection(backend_mode, owner, wsl_port, &target);
 
             if !backend_mode_allows_owner(backend_mode, owner) {
-                let message = AgentSupervisor::managed_mode_error_for_external_occupant(
+                let Some(message) = AgentSupervisor::managed_mode_error_for_external_occupant(
                     backend_mode,
                     wsl_port,
                     &target,
-                )
-                .expect("managed-mode owner mismatch must produce an error");
+                ) else {
+                    return Err(
+                        "Managed WSL ownership policy rejected a listener without an actionable error"
+                            .to_string(),
+                    );
+                };
                 log_wsl_owner_mismatch(backend_mode, wsl_port, &target);
                 return Err(message);
             }
@@ -69,20 +76,28 @@ impl AgentSupervisor {
                 && !matches!(backend_mode, WslBackendMode::External);
 
             let mut remediated_current_listener = false;
-            if self
-                .probe_websocket_auth(wsl_port, &auth.wsl_ws_token)
-                .await?
-            {
+            let identity = self
+                .probe_websocket_identity(wsl_port, &auth.wsl_ws_token)
+                .await?;
+            if identity.authenticated {
                 // A forced restart must tear a healthy backend down and respawn it — otherwise
                 // "Restart Agent" silently no-ops. Managed mode also remediates a same-port owner
                 // to converge on the installed backend.
                 let force_respawn = force && reclaimable_owner;
+                let runtime_matches = bundle
+                    .wsl_agent_sha256
+                    .as_deref()
+                    .is_some_and(|expected| identity.matches_runtime(expected));
+                let identity_respawn =
+                    should_respawn_for_runtime_identity(reclaimable_owner, runtime_matches);
                 let managed_owner_remediation = owner == WslBackendOwner::SamePortIntermediary
                     && matches!(backend_mode, WslBackendMode::Managed);
-                if force_respawn || managed_owner_remediation {
+                if force_respawn || identity_respawn || managed_owner_remediation {
                     self.record_owned_wsl_backend(&target, wsl_port)?;
                     let reason = if force_respawn {
                         "force_restart"
+                    } else if identity_respawn {
+                        "runtime_identity_mismatch"
                     } else {
                         "managed_owner_mismatch"
                     };
@@ -187,6 +202,25 @@ impl AgentSupervisor {
     }
 }
 
+fn should_respawn_for_runtime_identity(reclaimable_owner: bool, runtime_matches: bool) -> bool {
+    reclaimable_owner && !runtime_matches
+}
+
+#[cfg(test)]
+mod tests {
+    use super::should_respawn_for_runtime_identity;
+
+    #[test]
+    fn stale_reclaimable_backend_is_replaced() {
+        assert!(should_respawn_for_runtime_identity(true, false));
+    }
+
+    #[test]
+    fn external_backend_is_never_replaced_for_identity() {
+        assert!(!should_respawn_for_runtime_identity(false, false));
+    }
+}
+
 async fn spawn_wsl_supervised(
     supervisor: &AgentSupervisor,
     bundle: &AgentBundlePaths,
@@ -249,58 +283,4 @@ async fn spawn_wsl_supervised(
             Err(err)
         }
     }
-}
-
-fn log_wsl_owner_detection(
-    backend_mode: WslBackendMode,
-    owner: WslBackendOwner,
-    wsl_port: u16,
-    target: &crate::agent::wsl_process_control::WslLaunchTarget,
-) {
-    logging::log(
-        "info",
-        "agent",
-        "wsl_owner_detected",
-        &format!(
-            "mode={} owner={} port={wsl_port} {}",
-            backend_mode.log_key(),
-            owner.log_key(),
-            format_wsl_target(target)
-        ),
-    );
-}
-
-fn log_wsl_owner_mismatch(
-    backend_mode: WslBackendMode,
-    wsl_port: u16,
-    target: &crate::agent::wsl_process_control::WslLaunchTarget,
-) {
-    logging::log(
-        "warn",
-        "agent",
-        "wsl_external_unmanaged_auth_failed",
-        &format!(
-            "mode={} owner=external_unmanaged port={wsl_port} {}",
-            backend_mode.log_key(),
-            format_wsl_target(target)
-        ),
-    );
-}
-
-fn log_wsl_external_auth_failure(
-    mode: &str,
-    owner: WslBackendOwner,
-    wsl_port: u16,
-    target: &crate::agent::wsl_process_control::WslLaunchTarget,
-) {
-    logging::log(
-        "warn",
-        "agent",
-        "wsl_external_unmanaged_auth_failed",
-        &format!(
-            "mode={mode} owner={} port={wsl_port} {}",
-            owner.log_key(),
-            format_wsl_target(target)
-        ),
-    );
 }

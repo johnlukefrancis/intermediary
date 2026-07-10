@@ -42,10 +42,6 @@ pub(super) fn resolve_wsl_backend_mode() -> (WslBackendMode, Option<String>) {
     parse_wsl_backend_mode(raw.as_deref())
 }
 
-pub(super) fn wsl_backend_mode_requires_managed_owner() -> bool {
-    matches!(resolve_wsl_backend_mode().0, WslBackendMode::Managed)
-}
-
 pub(super) fn backend_mode_allows_owner(mode: WslBackendMode, owner: WslBackendOwner) -> bool {
     !matches!(
         (mode, owner),

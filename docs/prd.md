@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-05-23
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -223,17 +223,23 @@ Per repo, user can define multiple presets:
 
 ### 7.5 Bundle provenance manifest
 
-Every generated zip includes:
+Every generated zip uses bundle format version 2 and includes:
 
 * `BUNDLE_MANIFEST.json` containing:
 
+  * `bundleFormatVersion`
   * `generatedAt` (ISO timestamp)
   * `repoId`, `repoRoot`
   * `presetId`, `presetName`
-  * `selection` (includeRoot + topLevelDirsIncluded + excludedSubdirs)
+  * `selection` (includeRoot + topLevelDirsIncluded + excludedSubdirs + excludedFiles)
   * `effectiveGlobalExcludes` used by the scan
-  * `git` info (headSha/shortSha/branch, best-effort)
+  * versioned `git` capture evidence: captured HEAD/branch/time, comparison base, capture status, repo/selection dirty facts, selected/omitted counts, generated artifact names, incomplete artifacts, and structured failure/drift reasons
   * `fileCount`, `totalBytesBestEffort`
+* `BUNDLE_GIT_STATUS.txt` containing selected staging/worktree status, diff stat/name-status, untracked-file orientation, and privacy-safe omitted-change evidence
+* `BUNDLE_GIT_DIFF.patch` containing the selected tracked final-state delta from captured HEAD without binary payload encoding
+* `BUNDLE_HANDOFF.md` containing the project-neutral read order and repo-local operator guidance
+
+The selected file set is the privacy boundary for Git paths and content. Clean repositories emit explicit clean evidence and an empty patch. Git absence/failure preserves normal bundle creation with unavailable/partial evidence, while HEAD/status/selected-byte movement produces an unstable verdict.
 
 ### 7.6 Naming scheme
 

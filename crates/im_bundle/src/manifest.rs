@@ -3,12 +3,16 @@
 
 use serde::Serialize;
 
+use crate::git_capture::BundleGitCapture;
 use crate::global_excludes_summary::normalized_global_excludes_summary;
-use crate::plan::{BundleGitInfo, BundleSelection, GlobalExcludes};
+use crate::plan::{BundleSelection, GlobalExcludes};
+
+pub const BUNDLE_FORMAT_VERSION: u32 = 2;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BundleManifest {
+    pub bundle_format_version: u32,
     pub generated_at: String,
     pub repo_id: String,
     pub repo_root: String,
@@ -16,7 +20,7 @@ pub struct BundleManifest {
     pub preset_name: String,
     pub selection: ManifestSelection,
     pub effective_global_excludes: GlobalExcludes,
-    pub git: BundleGitInfo,
+    pub git: BundleGitCapture,
     pub file_count: u64,
     pub total_bytes_best_effort: u64,
 }
@@ -39,11 +43,12 @@ pub fn build_manifest(
     selection: &BundleSelection,
     global_excludes: &GlobalExcludes,
     top_level_dirs_included: &[String],
-    git: &BundleGitInfo,
+    git: &BundleGitCapture,
     file_count: u64,
     total_bytes_best_effort: u64,
 ) -> BundleManifest {
     BundleManifest {
+        bundle_format_version: BUNDLE_FORMAT_VERSION,
         generated_at: generated_at.to_string(),
         repo_id: repo_id.to_string(),
         repo_root: repo_root.to_string(),
@@ -56,11 +61,7 @@ pub fn build_manifest(
             excluded_files: selection.excluded_files.clone(),
         },
         effective_global_excludes: normalized_global_excludes_summary(global_excludes),
-        git: BundleGitInfo {
-            head_sha: git.head_sha.clone(),
-            short_sha: git.short_sha.clone(),
-            branch: git.branch.clone(),
-        },
+        git: git.clone(),
         file_count,
         total_bytes_best_effort,
     }

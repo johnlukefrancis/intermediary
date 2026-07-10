@@ -4,6 +4,7 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
+use sha2::{Digest, Sha256};
 use zip::write::SimpleFileOptions;
 use zip::CompressionMethod;
 
@@ -24,7 +25,8 @@ pub(crate) fn write_entry(
     files_total: u64,
     bytes_done_total: u64,
     cancel_token: Option<&BundleCancelToken>,
-) -> Result<u64> {
+    capture_digest: bool,
+) -> Result<WrittenEntry> {
     check_cancelled(cancel_token)?;
     let source_file =
         File::open(&entry.source_path).map_err(|source| BundleError::FileOpenFailed {
@@ -41,6 +43,7 @@ pub(crate) fn write_entry(
             source,
         })?;
     let mut reader = BufReader::new(source_file).take(current_bytes_total);
+    let mut hasher = capture_digest.then(Sha256::new);
 
     zip.start_file(
         &entry.archive_path,
@@ -79,6 +82,9 @@ pub(crate) fn write_entry(
                 archive_path: entry.archive_path.clone(),
                 source: zip::result::ZipError::Io(source),
             })?;
+        if let Some(hasher) = &mut hasher {
+            hasher.update(&buffer[..bytes_read]);
+        }
         total += bytes_read as u64;
         emit_entry_progress(
             progress,
@@ -103,7 +109,15 @@ pub(crate) fn write_entry(
         true,
     );
 
-    Ok(total)
+    Ok(WrittenEntry {
+        bytes: total,
+        digest: hasher.map(|hasher| hasher.finalize().into()),
+    })
+}
+
+pub(crate) struct WrittenEntry {
+    pub(crate) bytes: u64,
+    pub(crate) digest: Option<[u8; 32]>,
 }
 
 fn emit_entry_progress(

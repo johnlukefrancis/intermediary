@@ -6,16 +6,14 @@ use std::path::{Path, PathBuf};
 
 use crate::cancel::{check_cancelled, BundleCancelToken};
 use crate::error::{BundleError, Result};
-use crate::global_excludes::{
-    is_globally_excluded_dir_name, is_globally_excluded_file_name, is_globally_excluded_path,
-    normalize_global_excludes, NormalizedGlobalExcludes,
-};
 use crate::plan::BundlePlan;
 use crate::progress::ProgressEmitter;
+use crate::selection::BundleSelector;
 
 #[derive(Debug, Clone)]
 pub struct ScanEntry {
     pub source_path: PathBuf,
+    pub repo_relative_path: PathBuf,
     pub archive_path: String,
 }
 
@@ -42,12 +40,7 @@ pub fn scan_bundle_with_cancel(
     }
     check_cancelled(cancel_token)?;
 
-    let excluded_subdirs =
-        normalize_excluded_paths(&plan.selection.excluded_subdirs, "excludedSubdirs")?;
-    let excluded_subdir_set: HashSet<String> = excluded_subdirs.into_iter().collect();
-    let excluded_files = normalize_excluded_paths(&plan.selection.excluded_files, "excludedFiles")?;
-    let excluded_file_set: HashSet<String> = excluded_files.into_iter().collect();
-    let global_excludes = normalize_global_excludes(&plan.global_excludes);
+    let selector = BundleSelector::new(&plan.selection, &plan.global_excludes)?;
 
     let mut entries = Vec::new();
     let mut files_scanned = 0u64;
@@ -76,16 +69,14 @@ pub fn scan_bundle_with_cancel(
                 continue;
             }
             if file_type.is_file() {
-                let archive_path = name_str.to_string();
-                if excluded_file_set.contains(&archive_path)
-                    || is_globally_excluded_file_name(&name_str, &global_excludes)
-                    || is_globally_excluded_path(&archive_path, &global_excludes)
-                {
+                let relative_path = PathBuf::from(&name);
+                if !selector.admits_file(&relative_path) {
                     continue;
                 }
                 entries.push(ScanEntry {
                     source_path: entry.path(),
-                    archive_path,
+                    repo_relative_path: relative_path,
+                    archive_path: name_str.to_string(),
                 });
                 files_scanned += 1;
                 progress.emit_progress("scanning", files_scanned, 0);
@@ -97,9 +88,8 @@ pub fn scan_bundle_with_cancel(
     let mut top_level_dirs_included = Vec::new();
     for dir in &top_level_dirs {
         check_cancelled(cancel_token)?;
-        if is_globally_excluded_dir_name(dir, &global_excludes)
-            || is_globally_excluded_path(dir, &global_excludes)
-        {
+        let relative_dir = PathBuf::from(dir);
+        if !selector.admits_directory(&relative_dir) {
             continue;
         }
         top_level_dirs_included.push(dir.to_string());
@@ -107,15 +97,15 @@ pub fn scan_bundle_with_cancel(
         collect_dir_entries(
             &mut entries,
             &dir_path,
-            dir,
-            &excluded_subdir_set,
-            &excluded_file_set,
-            &global_excludes,
+            &relative_dir,
+            &selector,
             &mut files_scanned,
             progress,
             cancel_token,
         )?;
     }
+
+    entries.sort_by(|left, right| left.archive_path.cmp(&right.archive_path));
 
     Ok(ScanResult {
         entries,
@@ -166,23 +156,13 @@ fn validate_top_level_dirs(repo_root: &Path, dirs: &[String]) -> Result<Vec<Stri
 fn collect_dir_entries(
     entries: &mut Vec<ScanEntry>,
     dir_path: &Path,
-    archive_root: &str,
-    excluded_subdir_set: &HashSet<String>,
-    excluded_file_set: &HashSet<String>,
-    global_excludes: &NormalizedGlobalExcludes,
+    relative_dir: &Path,
+    selector: &BundleSelector,
     files_scanned: &mut u64,
     progress: &mut ProgressEmitter,
     cancel_token: Option<&BundleCancelToken>,
 ) -> Result<()> {
     check_cancelled(cancel_token)?;
-    if excluded_subdir_set.contains(archive_root) {
-        return Ok(());
-    }
-
-    // Check if this directory matches a global exclude path segment
-    if is_globally_excluded_path(archive_root, global_excludes) {
-        return Ok(());
-    }
 
     let dir_entries = std::fs::read_dir(dir_path).map_err(|source| BundleError::DirReadFailed {
         path: dir_path.to_path_buf(),
@@ -196,7 +176,6 @@ fn collect_dir_entries(
             source,
         })?;
         let name = entry.file_name();
-        let name_str = name.to_string_lossy();
         let file_type = entry
             .file_type()
             .map_err(|source| BundleError::MetadataFailed {
@@ -208,20 +187,17 @@ fn collect_dir_entries(
             continue;
         }
 
-        let next_archive = join_archive(archive_root, &name_str);
+        let next_relative = relative_dir.join(&name);
+        let next_archive = archive_path(&next_relative);
         if file_type.is_dir() {
-            if is_globally_excluded_dir_name(&name_str, global_excludes)
-                || is_globally_excluded_path(&next_archive, global_excludes)
-            {
+            if !selector.admits_directory(&next_relative) {
                 continue;
             }
             collect_dir_entries(
                 entries,
                 &entry.path(),
-                &next_archive,
-                excluded_subdir_set,
-                excluded_file_set,
-                global_excludes,
+                &next_relative,
+                selector,
                 files_scanned,
                 progress,
                 cancel_token,
@@ -230,14 +206,12 @@ fn collect_dir_entries(
         }
 
         if file_type.is_file() {
-            if excluded_file_set.contains(&next_archive)
-                || is_globally_excluded_file_name(&name_str, global_excludes)
-                || is_globally_excluded_path(&next_archive, global_excludes)
-            {
+            if !selector.admits_file(&next_relative) {
                 continue;
             }
             entries.push(ScanEntry {
                 source_path: entry.path(),
+                repo_relative_path: next_relative,
                 archive_path: next_archive,
             });
             *files_scanned += 1;
@@ -248,33 +222,12 @@ fn collect_dir_entries(
     Ok(())
 }
 
-fn join_archive(root: &str, name: &str) -> String {
-    if root.is_empty() {
-        name.to_string()
-    } else {
-        format!("{root}/{name}")
-    }
-}
-
-fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec<String>> {
-    let mut normalized = Vec::new();
-    for item in excluded {
-        let trimmed = item.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let normalized_item = trimmed.replace('\\', "/");
-        if normalized_item.starts_with('/') {
-            return Err(BundleError::InvalidPlan(format!(
-                "{field_name} must be relative: {trimmed}"
-            )));
-        }
-        if normalized_item.split('/').any(|part| part == "..") {
-            return Err(BundleError::InvalidPlan(format!(
-                "{field_name} cannot contain '..': {trimmed}"
-            )));
-        }
-        normalized.push(normalized_item);
-    }
-    Ok(normalized)
+fn archive_path(path: &Path) -> String {
+    path.components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(value) => Some(value.to_string_lossy()),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("/")
 }

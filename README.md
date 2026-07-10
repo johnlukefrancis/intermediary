@@ -15,7 +15,7 @@ Intermediary is built around two recurring problems in ChatGPT-first coding work
 
 Intermediary keeps that handoff loop in one place:
 
-- Builds timestamped zip bundles with a `BUNDLE_MANIFEST.json` provenance record.
+- Builds timestamped zip bundles with a v2 manifest, selected Git status/patch evidence against captured HEAD, and a fresh-model handoff note.
 - Surfaces recently changed docs and code so the newest files are always near the top.
 - Lets you favourite the files you hand off repeatedly.
 - Stages drag-and-drop-safe host-side copies for files that started in WSL or deep repo paths.
@@ -41,9 +41,9 @@ For the best bundle-first workflow, use a ChatGPT Project and pair it with the c
 ```
 
 - Intermediary keeps one bundle per repo+preset. Building a new one replaces the previous bundle for that repo/preset.
-- Every bundle includes `BUNDLE_MANIFEST.json` with timestamp, repo, preset, and git metadata.
+- Every bundle includes `BUNDLE_MANIFEST.json`, `BUNDLE_GIT_STATUS.txt`, `BUNDLE_GIT_DIFF.patch`, and `BUNDLE_HANDOFF.md` alongside selected current files.
 - When multiple bundles exist, choose the newest filename timestamp first. If needed, confirm with `generatedAt` inside the manifest.
-- Open `BUNDLE_MANIFEST.json` first, then use `docs/guide.md` in the bundle to navigate the project docs.
+- Read the manifest, Git status, and selected tracked patch first; then use `docs/guide.md` in the bundle to navigate project docs.
 - Treat the provided bundle as the source of truth for that repo.
 
 This setup is the recommended default for getting the full value from Intermediary. It is still a companion workflow, not a hidden runtime requirement.
