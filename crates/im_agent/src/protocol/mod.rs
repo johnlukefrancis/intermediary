@@ -20,7 +20,8 @@ pub use commands::{
     TrFleetWatchBackend, UiCommand, WatchRepoCommand,
 };
 pub use envelopes::{
-    EnvelopeKind, EventEnvelope, RequestEnvelope, ResponseEnvelope, ResponseError,
+    EnvelopeKind, EventEnvelope, InboundRequestEnvelope, RequestEnvelope, ResponseEnvelope,
+    ResponseError,
 };
 pub use events::{
     AgentEvent, BundleBuildProgressEvent, BundleBuiltEvent, FileActivity, FileActivityBucket,

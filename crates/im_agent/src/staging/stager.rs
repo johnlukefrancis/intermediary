@@ -2,6 +2,8 @@
 // Description: Atomic staging of files into the host-accessible directory
 
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tokio::fs;
@@ -17,11 +19,31 @@ pub struct StageResult {
     pub mtime_ms: u64,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct StageFileCancelToken {
+    cancelled: Arc<AtomicBool>,
+}
+
+impl StageFileCancelToken {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::SeqCst);
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::SeqCst)
+    }
+}
+
 pub async fn stage_file(
     config: &PathBridgeConfig,
     repo_id: &str,
     repo_root: &str,
     relative_path: &str,
+    cancel_token: StageFileCancelToken,
 ) -> Result<StageResult, AgentError> {
     stage_file_for_kind(
         config,
@@ -29,6 +51,7 @@ pub async fn stage_file(
         repo_root,
         relative_path,
         StagingRootKind::Wsl,
+        cancel_token,
     )
     .await
 }
@@ -39,8 +62,10 @@ pub async fn stage_file_for_kind(
     repo_root: &str,
     relative_path: &str,
     staging_kind: StagingRootKind,
+    cancel_token: StageFileCancelToken,
 ) -> Result<StageResult, AgentError> {
     validate_relative_path(relative_path)?;
+    ensure_not_cancelled(&cancel_token)?;
 
     let source_path = Path::new(repo_root).join(relative_path);
     let layout = StagingLayout::from_config(config, staging_kind)?;
@@ -64,12 +89,7 @@ pub async fn stage_file_for_kind(
         }
     };
 
-    if let Err(err) = fs::rename(&temp_path, &local_dest_path).await {
-        let _ = fs::remove_file(&temp_path).await;
-        return Err(AgentError::internal(format!(
-            "Failed to finalize staged file: {err}"
-        )));
-    }
+    finalize_temp_copy(&temp_path, &local_dest_path, &cancel_token).await?;
 
     let metadata = fs::metadata(&local_dest_path)
         .await
@@ -88,6 +108,35 @@ pub async fn stage_file_for_kind(
         bytes_copied,
         mtime_ms,
     })
+}
+
+fn ensure_not_cancelled(cancel_token: &StageFileCancelToken) -> Result<(), AgentError> {
+    if cancel_token.is_cancelled() {
+        return Err(AgentError::new(
+            "STAGE_FILE_CANCELLED",
+            "File staging cancelled",
+        ));
+    }
+    Ok(())
+}
+
+async fn finalize_temp_copy(
+    temp_path: &Path,
+    local_dest_path: &Path,
+    cancel_token: &StageFileCancelToken,
+) -> Result<(), AgentError> {
+    if let Err(cancelled) = ensure_not_cancelled(cancel_token) {
+        let _ = fs::remove_file(temp_path).await;
+        return Err(cancelled);
+    }
+
+    if let Err(err) = fs::rename(temp_path, local_dest_path).await {
+        let _ = fs::remove_file(temp_path).await;
+        return Err(AgentError::internal(format!(
+            "Failed to finalize staged file: {err}"
+        )));
+    }
+    Ok(())
 }
 
 fn temp_path_for(dest_path: &Path) -> PathBuf {
@@ -200,9 +249,34 @@ mod tests {
         ];
 
         for path in invalid_paths {
-            let result = stage_file(&config, "repo", &repo_root_str, path).await;
+            let result = stage_file(
+                &config,
+                "repo",
+                &repo_root_str,
+                path,
+                StageFileCancelToken::new(),
+            )
+            .await;
             let err = result.expect_err("expected invalid path error");
             assert_eq!(err.code(), "INVALID_PATH", "path: {path}");
         }
+    }
+
+    #[tokio::test]
+    async fn cancellation_after_copy_removes_temporary_file() {
+        let root = TempDir::new().expect("tempdir");
+        let temp_path = root.path().join("staged.tmp");
+        let dest_path = root.path().join("staged.txt");
+        fs::write(&temp_path, b"staged data").expect("write temp copy");
+        let cancel_token = StageFileCancelToken::new();
+        cancel_token.cancel();
+
+        let err = finalize_temp_copy(&temp_path, &dest_path, &cancel_token)
+            .await
+            .expect_err("cancelled finalization");
+
+        assert_eq!(err.code(), "STAGE_FILE_CANCELLED");
+        assert!(!temp_path.exists());
+        assert!(!dest_path.exists());
     }
 }

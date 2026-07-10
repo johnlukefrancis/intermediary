@@ -145,9 +145,9 @@ pub async fn build_bundle(
     options: BuildBundleOptions,
     event_bus: &EventBus,
     logger: &Logger,
+    cancel_token: im_bundle::cancel::BundleCancelToken,
 ) -> Result<BuildBundleResult, AgentError> {
-    let cancel_token = im_bundle::cancel::BundleCancelToken::new();
-    let _build_lock = acquire_build_lock(
+    let build_lock = acquire_build_lock(
         &options.repo_id,
         &options.preset_id,
         &options.build_id,
@@ -166,6 +166,7 @@ pub async fn build_bundle(
 
     let blocking_options = BuildBundleBlockingOptions::from(options);
     let build_result = tokio::task::spawn_blocking(move || {
+        let _build_lock = build_lock;
         build_bundle_blocking(
             blocking_options,
             built_at_iso,

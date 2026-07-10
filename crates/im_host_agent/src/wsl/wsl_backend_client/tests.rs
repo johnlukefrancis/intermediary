@@ -2,7 +2,7 @@
 // Description: Unit tests for WSL backend forwarded command timeout routing
 
 use super::*;
-use im_agent::protocol::BundleSelection;
+use im_agent::protocol::{BundleSelection, SetOptionsResult};
 
 fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> WslBackendClient {
     WslBackendClient {
@@ -49,6 +49,43 @@ async fn forward_command_timeout_enqueues_cancel_message() {
     );
 
     recv_task.await.expect("receiver task");
+}
+
+#[tokio::test]
+async fn forwarded_response_preserves_serving_connection_generation() {
+    let (request_tx, mut request_rx) = mpsc::unbounded_channel();
+    let client = client_for_test(request_tx);
+
+    let response_task = tokio::spawn(async move {
+        let request = match request_rx.recv().await {
+            Some(RequestLoopMessage::Forward(request)) => request,
+            _ => panic!("expected forward request"),
+        };
+        let response = ForwardedWslResponse {
+            response: UiResponse::SetOptionsResult(SetOptionsResult {
+                auto_stage_on_change: true,
+            }),
+            generation: 17,
+        };
+        request
+            .response_tx
+            .send(Ok(response))
+            .expect("send response");
+    });
+
+    let forwarded = client
+        .forward_command_with_timeout(UiCommand::Unknown, Duration::from_secs(1))
+        .await
+        .expect("forwarded response");
+    assert_eq!(forwarded.generation, 17);
+    assert!(matches!(
+        forwarded.response,
+        UiResponse::SetOptionsResult(SetOptionsResult {
+            auto_stage_on_change: true
+        })
+    ));
+
+    response_task.await.expect("response task");
 }
 
 #[test]

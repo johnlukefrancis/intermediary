@@ -4,8 +4,8 @@
 use serde_json::json;
 
 use super::{
-    AgentEvent, ClientHelloCommand, ClientHelloResult, RequestEnvelope, ResponseEnvelope,
-    UiCommand, UiResponse,
+    AgentEvent, ClientHelloCommand, ClientHelloResult, InboundRequestEnvelope, RequestEnvelope,
+    ResponseEnvelope, UiCommand, UiResponse,
 };
 use crate::runtime::RepoRoot;
 
@@ -29,6 +29,12 @@ fn request_response_roundtrip() {
         serde_json::from_str(&serialized_request).expect("parse request");
 
     assert_eq!(parsed_request.request_id, "req_1");
+    let inbound: InboundRequestEnvelope =
+        serde_json::from_str(&serialized_request).expect("parse inbound request");
+    assert!(matches!(
+        inbound,
+        InboundRequestEnvelope::Request { request_id, .. } if request_id == "req_1"
+    ));
 
     let response_payload = UiResponse::ClientHelloResult(ClientHelloResult {
         agent_version: "0.1.0".to_string(),
@@ -44,6 +50,20 @@ fn request_response_roundtrip() {
         ResponseEnvelope::Ok { request_id, .. } => assert_eq!(request_id, "req_1"),
         ResponseEnvelope::Error { .. } => panic!("expected ok response"),
     }
+}
+
+#[test]
+fn request_cancellation_roundtrip() {
+    let cancel = InboundRequestEnvelope::cancel("req_17");
+    let serialized = serde_json::to_string(&cancel).expect("serialize cancellation");
+    assert_eq!(serialized, r#"{"kind":"cancel","requestId":"req_17"}"#);
+
+    let parsed: InboundRequestEnvelope =
+        serde_json::from_str(&serialized).expect("parse cancellation");
+    assert!(matches!(
+        parsed,
+        InboundRequestEnvelope::Cancel { request_id } if request_id == "req_17"
+    ));
 }
 
 #[test]

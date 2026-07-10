@@ -60,8 +60,8 @@ impl HostRuntime {
         }
     }
 
-    pub fn mark_wsl_forward_success(&mut self, event_bus: &EventBus) {
-        self.mark_wsl_transport_success(event_bus);
+    pub fn mark_wsl_forward_success(&mut self, event_bus: &EventBus, generation: u64) {
+        self.mark_wsl_transport_success_for_generation(event_bus, generation);
     }
 
     pub fn emit_wsl_forward_error(

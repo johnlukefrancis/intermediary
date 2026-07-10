@@ -12,6 +12,7 @@ pub use bundle_builder::{
     build_bundle, cancel_bundle_build, BuildBundleOptions, BuildBundleResult,
 };
 pub use bundle_lister::{list_bundles, ListBundlesOptions};
+pub use im_bundle::cancel::BundleCancelToken;
 
 #[cfg(test)]
 mod bundle_builder_tests;

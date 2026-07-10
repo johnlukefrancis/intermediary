@@ -5,6 +5,7 @@ mod config;
 mod config_fingerprint;
 mod state;
 mod state_watchers;
+mod watcher_reconciliation;
 
 pub use config::{AppConfig, RepoConfig, RepoRoot, RepoRootKind};
 pub use config_fingerprint::compute_config_fingerprint;

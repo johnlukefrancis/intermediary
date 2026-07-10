@@ -874,6 +874,14 @@
       "summary": "Agent runtime state and option handlers"
     },
     {
+      "path": "crates/im_agent/src/runtime/watcher_reconciliation.rs",
+      "summary": "Concurrent repository watcher reconciliation for agent clientHello bootstrap"
+    },
+    {
+      "path": "crates/im_agent/src/server/connection_tests.rs",
+      "summary": "Request task cancellation tests for agent WebSocket connections"
+    },
+    {
       "path": "crates/im_agent/src/server/connection.rs",
       "summary": "Per-connection WebSocket handling and request routing"
     },
@@ -884,6 +892,10 @@
     {
       "path": "crates/im_agent/src/server/connection/repo_commands.rs",
       "summary": "Repo file-read and topology command handlers for WebSocket dispatch"
+    },
+    {
+      "path": "crates/im_agent/src/server/connection/request_cancellation.rs",
+      "summary": "Cooperative cancellation handles for active backend requests"
     },
     {
       "path": "crates/im_agent/src/server/event_bus.rs",
@@ -1008,6 +1020,10 @@
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime/mod.rs",
       "summary": "Host runtime command routing and clientHello orchestration for host and WSL backends"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs",
+      "summary": "WSL transport transition tests for host runtime routing"
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs",

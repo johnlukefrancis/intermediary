@@ -1,5 +1,5 @@
 # Agent/WSL Bruised States Runbook
-Updated on: 2026-07-07
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007, ADR-010, ADR-012
 
@@ -28,7 +28,8 @@ What to do:
 Expected behavior after resume:
 - Status bar may briefly show `Reconnecting (...)`.
 - UI reconnects the WebSocket session.
-- `clientHello` is replayed as needed and repo/bundle state rehydrates.
+- `clientHello` is replayed once for the active WSL connection generation and repo/bundle state rehydrates.
+- Recursive watcher registration runs concurrently off the async runtime workers; the host uses the WSL client's single bounded request lifecycle rather than abandoning bootstrap under a shorter wrapper timeout.
 - Stale WSL transport errors clear after explicit `wslBackendStatus: online`, including the recovery signal emitted on the first successful WSL operation after transport recovery.
 
 When to escalate:
@@ -40,12 +41,14 @@ When to escalate:
 Observed behavior:
 - Bundle requests are timeout-bounded (notably 5 minutes for build requests).
 - A timed-out build returns an error to UI, but does **not** replace/remove the previous successful bundle.
+- Timeout and disconnect cancellation use the same cooperative build token as the Cancel button; the blocking worker retains the repo/preset build lock until temporary output cleanup completes.
 - While a bundle is building, the build button becomes **Cancel**. Cancellation is quiet in the UI: the in-progress state clears without recording a persistent build error.
 
 Why this is safe:
 - Bundle finalize uses temp file + atomic rename.
 - Older bundles are pruned only after successful finalize.
 - Cancellation is cooperative and build-id scoped. The backend removes only the matching in-progress temp zip and does not remove the previous successful bundle.
+- A replacement build for the same repo/preset cannot start until the cancelled worker has finished cleanup and released its build lock.
 
 What to do:
 - Cancel a long build if the selection was wrong or the backend is unstable, then retry once backend is online/stable.
@@ -78,6 +81,7 @@ Default runtime logs are under the app local-data `logs` directory:
 Notes:
 - `run_latest.txt` is app/supervisor-side logging.
 - `agent_latest.log` is host/WSL agent JSONL logging.
+- WSL bootstrap completion/failure is anchored by `WSL backend clientHello applied` / `WSL backend clientHello failed`, with `durationMs` and `generation` fields.
 - Supervised app launches diagnose agent early exits from bounded `agent_latest.log` tails; they do not depend on draining child stdout/stderr pipes.
 - Dev workflows may override log directory (for example via `INTERMEDIARY_LOG_DIR`).
 

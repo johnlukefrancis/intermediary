@@ -221,9 +221,12 @@ crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
 crates/im_agent/src/runtime/state_watchers.rs - Watcher lifecycle helpers for agent runtime state
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
+crates/im_agent/src/runtime/watcher_reconciliation.rs - Concurrent repository watcher reconciliation for agent clientHello bootstrap
+crates/im_agent/src/server/connection_tests.rs - Request task cancellation tests for agent WebSocket connections
 crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and request routing
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
 crates/im_agent/src/server/connection/repo_commands.rs - Repo file-read and topology command handlers for WebSocket dispatch
+crates/im_agent/src/server/connection/request_cancellation.rs - Cooperative cancellation handles for active backend requests
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
@@ -255,6 +258,7 @@ crates/im_host_agent/src/main.rs - Host agent daemon entry point
 crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
 crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Build-bundle host dispatch and WSL forwarding helpers for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
+crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs - WSL transport transition tests for host runtime routing
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations

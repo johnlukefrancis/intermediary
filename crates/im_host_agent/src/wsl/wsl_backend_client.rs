@@ -29,15 +29,21 @@ pub struct WslBackendClient {
     connection_generation: Arc<AtomicU64>,
 }
 
+#[derive(Debug)]
+pub struct ForwardedWslResponse {
+    pub response: UiResponse,
+    pub generation: u64,
+}
+
 pub(super) enum RequestLoopMessage {
-    Forward(ForwardRequest),
+    Forward(Box<ForwardRequest>),
     Cancel { request_id: String },
 }
 
 pub(super) struct ForwardRequest {
     pub(super) request_id: String,
     pub(super) command: UiCommand,
-    pub(super) response_tx: oneshot::Sender<Result<UiResponse, AgentError>>,
+    pub(super) response_tx: oneshot::Sender<Result<ForwardedWslResponse, AgentError>>,
 }
 impl WslBackendClient {
     pub fn new(wsl_port: u16, wsl_ws_token: String, event_bus: EventBus, logger: Logger) -> Self {
@@ -65,7 +71,10 @@ impl WslBackendClient {
         self.connection_generation.load(Ordering::SeqCst)
     }
 
-    pub async fn forward_command(&self, command: UiCommand) -> Result<UiResponse, AgentError> {
+    pub async fn forward_command_with_generation(
+        &self,
+        command: UiCommand,
+    ) -> Result<ForwardedWslResponse, AgentError> {
         let timeout_duration = timeout_for_command(&command);
         self.forward_command_with_timeout(command, timeout_duration)
             .await
@@ -74,16 +83,16 @@ impl WslBackendClient {
         &self,
         command: UiCommand,
         timeout_duration: Duration,
-    ) -> Result<UiResponse, AgentError> {
+    ) -> Result<ForwardedWslResponse, AgentError> {
         let request_id = self.next_request_id();
         let (response_tx, response_rx) = oneshot::channel();
 
         self.request_tx
-            .send(RequestLoopMessage::Forward(ForwardRequest {
+            .send(RequestLoopMessage::Forward(Box::new(ForwardRequest {
                 request_id: request_id.clone(),
                 command,
                 response_tx,
-            }))
+            })))
             .map_err(|_| wsl_unavailable_error("WSL backend request loop is offline"))?;
 
         let timeout_ms = timeout_duration.as_millis();
@@ -149,7 +158,7 @@ async fn run_client_loop(
                     Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),
                 );
                 emit_wsl_backend_status(&event_bus, WslBackendConnectionStatus::Online, generation);
-                run_connected(stream, &mut request_rx, &event_bus, &logger).await;
+                run_connected(stream, &mut request_rx, &event_bus, &logger, generation).await;
                 logger.warn(
                     "Disconnected from WSL backend",
                     Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),

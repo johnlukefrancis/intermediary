@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-07-07
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -108,6 +108,8 @@ Intermediary uses a **host-routed architecture**:
   - Maintains internal WebSocket client to WSL backend agent
   - Forwards WSL-targeted requests and relays backend events to the UI
   - Keeps retrying WSL backend transport with bounded reconnect delay and emits explicit online/offline transition events (`wslBackendStatus`) with a reconnect generation counter
+  - Owns one bounded timeout per forwarded request; timed-out requests send a request-id-scoped cooperative cancellation to the WSL backend and let the operation retain its cleanup guards until work stops
+  - Attributes every successful forwarded response to the connection generation that produced it, including `clientHello`, options, build, and build-cancellation paths, so an older response cannot clear a newer transport error
   - Emits explicit backend-availability errors without taking down Windows repos
 
 ### WSL Backend Agent
@@ -116,9 +118,10 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** File watching and bundle generation for WSL roots
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
+  - Recursive native watcher registration/unregistration runs on blocking workers, with independent repo watchers started and reset concurrently during `clientHello` bootstrap
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
-  - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; last-good bundle remains on build failure)
-  - Atomic file staging for WSL repo operations
+  - Bundle building with manifest injection via `im_bundle` (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
+  - Atomic file staging for WSL repo operations, with cooperative cancellation removing temporary copies before the request completes
   - Auto-stage on change (configurable)
 
 ### IPC Protocol
@@ -129,6 +132,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - Host-agent validates token for every upgrade and enforces origin allowlisting when an `Origin` header is present.
 - Host→WSL backend forwarding uses a separate internal token not exposed to the UI.
 - Request: `{ kind: "request", requestId, payload }`
+- Host→WSL cancellation: `{ kind: "cancel", requestId }`; the backend signals only that connection's matching operation, suppresses its stale response, and retains the active request until cooperative cleanup completes
 - Response: `{ kind: "response", requestId, status, payload|error }`
 - Event: `{ kind: "event", eventId, payload }`
 
@@ -161,8 +165,16 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 ### Lifecycle recovery behavior
 
 - If the WSL backend goes offline, Windows-root repos continue to function; WSL-targeted commands return explicit transport errors and status remains recoverable.
-- On reconnect, host runtime replays cached WSL `clientHello` once per backend connection generation so watchers/state re-bootstrap without requiring manual full app reset.
+- On reconnect, host runtime replays cached WSL `clientHello` once per backend connection generation so watchers/state re-bootstrap without requiring manual full app reset. A successful replay is recorded against the generation carried by its response, not a generation sampled before the request.
+- Forwarding uses the WSL client's canonical per-command timeout. There is no shorter wrapper timeout that can abandon the caller while the same backend request remains active; a canonical timeout emits request-id cancellation and the backend retains operation guards through cleanup before accepting conflicting work.
+- WSL `clientHello` diagnostics log `WSL backend clientHello applied` or `WSL backend clientHello failed` with `durationMs` and `generation`, without logging the configuration payload.
 - On OS resume (sleep/wake), the UI triggers reconnect + rehydrate flow; users may briefly see `Reconnecting (...)` and then normal status once handshake and hydration complete.
+
+| Situation | Expected visible outcome |
+|---|---|
+| UI→host socket is connected while WSL `clientHello` is still applying | Status may say `Connected` because the host endpoint is live; WSL hydration waits for its generation-scoped bootstrap instead of issuing duplicate handshakes. |
+| Multiple WSL repos require watcher startup | Watchers initialize concurrently off async runtime workers; one slow repo does not serialize every independent watcher registration. |
+| A WSL request exceeds its canonical request budget | One WSL timeout is surfaced, the matching operation is cooperatively cancelled by request ID, temporary output is cleaned before its guard releases, and host-root workflows remain available. |
 
 ### Host OS File Actions
 

@@ -23,6 +23,37 @@ pub struct RequestEnvelope {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum InboundRequestEnvelope {
+    #[serde(rename = "request")]
+    Request {
+        #[serde(rename = "requestId")]
+        request_id: String,
+        payload: Box<UiCommand>,
+    },
+    #[serde(rename = "cancel")]
+    Cancel {
+        #[serde(rename = "requestId")]
+        request_id: String,
+    },
+}
+
+impl InboundRequestEnvelope {
+    pub fn request(request_id: impl Into<String>, payload: UiCommand) -> Self {
+        Self::Request {
+            request_id: request_id.into(),
+            payload: Box::new(payload),
+        }
+    }
+
+    pub fn cancel(request_id: impl Into<String>) -> Self {
+        Self::Cancel {
+            request_id: request_id.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseError {
     pub code: String,

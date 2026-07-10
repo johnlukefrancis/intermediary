@@ -53,13 +53,13 @@ async fn dispatch_build_bundle(
             };
             let repo_id = command.repo_id.clone();
             let result = client
-                .forward_command(UiCommand::BuildBundle(command))
+                .forward_command_with_generation(UiCommand::BuildBundle(command))
                 .await;
             let mut runtime = ctx.runtime.write().await;
             match result {
-                Ok(response) => {
-                    runtime.mark_wsl_forward_success(&ctx.event_bus);
-                    Ok(response)
+                Ok(forwarded) => {
+                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
+                    Ok(forwarded.response)
                 }
                 Err(err) => {
                     runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
@@ -95,13 +95,13 @@ async fn dispatch_cancel_bundle_build(
             };
             let repo_id = command.repo_id.clone();
             let result = client
-                .forward_command(UiCommand::CancelBundleBuild(command))
+                .forward_command_with_generation(UiCommand::CancelBundleBuild(command))
                 .await;
             let mut runtime = ctx.runtime.write().await;
             match result {
-                Ok(response) => {
-                    runtime.mark_wsl_forward_success(&ctx.event_bus);
-                    Ok(response)
+                Ok(forwarded) => {
+                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
+                    Ok(forwarded.response)
                 }
                 Err(err) => {
                     runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));

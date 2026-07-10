@@ -5,4 +5,4 @@ mod wsl_backend_client;
 mod wsl_backend_connection;
 mod wsl_backend_messages;
 
-pub use wsl_backend_client::WslBackendClient;
+pub use wsl_backend_client::{ForwardedWslResponse, WslBackendClient};

@@ -2,7 +2,8 @@
 // Description: Host-native local backend for repo watch, staging, and bundle operations
 
 use im_agent::bundles::{
-    build_bundle, cancel_bundle_build, list_bundles, BuildBundleOptions, ListBundlesOptions,
+    build_bundle, cancel_bundle_build, list_bundles, BuildBundleOptions, BundleCancelToken,
+    ListBundlesOptions,
 };
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
@@ -13,7 +14,7 @@ use im_agent::protocol::{
 };
 use im_agent::runtime::{AgentRuntime, RepoConfig, RepoRootKind};
 use im_agent::server::EventBus;
-use im_agent::staging::{stage_file_for_kind, StagingRootKind};
+use im_agent::staging::{stage_file_for_kind, StageFileCancelToken, StagingRootKind};
 
 use crate::error_codes::REPO_ROOT_MISMATCH;
 
@@ -77,6 +78,7 @@ impl LocalHostBackend {
             repo_root,
             &command.path,
             StagingRootKind::Host,
+            StageFileCancelToken::new(),
         )
         .await?;
 
@@ -132,6 +134,7 @@ impl LocalHostBackend {
             },
             event_bus,
             logger,
+            BundleCancelToken::new(),
         )
         .await?;
 

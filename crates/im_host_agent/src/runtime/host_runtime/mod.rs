@@ -6,7 +6,6 @@ mod wsl_routing;
 mod wsl_transport_epoch_state;
 
 use std::collections::{HashMap, HashSet};
-use std::time::Duration;
 
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
@@ -27,8 +26,6 @@ use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
 
 use self::wsl_transport_epoch_state::WslTransportEpochState;
-
-pub(super) const WSL_CLIENT_HELLO_TIMEOUT: Duration = Duration::from_secs(8);
 
 pub struct HostRuntime {
     local_backend: LocalHostBackend,
@@ -177,10 +174,12 @@ impl HostRuntime {
 
         match self
             .wsl_client(event_bus)
-            .forward_command(UiCommand::SetOptions(command))
+            .forward_command_with_generation(UiCommand::SetOptions(command))
             .await
         {
-            Ok(_) => self.mark_wsl_transport_success(event_bus),
+            Ok(forwarded) => {
+                self.mark_wsl_transport_success_for_generation(event_bus, forwarded.generation)
+            }
             Err(err) => self.emit_wsl_unavailable_if_transport_error(&err, event_bus, None),
         }
 

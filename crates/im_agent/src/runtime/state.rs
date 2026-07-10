@@ -9,8 +9,8 @@ use serde_json::Value;
 use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::protocol::{
-    AgentErrorDetails, AgentErrorEvent, AgentEvent, ClientHelloCommand, ClientHelloResult,
-    RefreshResult, SetOptionsCommand, SetOptionsResult, WatchRepoResult,
+    ClientHelloCommand, ClientHelloResult, RefreshResult, SetOptionsCommand, SetOptionsResult,
+    WatchRepoResult,
 };
 use crate::repos::{is_valid_repo_root, RecentFilesStore, RepoWatcher};
 use crate::server::EventBus;
@@ -94,55 +94,8 @@ impl AgentRuntime {
             self.recent_files_store = Some(RecentFilesStore::new(state_dir, logger.clone()));
         }
 
-        for repo in parsed_config.repos.iter() {
-            let Some(repo_root) = repo.root.path_for_kind(self.supported_root_kind) else {
-                logger.info(
-                    "Skipping unsupported repo root for runtime",
-                    Some(serde_json::json!({
-                        "repoId": repo.repo_id,
-                        "supportedRootKind": self.supported_root_kind.as_str(),
-                        "rootKind": repo.root.kind(),
-                        "rootPath": repo.root.path()
-                    })),
-                );
-                if self.supported_root_kind == RepoRootKind::Host
-                    && repo.root_kind() == RepoRootKind::Wsl
-                    && cfg!(not(target_os = "windows"))
-                {
-                    event_bus.broadcast_event(AgentEvent::Error(AgentErrorEvent::new(
-                        "config",
-                        format!(
-                            "WSL repo root not supported on this platform: {}",
-                            repo.repo_id
-                        ),
-                        Some(AgentErrorDetails {
-                            code: None,
-                            doc_path: None,
-                            repo_id: Some(repo.repo_id.clone()),
-                            raw_code: Some("UNSUPPORTED_REPO_ROOT".to_string()),
-                            raw_message: None,
-                        }),
-                    )));
-                }
-                continue;
-            };
-            if !is_valid_repo_root(repo_root).await {
-                logger.warn(
-                    "Invalid repo root, skipping watcher",
-                    Some(serde_json::json!({"repoId": repo.repo_id, "rootPath": repo_root})),
-                );
-                continue;
-            }
-            if let Err(err) = self
-                .ensure_repo_watcher_running(repo, event_bus, logger)
-                .await
-            {
-                logger.error(
-                    "Failed to start repo watcher",
-                    Some(serde_json::json!({"repoId": repo.repo_id, "error": err.message()})),
-                );
-            }
-        }
+        self.reconcile_repo_watchers(&parsed_config.repos, event_bus, logger)
+            .await;
 
         Ok(ClientHelloResult {
             agent_version: agent_version.to_string(),

@@ -49,8 +49,7 @@ impl RepoWatcher {
         combined_ignore_globs.extend(config.classification_ignore_globs.clone());
         let ignore_matcher = IgnoreMatcher::new(&combined_ignore_globs)?;
 
-        let mut mru =
-            MruIndex::new(config.mru_capacity).map_err(|err| AgentError::internal(err))?;
+        let mut mru = MruIndex::new(config.mru_capacity).map_err(AgentError::internal)?;
         let initial_entries = config
             .recent_store
             .load(
@@ -66,15 +65,20 @@ impl RepoWatcher {
         }
 
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Result<Event, notify::Error>>();
+        let watch_root = config.root_path.clone();
+        let watcher = tokio::task::spawn_blocking(move || {
+            let mut watcher = notify::recommended_watcher(move |res| {
+                let _ = event_tx.send(res);
+            })
+            .map_err(|err| AgentError::internal(format!("Failed to create watcher: {err}")))?;
 
-        let mut watcher = notify::recommended_watcher(move |res| {
-            let _ = event_tx.send(res);
+            watcher
+                .watch(Path::new(&watch_root), RecursiveMode::Recursive)
+                .map_err(|err| AgentError::internal(format!("Failed to watch repo: {err}")))?;
+            Ok::<RecommendedWatcher, AgentError>(watcher)
         })
-        .map_err(|err| AgentError::internal(format!("Failed to create watcher: {err}")))?;
-
-        watcher
-            .watch(Path::new(&config.root_path), RecursiveMode::Recursive)
-            .map_err(|err| AgentError::internal(format!("Failed to watch repo: {err}")))?;
+        .await
+        .map_err(|err| AgentError::internal(format!("Watcher startup task failed: {err}")))??;
 
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
@@ -136,7 +140,11 @@ impl RepoWatcher {
     pub async fn stop(&self) {
         let _ = self.stop_tx.send(true);
         if let Some(mut watcher) = self.watcher.lock().await.take() {
-            let _ = watcher.unwatch(&self.root_path);
+            let root_path = self.root_path.clone();
+            let _ = tokio::task::spawn_blocking(move || {
+                let _ = watcher.unwatch(&root_path);
+            })
+            .await;
         }
         self.task.abort();
         self.recent_store.flush_repo(&self.repo_id).await;

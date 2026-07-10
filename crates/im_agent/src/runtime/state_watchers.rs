@@ -6,6 +6,7 @@ use crate::logging::Logger;
 use crate::protocol::AgentEvent;
 use crate::repos::{build_mounted_windows_path_warning_event, RepoWatcher, RepoWatcherConfig};
 use crate::server::EventBus;
+use futures_util::future::join_all;
 use serde_json::json;
 
 use super::state::AgentRuntime;
@@ -13,10 +14,13 @@ use super::{RepoConfig, RepoRootKind};
 
 impl AgentRuntime {
     pub async fn reset_watchers(&mut self) {
-        for watcher in self.watchers.values() {
-            watcher.stop().await;
-        }
-        self.watchers.clear();
+        let watchers = std::mem::take(&mut self.watchers);
+        join_all(
+            watchers
+                .into_values()
+                .map(|watcher| async move { watcher.stop().await }),
+        )
+        .await;
 
         if let Some(store) = &self.recent_files_store {
             store.flush_all().await;
@@ -41,60 +45,8 @@ impl AgentRuntime {
         event_bus: &EventBus,
         logger: &Logger,
     ) -> Result<(), AgentError> {
-        let store = self.recent_files_store.as_ref().ok_or_else(|| {
-            AgentError::new("NOT_CONFIGURED", "Recent files store not configured")
-        })?;
-
-        let repo_root = repo
-            .root_path_for_kind(self.supported_root_kind)
-            .ok_or_else(|| {
-                AgentError::new(
-                    "UNSUPPORTED_REPO_ROOT",
-                    format!(
-                        "Repo {} root kind {} is unsupported by {} runtime",
-                        repo.repo_id,
-                        repo.root.kind(),
-                        self.supported_root_kind.as_str()
-                    ),
-                )
-            })?;
-
-        let repo_uses_mounted_windows_path =
-            is_mounted_windows_path_watch_risk(self.supported_root_kind, repo_root);
-        if repo_uses_mounted_windows_path
-            && self
-                .mounted_windows_path_warned_repos
-                .insert(repo.repo_id.clone())
-        {
-            logger.warn(
-                "Watcher running on mounted Windows path in Linux runtime",
-                Some(json!({ "repoId": repo.repo_id, "repoRoot": repo_root })),
-            );
-            event_bus.broadcast_event(AgentEvent::Error(build_mounted_windows_path_warning_event(
-                &repo.repo_id,
-                repo_root,
-            )));
-        }
-
-        let classification_ignore_globs = self
-            .config
-            .as_ref()
-            .map(|config| config.classification_excludes.to_ignore_globs())
-            .unwrap_or_default();
-
-        let watcher = RepoWatcher::start(RepoWatcherConfig {
-            repo_id: repo.repo_id.clone(),
-            root_path: repo_root.to_string(),
-            docs_globs: repo.docs_globs.clone(),
-            code_globs: repo.code_globs.clone(),
-            ignore_globs: repo.ignore_globs.clone(),
-            classification_ignore_globs,
-            mru_capacity: self.recent_files_limit.max(1),
-            recent_store: store.clone(),
-            logger: logger.clone(),
-            event_bus: event_bus.clone(),
-        })
-        .await?;
+        let config = self.repo_watcher_config(repo, event_bus, logger)?;
+        let watcher = RepoWatcher::start(config).await?;
 
         self.watchers.insert(repo.repo_id.clone(), watcher);
         Ok(())
@@ -129,6 +81,65 @@ impl AgentRuntime {
 
         self.start_repo_watcher(repo, event_bus, logger).await
     }
+
+    pub(super) fn repo_watcher_config(
+        &mut self,
+        repo: &RepoConfig,
+        event_bus: &EventBus,
+        logger: &Logger,
+    ) -> Result<RepoWatcherConfig, AgentError> {
+        let store = self.recent_files_store.as_ref().ok_or_else(|| {
+            AgentError::new("NOT_CONFIGURED", "Recent files store not configured")
+        })?;
+        let repo_root = repo
+            .root_path_for_kind(self.supported_root_kind)
+            .ok_or_else(|| unsupported_repo_error(repo, self.supported_root_kind))?;
+
+        if is_mounted_windows_path_watch_risk(self.supported_root_kind, repo_root)
+            && self
+                .mounted_windows_path_warned_repos
+                .insert(repo.repo_id.clone())
+        {
+            logger.warn(
+                "Watcher running on mounted Windows path in Linux runtime",
+                Some(json!({ "repoId": repo.repo_id, "repoRoot": repo_root })),
+            );
+            event_bus.broadcast_event(AgentEvent::Error(build_mounted_windows_path_warning_event(
+                &repo.repo_id,
+                repo_root,
+            )));
+        }
+
+        let classification_ignore_globs = self
+            .config
+            .as_ref()
+            .map(|config| config.classification_excludes.to_ignore_globs())
+            .unwrap_or_default();
+        Ok(RepoWatcherConfig {
+            repo_id: repo.repo_id.clone(),
+            root_path: repo_root.to_string(),
+            docs_globs: repo.docs_globs.clone(),
+            code_globs: repo.code_globs.clone(),
+            ignore_globs: repo.ignore_globs.clone(),
+            classification_ignore_globs,
+            mru_capacity: self.recent_files_limit.max(1),
+            recent_store: store.clone(),
+            logger: logger.clone(),
+            event_bus: event_bus.clone(),
+        })
+    }
+}
+
+fn unsupported_repo_error(repo: &RepoConfig, supported: RepoRootKind) -> AgentError {
+    AgentError::new(
+        "UNSUPPORTED_REPO_ROOT",
+        format!(
+            "Repo {} root kind {} is unsupported by {} runtime",
+            repo.repo_id,
+            repo.root.kind(),
+            supported.as_str()
+        ),
+    )
 }
 
 fn is_mounted_windows_path_watch_risk(runtime_root_kind: RepoRootKind, repo_root: &str) -> bool {

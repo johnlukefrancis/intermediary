@@ -8,11 +8,12 @@ use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
 use crate::staging::{stage_file, StagingRootKind};
 
-use super::{repo_commands, ConnectionContext};
+use super::{repo_commands, request_cancellation::RequestCancellation, ConnectionContext};
 
 pub async fn dispatch_command(
     command: UiCommand,
     ctx: &ConnectionContext,
+    cancellation: &RequestCancellation,
 ) -> Result<UiResponse, AgentError> {
     match command {
         UiCommand::ClientHello(command) => {
@@ -55,7 +56,14 @@ pub async fn dispatch_command(
                 )
             };
 
-            let result = stage_file(&staging, &command.repo_id, &repo_root, &command.path).await?;
+            let result = stage_file(
+                &staging,
+                &command.repo_id,
+                &repo_root,
+                &command.path,
+                cancellation.stage_file_token()?,
+            )
+            .await?;
             let host_path = result.host_path;
             Ok(UiResponse::StageFileResult(
                 crate::protocol::StageFileResult {
@@ -122,6 +130,7 @@ pub async fn dispatch_command(
                 },
                 &ctx.event_bus,
                 &ctx.logger,
+                cancellation.bundle_token()?,
             )
             .await?;
 

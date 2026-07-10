@@ -6,14 +6,14 @@ use std::collections::HashMap;
 use futures_util::{SinkExt, StreamExt};
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
-use im_agent::protocol::{EnvelopeKind, RequestEnvelope, UiResponse};
+use im_agent::protocol::InboundRequestEnvelope;
 use im_agent::server::EventBus;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use super::wsl_backend_client::RequestLoopMessage;
+use super::wsl_backend_client::{ForwardedWslResponse, RequestLoopMessage};
 use super::wsl_backend_messages::{
     fail_pending_requests, handle_backend_message, wsl_unavailable_error,
 };
@@ -23,9 +23,10 @@ pub(super) async fn run_connected(
     request_rx: &mut mpsc::UnboundedReceiver<RequestLoopMessage>,
     event_bus: &EventBus,
     logger: &Logger,
+    generation: u64,
 ) {
     let (mut sink, mut read_stream) = stream.split();
-    let mut pending: HashMap<String, oneshot::Sender<Result<UiResponse, AgentError>>> =
+    let mut pending: HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>> =
         HashMap::new();
     loop {
         tokio::select! {
@@ -36,11 +37,10 @@ pub(super) async fn run_connected(
                 };
                 match request {
                     RequestLoopMessage::Forward(request) => {
-                        let envelope = RequestEnvelope {
-                            kind: EnvelopeKind::Request,
-                            request_id: request.request_id.clone(),
-                            payload: request.command,
-                        };
+                        let envelope = InboundRequestEnvelope::request(
+                            request.request_id.clone(),
+                            request.command,
+                        );
 
                         let payload = match serde_json::to_string(&envelope) {
                             Ok(payload) => payload,
@@ -59,6 +59,24 @@ pub(super) async fn run_connected(
                     }
                     RequestLoopMessage::Cancel { request_id } => {
                         pending.remove(&request_id);
+                        let envelope = InboundRequestEnvelope::cancel(request_id);
+                        let payload = match serde_json::to_string(&envelope) {
+                            Ok(payload) => payload,
+                            Err(err) => {
+                                logger.warn(
+                                    "Failed to serialize WSL request cancellation",
+                                    Some(serde_json::json!({"error": err.to_string()})),
+                                );
+                                continue;
+                            }
+                        };
+                        if let Err(err) = sink.send(Message::Text(payload)).await {
+                            fail_pending_requests(
+                                &mut pending,
+                                format!("Failed to cancel WSL backend request: {err}"),
+                            );
+                            break;
+                        }
                     }
                 }
             }
@@ -69,7 +87,13 @@ pub(super) async fn run_connected(
                 };
                 match message {
                     Ok(Message::Text(text)) => {
-                        handle_backend_message(&text, &mut pending, event_bus, logger);
+                        handle_backend_message(
+                            &text,
+                            &mut pending,
+                            event_bus,
+                            logger,
+                            generation,
+                        );
                     }
                     Ok(Message::Close(_)) => {
                         fail_pending_requests(&mut pending, "WSL backend closed connection");
@@ -91,7 +115,7 @@ pub(super) async fn run_connected(
 }
 
 fn fail_send_error(
-    pending: &mut HashMap<String, oneshot::Sender<Result<UiResponse, AgentError>>>,
+    pending: &mut HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>>,
     request_id: &str,
     err: tokio_tungstenite::tungstenite::Error,
 ) {

@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-07-07
+Updated on: 2026-07-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -32,6 +32,7 @@ Depends on: ADR-000, ADR-007
 - 2026-02-08: macOS release packaging can fail to launch `im_host_agent` if helper-binary signing/notarization is incomplete. App now enforces executable permissions at install time and reports high-signal spawn errors, but final notarization coverage still depends on release pipeline configuration.
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).
+- 2026-07-10: `agent_latest.log` is append-only and the installed runtime log was observed at about 780 MB, dominated by successful supervisor health-probe connection lifecycle entries. Long-running installs can accumulate unnecessary disk usage until logging gains bounded retention and probe-aware verbosity.
 
 ---
 
@@ -43,6 +44,7 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-07-10: The status bar could repeatedly show `Timed out waiting for WSL backend clientHello response` while the UI remained connected and the WSL WebSocket stayed on the same live generation. WSL bootstrap synchronously registered and reset each repo's recursive watcher in sequence, while the host wrapped the WSL client's bounded request in a second, shorter timeout; that wrapper could drop the caller without sending the client's cancellation, leave backend work running, and attribute a stale completion to an incorrectly sampled generation. Fixed by moving native watcher registration/unregistration to blocking workers, starting/resetting repo watchers concurrently, using the WSL client as the sole timeout owner, carrying the serving connection generation through every success path, and making request-id cancellation cooperative. Bundle workers now retain their build lock until blocking cleanup finishes, while cancelled staging removes its temporary copy before completing. The four-repo production-path probe improved from 4.5–5.2 seconds to about 2.2 seconds.
 - 2026-07-07: WSL agent detection and termination were silently corrupted when scripts were marshalled through `wsl.exe -- bash -lc "<script>"`: the Windows→WSL argument boundary mangled embedded newlines/quotes/`$()` (observed `syntax error near '<n>'`), and the login profile injected terminal-size errors plus a `$PATH` full of `Program Files (x86)` landmines. So port reclamation and stale-agent detection returned nothing and a wedged agent stayed branded `external` — the reclamation fixes below never actually ran on Windows. Fixed by feeding every WSL control/detection script over **stdin** to `bash --noprofile --norc -s`, so the script never crosses wsl.exe's argument parser and no login profile runs. Verified end-to-end through real `wsl.exe` from Rust.
 - 2026-07-07: Reinstalling the app (or launching then closing the WSL dev task) could permanently wedge the WSL backend — a surviving `im_agent` held port 3142 with a mismatched token and was branded an `external` process the supervisor refused to terminate in mode=auto, with no in-app recovery. Fixed by making kill authority port-anchored: the supervisor now finds the port owner via `ss`, confirms it is an Intermediary `im_agent` (comm/exe/token-env), and reclaims it (TERM→KILL) — so any of our own stale/mismatched agents on the reserved port are reclaimed while foreign listeners are still left alone. Also relocated `ws_auth.json` out of the installer-wiped `agent/` dir (with migration) so reinstalls reuse the token and reconnect cleanly.
 - 2026-07-07: "Restart Agent" could silently no-op — `stop()` only killed the in-distro agent when it held a launch target it recorded this session, and a forced restart still short-circuited to `AlreadyRunning`. Fixed by reclaiming the backend by port on stop/restart (durable distro+port handle) and honoring `force` so a restart always tears down and respawns, recovering the app even from a wedged state.

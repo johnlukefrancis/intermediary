@@ -5,17 +5,19 @@ use std::collections::HashMap;
 
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
-use im_agent::protocol::{AgentEvent, EventEnvelope, ResponseEnvelope, UiResponse};
+use im_agent::protocol::{AgentEvent, EventEnvelope, ResponseEnvelope};
 use im_agent::server::EventBus;
 use tokio::sync::oneshot;
 
 use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
+use crate::wsl::wsl_backend_client::ForwardedWslResponse;
 
 pub(super) fn handle_backend_message(
     text: &str,
-    pending: &mut HashMap<String, oneshot::Sender<Result<UiResponse, AgentError>>>,
+    pending: &mut HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>>,
     event_bus: &EventBus,
     logger: &Logger,
+    generation: u64,
 ) {
     let value: serde_json::Value = match serde_json::from_str(text) {
         Ok(value) => value,
@@ -56,7 +58,10 @@ pub(super) fn handle_backend_message(
             ..
         } => {
             if let Some(response_tx) = pending.remove(&request_id) {
-                let _ = response_tx.send(Ok(payload));
+                let _ = response_tx.send(Ok(ForwardedWslResponse {
+                    response: payload,
+                    generation,
+                }));
             }
         }
         ResponseEnvelope::Error {
@@ -74,7 +79,7 @@ pub(super) fn handle_backend_message(
 }
 
 pub(super) fn fail_pending_requests(
-    pending: &mut HashMap<String, oneshot::Sender<Result<UiResponse, AgentError>>>,
+    pending: &mut HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>>,
     message: impl Into<String>,
 ) {
     let err = wsl_unavailable_error(message.into());

@@ -45,6 +45,7 @@ pub(crate) fn build_bundle_blocking(
     progress_tx: mpsc::UnboundedSender<ProgressMessage>,
     cancel_token: im_bundle::cancel::BundleCancelToken,
 ) -> Result<BlockingBundleResult, AgentError> {
+    ensure_not_cancelled(&cancel_token)?;
     let layout = StagingLayout::from_config(&options.staging, options.staging_kind)?;
     let output_dir = layout.bundles_dir(&options.repo_id, &options.preset_id);
     std::fs::create_dir_all(&output_dir)
@@ -83,6 +84,11 @@ pub(crate) fn build_bundle_blocking(
             }
         };
 
+    if let Err(cancelled) = ensure_not_cancelled(&cancel_token) {
+        let _ = std::fs::remove_file(&temp_path);
+        return Err(cancelled);
+    }
+
     if let Err(err) = std::fs::rename(&temp_path, &final_path) {
         let _ = std::fs::remove_file(&temp_path);
         return Err(AgentError::internal(format!(
@@ -106,6 +112,18 @@ pub(crate) fn build_bundle_blocking(
         file_count: bundle_result.file_count,
         built_at_iso,
     })
+}
+
+fn ensure_not_cancelled(
+    cancel_token: &im_bundle::cancel::BundleCancelToken,
+) -> Result<(), AgentError> {
+    if cancel_token.is_cancelled() {
+        return Err(AgentError::new(
+            "BUNDLE_BUILD_CANCELLED",
+            "Bundle build cancelled",
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn format_timestamp(date: DateTime<Utc>) -> String {
