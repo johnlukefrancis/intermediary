@@ -1,99 +1,28 @@
 // Path: src-tauri/src/lib/commands/startup.rs
 // Description: Startup readiness command for splashscreen -> main transition
 
-use crate::config::{
-    load_from_disk, resolve_config_path,
-    types::{resolve_window_bounds_for_mode, UiWindowBounds},
-};
+use super::startup_window_bounds;
 use crate::obs::logging;
-use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{AppHandle, LogicalSize, Manager, Monitor, PhysicalPosition, Position, Size};
+use std::sync::Mutex;
+use tauri::{AppHandle, Manager};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum StartupPhase {
+    AwaitingRuntime,
+    AwaitingFrontend,
+    Complete,
+}
 
 pub struct StartupWindowState {
-    launch_window_initialized: AtomicBool,
-    transition_completed: AtomicBool,
+    phase: Mutex<StartupPhase>,
 }
 
 impl Default for StartupWindowState {
     fn default() -> Self {
         Self {
-            launch_window_initialized: AtomicBool::new(false),
-            transition_completed: AtomicBool::new(false),
+            phase: Mutex::new(StartupPhase::AwaitingRuntime),
         }
     }
-}
-
-impl StartupWindowState {
-    fn claim_launch_window_initialization(&self) -> bool {
-        self.launch_window_initialized
-            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-            .is_ok()
-    }
-}
-
-fn logical_to_physical_dimension(value: u32, scale_factor: f64) -> Option<i32> {
-    let scaled = (f64::from(value) * scale_factor).round();
-    if !scaled.is_finite() {
-        return None;
-    }
-    let clamped = scaled.max(1.0).min(f64::from(i32::MAX));
-    Some(clamped as i32)
-}
-
-fn resolve_launch_monitor(app: &AppHandle) -> Option<Monitor> {
-    if let Some(main_window) = app.get_webview_window("main") {
-        match main_window.current_monitor() {
-            Ok(Some(monitor)) => return Some(monitor),
-            Ok(None) => {}
-            Err(err) => {
-                logging::log(
-                    "warn",
-                    "startup",
-                    "launch_monitor_current_failed",
-                    &format!("Failed to resolve current monitor from main window: {err}"),
-                );
-            }
-        }
-    }
-
-    match app.primary_monitor() {
-        Ok(monitor) => monitor,
-        Err(err) => {
-            logging::log(
-                "warn",
-                "startup",
-                "launch_monitor_primary_failed",
-                &format!("Failed to resolve primary monitor: {err}"),
-            );
-            None
-        }
-    }
-}
-
-fn resolve_launch_center_position(
-    app: &AppHandle,
-    bounds: UiWindowBounds,
-) -> Option<PhysicalPosition<i32>> {
-    let monitor = resolve_launch_monitor(app)?;
-    let work_area = monitor.work_area();
-    let scale_factor = monitor.scale_factor();
-
-    let area_x = work_area.position.x;
-    let area_y = work_area.position.y;
-    let area_width = i32::try_from(work_area.size.width).ok()?;
-    let area_height = i32::try_from(work_area.size.height).ok()?;
-    let bounds_width = logical_to_physical_dimension(bounds.width, scale_factor)?;
-    let bounds_height = logical_to_physical_dimension(bounds.height, scale_factor)?;
-
-    let max_x = area_x.saturating_add(area_width.saturating_sub(bounds_width).max(0));
-    let max_y = area_y.saturating_add(area_height.saturating_sub(bounds_height).max(0));
-    let centered_x = area_x.saturating_add(area_width.saturating_sub(bounds_width) / 2);
-    let centered_y = area_y.saturating_add(area_height.saturating_sub(bounds_height) / 2);
-
-    Some(PhysicalPosition::new(
-        centered_x.clamp(area_x, max_x),
-        centered_y.clamp(area_y, max_y),
-    ))
 }
 
 pub fn apply_launch_window_bounds(app: &AppHandle) {
@@ -106,7 +35,16 @@ pub fn apply_launch_window_bounds(app: &AppHandle) {
         );
         return;
     };
-    if !startup_state.claim_launch_window_initialization() {
+    let Ok(mut phase) = startup_state.phase.lock() else {
+        logging::log(
+            "error",
+            "startup",
+            "launch_state_poisoned",
+            "Startup phase lock was poisoned",
+        );
+        return;
+    };
+    if *phase != StartupPhase::AwaitingRuntime {
         return;
     }
     logging::log(
@@ -116,49 +54,15 @@ pub fn apply_launch_window_bounds(app: &AppHandle) {
         "Applying launch window state after Tauri runtime readiness",
     );
 
-    let config = match resolve_config_path(app).and_then(|path| {
-        load_from_disk(&path)
-            .map(|result| result.config)
-            .map_err(|error| error.to_string())
-    }) {
-        Ok(config) => config,
-        Err(err) => {
+    startup_window_bounds::apply(app);
+    if let Some(main_window) = app.get_webview_window("main") {
+        if let Err(err) = main_window.show() {
             logging::log(
                 "warn",
                 "startup",
-                "launch_bounds_config_failed",
-                &format!("Falling back to default launch bounds: {err}"),
+                "show_main_boot_failed",
+                &format!("Failed to activate main startup WebView: {err}"),
             );
-            crate::config::PersistedConfig::default()
-        }
-    };
-
-    let bounds = resolve_window_bounds_for_mode(&config, config.ui_mode);
-    let position = resolve_launch_center_position(app, bounds);
-    for label in ["main", "splashscreen"] {
-        let Some(window) = app.get_webview_window(label) else {
-            continue;
-        };
-
-        let size = Size::Logical(LogicalSize::new(bounds.width as f64, bounds.height as f64));
-        if let Err(err) = window.set_size(size) {
-            logging::log(
-                "warn",
-                "startup",
-                "launch_bounds_apply_failed",
-                &format!("Failed to set {label} window size: {err}"),
-            );
-        }
-
-        if let Some(position) = position {
-            if let Err(err) = window.set_position(Position::Physical(position)) {
-                logging::log(
-                    "warn",
-                    "startup",
-                    "launch_position_apply_failed",
-                    &format!("Failed to set {label} window position: {err}"),
-                );
-            }
         }
     }
 
@@ -172,6 +76,7 @@ pub fn apply_launch_window_bounds(app: &AppHandle) {
             );
         }
     }
+    *phase = StartupPhase::AwaitingFrontend;
     logging::log(
         "info",
         "startup",
@@ -196,7 +101,7 @@ fn ensure_main_window_ready(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn retire_splashscreen(app: &AppHandle) {
+pub fn retire_splashscreen(app: &AppHandle) {
     let Some(splash_window) = app.get_webview_window("splashscreen") else {
         return;
     };
@@ -242,28 +147,42 @@ pub fn startup_ready(app: AppHandle) -> Result<(), String> {
         );
         "Startup window state is unavailable".to_string()
     })?;
-    if startup_state.transition_completed.load(Ordering::SeqCst) {
+    let mut phase = startup_state.phase.lock().map_err(|_| {
+        logging::log(
+            "error",
+            "startup",
+            "ready_state_poisoned",
+            "Startup phase lock was poisoned",
+        );
+        "Startup window state is unavailable".to_string()
+    })?;
+    if *phase == StartupPhase::Complete {
         return ensure_main_window_ready(&app);
     }
 
     ensure_main_window_ready(&app)?;
     retire_splashscreen(&app);
-    startup_state
-        .transition_completed
-        .store(true, Ordering::SeqCst);
+    *phase = StartupPhase::Complete;
+    logging::log(
+        "info",
+        "startup",
+        "transition_complete",
+        "Main window revealed and splashscreen retired",
+    );
 
     ensure_main_window_ready(&app)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::StartupWindowState;
+    use super::{StartupPhase, StartupWindowState};
 
     #[test]
-    fn launch_window_initialization_is_claimed_once() {
+    fn startup_phase_begins_awaiting_runtime() {
         let state = StartupWindowState::default();
-
-        assert!(state.claim_launch_window_initialization());
-        assert!(!state.claim_launch_window_initialization());
+        assert_eq!(
+            *state.phase.lock().expect("test lock"),
+            StartupPhase::AwaitingRuntime
+        );
     }
 }

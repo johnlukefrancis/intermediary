@@ -20,7 +20,9 @@ use commands::paths::{
     convert_windows_to_wsl, convert_wsl_to_windows, get_app_paths, resolve_repo_root,
 };
 use commands::reset::reset_app_state;
-use commands::startup::{apply_launch_window_bounds, startup_ready, StartupWindowState};
+use commands::startup::{
+    apply_launch_window_bounds, retire_splashscreen, startup_ready, StartupWindowState,
+};
 use commands::wsl_distro::WslDistroState;
 use obs::logging;
 use tauri::{Manager, RunEvent};
@@ -115,6 +117,12 @@ pub fn run() {
     app.run(move |app_handle, event| {
         if matches!(event, RunEvent::Ready) {
             apply_launch_window_bounds(app_handle);
+        }
+
+        if let RunEvent::WindowEvent { label, event, .. } = &event {
+            if label == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                retire_splashscreen(app_handle);
+            }
         }
 
         if !stopped && matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {

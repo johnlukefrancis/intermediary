@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-07-10
+Updated on: 2026-07-12
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -66,8 +66,10 @@ Intermediary uses a **host-routed architecture**:
 - **Key features:**
   - Two-window startup handshake: all command-visible Rust state is registered on the Tauri Builder
     before either configured WebView can load or invoke a command; user setup performs no window RPC;
-    after `RunEvent::Ready`, one runtime-owned transition applies persisted bounds and shows the
-    static splashscreen, while the main window remains hidden until the frontend signals readiness
+    one runtime-owned state machine serializes `RunEvent::Ready` and frontend readiness in either
+    order. When runtime readiness arrives first it applies persisted bounds and activates the
+    CSS-gated main WebView beneath the static splashscreen; frontend readiness retires the splash.
+    Destroying the main window also retires the splash so it cannot keep the process alive by itself
   - Resolves `run_latest.txt` and installs a bounded panic hook before Tauri construction; an
     unusable `INTERMEDIARY_LOG_DIR` emits a diagnostic and falls back to app-local storage before
     startup continues. Explicit pre-build/setup/build-complete stage markers preserve the payload,

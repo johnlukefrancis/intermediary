@@ -1386,6 +1386,10 @@
       "summary": "Tauri command to clear staging artifacts and caches"
     },
     {
+      "path": "src-tauri/src/lib/commands/startup_window_bounds.rs",
+      "summary": "Resolve and apply persisted launch bounds for startup windows"
+    },
+    {
       "path": "src-tauri/src/lib/commands/startup.rs",
       "summary": "Startup readiness command for splashscreen -> main transition"
     },

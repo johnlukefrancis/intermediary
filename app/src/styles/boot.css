@@ -3,8 +3,9 @@
  * Description: Boot phase opacity gate - smooth fade-in when main window becomes ready
  */
 
-/* Hold content invisible during pre-boot (window is hidden anyway;
-   this prevents any flash during the show() -> bootPhase="ready" gap) */
+/* Hold content invisible while the backend keeps the main WebView active beneath
+   the splashscreen. This lets WebView2 execute the readiness handshake without
+   flashing partially initialized UI. */
 [data-boot-phase="pre"] #root {
   opacity: 0;
 }
