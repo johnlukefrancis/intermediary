@@ -38,7 +38,7 @@ pub(crate) struct ParsedStatus {
     pub(crate) counts: GitCaptureCounts,
     pub(crate) selected_records: Vec<SelectedStatusRecord>,
     pub(crate) general_pathspecs: Vec<GitPath>,
-    pub(crate) rename_pathspecs: Vec<GitPath>,
+    pub(crate) rename_pathspecs: Vec<[GitPath; 2]>,
     pub(crate) watched_regular_paths: HashSet<PathBuf>,
 }
 
@@ -113,16 +113,17 @@ pub(crate) fn parse_status(
             let fully_selected_rename = record.original.is_some()
                 && selected_current.is_some()
                 && selected_original.is_some();
-            let pathspecs = if fully_selected_rename {
-                &mut rename_pathspecs
+            if fully_selected_rename {
+                if let (Some(current), Some(original)) = (&selected_current, &selected_original) {
+                    rename_pathspecs.insert([current.clone(), original.clone()]);
+                }
             } else {
-                &mut general_pathspecs
-            };
-            if let Some(path) = &selected_current {
-                pathspecs.insert(path.clone());
-            }
-            if let Some(path) = &selected_original {
-                pathspecs.insert(path.clone());
+                if let Some(path) = &selected_current {
+                    general_pathspecs.insert(path.clone());
+                }
+                if let Some(path) = &selected_original {
+                    general_pathspecs.insert(path.clone());
+                }
             }
         }
         if record.current_kind(repo_root, repo_prefix) == SelectedPathKind::File

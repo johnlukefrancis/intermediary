@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-07-12
+Updated on: 2026-07-15
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -133,7 +133,7 @@ Intermediary uses a **host-routed architecture**:
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recursive native watcher registration/unregistration runs on blocking workers, with independent repo watchers started and reset concurrently during `clientHello` bootstrap
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
-  - Bundle building via `im_bundle` with a v2 manifest, selection-bounded captured-HEAD Git status/patch evidence, and generated handoff orientation (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
+  - Bundle building via `im_bundle` with a v2 manifest, selection-bounded captured-HEAD Git status/patch evidence, host-safe batching for Windows-scale selected path sets, and generated handoff orientation (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
   - Atomic file staging for WSL repo operations, with cooperative cancellation removing temporary copies before the request completes
   - Auto-stage on change (configurable)
 
@@ -290,7 +290,7 @@ intermediary/
 
 1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates the Auto Files table from the unified recent list after applying the topology-ready active Zip Bundles selection; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
-3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → the shared blocking writer captures HEAD/status, scans current files and Git paths through one selection predicate, reconciles selected Git-ignored ordinary files, writes ordinary files, verifies repeated patch/status/ignore classification and selected bytes, emits manifest/status/patch/handoff entries, then atomically finalizes → host agent forwards `bundleBuilt` event and response
+3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → the shared blocking writer captures HEAD/status, scans current files and Git paths through one selection predicate, reconciles selected Git-ignored ordinary files, batches selected tracked paths below host process-argument ceilings while keeping rename pairs atomic, writes ordinary files, verifies repeated patch/status/ignore classification and selected bytes, emits manifest/status/patch/handoff entries, then atomically finalizes → host agent forwards `bundleBuilt` event and response
 
 ## Related docs
 

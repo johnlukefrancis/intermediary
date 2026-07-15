@@ -178,6 +178,7 @@ fn plan(repo: &Path, output: &Path) -> BundlePlan {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["src".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

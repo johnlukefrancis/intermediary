@@ -9,6 +9,11 @@ use tauri::AppHandle;
 
 use super::wsl_distro::resolve_runtime_wsl_distro;
 
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn explorer_folder_arg(host_path: &str) -> String {
+    format!("/e,{host_path}")
+}
+
 /// Open a folder in the host OS file manager.
 ///
 /// # Arguments
@@ -39,7 +44,7 @@ pub async fn open_in_file_manager(
         #[cfg(target_os = "windows")]
         {
             Command::new("explorer")
-                .arg(&host_path)
+                .arg(explorer_folder_arg(&host_path))
                 .spawn()
                 .map_err(|e| format!("Failed to open Explorer: {e}"))?;
             return Ok::<(), String>(());
@@ -98,4 +103,25 @@ pub(crate) fn resolve_host_path(
     _distro_override: Option<&str>,
 ) -> Result<String, String> {
     Ok(folder_path.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::explorer_folder_arg;
+
+    #[test]
+    fn explorer_folder_arg_keeps_switch_and_windows_path_together() {
+        assert_eq!(
+            explorer_folder_arg(r"C:\Worktrees\wb-lab"),
+            r"/e,C:\Worktrees\wb-lab"
+        );
+    }
+
+    #[test]
+    fn explorer_folder_arg_keeps_switch_and_unc_path_together() {
+        assert_eq!(
+            explorer_folder_arg(r"\\wsl.localhost\Ubuntu\home\johnf\code"),
+            r"/e,\\wsl.localhost\Ubuntu\home\johnf\code"
+        );
+    }
 }

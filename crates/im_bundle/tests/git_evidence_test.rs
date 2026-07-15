@@ -255,6 +255,7 @@ fn reserved_generated_entry_collision_fails_closed() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -309,6 +310,7 @@ fn plan(repo: &Path, output: &Path) -> BundlePlan {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["src".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec!["src/private".to_string()],
             excluded_files: vec!["src/excluded.txt".to_string()],
         },

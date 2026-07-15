@@ -1,5 +1,5 @@
 # Bundle Global Excludes Report
-Updated on: 2026-05-21
+Updated on: 2026-07-15
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-008, ADR-009, ADR-012
 
@@ -26,6 +26,8 @@ directories named `Build` even after the user removes that recommendation.
 | `globalExcludes` is omitted from a bundle request | Recommended global excludes seed the effective bundle scan. |
 | `globalExcludes` is present and empty | The scan uses no user-configured global excludes. |
 | `globalExcludes.dirNames` does not contain `build` | Directories named `Build` or `build` are bundled unless filtered by another explicit rule. |
+| A nested directory matches a recommended name and remains untouched | The selection initializer records it in `excludedSubdirs`, so the scanner and Git projection omit it. |
+| The user selects that nested directory | The selection records the exact path in `includedSubdirs`; that directory-name exclude is overridden only there. |
 | A global exclude filters a directory | `BUNDLE_MANIFEST.json` shows the effective global exclude state used for that scan. |
 
 ## Invariants
@@ -34,6 +36,8 @@ directories named `Build` even after the user removes that recommendation.
 - The agent mapper must preserve explicit user `globalExcludes` payloads exactly; scanner
   normalization is the only case/format normalization step.
 - Recommended excludes are not hidden mandatory filters.
+- Explicit selection is stronger than a directory-name default at the selected top-level or exact
+  `includedSubdirs` path; it does not disable unrelated directory, path-pattern, or file excludes.
 - No hard safety exclude is added by this fix; any future hard exclude needs a named policy
   and manifest/debug evidence.
 
@@ -45,6 +49,8 @@ directories named `Build` even after the user removes that recommendation.
 - Update regression coverage for omitted config, explicit empty config, and a source
   directory named `Scripts/Build`.
 - Update docs and UI copy so “recommended” no longer implies “always applied.”
+- Persist explicit nested inclusions so topology refresh cannot silently re-apply a basename default.
+- Apply the same positive-selection exception in the archive scanner and Git evidence predicate.
 
 ## References
 

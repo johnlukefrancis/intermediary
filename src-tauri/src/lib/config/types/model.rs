@@ -70,6 +70,9 @@ pub struct BundleSelection {
     pub include_root: bool,
     /// Selected top-level directories
     pub top_level_dirs: Vec<String>,
+    /// Subdirectories explicitly included despite matching a default directory exclude
+    #[serde(default)]
+    pub included_subdirs: Vec<String>,
     /// Subdirectories to exclude (e.g. "TriangleRain/Assets")
     #[serde(default)]
     pub excluded_subdirs: Vec<String>,

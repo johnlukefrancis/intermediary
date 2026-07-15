@@ -54,6 +54,7 @@ export type UiState = z.infer<typeof UiStateSchema>;
 export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   topLevelDirs: z.array(z.string()),
+  includedSubdirs: z.array(z.string()).default([]),
   excludedSubdirs: z.array(z.string()).default([]),
   excludedFiles: z.array(z.string()).default([]),
 });

@@ -30,6 +30,7 @@ fn scan_respects_ignore_and_exclude() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec!["app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec!["app/skip_me".to_string()],
             excluded_files: vec![],
         },
@@ -71,6 +72,7 @@ fn scan_respects_nested_subdir_exclude() {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec!["app/src/components".to_string()],
             excluded_files: vec![],
         },
@@ -111,6 +113,7 @@ fn scan_respects_excluded_files() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec!["app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec!["README.md".to_string(), "app/src/secret.ts".to_string()],
         },
@@ -147,6 +150,7 @@ fn reject_invalid_top_level_dir() {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["../escape".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -177,6 +181,7 @@ fn reject_invalid_excluded_file() {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec!["../outside.txt".to_string()],
         },
@@ -193,13 +198,14 @@ fn reject_invalid_excluded_file() {
 }
 
 #[test]
-fn ignores_top_level_ignored_dirs_without_error() {
+fn explicit_top_level_selection_overrides_default_directory_exclude() {
     let dir = tempdir().unwrap();
     let repo_root = dir.path();
 
     std::fs::create_dir(repo_root.join("app")).unwrap();
     std::fs::create_dir(repo_root.join("node_modules")).unwrap();
     std::fs::write(repo_root.join("app/index.ts"), "code").unwrap();
+    std::fs::write(repo_root.join("node_modules/source.js"), "selected").unwrap();
 
     let plan = BundlePlan {
         output_path: repo_root.join("out.zip"),
@@ -210,6 +216,7 @@ fn ignores_top_level_ignored_dirs_without_error() {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["app".to_string(), "node_modules".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -219,5 +226,64 @@ fn ignores_top_level_ignored_dirs_without_error() {
 
     let mut progress = ProgressEmitter::new();
     let result = scan_bundle(&plan, &mut progress).unwrap();
-    assert_eq!(result.top_level_dirs_included, vec!["app".to_string()]);
+    assert_eq!(
+        result.top_level_dirs_included,
+        vec!["app".to_string(), "node_modules".to_string()]
+    );
+    assert!(result
+        .entries
+        .iter()
+        .any(|entry| entry.archive_path == "node_modules/source.js"));
+}
+
+#[test]
+fn explicitly_included_source_target_overrides_default_directory_exclude() {
+    let dir = tempdir().unwrap();
+    let repo_root = dir.path();
+    std::fs::create_dir_all(repo_root.join("crates/wb_render_wgpu/src/target")).unwrap();
+    std::fs::create_dir_all(repo_root.join("crates/other/target")).unwrap();
+    std::fs::write(
+        repo_root.join("crates/wb_render_wgpu/src/target/mod.rs"),
+        "pub struct RenderTarget;\n",
+    )
+    .unwrap();
+    std::fs::write(
+        repo_root.join("crates/other/target/output.bin"),
+        "generated",
+    )
+    .unwrap();
+
+    let plan = BundlePlan {
+        output_path: repo_root.join("out.zip"),
+        repo_root: repo_root.to_path_buf(),
+        repo_id: "repo".to_string(),
+        preset_id: "full".to_string(),
+        preset_name: "Full".to_string(),
+        selection: BundleSelection {
+            include_root: false,
+            top_level_dirs: vec!["crates".to_string()],
+            included_subdirs: vec!["crates/wb_render_wgpu/src/target".to_string()],
+            excluded_subdirs: vec![],
+            excluded_files: vec![],
+        },
+        built_at_iso: "2026-07-15T00:00:00Z".to_string(),
+        global_excludes: GlobalExcludes {
+            dir_names: vec!["target".to_string()],
+            dir_suffixes: vec![],
+            file_names: vec![],
+            extensions: vec![],
+            patterns: vec![],
+        },
+    };
+
+    let mut progress = ProgressEmitter::new();
+    let result = scan_bundle(&plan, &mut progress).unwrap();
+    let archive_paths: Vec<_> = result
+        .entries
+        .iter()
+        .map(|entry| entry.archive_path.as_str())
+        .collect();
+
+    assert!(archive_paths.contains(&"crates/wb_render_wgpu/src/target/mod.rs"));
+    assert!(!archive_paths.contains(&"crates/other/target/output.bin"));
 }

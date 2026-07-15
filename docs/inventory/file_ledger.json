@@ -946,6 +946,10 @@
       "summary": "Bounded, cancellable Git subprocess execution for bundle evidence"
     },
     {
+      "path": "crates/im_bundle/src/git_capture/diff_issue.rs",
+      "summary": "Artifact-specific issue classification for selected Git diff capture"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/diff.rs",
       "summary": "Bounded selected-path Git diff, stat, and name-status capture"
     },
@@ -968,6 +972,10 @@
     {
       "path": "crates/im_bundle/src/git_capture/path.rs",
       "summary": "Lossless Git path transport and model-readable quoting helpers"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/pathspec_batches.rs",
+      "summary": "Host-safe Git pathspec argument batching with atomic rename pairs"
     },
     {
       "path": "crates/im_bundle/src/git_capture/porcelain.rs",
@@ -1044,6 +1052,10 @@
     {
       "path": "crates/im_bundle/tests/git_evidence_test.rs",
       "summary": "End-to-end witness tests for selection-bounded bundle Git evidence"
+    },
+    {
+      "path": "crates/im_bundle/tests/git_large_selection_test.rs",
+      "summary": "Windows-scale witness for host-safe selected Git diff path batching"
     },
     {
       "path": "crates/im_bundle/tests/scanner_test.rs",

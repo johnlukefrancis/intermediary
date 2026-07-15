@@ -59,6 +59,7 @@ fn failed_build_keeps_last_good_bundle() {
         selection: BundleSelection {
             include_root: false,
             top_level_dirs: vec!["missing-dir".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -107,6 +108,7 @@ fn successful_build_replaces_then_cleans_older_bundles() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -165,6 +167,7 @@ fn cancelled_build_keeps_last_good_bundle_and_removes_temp_output() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -206,13 +209,14 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
     let repo_root = root.path().join("repo");
     let staging_root = root.path().join("staging");
     std::fs::create_dir_all(repo_root.join("Scripts/Build")).expect("scripts build mkdir");
-    std::fs::create_dir_all(repo_root.join("node_modules")).expect("node_modules mkdir");
+    std::fs::create_dir_all(repo_root.join("app/node_modules")).expect("node_modules mkdir");
     std::fs::write(
         repo_root.join("Scripts/Build/Build-TriangleRainEditor.ps1"),
         "Write-Output 'build'\n",
     )
     .expect("seed build script");
-    std::fs::write(repo_root.join("node_modules/noise.txt"), "ignored").expect("seed ignored file");
+    std::fs::write(repo_root.join("app/node_modules/noise.txt"), "ignored")
+        .expect("seed ignored file");
 
     let options = BuildBundleBlockingOptions {
         repo_id: "repo".to_string(),
@@ -221,7 +225,8 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
         preset_name: "Context".to_string(),
         selection: BundleSelection {
             include_root: false,
-            top_level_dirs: vec!["Scripts".to_string(), "node_modules".to_string()],
+            top_level_dirs: vec!["Scripts".to_string(), "app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -254,7 +259,7 @@ fn explicit_global_excludes_without_build_include_scripts_build_files() {
     assert!(archive
         .by_name("Scripts/Build/Build-TriangleRainEditor.ps1")
         .is_ok());
-    assert!(archive.by_name("node_modules/noise.txt").is_err());
+    assert!(archive.by_name("app/node_modules/noise.txt").is_err());
 
     let mut manifest = archive
         .by_name("BUNDLE_MANIFEST.json")

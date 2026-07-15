@@ -217,7 +217,7 @@ impl GitCaptureSession {
         let paths = status
             .general_pathspecs
             .iter()
-            .chain(&status.rename_pathspecs);
+            .chain(status.rename_pathspecs.iter().flatten());
         let (count, bytes) = paths.fold((0usize, 0usize), |(count, bytes), path| {
             (count + 1, bytes.saturating_add(path.as_bytes().len()))
         });

@@ -213,7 +213,7 @@ Each repo has:
 Per repo, user can define multiple presets:
 
 * Preset name, description
-* **Selection UI:** top-level folders plus nested subdirectory exclusions up to repo depth 4. Users toggle top-level folders to include and untick nested folders to exclude from the zip.
+* **Selection UI:** top-level folders plus nested subdirectory exclusions up to repo depth 4. Users toggle top-level folders to include and untick nested folders to exclude from the zip. Re-including a nested folder that matches a recommended directory-name exclude records an exact positive inclusion, so legitimate source paths such as `src/target` remain selected without including other build-output folders named `target`.
 * **Include root files toggle:** single boolean, default ON. When ON, includes files at repo root (README, package.json, etc.).
 * Recommended global excludes seed new or omitted bundle config: `node_modules`, `.git`, `dist`, `build`, `target`, `.next`, `.cache`, `logs`, `.turbo`, `__pycache__`, `.mypy_cache`, `.pytest_cache`, `coverage`, common cache dirs, generated artifacts, binary/model-weight extensions, and local env/cache files.
 * Explicit user-configured `globalExcludes` are authoritative after normalization; recommended entries are not hidden mandatory filters.
@@ -231,7 +231,7 @@ Every generated zip uses bundle format version 2 and includes:
   * `generatedAt` (ISO timestamp)
   * `repoId`, `repoRoot`
   * `presetId`, `presetName`
-  * `selection` (includeRoot + topLevelDirsIncluded + excludedSubdirs + excludedFiles)
+  * `selection` (includeRoot + topLevelDirsIncluded + includedSubdirs + excludedSubdirs + excludedFiles)
   * `effectiveGlobalExcludes` used by the scan
   * versioned `git` capture evidence: captured HEAD/branch/time, comparison base, capture status, repo/selection dirty facts, selected/omitted counts, generated artifact names, incomplete artifacts, and structured failure/drift reasons
   * `fileCount`, `totalBytesBestEffort`

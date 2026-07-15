@@ -33,6 +33,7 @@ fn build_request_cancellation_signals_the_dispatch_token() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

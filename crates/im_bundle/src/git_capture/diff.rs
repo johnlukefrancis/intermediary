@@ -6,10 +6,11 @@ use std::ffi::OsString;
 use crate::cancel::BundleCancelToken;
 use crate::error::Result;
 
-use super::command::{run_git, GitCommandFailure};
-use super::path::GitPath;
+use super::command::run_git;
+use super::diff_issue::{command_issue, limit_issue, pathspec_issue, DiffOutput};
+use super::pathspec_batches::{batch_rename_pairs, batch_single_paths, PathspecBatchError};
 use super::status::ParsedStatus;
-use super::{GitCaptureConfig, GitCaptureIssue, GIT_DIFF_NAME, GIT_STATUS_NAME};
+use super::{GitCaptureConfig, GitCaptureIssue};
 
 const PATCH_LIMIT: usize = 32 * 1024 * 1024;
 const SUMMARY_LIMIT: usize = 4 * 1024 * 1024;
@@ -29,18 +30,20 @@ pub(crate) fn capture_diff_artifacts(
     cancel_token: Option<&BundleCancelToken>,
 ) -> Result<CapturedDiffArtifacts> {
     let mut artifacts = CapturedDiffArtifacts::default();
+    let general_batches = batch_single_paths(&status.general_pathspecs);
     capture_group(
         config,
         head_sha,
-        &status.general_pathspecs,
+        &general_batches,
         false,
         &mut artifacts,
         cancel_token,
     )?;
+    let rename_batches = batch_rename_pairs(&status.rename_pathspecs);
     capture_group(
         config,
         head_sha,
-        &status.rename_pathspecs,
+        &rename_batches,
         true,
         &mut artifacts,
         cancel_token,
@@ -55,24 +58,26 @@ pub(crate) fn recapture_patch(
     cancel_token: Option<&BundleCancelToken>,
 ) -> Result<std::result::Result<Vec<u8>, GitCaptureIssue>> {
     let mut patch = Vec::new();
-    for (paths, detect_renames) in [
-        (&status.general_pathspecs, false),
-        (&status.rename_pathspecs, true),
+    for (batches, detect_renames) in [
+        (batch_single_paths(&status.general_pathspecs), false),
+        (batch_rename_pairs(&status.rename_pathspecs), true),
     ] {
-        if paths.is_empty() {
-            continue;
-        }
-        match run_diff(
+        let batches = match batches {
+            Ok(batches) => batches,
+            Err(error) => return Ok(Err(pathspec_issue(DiffOutput::Patch, error))),
+        };
+        let (output, issue) = run_diff_batches(
             config,
             DiffOutput::Patch,
             head_sha,
-            paths,
+            &batches,
             detect_renames,
             PATCH_LIMIT.saturating_sub(patch.len()),
             cancel_token,
-        )? {
-            Ok(output) => patch.extend_from_slice(&output),
-            Err(issue) => return Ok(Err(issue)),
+        )?;
+        patch.extend_from_slice(&output);
+        if let Some(issue) = issue {
+            return Ok(Err(issue));
         }
     }
     Ok(Ok(patch))
@@ -81,14 +86,11 @@ pub(crate) fn recapture_patch(
 fn capture_group(
     config: &GitCaptureConfig,
     head_sha: &str,
-    paths: &[GitPath],
+    batches: &std::result::Result<Vec<Vec<OsString>>, PathspecBatchError>,
     detect_renames: bool,
     artifacts: &mut CapturedDiffArtifacts,
     cancel_token: Option<&BundleCancelToken>,
 ) -> Result<()> {
-    if paths.is_empty() {
-        return Ok(());
-    }
     for output_kind in [DiffOutput::Patch, DiffOutput::Stat, DiffOutput::NameStatus] {
         let (target, limit) = match output_kind {
             DiffOutput::Patch => (&mut artifacts.patch, PATCH_LIMIT),
@@ -96,6 +98,38 @@ fn capture_group(
             DiffOutput::NameStatus => (&mut artifacts.name_status, SUMMARY_LIMIT),
         };
         let remaining = limit.saturating_sub(target.len());
+        let (output, issue) = match batches {
+            Ok(batches) => run_diff_batches(
+                config,
+                output_kind,
+                head_sha,
+                batches,
+                detect_renames,
+                remaining,
+                cancel_token,
+            )?,
+            Err(error) => (Vec::new(), Some(pathspec_issue(output_kind, *error))),
+        };
+        target.extend_from_slice(&output);
+        if let Some(issue) = issue {
+            artifacts.issues.push(issue);
+        }
+    }
+    Ok(())
+}
+
+fn run_diff_batches(
+    config: &GitCaptureConfig,
+    output_kind: DiffOutput,
+    head_sha: &str,
+    batches: &[Vec<OsString>],
+    detect_renames: bool,
+    output_limit: usize,
+    cancel_token: Option<&BundleCancelToken>,
+) -> Result<(Vec<u8>, Option<GitCaptureIssue>)> {
+    let mut captured = Vec::new();
+    for paths in batches {
+        let remaining = output_limit.saturating_sub(captured.len());
         match run_diff(
             config,
             output_kind,
@@ -105,18 +139,18 @@ fn capture_group(
             remaining,
             cancel_token,
         )? {
-            Ok(output) => target.extend_from_slice(&output),
-            Err(issue) => artifacts.issues.push(issue),
+            Ok(output) => captured.extend_from_slice(&output),
+            Err(issue) => return Ok((captured, Some(issue))),
         }
     }
-    Ok(())
+    Ok((captured, None))
 }
 
 fn run_diff(
     config: &GitCaptureConfig,
     output_kind: DiffOutput,
     head_sha: &str,
-    paths: &[GitPath],
+    paths: &[OsString],
     detect_renames: bool,
     output_limit: usize,
     cancel_token: Option<&BundleCancelToken>,
@@ -124,13 +158,7 @@ fn run_diff(
     if output_limit == 0 {
         return Ok(Err(limit_issue(output_kind)));
     }
-    let Some(mut args) = diff_args(output_kind, head_sha, paths, detect_renames) else {
-        return Ok(Err(GitCaptureIssue::new(
-            "unsupportedPathEncoding",
-            Some(output_kind.artifact()),
-            "At least one selected Git path could not be passed to Git on this host.",
-        )));
-    };
+    let mut args = diff_args(output_kind, head_sha, paths, detect_renames);
     let result = run_git(
         &config.executable,
         &config.repo_root,
@@ -156,28 +184,12 @@ fn run_diff(
     Ok(Ok(output.stdout))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DiffOutput {
-    Patch,
-    Stat,
-    NameStatus,
-}
-
-impl DiffOutput {
-    fn artifact(self) -> &'static str {
-        match self {
-            Self::Patch => GIT_DIFF_NAME,
-            Self::Stat | Self::NameStatus => GIT_STATUS_NAME,
-        }
-    }
-}
-
 fn diff_args(
     output_kind: DiffOutput,
     head_sha: &str,
-    paths: &[GitPath],
+    paths: &[OsString],
     detect_renames: bool,
-) -> Option<Vec<OsString>> {
+) -> Vec<OsString> {
     let mut args = common_git_args();
     args.push("diff".into());
     args.extend([
@@ -210,10 +222,8 @@ fn diff_args(
     }
     args.push(head_sha.into());
     args.push("--".into());
-    for path in paths {
-        args.push(path.to_os_string()?);
-    }
-    Some(args)
+    args.extend(paths.iter().cloned());
+    args
 }
 
 pub(super) fn common_git_args() -> Vec<OsString> {
@@ -236,36 +246,4 @@ pub(super) fn common_git_config_args() -> Vec<OsString> {
     .into_iter()
     .map(OsString::from)
     .collect()
-}
-
-fn command_issue(output_kind: DiffOutput, failure: GitCommandFailure) -> GitCaptureIssue {
-    let (kind, detail) = match failure {
-        GitCommandFailure::MissingExecutable => (
-            "gitUnavailable",
-            "The Git executable became unavailable during evidence capture.",
-        ),
-        GitCommandFailure::TimedOut => (
-            "commandTimeout",
-            "A bounded Git evidence command timed out.",
-        ),
-        GitCommandFailure::SpawnFailed
-        | GitCommandFailure::InputWriteFailed
-        | GitCommandFailure::OutputReadFailed => (
-            "commandFailure",
-            "A Git evidence command could not be executed or read.",
-        ),
-        GitCommandFailure::NotGitRepository | GitCommandFailure::NonZeroExit => (
-            "commandFailure",
-            "A Git evidence command returned a non-zero status.",
-        ),
-    };
-    GitCaptureIssue::new(kind, Some(output_kind.artifact()), detail)
-}
-
-fn limit_issue(output_kind: DiffOutput) -> GitCaptureIssue {
-    GitCaptureIssue::new(
-        "outputTruncated",
-        Some(output_kind.artifact()),
-        "The artifact output safety bound was exhausted.",
-    )
 }

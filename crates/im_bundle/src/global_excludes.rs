@@ -275,6 +275,7 @@ mod tests {
             selection: BundleSelection {
                 include_root: true,
                 top_level_dirs: vec!["app".to_string(), "models".to_string()],
+                included_subdirs: vec![],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
             },
@@ -327,6 +328,7 @@ mod tests {
             selection: BundleSelection {
                 include_root: false,
                 top_level_dirs: vec!["app".to_string(), "models".to_string()],
+                included_subdirs: vec![],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
             },
@@ -366,6 +368,7 @@ mod tests {
             selection: BundleSelection {
                 include_root: false,
                 top_level_dirs: vec!["TriangleRain".to_string()],
+                included_subdirs: vec![],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
             },
@@ -407,6 +410,7 @@ mod tests {
             selection: BundleSelection {
                 include_root: false,
                 top_level_dirs: vec!["TriangleRain".to_string()],
+                included_subdirs: vec![],
                 excluded_subdirs: vec![],
                 excluded_files: vec![],
             },

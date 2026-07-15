@@ -35,6 +35,7 @@ fn writes_zip_with_manifest_and_respects_exclusions() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec!["app".to_string()],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec!["app/src/secret.ts".to_string()],
         },
@@ -80,6 +81,7 @@ fn progress_callbacks_follow_phase_order() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },
@@ -131,6 +133,7 @@ fn cancelled_bundle_write_stops_before_output_creation() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

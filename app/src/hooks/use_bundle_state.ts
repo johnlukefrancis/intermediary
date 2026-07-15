@@ -209,13 +209,17 @@ export function useBundleState(
         if (!preset.isSelectionInitialized) {
           const selectedDirs = [...topLevelDirs].filter((d) => !excludedSet.has(d)).sort();
           const autoExcludedSubs = computeDefaultExcludedSubdirs(
-            selectedDirs, topLevelSubdirs, defaultExcluded
+            selectedDirs,
+            topLevelSubdirs,
+            defaultExcluded,
+            preset.selection.includedSubdirs
           );
           next.set(preset.presetId, {
             ...preset,
             selection: {
               includeRoot: preset.selection.includeRoot,
               topLevelDirs: selectedDirs,
+              includedSubdirs: preset.selection.includedSubdirs,
               excludedSubdirs: autoExcludedSubs,
               excludedFiles: preset.selection.excludedFiles,
             },
@@ -227,7 +231,10 @@ export function useBundleState(
         }
 
         const autoExcludedSubs = computeDefaultExcludedSubdirs(
-          preset.selection.topLevelDirs, topLevelSubdirs, defaultExcluded
+          preset.selection.topLevelDirs,
+          topLevelSubdirs,
+          defaultExcluded,
+          preset.selection.includedSubdirs
         );
         const mergedExcluded = mergeExcludedSubdirs(
           preset.selection.excludedSubdirs,

@@ -25,9 +25,10 @@ export function buildSelectionKey(selections: Record<string, BundleSelection>): 
         return `${presetId}:missing`;
       }
       const dirs = selection.topLevelDirs.join(",");
+      const included = selection.includedSubdirs.join(",");
       const excluded = selection.excludedSubdirs.join(",");
       const excludedFiles = selection.excludedFiles.join(",");
-      return `${presetId}:${selection.includeRoot}:${dirs}:${excluded}:${excludedFiles}`;
+      return `${presetId}:${selection.includeRoot}:${dirs}:${included}:${excluded}:${excludedFiles}`;
     });
   return entries.join("|");
 }
@@ -49,17 +50,20 @@ function subdirBaseName(path: string): string {
 export function computeDefaultExcludedSubdirs(
   selectedDirs: string[],
   topLevelSubdirs: Record<string, string[]>,
-  defaultExcluded: string[]
+  defaultExcluded: string[],
+  includedSubdirs: readonly string[] = []
 ): string[] {
   if (defaultExcluded.length === 0) return [];
   const excludedSet = new Set(defaultExcluded);
+  const includedSet = new Set(includedSubdirs);
   const result: string[] = [];
   for (const dir of selectedDirs) {
     const subs = topLevelSubdirs[dir];
     if (!subs) continue;
     for (const sub of subs) {
-      if (excludedSet.has(subdirBaseName(sub))) {
-        result.push(`${dir}/${sub}`);
+      const path = `${dir}/${sub}`;
+      if (excludedSet.has(subdirBaseName(sub)) && !includedSet.has(path)) {
+        result.push(path);
       }
     }
   }
@@ -117,9 +121,14 @@ export function createPresetState(
     const normalizedDirs = isTopologyReady
       ? normalizeTopLevelDirs(savedSelection.topLevelDirs, topLevelDirs)
       : normalizeTopLevelDirs(savedSelection.topLevelDirs);
-    const selectedDirs = normalizedDirs.filter((d) => !excludedSet.has(d));
+    const selectedDirs = normalizedDirs;
     const autoExcludedSubs = isTopologyReady
-      ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
+      ? computeDefaultExcludedSubdirs(
+          selectedDirs,
+          topLevelSubdirs,
+          activeDefaultExcluded,
+          savedSelection.includedSubdirs
+        )
       : [];
     const mergedExcluded = mergeExcludedSubdirs(
       savedSelection.excludedSubdirs,
@@ -130,6 +139,7 @@ export function createPresetState(
       {
         includeRoot: savedSelection.includeRoot,
         topLevelDirs: selectedDirs,
+        includedSubdirs: [...savedSelection.includedSubdirs].sort(),
         excludedSubdirs: mergedExcluded.sort(),
         excludedFiles: [...savedSelection.excludedFiles].sort(),
       },
@@ -148,6 +158,7 @@ export function createPresetState(
       {
         includeRoot: preset.includeRoot,
         topLevelDirs: selectedDirs,
+        includedSubdirs: [],
         excludedSubdirs: isTopologyReady
           ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
           : [],
@@ -166,6 +177,7 @@ export function createPresetState(
     {
       includeRoot: preset.includeRoot,
       topLevelDirs: selectedDirs,
+      includedSubdirs: [],
       excludedSubdirs: isTopologyReady
         ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
         : [],

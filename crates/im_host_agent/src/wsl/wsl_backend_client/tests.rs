@@ -97,6 +97,7 @@ fn build_bundle_uses_extended_timeout_budget() {
         selection: BundleSelection {
             include_root: true,
             top_level_dirs: vec![],
+            included_subdirs: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

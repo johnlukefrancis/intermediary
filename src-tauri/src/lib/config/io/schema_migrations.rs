@@ -60,6 +60,7 @@ pub(super) fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Version 24 -> 25: Add bundle selection excluded_files
     // (serde default handles missing field).
     // Version 25 -> 26: Raise the default recent file retention.
+    // Bundle selection included_subdirs is additive and uses a serde default.
     if config.config_version < 26 && config.recent_files_limit == 40 {
         config.recent_files_limit = 200;
     }

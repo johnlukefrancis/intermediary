@@ -166,6 +166,7 @@ fn build_plan(
         selection: im_bundle::plan::BundleSelection {
             include_root: options.selection.include_root,
             top_level_dirs: options.selection.top_level_dirs.clone(),
+            included_subdirs: options.selection.included_subdirs.clone(),
             excluded_subdirs: options.selection.excluded_subdirs.clone(),
             excluded_files: options.selection.excluded_files.clone(),
         },

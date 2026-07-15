@@ -22,6 +22,7 @@ pub(crate) enum SelectedPathKind {
 pub(crate) struct BundleSelector {
     include_root: bool,
     top_level_dirs: HashSet<String>,
+    included_subdirs: HashSet<String>,
     excluded_subdirs: HashSet<String>,
     excluded_files: HashSet<String>,
     global_excludes: NormalizedGlobalExcludes,
@@ -40,6 +41,12 @@ impl BundleSelector {
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty())
                 .collect(),
+            included_subdirs: normalize_selection_paths(
+                &selection.included_subdirs,
+                "includedSubdirs",
+            )?
+            .into_iter()
+            .collect(),
             excluded_subdirs: normalize_excluded_paths(
                 &selection.excluded_subdirs,
                 "excludedSubdirs",
@@ -92,8 +99,12 @@ impl BundleSelector {
         };
         for index in 0..directory_count {
             let directory_path = components[..=index].join("/");
-            if self.excluded_subdirs.contains(&directory_path)
-                || is_globally_excluded_dir_name(&components[index], &self.global_excludes)
+            if self.excluded_subdirs.contains(&directory_path) {
+                return false;
+            }
+            let explicitly_included = index == 0 || self.included_subdirs.contains(&directory_path);
+            if !explicitly_included
+                && is_globally_excluded_dir_name(&components[index], &self.global_excludes)
             {
                 return false;
             }
@@ -124,7 +135,7 @@ fn normalized_components(path: &Path) -> Option<(Vec<String>, String)> {
     Some((components, archive_path))
 }
 
-fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec<String>> {
+fn normalize_selection_paths(excluded: &[String], field_name: &str) -> Result<Vec<String>> {
     let mut normalized = Vec::new();
     for item in excluded {
         let trimmed = item.trim();
@@ -150,6 +161,10 @@ fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec
     Ok(normalized)
 }
 
+fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec<String>> {
+    normalize_selection_paths(excluded, field_name)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,6 +174,7 @@ mod tests {
             &BundleSelection {
                 include_root: true,
                 top_level_dirs: vec!["src".to_string()],
+                included_subdirs: vec![],
                 excluded_subdirs: vec!["src/private".to_string()],
                 excluded_files: vec!["src/skip.rs".to_string()],
             },
@@ -186,9 +202,56 @@ mod tests {
     }
 
     #[test]
-    fn excludes_selected_top_level_directory_by_global_policy() {
+    fn explicit_top_level_selection_overrides_directory_name_exclude() {
         let selector = selector();
-        assert!(!selector.admits_directory(Path::new("target")));
         assert!(!selector.admits_file(Path::new("target/output.rs")));
+
+        let selector = BundleSelector::new(
+            &BundleSelection {
+                include_root: false,
+                top_level_dirs: vec!["target".to_string()],
+                included_subdirs: vec![],
+                excluded_subdirs: vec![],
+                excluded_files: vec![],
+            },
+            &GlobalExcludes {
+                dir_names: vec!["target".to_string()],
+                dir_suffixes: vec![],
+                file_names: vec![],
+                extensions: vec![],
+                patterns: vec![],
+            },
+        )
+        .expect("selector");
+
+        assert!(selector.admits_directory(Path::new("target")));
+        assert!(selector.admits_file(Path::new("target/output.rs")));
+    }
+
+    #[test]
+    fn explicit_nested_selection_overrides_only_its_directory_name_exclude() {
+        let selector = BundleSelector::new(
+            &BundleSelection {
+                include_root: false,
+                top_level_dirs: vec!["crates".to_string()],
+                included_subdirs: vec!["crates/wb_render_wgpu/src/target".to_string()],
+                excluded_subdirs: vec![],
+                excluded_files: vec![],
+            },
+            &GlobalExcludes {
+                dir_names: vec!["target".to_string(), "node_modules".to_string()],
+                dir_suffixes: vec![],
+                file_names: vec![],
+                extensions: vec![],
+                patterns: vec![],
+            },
+        )
+        .expect("selector");
+
+        assert!(selector.admits_file(Path::new("crates/wb_render_wgpu/src/target/mod.rs")));
+        assert!(!selector.admits_file(Path::new(
+            "crates/wb_render_wgpu/src/target/node_modules/noise.js"
+        )));
+        assert!(!selector.admits_file(Path::new("crates/other/target/output.rs")));
     }
 }

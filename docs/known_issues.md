@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-07-12
+Updated on: 2026-07-15
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -32,7 +32,12 @@ Depends on: ADR-000, ADR-007
 
 ## P1 — Major functionality broken
 
-*None*
+- 2026-07-15: A Windows host-native `wb-lab` context bundle selected 1,104 changed paths but
+  emitted a zero-byte patch with four Git command failures. The selected pathspec arguments were
+  within Intermediary's 4,096-path/256 KiB product bound but exceeded the smaller Windows process
+  command-line ceiling before Git could start. The source fix divides selected paths into
+  deterministic 24 KiB process batches while keeping rename pairs atomic; a Windows build and
+  regenerated real-repo bundle witness are still required before moving this issue to Resolved.
 
 ---
 
@@ -58,6 +63,15 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-07-15: Legitimate source directories named `target`, including
+  `crates/wb_render_wgpu/src/target`, could not stay selected because topology refresh re-applied the
+  basename default and the bundle scanner independently treated it as an unconditional global
+  exclude. Fixed by persisting exact positive `includedSubdirs` selections and giving them
+  precedence over directory-name excludes in the shared scanner/Git predicate while leaving other
+  generated `target` directories excluded.
+- 2026-07-15: The tab-bar folder button could launch Explorer at its default location for
+  host-native Windows repo roots. Fixed by passing Explorer's folder-view switch and exact target as
+  one argument; WSL UNC targets use the same tested argument boundary.
 - 2026-07-12: The Windows splashscreen could remain indefinitely until clicked, survive after the
   main window appeared, and keep the process alive after the main window closed. Frontend readiness
   could retire the splash before Tauri emitted `RunEvent::Ready`, after which the runtime callback

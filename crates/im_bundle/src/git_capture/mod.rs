@@ -3,10 +3,12 @@
 
 mod command;
 mod diff;
+mod diff_issue;
 mod discovery;
 mod finalize;
 mod ignored;
 mod path;
+mod pathspec_batches;
 mod porcelain;
 mod render;
 mod session;

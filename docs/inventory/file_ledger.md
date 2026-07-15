@@ -239,12 +239,14 @@ crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan 
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
 crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution for bundle evidence
+crates/im_bundle/src/git_capture/diff_issue.rs - Artifact-specific issue classification for selected Git diff capture
 crates/im_bundle/src/git_capture/diff.rs - Bounded selected-path Git diff, stat, and name-status capture
 crates/im_bundle/src/git_capture/discovery.rs - Git discovery failure classification and raw prefix normalization
 crates/im_bundle/src/git_capture/finalize.rs - Git artifact finalization and working-tree coherence verdicts
 crates/im_bundle/src/git_capture/ignored.rs - Reconcile selected archived files that Git status hides behind ignore rules
 crates/im_bundle/src/git_capture/mod.rs - Versioned selection-bounded Git evidence capture for bundle archives
 crates/im_bundle/src/git_capture/path.rs - Lossless Git path transport and model-readable quoting helpers
+crates/im_bundle/src/git_capture/pathspec_batches.rs - Host-safe Git pathspec argument batching with atomic rename pairs
 crates/im_bundle/src/git_capture/porcelain.rs - Strict parser for NUL-delimited Git porcelain-v2 records
 crates/im_bundle/src/git_capture/render.rs - Selection-safe human-readable Git status and bundle handoff artifacts
 crates/im_bundle/src/git_capture/session.rs - Git capture discovery, initial status, and safety-bound setup
@@ -264,6 +266,7 @@ crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and prog
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/src/zip_entry.rs - Single file entry writer for bundle zip archives
 crates/im_bundle/tests/git_evidence_test.rs - End-to-end witness tests for selection-bounded bundle Git evidence
+crates/im_bundle/tests/git_large_selection_test.rs - Windows-scale witness for host-safe selected Git diff path batching
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior
 crates/im_bundle/tests/size_capped_reads_test.rs - Ensures bundle writes only the bytes present at file-open time even if file grows
 crates/im_host_agent/src/config.rs - Host agent environment configuration parsing

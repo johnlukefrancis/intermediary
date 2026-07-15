@@ -146,6 +146,7 @@ export function BundleFileExplorer({
     onSelectionChange({
       ...selection,
       topLevelDirs: [],
+      includedSubdirs: [],
       excludedSubdirs: [],
       excludedFiles: selection.excludedFiles.filter((value) => !value.includes("/")),
     });
@@ -160,6 +161,9 @@ export function BundleFileExplorer({
           onSelectionChange({
             ...selection,
             topLevelDirs: [...selected].sort(),
+            includedSubdirs: selection.includedSubdirs.filter(
+              (value) => !isSelfOrDescendant(value, path)
+            ),
             excludedSubdirs: selection.excludedSubdirs.filter((value) => !isSelfOrDescendant(value, path)),
             excludedFiles: selection.excludedFiles.filter((value) => !isSelfOrDescendant(value, path)),
           });
@@ -170,10 +174,16 @@ export function BundleFileExplorer({
         return;
       }
 
-      const excludedSubdirs = selection.excludedSubdirs.includes(path)
+      const isExcluded = selection.excludedSubdirs.includes(path);
+      const excludedSubdirs = isExcluded
         ? withoutPath(path, selection.excludedSubdirs)
         : sortedWith(path, selection.excludedSubdirs);
-      onSelectionChange({ ...selection, excludedSubdirs });
+      const includedSubdirs = isExcluded
+        ? sortedWith(path, selection.includedSubdirs)
+        : selection.includedSubdirs.filter(
+            (value) => !isSelfOrDescendant(value, path)
+          );
+      onSelectionChange({ ...selection, includedSubdirs, excludedSubdirs });
     },
     [onSelectionChange, selection]
   );

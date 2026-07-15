@@ -13,6 +13,8 @@ pub struct BundleSelection {
     pub include_root: bool,
     pub top_level_dirs: Vec<String>,
     #[serde(default)]
+    pub included_subdirs: Vec<String>,
+    #[serde(default)]
     pub excluded_subdirs: Vec<String>,
     #[serde(default)]
     pub excluded_files: Vec<String>,
