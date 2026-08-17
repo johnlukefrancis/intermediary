@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-07-10
+Updated on: 2026-08-17
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -15,6 +15,7 @@ This is the documentation index for Intermediary. Start here to find relevant do
 | [docs/system_overview.md](system_overview.md) | High-level architecture overview |
 | [docs/roadmap.md](roadmap.md) | Current initiatives and priorities |
 | [docs/known_issues.md](known_issues.md) | Known bugs and limitations |
+| [docs/changelog.md](changelog.md) | Shipped release notes |
 
 ## Compliance (ADRs)
 

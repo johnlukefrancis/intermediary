@@ -6,15 +6,12 @@ use std::path::Path;
 use std::process::Command;
 use tauri::AppHandle;
 
+#[cfg(target_os = "windows")]
+use super::file_manager::explorer_file_arg;
 use super::file_manager::{is_windows_unc_path, resolve_host_path};
 use super::file_open_policy::open_paths_by_policy;
 use super::file_opener_paths::{resolve_host_file_path, resolve_host_file_paths};
 use super::wsl_distro::resolve_runtime_wsl_distro;
-
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-fn explorer_select_arg(host_path: &str) -> String {
-    format!("/select,{host_path}")
-}
 
 fn reveal_existing_host_file(host_path: String) -> Result<(), String> {
     let path = Path::new(&host_path);
@@ -25,7 +22,7 @@ fn reveal_existing_host_file(host_path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         Command::new("explorer")
-            .arg(explorer_select_arg(&host_path))
+            .arg(explorer_file_arg(&host_path))
             .spawn()
             .map_err(|e| format!("Failed to open Explorer: {e}"))?;
         return Ok::<(), String>(());
@@ -91,19 +88,6 @@ pub async fn reveal_host_file_in_file_manager(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
-}
-
-#[cfg(test)]
-mod tests {
-    use super::explorer_select_arg;
-
-    #[test]
-    fn explorer_select_arg_keeps_select_and_path_together() {
-        assert_eq!(
-            explorer_select_arg(r"C:\repo\Docs\Guide.md"),
-            r"/select,C:\repo\Docs\Guide.md"
-        );
-    }
 }
 
 #[tauri::command]

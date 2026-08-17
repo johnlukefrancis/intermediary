@@ -119,6 +119,10 @@ The VS Code tasks set these automatically:
 | `INTERMEDIARY_WINDOWS_LOCALAPPDATA` | Deterministic Windows app-local path used by WSL agent launcher to resolve `ws_auth.json` | `/mnt/c/Users/<you>/AppData/Local` |
 | `INTERMEDIARY_LOG_DIR` | Log output directory (WSL UNC path) | `\\wsl$\<your-distro>\<your-wsl-path>\logs` |
 
+The Windows task exports `INTERMEDIARY_WIN_PATH` through `WSLENV` with Windows-to-WSL path
+translation. This keeps the sync destination and the Windows build directory identical even when
+the prompted mirror differs from the default drive.
+
 **Note:** Native WSL paths (e.g., `/home/...`) are converted to Windows paths automatically via `wslpath` at runtime. Intermediary now uses persisted app config (`agentDistro`) as the primary distro authority for runtime conversion; `INTERMEDIARY_WSL_DISTRO` is mainly for dev scripts/tools and as a fallback when no app override is configured.
 
 ## Watch Sync

@@ -63,6 +63,17 @@ Depends on: ADR-000, ADR-007
 
 ## Resolved (recent)
 
+- 2026-08-17: Windows installer tasks could sync current WSL source to the default D: mirror but
+  build a separately configured C: mirror, producing a successful installer from stale source.
+  Fixed by exporting the configured Windows mirror through `WSLENV` with path translation before
+  every WSL sync/watch process, so sync and build share one authoritative mirror.
+- 2026-08-17: Windows-root file-location actions (Auto Files, the bundle selector,
+  workspace titles, and bundle rows) could fall back to Explorer's default location because
+  repo-relative slash paths remained mixed with the Windows root and Explorer interpreted those
+  forward slashes as command switches. Fixed by resolving host-repo files with native Windows
+  separators, centralizing Explorer argument construction, and passing Explorer's `/select,`
+  switch and exact target as one argument for every file reveal. The folder-only `/e,` switch is
+  not part of the file-selection form.
 - 2026-07-15: Legitimate source directories named `target`, including
   `crates/wb_render_wgpu/src/target`, could not stay selected because topology refresh re-applied the
   basename default and the bundle scanner independently treated it as an unconditional global

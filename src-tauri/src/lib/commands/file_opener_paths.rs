@@ -85,9 +85,50 @@ fn build_absolute_repo_path(root: &RepoRoot, normalized_relative: &str) -> Resul
             }
             Ok(format!("{trimmed_root}/{normalized_relative}"))
         }
-        RepoRoot::Host { .. } => Ok(Path::new(&root_path)
-            .join(normalized_relative)
-            .to_string_lossy()
-            .to_string()),
+        RepoRoot::Host { .. } => {
+            let (host_root, host_relative) = if cfg!(target_os = "windows") {
+                (
+                    root_path.replace('/', "\\"),
+                    normalized_relative.replace('/', "\\"),
+                )
+            } else {
+                (root_path, normalized_relative.to_string())
+            };
+            Ok(Path::new(&host_root)
+                .join(host_relative)
+                .to_string_lossy()
+                .to_string())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_absolute_repo_path;
+    use crate::config::types::RepoRoot;
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn host_repo_file_path_uses_windows_separators() {
+        let root = RepoRoot::Host {
+            path: "C:/Worktrees/Windows Project".to_string(),
+        };
+
+        assert_eq!(
+            build_absolute_repo_path(&root, "Docs/Guide Notes.md"),
+            Ok(r"C:\Worktrees\Windows Project\Docs\Guide Notes.md".to_string())
+        );
+    }
+
+    #[test]
+    fn wsl_repo_file_path_keeps_posix_separators() {
+        let root = RepoRoot::Wsl {
+            path: "/home/johnf/code".to_string(),
+        };
+
+        assert_eq!(
+            build_absolute_repo_path(&root, "Docs/Guide Notes.md"),
+            Ok("/home/johnf/code/Docs/Guide Notes.md".to_string())
+        );
     }
 }

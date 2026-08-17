@@ -23,6 +23,16 @@ $ErrorActionPreference = "Stop"
 $env:INTERMEDIARY_WIN_PATH = $WindowsMirrorPath
 $env:INTERMEDIARY_WSL_PATH = $WslRepoPath
 $env:INTERMEDIARY_WSL_DISTRO = $WslDistro
+
+$wslEnvEntries = @(
+  $env:WSLENV -split ":" |
+    Where-Object {
+      -not [string]::IsNullOrWhiteSpace($_) -and
+      $_ -notmatch "^INTERMEDIARY_WIN_PATH(?:/.*)?$"
+    }
+)
+$env:WSLENV = ($wslEnvEntries + "INTERMEDIARY_WIN_PATH/up") -join ":"
+
 $isInstallerMode = $Mode -in @("build-installer", "build-installer-launch")
 
 if (-not $isInstallerMode) {

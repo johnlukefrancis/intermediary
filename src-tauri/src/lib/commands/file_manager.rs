@@ -10,8 +10,19 @@ use tauri::AppHandle;
 use super::wsl_distro::resolve_runtime_wsl_distro;
 
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-fn explorer_folder_arg(host_path: &str) -> String {
+pub(crate) fn explorer_folder_arg(host_path: &str) -> String {
     format!("/e,{host_path}")
+}
+
+/// Build the single Explorer argument used to reveal a file in its parent folder.
+///
+/// Explorer's comma-delimited selection switch must stay on the same argument
+/// boundary as the target path. The file form intentionally uses `/select,`
+/// without the folder-only `/e,` switch: Explorer treats that as the reveal
+/// contract for an existing file, including Windows drive and UNC paths.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub(crate) fn explorer_file_arg(host_path: &str) -> String {
+    format!("/select,{host_path}")
 }
 
 /// Open a folder in the host OS file manager.
@@ -107,13 +118,13 @@ pub(crate) fn resolve_host_path(
 
 #[cfg(test)]
 mod tests {
-    use super::explorer_folder_arg;
+    use super::{explorer_file_arg, explorer_folder_arg};
 
     #[test]
     fn explorer_folder_arg_keeps_switch_and_windows_path_together() {
         assert_eq!(
-            explorer_folder_arg(r"C:\Worktrees\wb-lab"),
-            r"/e,C:\Worktrees\wb-lab"
+            explorer_folder_arg(r"C:\Worktrees\Windows Project"),
+            r"/e,C:\Worktrees\Windows Project"
         );
     }
 
@@ -122,6 +133,22 @@ mod tests {
         assert_eq!(
             explorer_folder_arg(r"\\wsl.localhost\Ubuntu\home\johnf\code"),
             r"/e,\\wsl.localhost\Ubuntu\home\johnf\code"
+        );
+    }
+
+    #[test]
+    fn explorer_file_arg_keeps_selection_and_windows_path_together() {
+        assert_eq!(
+            explorer_file_arg(r"C:\Worktrees\Windows Project\Docs\Guide Notes.md"),
+            r"/select,C:\Worktrees\Windows Project\Docs\Guide Notes.md"
+        );
+    }
+
+    #[test]
+    fn explorer_file_arg_keeps_selection_and_unc_path_together() {
+        assert_eq!(
+            explorer_file_arg(r"\\wsl.localhost\Ubuntu\home\johnf\code\Docs\Guide.md"),
+            r"/select,\\wsl.localhost\Ubuntu\home\johnf\code\Docs\Guide.md"
         );
     }
 }
