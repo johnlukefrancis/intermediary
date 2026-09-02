@@ -966,6 +966,18 @@
       "summary": "Reconcile selected archived files that Git status hides behind ignore rules"
     },
     {
+      "path": "crates/im_bundle/src/git_capture/index_tree.rs",
+      "summary": "Read-only Git tree SHA of an index listing, matching `git write-tree`"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/index.rs",
+      "summary": "Bounded capture of the candidate index tree identity"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/initial_state.rs",
+      "summary": "Initial selected-delta, index-tree, and file fingerprint capture for a Git session"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/mod.rs",
       "summary": "Versioned selection-bounded Git evidence capture for bundle archives"
     },
@@ -980,6 +992,10 @@
     {
       "path": "crates/im_bundle/src/git_capture/porcelain.rs",
       "summary": "Strict parser for NUL-delimited Git porcelain-v2 records"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/render_omitted.rs",
+      "summary": "Model-readable listing of changed paths the bundle selection omitted"
     },
     {
       "path": "crates/im_bundle/src/git_capture/render.rs",
@@ -1016,6 +1032,10 @@
     {
       "path": "crates/im_bundle/src/manifest.rs",
       "summary": "Bundle manifest structure and serialization"
+    },
+    {
+      "path": "crates/im_bundle/src/omission.rs",
+      "summary": "Why a changed repository path fell outside the bundle selection"
     },
     {
       "path": "crates/im_bundle/src/plan.rs",

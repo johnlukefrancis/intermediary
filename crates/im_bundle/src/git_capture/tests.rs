@@ -11,7 +11,10 @@ use tempfile::tempdir;
 use crate::plan::{BundlePlan, BundleSelection, GlobalExcludes};
 use crate::scanner::ScanEntry;
 
-use super::{GitCaptureConfig, GitCaptureSession, GitCaptureState, WrittenEntryDigests};
+use super::diff::{FULL_DELETIONS_BUDGET, PATCH_LIMIT};
+use super::{
+    GitCaptureConfig, GitCaptureSession, GitCaptureState, PatchDeletions, WrittenEntryDigests,
+};
 
 #[test]
 fn missing_git_executable_yields_unavailable_evidence() {
@@ -26,6 +29,8 @@ fn missing_git_executable_yields_unavailable_evidence() {
             executable: root.path().join("missing-git"),
             repo_root: repo,
             command_timeout: Duration::from_millis(100),
+            patch_limit: PATCH_LIMIT,
+            full_deletions_budget: FULL_DELETIONS_BUDGET,
         },
         None,
     )
@@ -61,6 +66,8 @@ fn timed_out_git_command_yields_unavailable_evidence() {
             executable: fake_git,
             repo_root: repo,
             command_timeout: Duration::from_millis(20),
+            patch_limit: PATCH_LIMIT,
+            full_deletions_budget: FULL_DELETIONS_BUDGET,
         },
         None,
     )
@@ -85,6 +92,8 @@ fn nonzero_git_command_is_distinct_from_non_git_repository() {
             executable: PathBuf::from("/bin/false"),
             repo_root: repo,
             command_timeout: Duration::from_millis(100),
+            patch_limit: PATCH_LIMIT,
+            full_deletions_budget: FULL_DELETIONS_BUDGET,
         },
         None,
     )
@@ -94,6 +103,53 @@ fn nonzero_git_command_is_distinct_from_non_git_repository() {
         .expect("finish failed-command capture");
     assert_eq!(evidence.manifest.status, GitCaptureState::Unavailable);
     assert_eq!(evidence.manifest.issues[0].kind, "commandFailure");
+}
+
+#[test]
+fn oversized_deletion_bodies_degrade_to_header_only_patch() {
+    let root = tempdir().expect("tempdir");
+    let repo = root.path().join("repo");
+    std::fs::create_dir_all(repo.join("src")).expect("repo");
+    init_git(&repo);
+    let removed_body = "removed line that must not survive header-only capture\n".repeat(200);
+    std::fs::write(repo.join("src/removed.txt"), &removed_body).expect("removed baseline");
+    std::fs::write(repo.join("src/kept.txt"), b"baseline\n").expect("kept baseline");
+    git(&repo, &["add", "."]);
+    git(&repo, &["commit", "-qm", "baseline"]);
+    std::fs::remove_file(repo.join("src/removed.txt")).expect("delete tracked file");
+    let kept = b"kept but edited\n";
+    std::fs::write(repo.join("src/kept.txt"), kept).expect("edit kept file");
+
+    let plan = plan(&repo, &root.path().join("out.zip"));
+    let session = GitCaptureSession::begin_with_config(
+        &plan,
+        GitCaptureConfig {
+            executable: PathBuf::from("git"),
+            repo_root: repo,
+            command_timeout: Duration::from_secs(5),
+            patch_limit: PATCH_LIMIT,
+            full_deletions_budget: 1024,
+        },
+        None,
+    )
+    .expect("begin capture");
+    let mut written = WrittenEntryDigests::new();
+    written.insert(PathBuf::from("src/kept.txt"), Sha256::digest(kept).into());
+    let evidence = session.finish(&written, None).expect("finish capture");
+
+    assert_eq!(evidence.manifest.status, GitCaptureState::Complete);
+    assert!(evidence.manifest.issues.is_empty());
+    assert_eq!(
+        evidence.manifest.patch_deletions,
+        PatchDeletions::HeaderOnly
+    );
+    let patch = String::from_utf8(evidence.diff).expect("utf8 patch");
+    assert!(patch.contains("deleted file mode"));
+    assert!(!patch.contains("removed line that must not survive"));
+    assert!(patch.contains("+kept but edited"));
+    let status = String::from_utf8(evidence.status).expect("utf8 status");
+    assert!(status.contains("Patch deletions: header-only"));
+    assert!(status.contains("src/removed.txt"));
 }
 
 #[test]

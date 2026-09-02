@@ -223,7 +223,7 @@ Per repo, user can define multiple presets:
 
 ### 7.5 Bundle provenance manifest
 
-Every generated zip uses bundle format version 2 and includes:
+Every generated zip uses bundle format version 3 and includes:
 
 * `BUNDLE_MANIFEST.json` containing:
 
@@ -233,7 +233,7 @@ Every generated zip uses bundle format version 2 and includes:
   * `presetId`, `presetName`
   * `selection` (includeRoot + topLevelDirsIncluded + includedSubdirs + excludedSubdirs + excludedFiles)
   * `effectiveGlobalExcludes` used by the scan
-  * versioned `git` capture evidence: captured HEAD/branch/time, comparison base, capture status, repo/selection dirty facts, selected/omitted counts, generated artifact names, incomplete artifacts, and structured failure/drift reasons
+  * versioned `git` capture evidence: captured HEAD/branch/time, comparison base, candidate index tree id, capture status, repo/selection dirty facts, patch deletion mode, selected/omitted counts, generated artifact names, incomplete artifacts, and structured failure/drift reasons
   * `fileCount`, `totalBytesBestEffort`
 * `BUNDLE_GIT_STATUS.txt` containing selected staging/worktree status, diff stat/name-status, untracked-file orientation, and privacy-safe omitted-change evidence
 * `BUNDLE_GIT_DIFF.patch` containing the selected tracked final-state delta from captured HEAD without binary payload encoding

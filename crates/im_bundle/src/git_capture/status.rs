@@ -1,9 +1,10 @@
 // Path: crates/im_bundle/src/git_capture/status.rs
 // Description: Raw porcelain-v2 Git status parsing and selection-safe projection
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::omission::OmissionReason;
 use crate::selection::{BundleSelector, SelectedPathKind};
 
 use super::path::{bytes_to_path, strip_repo_prefix, GitPath};
@@ -29,6 +30,15 @@ pub(crate) struct SelectedStatusRecord {
     pub(crate) counterpart_omitted: bool,
 }
 
+/// A changed repository path the selection left out: name and reason cross
+/// into evidence, content never does.
+#[derive(Debug, Clone)]
+pub(crate) struct OmittedPath {
+    pub(crate) xy: String,
+    pub(crate) path: GitPath,
+    pub(crate) reason: OmissionReason,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedStatus {
     pub(crate) head_sha: Option<String>,
@@ -37,6 +47,7 @@ pub(crate) struct ParsedStatus {
     pub(crate) selection_dirty: bool,
     pub(crate) counts: GitCaptureCounts,
     pub(crate) selected_records: Vec<SelectedStatusRecord>,
+    pub(crate) omitted: Vec<OmittedPath>,
     pub(crate) general_pathspecs: Vec<GitPath>,
     pub(crate) rename_pathspecs: Vec<[GitPath; 2]>,
     pub(crate) watched_regular_paths: HashSet<PathBuf>,
@@ -58,7 +69,7 @@ pub(crate) fn parse_status(
     let mut selected_tracked = HashSet::new();
     let mut selected_untracked = HashSet::new();
     let mut selected_deleted = HashSet::new();
-    let mut omitted_paths = HashSet::new();
+    let mut omitted_paths = BTreeMap::new();
     let mut selected_records = Vec::new();
     let mut general_pathspecs = HashSet::new();
     let mut rename_pathspecs = HashSet::new();
@@ -76,11 +87,12 @@ pub(crate) fn parse_status(
         let original = record
             .original
             .as_ref()
-            .and_then(|path| project_path(path, repo_prefix, record.original_kind(), selector));
+            .map(|path| project_path(path, repo_prefix, record.original_kind(), selector));
 
         register_endpoint(
             &record.current,
-            current.as_ref(),
+            &record.xy,
+            &current,
             record.is_untracked(),
             record.is_deleted(),
             &mut selected_paths,
@@ -89,10 +101,11 @@ pub(crate) fn parse_status(
             &mut selected_deleted,
             &mut omitted_paths,
         );
-        if let Some(original_path) = &record.original {
+        if let (Some(original_path), Some(projected)) = (&record.original, &original) {
             register_endpoint(
                 original_path,
-                original.as_ref(),
+                &record.xy,
+                projected,
                 false,
                 false,
                 &mut selected_paths,
@@ -103,8 +116,10 @@ pub(crate) fn parse_status(
             );
         }
 
-        let selected_current = current.clone();
-        let selected_original = original.clone();
+        let selected_current = current.clone().ok();
+        let selected_original = original.clone().and_then(|projected| projected.ok());
+        let counterpart_omitted =
+            record.original.is_some() && (current.is_err() || matches!(original, Some(Err(_))));
         if selected_current.is_none() && selected_original.is_none() {
             continue;
         }
@@ -155,8 +170,7 @@ pub(crate) fn parse_status(
             current: selected_current,
             original: selected_original,
             score: record.score,
-            counterpart_omitted: record.original.is_some()
-                && (current.is_none() || original.is_none()),
+            counterpart_omitted,
         });
     }
 
@@ -185,6 +199,7 @@ pub(crate) fn parse_status(
             omitted_changed_paths: Some(omitted_paths.len() as u64),
         },
         selected_records,
+        omitted: omitted_paths.into_values().collect(),
         general_pathspecs,
         rename_pathspecs,
         watched_regular_paths,
@@ -230,29 +245,39 @@ fn project_path(
     repo_prefix: &[u8],
     kind: SelectedPathKind,
     selector: &BundleSelector,
-) -> Option<GitPath> {
-    let relative = strip_repo_prefix(path.as_bytes(), repo_prefix)?;
-    let path_buf = bytes_to_path(relative)?;
-    selector
-        .admits_git_path(&path_buf, kind)
-        .then(|| GitPath::from_bytes(relative))
+) -> std::result::Result<GitPath, OmissionReason> {
+    let relative =
+        strip_repo_prefix(path.as_bytes(), repo_prefix).ok_or(OmissionReason::OutsideBundleRoot)?;
+    let path_buf = bytes_to_path(relative).ok_or(OmissionReason::UnrepresentablePath)?;
+    selector.classify(&path_buf, kind)?;
+    Ok(GitPath::from_bytes(relative))
 }
 
 #[allow(clippy::too_many_arguments)]
 fn register_endpoint(
     repo_path: &GitPath,
-    selected: Option<&GitPath>,
+    xy: &str,
+    selected: &std::result::Result<GitPath, OmissionReason>,
     untracked: bool,
     deleted: bool,
     selected_paths: &mut HashSet<GitPath>,
     selected_tracked: &mut HashSet<GitPath>,
     selected_untracked: &mut HashSet<GitPath>,
     selected_deleted: &mut HashSet<GitPath>,
-    omitted_paths: &mut HashSet<GitPath>,
+    omitted_paths: &mut BTreeMap<GitPath, OmittedPath>,
 ) {
-    let Some(path) = selected else {
-        omitted_paths.insert(repo_path.clone());
-        return;
+    let path = match selected {
+        Ok(path) => path,
+        Err(reason) => {
+            omitted_paths
+                .entry(repo_path.clone())
+                .or_insert_with(|| OmittedPath {
+                    xy: xy.to_string(),
+                    path: repo_path.clone(),
+                    reason: reason.clone(),
+                });
+            return;
+        }
     };
     selected_paths.insert(path.clone());
     if untracked {

@@ -50,11 +50,15 @@ fn dirty_repo_bundle_carries_exact_selected_head_evidence() {
     let status = read_text(&mut archive, "BUNDLE_GIT_STATUS.txt");
     let patch = read_text(&mut archive, "BUNDLE_GIT_DIFF.patch");
     let handoff = read_text(&mut archive, "BUNDLE_HANDOFF.md");
+    let index_patch = read_text(&mut archive, "BUNDLE_GIT_INDEX_DIFF.patch");
+    let worktree_patch = read_text(&mut archive, "BUNDLE_GIT_WORKTREE_DIFF.patch");
+    let omitted = read_text(&mut archive, "BUNDLE_GIT_OMITTED_PATHS.txt");
 
-    assert_eq!(manifest["bundleFormatVersion"], 2);
-    assert_eq!(manifest["git"]["contractVersion"], 1);
+    assert_eq!(manifest["bundleFormatVersion"], 3);
+    assert_eq!(manifest["git"]["contractVersion"], 2);
     assert_eq!(manifest["git"]["comparisonBase"], "HEAD");
     assert_eq!(manifest["git"]["status"], "complete");
+    assert_eq!(manifest["git"]["patchDeletions"], "full");
     assert!(manifest["git"]["capturedAt"].as_str().is_some());
     assert!(manifest["git"]["headSha"]
         .as_str()
@@ -68,7 +72,23 @@ fn dirty_repo_bundle_carries_exact_selected_head_evidence() {
         manifest["git"]["artifacts"]["diff"],
         "BUNDLE_GIT_DIFF.patch"
     );
+    assert_eq!(
+        manifest["git"]["artifacts"]["indexDiff"],
+        "BUNDLE_GIT_INDEX_DIFF.patch"
+    );
+    assert_eq!(
+        manifest["git"]["artifacts"]["worktreeDiff"],
+        "BUNDLE_GIT_WORKTREE_DIFF.patch"
+    );
+    assert_eq!(
+        manifest["git"]["artifacts"]["omittedPaths"],
+        "BUNDLE_GIT_OMITTED_PATHS.txt"
+    );
     assert_eq!(manifest["git"]["artifacts"]["handoff"], "BUNDLE_HANDOFF.md");
+    assert_eq!(
+        manifest["git"]["candidateIndexTreeSha"],
+        git_stdout(&repo, &["write-tree"])
+    );
     assert_eq!(
         manifest["git"]["incompleteArtifacts"],
         serde_json::json!([])
@@ -96,7 +116,43 @@ fn dirty_repo_bundle_carries_exact_selected_head_evidence() {
     assert!(!status.contains("diff --git "));
     assert!(!status.contains("@@ -"));
     assert!(status.contains("additional changed paths excluded"));
+    assert!(status.contains("BUNDLE_GIT_OMITTED_PATHS.txt"));
     assert!(!status.contains("src/excluded.txt"));
+    assert!(status.contains("Candidate index tree: "));
+
+    // Staged versus unstaged boundary: index patch is HEAD -> index, worktree
+    // patch is index -> working tree, and neither leaks excluded names.
+    assert!(index_patch.contains("+staged intermediate"));
+    assert!(!index_patch.contains("staged plus final worktree"));
+    assert!(!index_patch.contains("unstaged final"));
+    assert!(index_patch.contains("rename from src/rename_old.txt"));
+    assert!(worktree_patch.contains("-staged intermediate"));
+    assert!(worktree_patch.contains("+staged plus final worktree"));
+    assert!(worktree_patch.contains("+unstaged final"));
+    assert!(worktree_patch.contains("deleted file mode"));
+    assert!(!worktree_patch.contains("src/untracked.txt"));
+    for excluded in [
+        "src/excluded.txt",
+        "src/private/hidden.txt",
+        "src/cache/hidden.txt",
+    ] {
+        assert!(
+            !index_patch.contains(excluded),
+            "{excluded} leaked into index patch"
+        );
+        assert!(
+            !worktree_patch.contains(excluded),
+            "{excluded} leaked into worktree patch"
+        );
+    }
+
+    // Omitted changed paths are named with their reason; their content is not bundled.
+    assert!(omitted.contains("src/excluded.txt\texcluded file (excludedFiles)"));
+    assert!(omitted
+        .contains("src/private/hidden.txt\texcluded subdirectory src/private (excludedSubdirs)"));
+    assert!(omitted.contains("src/cache/hidden.txt\tglobal directory-name exclude cache"));
+    assert!(!omitted.contains("private changed"));
+    assert!(archive.by_name("src/excluded.txt").is_err());
     assert!(!status.contains("src/private/hidden.txt"));
     assert!(!status.contains("src/cache/hidden.txt"));
 
@@ -108,6 +164,7 @@ fn dirty_repo_bundle_carries_exact_selected_head_evidence() {
     assert!(patch.contains("@@ -"));
     assert!(patch.contains("unstaged final"));
     assert!(patch.contains("deleted file mode"));
+    assert!(patch.contains("-delete me"));
     assert!(patch.contains("rename from src/rename_old.txt"));
     assert!(patch.contains("rename to src/rename_new.txt"));
     assert!(patch.contains("Binary files a/src/blob.dat and b/src/blob.dat differ"));
@@ -213,6 +270,9 @@ fn clean_and_non_git_repos_emit_truthful_evidence() {
     assert_eq!(clean_manifest["git"]["selectionDirty"], false);
     assert!(read_text(&mut clean, "BUNDLE_GIT_DIFF.patch").is_empty());
     assert!(read_text(&mut clean, "BUNDLE_GIT_STATUS.txt").contains("Clean:"));
+    assert!(read_text(&mut clean, "BUNDLE_GIT_OMITTED_PATHS.txt").contains("(none:"));
+    assert!(read_text(&mut clean, "BUNDLE_GIT_INDEX_DIFF.patch").is_empty());
+    assert!(read_text(&mut clean, "BUNDLE_GIT_WORKTREE_DIFF.patch").is_empty());
 
     write(&repo, "src/excluded.txt", b"excluded-only change\n");
     let excluded_output = root.path().join("excluded-only.zip");
@@ -323,6 +383,19 @@ fn plan(repo: &Path, output: &Path) -> BundlePlan {
             patterns: vec![],
         },
     }
+}
+
+fn git_stdout(repo: &Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(repo)
+        .output()
+        .expect("run git");
+    assert!(output.status.success(), "git command failed: {args:?}");
+    String::from_utf8(output.stdout)
+        .expect("utf8 git output")
+        .trim()
+        .to_string()
 }
 
 fn git(repo: &Path, args: &[&str]) {

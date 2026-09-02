@@ -16,6 +16,11 @@ pub(crate) fn render_status(
     output.push_str(&format!("Capture status: {}\n", state_name(capture.status)));
     output.push_str(&format!("Captured at: {}\n", capture.captured_at));
     output.push_str("Comparison base: HEAD\n");
+    if capture.patch_deletions == super::PatchDeletions::HeaderOnly {
+        output.push_str(
+            "Patch deletions: header-only. A patch carrying full deleted-file bodies exceeded the reviewable patch budget, so BUNDLE_GIT_DIFF.patch keeps each deletion's header without its removed content; every deletion is still listed in the stat and name-status sections below.\n",
+        );
+    }
     output.push_str(&format!(
         "Captured HEAD: {}\n",
         capture.head_sha.as_deref().unwrap_or("unavailable")
@@ -26,6 +31,13 @@ pub(crate) fn render_status(
             .branch
             .as_deref()
             .unwrap_or("detached or unavailable")
+    ));
+    output.push_str(&format!(
+        "Candidate index tree: {}\n",
+        capture
+            .candidate_index_tree_sha
+            .as_deref()
+            .unwrap_or("unavailable")
     ));
     output.push_str(&format!(
         "Repository dirty: {}\n",
@@ -88,7 +100,7 @@ pub(crate) fn render_status(
     }
     if capture.counts.omitted_changed_paths.unwrap_or(0) > 0 {
         output.push_str(
-            "\nThe repository has additional changed paths excluded by bundle selection. Their names and contents are intentionally not reproduced here.\n",
+            "\nThe repository has additional changed paths excluded by bundle selection. Their names and omission reasons are listed in BUNDLE_GIT_OMITTED_PATHS.txt; their contents are intentionally not in this bundle.\n",
         );
     }
     if !capture.issues.is_empty() {
@@ -119,7 +131,9 @@ Read in this order:
 1. `BUNDLE_MANIFEST.json` for the bundle contract, selection, and capture quality.
 2. `BUNDLE_GIT_STATUS.txt` for branch/HEAD orientation and selected-path state.
 3. `BUNDLE_GIT_DIFF.patch` for the selected tracked working-tree delta from captured HEAD.
-4. When present, `docs/guide.md`, the recent portion of `docs/changelog.md`, then the relevant source and documentation.
+4. `BUNDLE_GIT_INDEX_DIFF.patch` (captured HEAD to index) and `BUNDLE_GIT_WORKTREE_DIFF.patch` (index to working tree) only when the staged/unstaged boundary matters; `candidateIndexTreeSha` in the manifest identifies the tree the index would commit as.
+5. `BUNDLE_GIT_OMITTED_PATHS.txt` for changed repository paths the bundle selection left out, with the reason for each.
+6. When present, `docs/guide.md`, the recent portion of `docs/changelog.md`, then the relevant source and documentation.
 
 Do not expect a `.git` directory or ask for live Git commands after upload. Treat generated Git artifacts as evidence captured during bundle construction and honor any partial, unavailable, or unstable status.
 

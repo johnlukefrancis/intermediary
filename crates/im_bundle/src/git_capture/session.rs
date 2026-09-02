@@ -14,10 +14,9 @@ use crate::plan::BundlePlan;
 use crate::selection::BundleSelector;
 
 use super::command::run_git;
-use super::diff::{common_git_args, recapture_patch};
+use super::diff::{common_git_args, FULL_DELETIONS_BUDGET, PATCH_LIMIT};
 use super::discovery::{initial_issue, trim_line_ending};
 use super::status::{parse_status, ParsedStatus};
-use super::verification::capture_current_digests;
 use super::{
     empty_manifest, GitCaptureConfig, GitCaptureIssue, GitCaptureSession, GitCaptureState,
     GIT_DIFF_NAME, GIT_STATUS_NAME,
@@ -25,8 +24,8 @@ use super::{
 
 const STATUS_LIMIT: usize = 8 * 1024 * 1024;
 const PREFIX_LIMIT: usize = 1024 * 1024;
-const PATH_COUNT_LIMIT: usize = 4096;
-const PATH_BYTES_LIMIT: usize = 256 * 1024;
+const PATH_COUNT_LIMIT: usize = 16384;
+const PATH_BYTES_LIMIT: usize = 1024 * 1024;
 
 impl GitCaptureSession {
     pub(crate) fn begin(
@@ -37,6 +36,8 @@ impl GitCaptureSession {
             executable: PathBuf::from("git"),
             repo_root: plan.repo_root.clone(),
             command_timeout: Duration::from_secs(5),
+            patch_limit: PATCH_LIMIT,
+            full_deletions_budget: FULL_DELETIONS_BUDGET,
         };
         Self::begin_with_config(plan, config, cancel_token)
     }
@@ -53,6 +54,7 @@ impl GitCaptureSession {
             repo_prefix: Vec::new(),
             pre_status_digest: None,
             initial_patch: None,
+            initial_index_tree_sha: None,
             initial_digests: Default::default(),
             initial_digests_complete: false,
             selected_file_input: None,
@@ -222,44 +224,6 @@ impl GitCaptureSession {
             (count + 1, bytes.saturating_add(path.as_bytes().len()))
         });
         count > PATH_COUNT_LIMIT || bytes > PATH_BYTES_LIMIT
-    }
-
-    fn capture_initial_state(&mut self, cancel_token: Option<&BundleCancelToken>) -> Result<()> {
-        let (Some(status), Some(head_sha)) =
-            (self.parsed_status.clone(), self.manifest.head_sha.clone())
-        else {
-            return Ok(());
-        };
-        if self.manifest.status == GitCaptureState::Unavailable {
-            return Ok(());
-        }
-        match recapture_patch(&self.config, &status, &head_sha, cancel_token)? {
-            Ok(patch) => self.initial_patch = Some(patch),
-            Err(issue) => {
-                self.mark_initial_partial();
-                self.manifest.issues.push(issue);
-            }
-        }
-        let captured = capture_current_digests(
-            &self.config.repo_root,
-            &status.watched_regular_paths,
-            cancel_token,
-        )?;
-        self.initial_digests = captured.digests;
-        self.initial_digests_complete = captured.complete;
-        if !captured.complete {
-            self.mark_initial_partial();
-            self.manifest.issues.push(GitCaptureIssue::new(
-                if captured.timed_out {
-                    "verificationTimeout"
-                } else {
-                    "stateReadFailure"
-                },
-                Some(GIT_DIFF_NAME),
-                "The initial selected-file state could not be fully fingerprinted within capture bounds.",
-            ));
-        }
-        Ok(())
     }
 
     pub(super) fn mark_initial_partial(&mut self) {

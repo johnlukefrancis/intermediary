@@ -7,7 +7,7 @@ use crate::git_capture::BundleGitCapture;
 use crate::global_excludes_summary::normalized_global_excludes_summary;
 use crate::plan::{BundleSelection, GlobalExcludes};
 
-pub const BUNDLE_FORMAT_VERSION: u32 = 2;
+pub const BUNDLE_FORMAT_VERSION: u32 = 3;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

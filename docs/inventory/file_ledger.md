@@ -244,10 +244,14 @@ crates/im_bundle/src/git_capture/diff.rs - Bounded selected-path Git diff, stat,
 crates/im_bundle/src/git_capture/discovery.rs - Git discovery failure classification and raw prefix normalization
 crates/im_bundle/src/git_capture/finalize.rs - Git artifact finalization and working-tree coherence verdicts
 crates/im_bundle/src/git_capture/ignored.rs - Reconcile selected archived files that Git status hides behind ignore rules
+crates/im_bundle/src/git_capture/index_tree.rs - Read-only Git tree SHA of an index listing, matching `git write-tree`
+crates/im_bundle/src/git_capture/index.rs - Bounded capture of the candidate index tree identity
+crates/im_bundle/src/git_capture/initial_state.rs - Initial selected-delta, index-tree, and file fingerprint capture for a Git session
 crates/im_bundle/src/git_capture/mod.rs - Versioned selection-bounded Git evidence capture for bundle archives
 crates/im_bundle/src/git_capture/path.rs - Lossless Git path transport and model-readable quoting helpers
 crates/im_bundle/src/git_capture/pathspec_batches.rs - Host-safe Git pathspec argument batching with atomic rename pairs
 crates/im_bundle/src/git_capture/porcelain.rs - Strict parser for NUL-delimited Git porcelain-v2 records
+crates/im_bundle/src/git_capture/render_omitted.rs - Model-readable listing of changed paths the bundle selection omitted
 crates/im_bundle/src/git_capture/render.rs - Selection-safe human-readable Git status and bundle handoff artifacts
 crates/im_bundle/src/git_capture/session.rs - Git capture discovery, initial status, and safety-bound setup
 crates/im_bundle/src/git_capture/status.rs - Raw porcelain-v2 Git status parsing and selection-safe projection
@@ -257,6 +261,7 @@ crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized sum
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
+crates/im_bundle/src/omission.rs - Why a changed repository path fell outside the bundle selection
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
 crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping

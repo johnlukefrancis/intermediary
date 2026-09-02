@@ -28,7 +28,7 @@ fn in_budget_selection_larger_than_windows_command_line_captures_complete_patch(
         .map(|path| path.to_string_lossy().len() + 1)
         .sum();
     assert!(selected_path_bytes > 48 * 1024);
-    assert!(selected_path_bytes < 256 * 1024);
+    assert!(selected_path_bytes < 1024 * 1024);
 
     for path in &paths {
         write(&repo, path, b"baseline\n");

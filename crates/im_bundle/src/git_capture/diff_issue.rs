@@ -3,11 +3,15 @@
 
 use super::command::GitCommandFailure;
 use super::pathspec_batches::PathspecBatchError;
-use super::{GitCaptureIssue, GIT_DIFF_NAME, GIT_STATUS_NAME};
+use super::{
+    GitCaptureIssue, GIT_DIFF_NAME, GIT_INDEX_DIFF_NAME, GIT_STATUS_NAME, GIT_WORKTREE_DIFF_NAME,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum DiffOutput {
     Patch,
+    IndexPatch,
+    WorktreePatch,
     Stat,
     NameStatus,
 }
@@ -16,6 +20,8 @@ impl DiffOutput {
     pub(super) fn artifact(self) -> &'static str {
         match self {
             Self::Patch => GIT_DIFF_NAME,
+            Self::IndexPatch => GIT_INDEX_DIFF_NAME,
+            Self::WorktreePatch => GIT_WORKTREE_DIFF_NAME,
             Self::Stat | Self::NameStatus => GIT_STATUS_NAME,
         }
     }

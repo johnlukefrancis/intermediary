@@ -7,7 +7,9 @@ use crate::cancel::BundleCancelToken;
 use crate::error::Result;
 
 use super::diff::{capture_diff_artifacts, recapture_patch};
+use super::index::capture_index_tree_sha;
 use super::render::{handoff_note, render_status};
+use super::render_omitted::render_omitted_paths;
 use super::status::{ParsedStatus, SelectedStatusRecord};
 use super::verification::{verify_written_state, WrittenEntryDigests};
 use super::{
@@ -22,15 +24,24 @@ impl GitCaptureSession {
         cancel_token: Option<&BundleCancelToken>,
     ) -> Result<CapturedGitEvidence> {
         let mut patch = Vec::new();
+        let mut index_patch = Vec::new();
+        let mut worktree_patch = Vec::new();
         let mut stat = Vec::new();
         let mut name_status = Vec::new();
         if let (Some(status), Some(head_sha)) =
             (self.parsed_status.clone(), self.manifest.head_sha.clone())
         {
             if self.manifest.status != GitCaptureState::Unavailable {
-                let artifacts =
-                    capture_diff_artifacts(&self.config, &status, &head_sha, cancel_token)?;
+                let artifacts = capture_diff_artifacts(
+                    &self.config,
+                    &status,
+                    &head_sha,
+                    self.manifest.patch_deletions,
+                    cancel_token,
+                )?;
                 patch = artifacts.patch;
+                index_patch = artifacts.index_patch;
+                worktree_patch = artifacts.worktree_patch;
                 stat = artifacts.stat;
                 name_status = artifacts.name_status;
                 let patch_complete = !artifacts
@@ -53,10 +64,18 @@ impl GitCaptureSession {
         }
         self.finalize_incomplete_artifacts();
         let status = render_status(&self.manifest, self.records(), &stat, &name_status);
+        let omitted_paths = render_omitted_paths(
+            self.parsed_status
+                .as_ref()
+                .map(|status| status.omitted.as_slice()),
+        );
         Ok(CapturedGitEvidence {
             manifest: self.manifest,
             status,
             diff: patch,
+            index_diff: index_patch,
+            worktree_diff: worktree_patch,
+            omitted_paths,
             handoff: handoff_note().to_vec(),
         })
     }
@@ -94,7 +113,13 @@ impl GitCaptureSession {
             );
         }
         if patch_complete {
-            let second_patch = recapture_patch(&self.config, status, head_sha, cancel_token)?;
+            let second_patch = recapture_patch(
+                &self.config,
+                status,
+                head_sha,
+                self.manifest.patch_deletions,
+                cancel_token,
+            )?;
             match second_patch {
                 Ok(second_patch) if second_patch != patch => self.mark_unstable(
                     "captureDrift",
@@ -125,8 +150,28 @@ impl GitCaptureSession {
             self.mark_partial();
         }
         self.manifest.issues.extend(verification.issues);
+        self.verify_index_tree(cancel_token)?;
         self.verify_selected_ignored(cancel_token)?;
         self.verify_status_digest(cancel_token)
+    }
+
+    fn verify_index_tree(&mut self, cancel_token: Option<&BundleCancelToken>) -> Result<()> {
+        let Some(initial) = self.initial_index_tree_sha.clone() else {
+            return Ok(());
+        };
+        match capture_index_tree_sha(&self.config, cancel_token)? {
+            Ok(current) if current == initial => {}
+            Ok(_) => self.mark_unstable(
+                "captureDrift",
+                None,
+                "The index changed while bundle evidence was captured; candidateIndexTreeSha is the initial value.",
+            ),
+            Err(issue) => {
+                self.mark_partial();
+                self.manifest.issues.push(issue);
+            }
+        }
+        Ok(())
     }
 
     fn verify_status_digest(&mut self, cancel_token: Option<&BundleCancelToken>) -> Result<()> {

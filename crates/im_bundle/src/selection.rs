@@ -9,6 +9,7 @@ use crate::global_excludes::{
     is_globally_excluded_dir_name, is_globally_excluded_file_name, is_globally_excluded_path,
     normalize_global_excludes, NormalizedGlobalExcludes,
 };
+use crate::omission::OmissionReason;
 use crate::plan::{BundleSelection, GlobalExcludes};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,32 +65,43 @@ impl BundleSelector {
         self.admits(relative_path, SelectedPathKind::File)
     }
 
-    pub(crate) fn admits_git_path(&self, relative_path: &Path, kind: SelectedPathKind) -> bool {
-        self.admits(relative_path, kind)
-    }
-
     pub(crate) fn admits_directory(&self, relative_path: &Path) -> bool {
         self.admits(relative_path, SelectedPathKind::DirectoryLike)
     }
 
     fn admits(&self, relative_path: &Path, kind: SelectedPathKind) -> bool {
+        self.classify(relative_path, kind).is_ok()
+    }
+
+    /// The one selection predicate, answering why a path is omitted when it is.
+    pub(crate) fn classify(
+        &self,
+        relative_path: &Path,
+        kind: SelectedPathKind,
+    ) -> std::result::Result<(), OmissionReason> {
         if kind == SelectedPathKind::Symlink {
-            return false;
+            return Err(OmissionReason::Symlink);
         }
         let Some((components, archive_path)) = normalized_components(relative_path) else {
-            return false;
+            return Err(OmissionReason::UnrepresentablePath);
         };
-        if components.is_empty() {
-            return false;
-        }
+        let Some(top) = components.first() else {
+            return Err(OmissionReason::UnrepresentablePath);
+        };
 
-        let selected = if components.len() == 1 {
-            self.include_root || self.top_level_dirs.contains(&components[0])
-        } else {
-            self.top_level_dirs.contains(&components[0])
-        };
-        if !selected || self.excluded_files.contains(&archive_path) {
-            return false;
+        let top_selected = self.top_level_dirs.contains(top);
+        if components.len() == 1 && !(self.include_root || top_selected) {
+            return Err(if kind == SelectedPathKind::DirectoryLike {
+                OmissionReason::TopLevelDirNotSelected(top.clone())
+            } else {
+                OmissionReason::RootFilesNotSelected
+            });
+        }
+        if components.len() > 1 && !top_selected {
+            return Err(OmissionReason::TopLevelDirNotSelected(top.clone()));
+        }
+        if self.excluded_files.contains(&archive_path) {
+            return Err(OmissionReason::ExcludedFile);
         }
 
         let directory_count = if kind == SelectedPathKind::DirectoryLike {
@@ -100,25 +112,28 @@ impl BundleSelector {
         for index in 0..directory_count {
             let directory_path = components[..=index].join("/");
             if self.excluded_subdirs.contains(&directory_path) {
-                return false;
+                return Err(OmissionReason::ExcludedSubdir(directory_path));
             }
             let explicitly_included = index == 0 || self.included_subdirs.contains(&directory_path);
             if !explicitly_included
                 && is_globally_excluded_dir_name(&components[index], &self.global_excludes)
             {
-                return false;
+                return Err(OmissionReason::GlobalDirName(components[index].clone()));
             }
         }
 
-        if kind == SelectedPathKind::File
-            && components
-                .last()
-                .is_some_and(|name| is_globally_excluded_file_name(name, &self.global_excludes))
-        {
-            return false;
+        if kind == SelectedPathKind::File {
+            if let Some(name) = components.last() {
+                if is_globally_excluded_file_name(name, &self.global_excludes) {
+                    return Err(OmissionReason::GlobalFileName(name.clone()));
+                }
+            }
         }
 
-        !is_globally_excluded_path(&archive_path, &self.global_excludes)
+        if is_globally_excluded_path(&archive_path, &self.global_excludes) {
+            return Err(OmissionReason::GlobalPathPattern);
+        }
+        Ok(())
     }
 }
 

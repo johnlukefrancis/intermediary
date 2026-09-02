@@ -8,6 +8,7 @@ pub mod git_capture;
 pub mod global_excludes;
 pub mod global_excludes_summary;
 pub mod manifest;
+pub(crate) mod omission;
 pub mod plan;
 pub mod progress;
 pub mod progress_sink;

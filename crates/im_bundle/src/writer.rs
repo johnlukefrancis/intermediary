@@ -11,7 +11,8 @@ use zip::CompressionMethod;
 use crate::cancel::{check_cancelled, BundleCancelToken};
 use crate::error::{BundleError, Result};
 use crate::git_capture::{
-    GitCaptureSession, WrittenEntryDigests, GIT_DIFF_NAME, GIT_STATUS_NAME, HANDOFF_NAME,
+    GitCaptureSession, WrittenEntryDigests, GIT_DIFF_NAME, GIT_INDEX_DIFF_NAME,
+    GIT_OMITTED_PATHS_NAME, GIT_STATUS_NAME, GIT_WORKTREE_DIFF_NAME, HANDOFF_NAME,
 };
 use crate::manifest::build_manifest;
 use crate::plan::BundlePlan;
@@ -23,7 +24,7 @@ use crate::zip_entry::write_entry;
 const BUFFER_SIZE: usize = 256 * 1024;
 const OUTPUT_BUFFER_SIZE: usize = 256 * 1024;
 const MANIFEST_NAME: &str = "BUNDLE_MANIFEST.json";
-const GENERATED_ENTRY_COUNT: u64 = 4;
+const GENERATED_ENTRY_COUNT: u64 = 7;
 const COMPRESSION_LEVEL: i64 = 6;
 
 #[derive(Debug)]
@@ -148,6 +149,9 @@ fn write_zip(
     let git_evidence = git_session.finish(&written_digests, cancel_token)?;
     let generated_bytes = git_evidence.status.len() as u64
         + git_evidence.diff.len() as u64
+        + git_evidence.index_diff.len() as u64
+        + git_evidence.worktree_diff.len() as u64
+        + git_evidence.omitted_paths.len() as u64
         + git_evidence.handoff.len() as u64;
     let (manifest_json, total_bytes_best_effort) = build_manifest_json(
         plan,
@@ -160,6 +164,15 @@ fn write_zip(
     for (name, contents) in [
         (GIT_STATUS_NAME, git_evidence.status.as_slice()),
         (GIT_DIFF_NAME, git_evidence.diff.as_slice()),
+        (GIT_INDEX_DIFF_NAME, git_evidence.index_diff.as_slice()),
+        (
+            GIT_WORKTREE_DIFF_NAME,
+            git_evidence.worktree_diff.as_slice(),
+        ),
+        (
+            GIT_OMITTED_PATHS_NAME,
+            git_evidence.omitted_paths.as_slice(),
+        ),
         (HANDOFF_NAME, git_evidence.handoff.as_slice()),
     ] {
         write_generated_entry(&mut zip, name, contents, manifest_options)?;
@@ -253,7 +266,15 @@ fn write_generated_entry(
 }
 
 fn reject_reserved_entry_collisions(entries: &[ScanEntry]) -> Result<()> {
-    let reserved = [MANIFEST_NAME, GIT_STATUS_NAME, GIT_DIFF_NAME, HANDOFF_NAME];
+    let reserved = [
+        MANIFEST_NAME,
+        GIT_STATUS_NAME,
+        GIT_DIFF_NAME,
+        GIT_INDEX_DIFF_NAME,
+        GIT_WORKTREE_DIFF_NAME,
+        GIT_OMITTED_PATHS_NAME,
+        HANDOFF_NAME,
+    ];
     if let Some(entry) = entries
         .iter()
         .find(|entry| reserved.contains(&entry.archive_path.as_str()))
