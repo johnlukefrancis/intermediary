@@ -71,11 +71,12 @@ never used for Git state.
 | COMMIT with a message and a non-empty STAGED section | Label reads `COMMITTING…` with `aria-busy`; on success the message clears, the new short sha flashes in the status line, STAGED empties. |
 | COMMIT while MERGE CONFLICTS has any unresolved row | Button disabled; if sent anyway the agent refuses with `GIT_UNMERGED_PATHS` — unresolved conflicts always block commit even when the index already differs from HEAD. |
 | COMMIT when nothing is committable (index equals HEAD, no merge in progress) or the message is blank | Button disabled with hint "Stage changes to commit"; the agent additionally refuses with `GIT_NOTHING_TO_COMMIT`. A merge resolved to HEAD's tree remains committable. |
-| COMMIT sent with the `expectedIndexTreeSha` from the last status the user reviewed, but the index moved since (another tool staged/committed) | Agent refuses with `SOURCE_CONTROL_STATE_CHANGED`; the commit box shows "STATE CHANGED — REVIEW AGAIN", the message is kept, and status auto-refreshes so the user reviews the new state before retrying. |
-| COMMIT modal is open (or COMMIT was just clicked) while a background status refresh arrives | The modal froze `{ expectedIndexTreeSha, expectedHeadSha, message, acknowledgedOutsideRoot }` from the status rendered the moment it opened; Confirm sends exactly that frozen object — a later refresh never rebinds it, and the agent still refuses if its own re-read shows the index moved. |
-| A pre-commit hook re-stages only paths already in the reviewed index list (e.g. lint-staged formatting the files being committed) | The commit is bound to both `expectedIndexTreeSha` and `expectedHeadSha`; the hook's changes are accepted and the result carries `hookChangedPaths` naming them, with no extra confirmation. |
-| A pre-commit hook (or anything else) stages a path outside the reviewed index list | The commit lands and is then retracted (`git update-ref` moves the branch back to the previous HEAD, CAS-guarded; detached HEAD retargets `HEAD` itself) before it is visible; refused with `SOURCE_CONTROL_STATE_CHANGED` "a commit hook staged unreviewed paths: …", `effect: notApplied`. If the retraction itself fails, `effect: unknown` names the sha so the user knows exactly what state HEAD is in. |
-| The index changes between the two reads `capture_status` takes to build one status object | The read retries (up to 3 times); still torn after that → `indexTreeSha` comes back as an empty string (no stable identity), and a commit against it is refused until the next status read. |
+| COMMIT sent with the `expectedSnapshotId` from the last status the user reviewed, but the repository moved since — another tool staged or committed, a branch switch, or a merge/cherry-pick/revert started or ended | Agent refuses with `SOURCE_CONTROL_STATE_CHANGED` "the repository changed since it was reviewed: branch, HEAD, index, or merge state"; the commit box shows "STATE CHANGED — REVIEW AGAIN", the message is kept, and status auto-refreshes so the user reviews the new state before retrying. One identity (`snapshotId`) covers the branch the commit would move, where it points, the tree it would record, and the sequencer state it would conclude — a same-HEAD, same-tree commit on a different branch, or the same index with a swapped `MERGE_HEAD`, is refused like any other move. |
+| COMMIT while the rendered status carries `snapshotId: ""` (a torn index read, or state the agent could not read) | Button disabled with the hint "Review did not capture a stable snapshot; refresh before committing"; if sent anyway the agent refuses with `SOURCE_CONTROL_STATE_CHANGED` "the review did not capture a stable snapshot" rather than comparing two empties as equal. |
+| COMMIT modal is open (or COMMIT was just clicked) while a background status refresh arrives | The request froze `{ message, expectedSnapshotId }` from the status rendered the moment COMMIT was clicked (plus the outside-root count the modal shows); Confirm sends exactly that frozen object — a later refresh never rebinds it, and the agent still refuses if its own re-read under the lock shows a different snapshot. |
+| A pre-commit hook re-stages only paths already in the reviewed tree (e.g. lint-staged formatting the files being committed) | The commit stands; the result carries `hookChangedPaths` naming those paths, shown as an informational notice with no extra confirmation. |
+| A pre-commit hook (or anything else) stages a path the reviewed tree did not touch | The commit stands — Git published it, hooks ran, and a ref rewind would be a second unreviewed mutation, not a cancellation. The result carries `hookAddedPaths` naming those paths, and the column shows a warning-tone notice "COMMIT HOOK ADDED UNREVIEWED FILES" that names them and says the last commit can be undone with a soft reset (plain words, no command). |
+| The index changes between the two reads `capture_status` takes to build one status object | The read retries (up to 3 times); still torn after that → `indexTreeSha` and `snapshotId` both come back as empty strings (no stable identity), COMMIT is disabled with the no-snapshot hint, and a commit sent against it anyway is refused until the next status read. |
 | Commit times out but the agent's HEAD re-check shows it landed | Reported to the UI as applied, with the new short sha (a slow post-commit hook, not a failed commit); never retried automatically. |
 | `omitted.stagedOutsideRoot > 0` (repo entry rooted below the Git top level) | Warning row "N STAGED OUTSIDE THIS FOLDER WILL ALSO BE COMMITTED"; COMMIT asks for confirmation; COMMIT stays enabled because `status.committable` is Git's answer, not the listed rows. |
 | `truncated` status (Git output over 8 MiB) | Degraded banner; STAGE ALL and COMMIT disabled. |
@@ -91,10 +92,13 @@ never used for Git state.
 | Discard Changes on a copied row | Confirm modal names the destination path only (`[path]`) and says it will be deleted; the copy's source file is never touched, so an unrelated edit already sitting in that source file survives. |
 | Discard Changes on a renamed row | Confirm modal names both endpoints (`[originalPath, path]`) and says what happens to each — the current path is discarded, the original path is restored. |
 | Discard Changes on a CHANGES row where the on-disk file changed since the last status read | The stale target's stamp mismatches; the agent refuses the whole action with `SOURCE_CONTROL_STATE_CHANGED` naming that path, and the row's confirm re-reads status rather than assuming the earlier list is still accurate. |
-| Discard Changes on an existing tracked or untracked file | The target is atomically renamed into an operation-owned quarantine directory (`.git/intermediary-discard/<opId>/`) first, and bytes + `mtimeMs` + `mtimeNanos` are verified on the quarantined file; a mismatch renames it back and refuses with `SOURCE_CONTROL_STATE_CHANGED` (`notApplied` when no earlier target in the batch already succeeded); only then does `git restore --worktree` (tracked) or the delete (untracked) run. |
-| Discard Changes on a row that was already missing at the last status read (target carries `expectedMissing: true`) | If the path now exists, refused with `SOURCE_CONTROL_STATE_CHANGED` — a newer file appeared and is preserved rather than restored over; otherwise `git restore --worktree` runs to bring the tracked file back. |
+| Discard Changes on an existing tracked or untracked file | The target is atomically renamed into its own quarantine directory (`<git_dir>/intermediary-discard/<opId>-<targetIndex>/`, one per target of the action) as `claimed` first, and bytes + `mtimeMs` + `mtimeNanos` are verified on the quarantined file; a mismatch renames it back and refuses with `SOURCE_CONTROL_STATE_CHANGED` (`notApplied` when no earlier target in the batch already succeeded). On a match a `verified` marker (`<path>\n<plan>\n`) is written before anything is destroyed, then `git restore --worktree` (tracked) or the delete (untracked) runs, and the claim is renamed `retained` — the bytes stay on disk until the next agent start, so a discard the user regrets can still be recovered by hand. Anything failing after that marker is written (the Git command, or the retention itself) renames the claim to `unrestored` instead, reports `effect: unknown`, and names that path: the worktree path is already empty, so those bytes are the only copy the user has. |
+| Discard Changes on a row that was already missing at the last status read (target carries `expectedMissing: true`) | If the path now exists, refused with `SOURCE_CONTROL_STATE_CHANGED` "<path> was created after it was reviewed" — a newer file appeared and is preserved rather than restored over; otherwise `git restore --worktree` runs to bring the tracked file back. |
+| Discard Changes on a target the review asserted nothing about (a rename origin the UI showed as already gone) | Absent is what that target should be, so it is restored (no claim to make). If something is there now — a directory, a symlink, a file behind an unreadable parent — nothing can prove a discard would destroy what the user looked at, so it is refused with `SOURCE_CONTROL_STATE_CHANGED` "cannot identify <path> before discarding it (not a regular file the review could stamp)". |
+| Discard Changes where the worktree and its repository live on different volumes (a linked worktree on another drive) | The claim rename can never move the file, so the discard is refused with `SOURCE_CONTROL_UNSUPPORTED_LAYOUT` ("the worktree and its repository live on different volumes"), `effect: notApplied`; the column heads it "UNSUPPORTED REPOSITORY LAYOUT". It is a layout to change, not a state that settles. |
+| A claimed file cannot be put back (verification mismatch rolls back, or a later step fails) because something now occupies the original path, or the filesystem has no rename that refuses to replace | The put-back never overwrites what is there: the claim is renamed to `unrestored` inside its quarantine directory and held, the failure names that path, and `effect: unknown`. On WSL's 9p mount of a Windows drive (`/mnt/c`) no no-replace rename exists at all, so a rollback there always holds the bytes rather than returning them — serve Windows drives through the host agent instead. |
 | Discard Changes on multiple targets, one restores successfully and a later one fails | `effect: unknown`, with the message listing what was already restored — never `notApplied` once any target's effect boundary was crossed. |
-| Agent starts after a crash left quarantined discard targets behind | The leftovers under `.git/intermediary-discard/` are removed by a bounded startup sweep and logged; nothing is left wedging the repo. |
+| Agent starts and finds quarantine directories under `<git_dir>/intermediary-discard/` (a previous session's retained bytes, or a crash) | One bounded sweep per git dir on the first status read. A directory whose `<opId>` names a discard running right now — a sibling configured root over the same git dir can start one at any moment — is left alone entirely. Otherwise: a directory with a `verified` marker and no `unrestored` file is removed and its marker's path and plan logged — that finishes exactly the destruction the discard was authorized to do, and releases the previous session's retained bytes. A directory holding `unrestored` bytes, or one with no `verified` marker at all (a process that died between claiming and verifying), is kept and logged; nothing unproven is ever deleted. One directory that cannot be read or removed is logged with its path and does not stop the rest, and the sweep logs how many it removed, held, and failed on. |
 | Discard Changes generally | Confirm modal (destructive) lists every target path and what happens to it (restored from the index, or deleted); tracked files restore, untracked files are deleted; never directories. |
 | Copy row action (stage/unstage/discard) | Acts on the destination path only; the copy's source is never staged, unstaged, or discarded by that action. |
 | Cross-root rename (one endpoint inside the configured root, one outside) | The row shows a warning; the count of such rows adds to `omitted.stagedOutsideRoot` so COMMIT's confirmation names how many outside-root changes ride along. |
@@ -106,6 +110,8 @@ never used for Git state.
 | Host's WSL backend goes unavailable mid-shutdown while a mutation was forwarded to it | Counted as drained only when the host has no outstanding forwarded mutation request id to that backend; otherwise the host keeps waiting, up to the same emergency bound. |
 | Supervisor stops/restarts the agent during a long mutation | Labels the stop drained only on an explicit `drained: true` ack; on `drained: false` or no ack it waits for the process up to 480 s before its kill path runs; the process disappearing without an ack is logged `unknown`, never `drained`, and WSL distro termination is skipped while finality is unknown. |
 | Forced stop of the Windows Git process tree | Git's children run inside a Job Object with no kill-on-close limit: the tree is terminated on forced stop, drain expiry, and shutdown finalization, taking hooks, credential helpers, and `git-remote-*` descendants with it instead of detaching their pipes. Helpers that close their pipes outlive Git as on Unix. |
+| Forced stop of the host agent itself (emergency kill after a drain never completed) | On Windows the supervisor spawns the host agent into a supervisor-owned Job Object with no kill-on-close limit and terminates that job on the emergency path, so Git, hooks, and credential helpers under a hung agent go with it instead of being orphaned. An agent the app adopted rather than spawned has no job: it is stopped by binary identity and its descendants are not owned, which the log says outright ("no tree owner (adopted agent)"). |
+| A Git mutation (stage, unstage, discard, commit, push, pull) cannot be given a process-tree owner on Windows | Refused before the process spawns, `effect: notApplied`; if the job could only be attached after the spawn and that attach failed, the child is killed and the outcome is reported `unknown`. Reads still run without a job (a detached reader is honest about what it owns) and log that once. |
 | A tracked file changes under a folder the watcher's structural matcher would otherwise ignore (e.g. a tracked file living under `target/`) | The event still emits — the watcher's tracked-path set (from `git ls-files`) overrides the structural exclude for tracked paths, so SOURCE stays current; only untracked noise under those folders stays suppressed. |
 
 ## Cancellation and timeouts
@@ -157,6 +163,39 @@ reported from before/after HEAD (commit) or from the refreshed lists.
   body under the rail header, never as a second segmented rocker in the header.
 - Rows use the stacked name-over-directory idiom and must fit the 300px workspace-mode rail.
 
+## Accepted boundaries
+
+These were raised by the third adversarial review (`docs/reports/source_control_hardening_review_20260903.md`)
+and are recorded as decisions, not as open defects. Each names what the product deliberately does not do.
+
+- **No private commit transaction (hooks inside it, CAS publish).** It would reimplement `git commit` —
+  hook environment, `commit.cleanup`, gpgsign, sequencer cleanup, reflog, rerere — and isolate nothing
+  real, because hooks mutate the worktree, not only the index. The snapshot binds the commit's input and
+  Git owns publication.
+- **A hook may rewrite reviewed paths or edit the message (`prepare-commit-msg`).** Hooks are
+  repository-trusted code that every Git client runs. What a hook did is reported (`hookChangedPaths`,
+  `hookAddedPaths`), never pre-empted, and a commit Git published is never rewound.
+- **No content digest on status.** A changed file's identity is its size plus its nanosecond mtime.
+  Two different contents sharing both are possible; hashing every changed file on every status read is
+  not a cost this product pays, and the retained quarantine is the recovery path when it happens.
+- **Restore stays Git's, so a TOCTOU window exists around it.** `git restore --worktree` keeps eol,
+  filter, and LFS fidelity that a hand-rolled write would lose. The window is one process spawn per
+  target, and the claim already took the bytes the user reviewed out of the worktree first.
+- **The re-verify → ref-transaction window stays open.** Between the snapshot re-read under the mutation
+  lock and Git's own ref transaction, an external `git checkout` can still move HEAD. Closing it needs the
+  private-transaction route above.
+- **A worktree on a different volume from its repository is refused, not supported.** No rename can claim
+  a target across volumes; the layout is the thing to change (`SOURCE_CONTROL_UNSUPPORTED_LAYOUT`).
+- **`rename_no_replace` is not available on every filesystem.** Probed 2026-09-03 on this machine: ext4
+  returns `EEXIST` when the destination exists and succeeds otherwise; WSL2's 9p mount of a Windows drive
+  (`/mnt/c`) returns `EINVAL` unconditionally, so on 9p a rollback can never put bytes back and holds them
+  as `unrestored` instead. Windows drives are served through the host agent, where `MoveFileExW` works.
+- **Adopted agents have no process-tree owner.** An `im_agent`/`im_host_agent` the app reclaimed rather
+  than spawned is stopped by binary identity; its Git descendants are not owned by any job.
+- **Ownership stops at the Tauri process.** It is the outermost owner this product has; beyond it,
+  finality belongs to Git's own crash safety. On Linux/WSL the agent drains on SIGTERM/EOF and distro
+  termination is the outer owner — there is no supervisor above the supervisor.
+
 ## Acceptance
 
 1. Counts and sections match `git status` for a WSL repo and a host repo, including `MM`, renames,
@@ -167,8 +206,10 @@ reported from before/after HEAD (commit) or from the refreshed lists.
 4. SOURCE survives a resize across the handset/standard band and an app restart.
 5. Discarding a copied row deletes only the destination and leaves an unrelated edit already sitting in
    the copy's source file intact.
-6. A commit sent against a stale `expectedIndexTreeSha` (index moved since the last review) is refused
-   with `SOURCE_CONTROL_STATE_CHANGED`, never silently absorbs the newer state.
+6. A commit sent against a stale `expectedSnapshotId` (branch, HEAD, index tree, or merge state moved
+   since the last review) is refused with `SOURCE_CONTROL_STATE_CHANGED`, never silently absorbs the
+   newer state; a status with no stable snapshot (`snapshotId: ""`) disables COMMIT rather than
+   committing unchecked.
 7. A discard sent against a stale on-disk stamp is refused with `SOURCE_CONTROL_STATE_CHANGED`, naming the
    path, rather than destroying newer content than the user confirmed.
 8. Stage-all/unstage-all never touch MERGE CONFLICTS rows; conflicts stay unmerged until resolved per row.
@@ -176,9 +217,10 @@ reported from before/after HEAD (commit) or from the refreshed lists.
    exiting, up to the 450 s emergency bound, and never kills Git mid-command inside that bound.
 10. A tracked file that lives under `target/` or another structurally-ignored folder still refreshes
     SOURCE when it changes, while untracked noise under those folders keeps producing no refresh.
-11. A supplied pre-commit hook scenario either lands exactly the reviewed tree (accepting only paths the
-    hook itself changed, reported via `hookChangedPaths`) or is retracted with `SOURCE_CONTROL_STATE_CHANGED`
-    before HEAD is visibly moved — never a silently-widened commit.
+11. A supplied pre-commit hook scenario lands and is reported for what it is: a hook that rewrote
+    reviewed paths reports them in `hookChangedPaths` (informational), and a hook that added paths the
+    reviewed tree did not touch reports them in `hookAddedPaths` with the warning-tone notice — never a
+    silently-widened commit, and never a ref rewind after publication.
 12. Missing-then-recreated, same-length/same-mtime, and multi-path partial-failure discard scenarios all
     preserve the newer bytes on disk and never report `notApplied` once an effect has landed.
 13. A host or WSL close/restart during an operation longer than 60 s leaves that operation owned to a

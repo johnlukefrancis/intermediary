@@ -73,11 +73,10 @@ fn discard_carries_targets_with_optional_stamps_and_expected_missing() {
 }
 
 #[test]
-fn commit_carries_the_reviewed_index_tree_and_head_null_on_an_unborn_branch() {
+fn commit_carries_the_reviewed_snapshot_identity_and_nothing_else() {
     let payload = SourceControlActionPayload::Commit {
         message: "Change base".to_string(),
-        expected_index_tree_sha: "4b825dc642cb6eb9a060e54bf8d69288fbee4904".to_string(),
-        expected_head_sha: None,
+        expected_snapshot_id: "9f".repeat(32),
     };
     assert_eq!(
         action_json(&payload),
@@ -86,21 +85,9 @@ fn commit_carries_the_reviewed_index_tree_and_head_null_on_an_unborn_branch() {
             "action": {
                 "kind": "commit",
                 "message": "Change base",
-                "expectedIndexTreeSha": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
-                "expectedHeadSha": null
+                "expectedSnapshotId": "9f".repeat(32)
             }
         })
-    );
-    assert_eq!(round_trip(payload.clone()), payload);
-
-    let payload = SourceControlActionPayload::Commit {
-        message: "Change base".to_string(),
-        expected_index_tree_sha: "4b825dc642cb6eb9a060e54bf8d69288fbee4904".to_string(),
-        expected_head_sha: Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_string()),
-    };
-    assert_eq!(
-        action_json(&payload)["action"]["expectedHeadSha"],
-        json!("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     );
     assert_eq!(round_trip(payload.clone()), payload);
 }
@@ -155,6 +142,7 @@ fn status_carries_the_index_identity_the_lock_state_and_entry_stamps() {
         conflicts: Vec::new(),
         committable: true,
         index_tree_sha: "abc".to_string(),
+        snapshot_id: "def".to_string(),
         mutation_in_progress: false,
         omitted: SourceControlOmitted::default(),
         truncated: false,
@@ -162,6 +150,7 @@ fn status_carries_the_index_identity_the_lock_state_and_entry_stamps() {
     };
     let wire = serde_json::to_value(&status).expect("serialize status");
     assert_eq!(wire["indexTreeSha"], json!("abc"));
+    assert_eq!(wire["snapshotId"], json!("def"));
     assert_eq!(wire["mutationInProgress"], json!(false));
     assert_eq!(wire["index"][0].get("worktreeStamp"), None);
     assert_eq!(wire["index"][0].get("worktreeMissing"), None, "false is omitted");
@@ -177,25 +166,36 @@ fn status_carries_the_index_identity_the_lock_state_and_entry_stamps() {
 }
 
 #[test]
-fn action_result_omits_hook_changed_paths_when_empty_and_carries_them_when_not() {
+fn action_result_carries_each_hook_path_list_only_when_the_hook_did_that() {
     let base = SourceControlActionResult {
         repo_id: "repo".to_string(),
         kind: SourceControlActionKind::Commit,
         status: minimal_status(),
         commit_sha: Some("deadbeef".to_string()),
-        hook_changed_paths: Vec::new(),
+        hook_changed_paths: None,
+        hook_added_paths: None,
     };
     let wire = serde_json::to_value(&base).expect("serialize result");
     assert_eq!(wire.get("hookChangedPaths"), None);
+    assert_eq!(wire.get("hookAddedPaths"), None);
 
-    let with_hook_changes = SourceControlActionResult {
-        hook_changed_paths: vec!["formatted.txt".to_string()],
+    let with_hook_paths = SourceControlActionResult {
+        hook_changed_paths: Some(vec!["formatted.txt".to_string()]),
+        hook_added_paths: Some(vec!["generated.txt".to_string()]),
         ..base
     };
-    let wire = serde_json::to_value(&with_hook_changes).expect("serialize result");
+    let wire = serde_json::to_value(&with_hook_paths).expect("serialize result");
     assert_eq!(wire["hookChangedPaths"], json!(["formatted.txt"]));
+    assert_eq!(wire["hookAddedPaths"], json!(["generated.txt"]));
     let back: SourceControlActionResult = serde_json::from_value(wire).expect("deserialize result");
-    assert_eq!(back.hook_changed_paths, vec!["formatted.txt".to_string()]);
+    assert_eq!(
+        back.hook_changed_paths,
+        Some(vec!["formatted.txt".to_string()])
+    );
+    assert_eq!(
+        back.hook_added_paths,
+        Some(vec!["generated.txt".to_string()])
+    );
 }
 
 fn minimal_status() -> SourceControlStatus {
@@ -211,6 +211,7 @@ fn minimal_status() -> SourceControlStatus {
         conflicts: Vec::new(),
         committable: false,
         index_tree_sha: "abc".to_string(),
+        snapshot_id: "def".to_string(),
         mutation_in_progress: false,
         omitted: SourceControlOmitted::default(),
         truncated: false,

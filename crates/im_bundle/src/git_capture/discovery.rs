@@ -24,7 +24,8 @@ pub(crate) fn initial_issue(failure: GitCommandFailure) -> GitCaptureIssue {
         ),
         GitCommandFailureKind::SpawnFailed
         | GitCommandFailureKind::InputWriteFailed
-        | GitCommandFailureKind::OutputReadFailed => (
+        | GitCommandFailureKind::OutputReadFailed
+        | GitCommandFailureKind::NoProcessTreeOwner { .. } => (
             "commandFailure",
             "The Git discovery/status command could not be executed or read.",
         ),

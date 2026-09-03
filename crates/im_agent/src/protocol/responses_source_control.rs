@@ -92,6 +92,13 @@ pub struct SourceControlStatus {
     /// (the index holds unmerged entries). The UI returns it with a commit as
     /// the precondition that the index is still the one it reviewed.
     pub index_tree_sha: String,
+    /// One identity for everything a commit is bound to: the branch (or
+    /// `detached`), HEAD, the index tree, and the in-progress merge, cherry-pick
+    /// or revert Git records in its git dir. Empty exactly when the snapshot
+    /// could not be taken (a torn index read, or an unreadable sequencer file).
+    /// The UI returns it with a commit as the precondition that the repository
+    /// is still the one it reviewed.
+    pub snapshot_id: String,
     /// True when this repository's physical mutation lock was held while the
     /// status was read, so the lists may be mid-transaction.
     pub mutation_in_progress: bool,
@@ -163,11 +170,16 @@ pub struct SourceControlActionResult {
     pub status: SourceControlStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit_sha: Option<String>,
-    /// Paths a commit hook changed beyond the reviewed index, accepted because
-    /// every one of them was already part of the paths the user reviewed (an
-    /// in-root reviewed path, or an outside-root path staged at precondition
-    /// time when the UI had shown its outside-root confirmation). Present only
-    /// for a commit whose hook changed something; empty otherwise.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub hook_changed_paths: Vec<String>,
+    /// Reviewed paths a commit hook rewrote before the commit landed — paths
+    /// the user had already reviewed, whose content the hook changed (a
+    /// formatter reformatting what it just committed). Repository-root
+    /// relative, `None` when the hook rewrote nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook_changed_paths: Option<Vec<String>>,
+    /// Paths a commit hook added to the commit that the user never reviewed.
+    /// The commit stands — it is history now — and these paths are what the UI
+    /// must show so the user learns what rode along. Repository-root relative,
+    /// `None` when the hook added nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook_added_paths: Option<Vec<String>>,
 }

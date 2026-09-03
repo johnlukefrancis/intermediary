@@ -5,14 +5,13 @@ use super::{AgentSupervisor, EnsureProcessResult};
 use crate::agent::host_process_control::{terminate_host_agent_process, HostTerminateOutcome};
 use crate::agent::install::AgentBundlePaths;
 use crate::agent::process_control::{
-    capture_log_cursor, spawn_host_agent_process, wait_for_agent_ready,
+    capture_log_cursor, spawn_host_agent_process, wait_for_agent_ready, SpawnedHostAgent,
 };
 use crate::agent::supervisor::process_kill::{KILL_WAIT_POLL, KILL_WAIT_TIMEOUT};
-use crate::agent::supervisor::state::ProcessKind;
+use crate::agent::supervisor::state::{ProcessKind, SupervisedChild};
 use crate::agent::AgentWebSocketAuth;
 use crate::obs::logging;
 use std::path::Path;
-use std::process::Child;
 
 impl AgentSupervisor {
     pub(super) async fn ensure_host_running(
@@ -102,33 +101,40 @@ impl AgentSupervisor {
         let bundle_for_spawn = bundle.clone();
         let host_ws_token = auth.host_ws_token.clone();
         let auth = auth.clone();
-        let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-            let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
-            let log_offset = capture_log_cursor(&log_file);
-            let mut child = spawn_host_agent_process(
-                &bundle_for_spawn,
-                host_port,
-                wsl_port,
-                &auth.host_ws_token,
-                &auth.wsl_ws_token,
-                &auth.host_allowed_origins,
-            )?;
-            wait_for_agent_ready(
-                &mut child,
-                host_port,
-                ProcessKind::Host.label(),
-                &log_file,
-                log_offset,
-            )?;
-            Ok(child)
-        })
-        .await
-        .map_err(|err| format!("Host agent spawn task failed: {err}"))?;
+        let spawned =
+            tauri::async_runtime::spawn_blocking(move || -> Result<SupervisedChild, String> {
+                let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
+                let log_offset = capture_log_cursor(&log_file);
+                let SpawnedHostAgent { mut child, job } = spawn_host_agent_process(
+                    &bundle_for_spawn,
+                    host_port,
+                    wsl_port,
+                    &auth.host_ws_token,
+                    &auth.wsl_ws_token,
+                    &auth.host_allowed_origins,
+                )?;
+                if let Err(err) = wait_for_agent_ready(
+                    &mut child,
+                    host_port,
+                    ProcessKind::Host.label(),
+                    &log_file,
+                    log_offset,
+                ) {
+                    // An agent that never became ready is never recorded, so
+                    // this is the last hold anyone has on its tree: spend the
+                    // owner here rather than drop it and leak the descendants.
+                    let _ = job.terminate();
+                    return Err(err);
+                }
+                Ok(SupervisedChild::owned(child, job))
+            })
+            .await
+            .map_err(|err| format!("Host agent spawn task failed: {err}"))?;
 
         match spawned {
-            Ok(child) => {
-                let pid = child.id();
-                self.replace_child(ProcessKind::Host, child).await?;
+            Ok(process) => {
+                let pid = process.child.id();
+                self.replace_child(ProcessKind::Host, process).await?;
                 self.record_owned_host_backend(host_port, &host_ws_token)?;
                 self.update_last_spawn(ProcessKind::Host)?;
                 logging::log(

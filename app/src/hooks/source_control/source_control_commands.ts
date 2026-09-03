@@ -23,11 +23,11 @@ export function useSourceControlCommands(
     // The caller freezes every field from the status it reviewed; nothing here re-reads live state.
     commit: useCallback((request: SourceControlCommitRequest) => {
       if (request.message.trim().length === 0) return;
+      if (request.expectedSnapshotId.length === 0) return;
       void runAction({
         kind: "commit",
         message: request.message,
-        expectedIndexTreeSha: request.expectedIndexTreeSha,
-        expectedHeadSha: request.expectedHeadSha,
+        expectedSnapshotId: request.expectedSnapshotId,
       });
     }, [runAction]),
     push: useCallback(() => { void runAction({ kind: "push" }); }, [runAction]),

@@ -4,6 +4,7 @@
 pub mod cancel;
 pub mod compression_policy;
 pub mod error;
+pub mod fs_atomic;
 pub mod git;
 pub mod git_capture;
 pub mod global_excludes;
@@ -11,6 +12,7 @@ pub mod global_excludes_summary;
 pub mod manifest;
 pub(crate) mod omission;
 pub mod plan;
+pub mod process_job;
 pub mod progress;
 pub mod progress_sink;
 pub mod scanner;

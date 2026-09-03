@@ -12,8 +12,8 @@ use crate::protocol::{
     SourceControlEntryArea, SourceControlScope, SourceControlStatus, SourceControlWorktreeStamp,
 };
 
-use super::status_stamp::stamp_of;
-use super::{
+use crate::source_control::status::stamp::stamp_of;
+use crate::source_control::{
     run_source_control_action, source_control_status, SourceControlActionOutcome,
     SourceControlLocks,
 };
@@ -111,15 +111,35 @@ pub(super) async fn try_act_with(
     run_source_control_action(locks, root, action).await
 }
 
-/// A commit that names the index and HEAD the caller has just read, the way
-/// the UI sends the identity it displayed.
+/// A commit that names the snapshot the caller has just read, the way the UI
+/// sends the identity it displayed.
 pub(super) async fn commit_now(root: &Path, message: &str) -> SourceControlActionPayload {
-    let reviewed = status(root).await;
+    commit_for(&status(root).await, message)
+}
+
+/// The commit the UI would send for a status it is already holding.
+pub(super) fn commit_for(reviewed: &SourceControlStatus, message: &str) -> SourceControlActionPayload {
     SourceControlActionPayload::Commit {
         message: message.to_string(),
-        expected_index_tree_sha: reviewed.index_tree_sha,
-        expected_head_sha: reviewed.head_sha,
+        expected_snapshot_id: reviewed.snapshot_id.clone(),
     }
+}
+
+/// Installs an executable Git hook. The body is written to a sibling path and
+/// renamed into place: Git forks while this process may still hold a write
+/// handle open, and exec'ing a file another descriptor has open for writing
+/// fails with ETXTBSY. Renaming publishes a file no descriptor of ours points
+/// at, so the hook is either absent or executable, never busy.
+#[cfg(unix)]
+pub(super) fn write_hook(root: &Path, name: &str, body: &str) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let hooks = root.join(".git/hooks");
+    std::fs::create_dir_all(&hooks).expect("hooks dir");
+    let staging = hooks.join(format!("{name}.staging"));
+    std::fs::write(&staging, format!("#!/bin/sh\n{body}")).expect("hook body");
+    std::fs::set_permissions(&staging, std::fs::Permissions::from_mode(0o755)).expect("hook mode");
+    std::fs::rename(&staging, hooks.join(name)).expect("publish hook");
 }
 
 /// A discard whose targets carry the stamps on disk right now (or
@@ -161,6 +181,32 @@ pub(super) fn missing_target(path: &str) -> SourceControlDiscardTarget {
         expected_stamp: None,
         expected_missing: true,
     }
+}
+
+/// The discard quarantine directories under one git dir. Absent directory =
+/// no operation ever ran here, which is a legitimate answer, not a failure.
+pub(super) fn quarantine_entries(git_dir: &Path) -> Vec<PathBuf> {
+    let dir = git_dir.join("intermediary-discard");
+    match std::fs::read_dir(&dir) {
+        Ok(read) => read.map(|entry| entry.expect("read dir").path()).collect(),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
+        Err(error) => panic!("read {}: {error}", dir.display()),
+    }
+}
+
+/// The one quarantine directory a single-claiming-target action left behind.
+pub(super) fn only_operation(git_dir: &Path) -> PathBuf {
+    let mut found = quarantine_entries(git_dir);
+    assert_eq!(
+        found.len(),
+        1,
+        "one claiming target owns exactly one quarantine directory"
+    );
+    found.remove(0)
+}
+
+pub(super) fn text(path: &Path) -> String {
+    String::from_utf8(std::fs::read(path).expect("read file")).expect("utf-8")
 }
 
 pub(super) fn disk_stamp(root: &Path, path: &str) -> Option<SourceControlWorktreeStamp> {

@@ -54,6 +54,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/reports/bundle_global_excludes_report.md](reports/bundle_global_excludes_report.md) | Model verdict for bundle global-exclude ownership and manifest evidence |
 | [docs/reports/source_control_adversarial_review_20260903.md](reports/source_control_adversarial_review_20260903.md) | External adversarial review of the Source Control mutation transaction (P0/P1 findings and their required end state) |
 | [docs/reports/source_control_fix_layer_review_20260903.md](reports/source_control_fix_layer_review_20260903.md) | External closure review of the hardening layer: two remaining P0 owners (effect-boundary binding, drain-governed shutdown) |
+| [docs/reports/source_control_hardening_review_20260903.md](reports/source_control_hardening_review_20260903.md) | External hardening review of the split tree: reviewed-snapshot commit identity, post-publication hook reporting, discard quarantine safety, and process-tree ownership |
 
 ## Environment
 

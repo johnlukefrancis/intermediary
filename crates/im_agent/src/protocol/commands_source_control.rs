@@ -104,16 +104,13 @@ pub enum SourceControlActionPayload {
     Discard {
         targets: Vec<SourceControlDiscardTarget>,
     },
-    /// `expected_index_tree_sha` and `expected_head_sha` are the `indexTreeSha`
-    /// and `headSha` of the status the user reviewed; the agent refuses the
-    /// commit when either has moved. `expected_head_sha` is `null` when the
-    /// reviewed status was an unborn branch, and is still sent as that literal
-    /// `null` rather than omitted: the agent's precondition compares against
-    /// it either way.
+    /// `expected_snapshot_id` is the `snapshotId` of the status the user
+    /// reviewed: one identity covering branch, HEAD, index and merge state.
+    /// The agent refuses the commit when it no longer matches the repository,
+    /// and refuses an empty one outright rather than comparing it.
     Commit {
         message: String,
-        expected_index_tree_sha: String,
-        expected_head_sha: Option<String>,
+        expected_snapshot_id: String,
     },
     Push,
     Pull,

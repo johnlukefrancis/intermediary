@@ -1174,60 +1174,96 @@
       "summary": "WebSocket accept loop and connection dispatch"
     },
     {
-      "path": "crates/im_agent/src/source_control/actions_commit_retract.rs",
-      "summary": "Post-commit tree comparison against the reviewed state, and the CAS retraction of a hook overreach"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_commit.rs",
-      "summary": "Commit under the reviewed index+HEAD precondition, with timeout recovery and hook finalization"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_discard_claim.rs",
-      "summary": "Atomic per-target quarantine claim, verification, release, and rollback for discard"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_discard_target.rs",
-      "summary": "Executes one discard target: claim, classify, mutate, and release/rollback the claim"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_discard.rs",
-      "summary": "Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_remote.rs",
-      "summary": "Push and pull for one repo root, including upstream selection"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions_stage.rs",
-      "summary": "Stage and unstage one section or an explicit path list, never a pathspec wildcard"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/actions.rs",
+      "path": "crates/im_agent/src/source_control/actions/mod.rs",
       "summary": "Dispatches one source-control mutation and reads the status that follows it"
     },
     {
-      "path": "crates/im_agent/src/source_control/diff.rs",
-      "summary": "Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)"
+      "path": "crates/im_agent/src/source_control/actions/remote.rs",
+      "summary": "Push and pull for one repo root, including upstream selection"
     },
     {
-      "path": "crates/im_agent/src/source_control/discard_quarantine.rs",
-      "summary": "Quarantine directory naming for a discard operation and the bounded startup sweep of stale ones"
+      "path": "crates/im_agent/src/source_control/actions/stage.rs",
+      "summary": "Stage and unstage one section or an explicit path list, never a pathspec wildcard"
     },
     {
-      "path": "crates/im_agent/src/source_control/git_version.rs",
-      "summary": "Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)"
+      "path": "crates/im_agent/src/source_control/actions/tests.rs",
+      "summary": "Real-git tempdir tests for stage, unstage, discard, push, and pull actions"
     },
     {
-      "path": "crates/im_agent/src/source_control/image_diff_sides.rs",
+      "path": "crates/im_agent/src/source_control/commit/finalize.rs",
+      "summary": "Post-commit comparison of the landed tree against the reviewed one, split into hook-changed and hook-added paths"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/commit/mod.rs",
+      "summary": "Commit under the reviewed-snapshot precondition, with timeout recovery and hook reporting"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/commit/tests_hooks.rs",
+      "summary": "Real-git tests for what a commit hook did to a landed commit: reviewed rewrites and unreviewed additions are both rep..."
+    },
+    {
+      "path": "crates/im_agent/src/source_control/commit/tests_preconditions.rs",
+      "summary": "Real-git tests binding a commit to the reviewed snapshot identity, and row/section ownership"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/commit/tests.rs",
+      "summary": "Real-git tests for the commit oracle, its snapshot precondition, and the landed-but-unread error"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/diff/image_sides.rs",
       "summary": "Reads one image-diff side from a Git blob or from the working tree, bounded and base64-encoded"
     },
     {
-      "path": "crates/im_agent/src/source_control/image_diff.rs",
+      "path": "crates/im_agent/src/source_control/diff/image.rs",
       "summary": "Chooses the before/after Git snapshots of one changed image and assembles both sides"
     },
     {
-      "path": "crates/im_agent/src/source_control/locks.rs",
+      "path": "crates/im_agent/src/source_control/diff/mod.rs",
+      "summary": "Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/diff/tests_image.rs",
+      "summary": "Real-git tempdir tests for before/after image-diff side selection"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/diff/tests.rs",
+      "summary": "Real-git tempdir tests for bounded per-file diff capture"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/claim.rs",
+      "summary": "Per-target quarantine claim, verification, release, and rollback for discard"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/mod.rs",
+      "summary": "Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/quarantine.rs",
+      "summary": "Quarantine directory naming and phase files for a discard operation, and the bounded startup sweep"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/target.rs",
+      "summary": "Executes one discard target: claim, classify, mutate, and release/rollback the claim"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/tests_quarantine.rs",
+      "summary": "Real-git tests for the discard quarantine's phase files, its per-target directories, and retention"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/tests_stamps.rs",
+      "summary": "Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/tests_sweep.rs",
+      "summary": "Tests for the once-per-process discard quarantine sweep: what it finishes, what it spares, and what it survives"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/locks/mod.rs",
       "summary": "Mutation serialization keyed by the physical Git directory, plus the drain gate"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/locks/tests.rs",
+      "summary": "Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress"
     },
     {
       "path": "crates/im_agent/src/source_control/mod.rs",
@@ -1238,72 +1274,44 @@
       "summary": "UI path validation and normalization, NUL-joined pathspec input, and the in-root containment guard"
     },
     {
-      "path": "crates/im_agent/src/source_control/runner_failure.rs",
+      "path": "crates/im_agent/src/source_control/runner/failure.rs",
       "summary": "Maps a Git command failure onto an AgentError and, for mutations, its proven effect"
     },
     {
-      "path": "crates/im_agent/src/source_control/runner.rs",
+      "path": "crates/im_agent/src/source_control/runner/git_version.rs",
+      "summary": "Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/runner/mod.rs",
       "summary": "spawn_blocking bridge and Git failure to AgentError mapping for source control"
     },
     {
-      "path": "crates/im_agent/src/source_control/status_index_tree.rs",
+      "path": "crates/im_agent/src/source_control/status/index_tree.rs",
       "summary": "Read-only identity of the whole-repository index (`git write-tree` without writing)"
     },
     {
-      "path": "crates/im_agent/src/source_control/status_project.rs",
-      "summary": "Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/status_stamp.rs",
-      "summary": "Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/status.rs",
+      "path": "crates/im_agent/src/source_control/status/mod.rs",
       "summary": "Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape"
     },
     {
-      "path": "crates/im_agent/src/source_control/tests_actions.rs",
-      "summary": "Real-git tempdir tests for stage, unstage, discard, push, and pull actions"
+      "path": "crates/im_agent/src/source_control/status/project.rs",
+      "summary": "Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root"
     },
     {
-      "path": "crates/im_agent/src/source_control/tests_commit_hooks.rs",
-      "summary": "Real-git tests for what a commit hook may change: the reviewed set is accepted, anything beyond it is retracted"
+      "path": "crates/im_agent/src/source_control/status/snapshot.rs",
+      "summary": "One reviewed-snapshot identity over branch, HEAD, index tree, and in-progress merge state"
     },
     {
-      "path": "crates/im_agent/src/source_control/tests_commit.rs",
-      "summary": "Real-git tests for the commit oracle, its index/HEAD preconditions, and the landed-but-unread error"
+      "path": "crates/im_agent/src/source_control/status/stamp.rs",
+      "summary": "Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader"
     },
     {
-      "path": "crates/im_agent/src/source_control/tests_diff.rs",
-      "summary": "Real-git tempdir tests for bounded per-file diff capture"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests_discard_quarantine.rs",
-      "summary": "Real-git tests for the discard quarantine directory's cleanup and startup sweep"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests_discard_stamps.rs",
-      "summary": "Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests_image_diff.rs",
-      "summary": "Real-git tempdir tests for before/after image-diff side selection"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests_locks.rs",
-      "summary": "Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests_preconditions.rs",
-      "summary": "Real-git tests binding a commit to the reviewed index identity, and row/section ownership"
+      "path": "crates/im_agent/src/source_control/status/tests_projection.rs",
+      "summary": "Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping"
     },
     {
       "path": "crates/im_agent/src/source_control/tests_support.rs",
       "summary": "Real-git tempdir fixtures shared by the source-control tests"
-    },
-    {
-      "path": "crates/im_agent/src/source_control/tests.rs",
-      "summary": "Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping"
     },
     {
       "path": "crates/im_agent/src/staging/layout.rs",
@@ -1334,6 +1342,10 @@
       "summary": "Error types for bundle scanning and zip writing"
     },
     {
+      "path": "crates/im_bundle/src/fs_atomic.rs",
+      "summary": "Rename that refuses to replace an existing destination, on the two platforms the product runs on"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/command_child.rs",
       "summary": "Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner"
     },
@@ -1342,8 +1354,8 @@
       "summary": "Bounded pipe drain for the Git runner: grace after exit, then termination of the whole process tree"
     },
     {
-      "path": "crates/im_bundle/src/git_capture/command_job.rs",
-      "summary": "Windows Job Object primitives: create the job, assign a spawned child, terminate the tree on demand"
+      "path": "crates/im_bundle/src/git_capture/command_failure.rs",
+      "summary": "Why a Git command produced no usable output, and the bounded streams it failed with"
     },
     {
       "path": "crates/im_bundle/src/git_capture/command_stop.rs",
@@ -1352,6 +1364,10 @@
     {
       "path": "crates/im_bundle/src/git_capture/command_tests.rs",
       "summary": "Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command_tree_owner.rs",
+      "summary": "Getting a process-tree owner for one Git command, and how being refused one is reported"
     },
     {
       "path": "crates/im_bundle/src/git_capture/command_tree.rs",
@@ -1468,6 +1484,10 @@
     {
       "path": "crates/im_bundle/src/plan.rs",
       "summary": "Bundle plan schema and loader for im_bundle_cli"
+    },
+    {
+      "path": "crates/im_bundle/src/process_job.rs",
+      "summary": "Windows Job Object ownership of a spawned process tree, shared by the Git runner and the app's agent supervisor"
     },
     {
       "path": "crates/im_bundle/src/progress_sink.rs",
@@ -1734,6 +1754,10 @@
       "summary": "Spawn helpers for host/WSL agents and readiness probing"
     },
     {
+      "path": "src-tauri/src/lib/agent/process_control/log_tail.rs",
+      "summary": "Reads the agent log written since a spawn cursor, bounded by bytes and lines, for early-exit reporting"
+    },
+    {
       "path": "src-tauri/src/lib/agent/runtime_identity.rs",
       "summary": "Bounded SHA-256 identity for packaged and installed agent executables"
     },
@@ -1762,12 +1786,16 @@
       "summary": "Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/managed_processes/tests.rs",
+      "summary": "State transitions for the supervisor's recorded process and the tree owner it carries"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/probes.rs",
       "summary": "Async supervisor probe helpers for port, websocket auth, and origin compatibility"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/process_kill.rs",
-      "summary": "Blocking child-process termination helpers for supervisor-owned processes"
+      "summary": "Blocking termination of a supervisor-owned process and the tree it started"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/runtime.rs",

@@ -100,6 +100,7 @@ pub async fn execute_host_source_control(
                     status: outcome.status,
                     commit_sha: outcome.commit_sha,
                     hook_changed_paths: outcome.hook_changed_paths,
+                    hook_added_paths: outcome.hook_added_paths,
                 },
             ))
         }

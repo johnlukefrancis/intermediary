@@ -3,6 +3,7 @@
 
 use super::graceful_stop::GracefulStopPath;
 use crate::agent::wsl_process_control::WslLaunchTarget;
+use im_bundle::process_job::JobHandle;
 use std::process::Child;
 use std::time::Instant;
 
@@ -28,9 +29,39 @@ impl ProcessKind {
     }
 }
 
+/// A supervisor-owned process and the owner of the tree it can start. The two
+/// travel as one value so a stop can never reach the child while the job that
+/// holds its descendants is left behind, or the reverse.
+///
+/// `job` is `None` for a process whose tree this supervisor never owned: an
+/// agent that was already listening when we started and was adopted by port and
+/// token alone (`host::should_adopt_running_host`), and the WSL launcher, whose
+/// real work runs inside the distro where a Windows job object reaches nothing.
+#[derive(Debug)]
+pub(super) struct SupervisedChild {
+    pub child: Child,
+    pub job: Option<JobHandle>,
+}
+
+impl SupervisedChild {
+    pub(super) fn owned(child: Child, job: JobHandle) -> Self {
+        Self {
+            child,
+            job: Some(job),
+        }
+    }
+}
+
+/// A child we spawned without owning its tree.
+impl From<Child> for SupervisedChild {
+    fn from(child: Child) -> Self {
+        Self { child, job: None }
+    }
+}
+
 #[derive(Debug, Default)]
 pub(super) struct ManagedProcessState {
-    pub child: Option<Child>,
+    pub process: Option<SupervisedChild>,
     pub last_spawn_at: Option<Instant>,
 }
 
@@ -67,6 +98,60 @@ pub(super) struct AgentSupervisorState {
     /// to decide whether the WSL distro is safe to terminate: never while
     /// finality came back `Unknown`.
     pub last_host_stop_finality: Option<GracefulStopPath>,
+}
+
+/// A child that stays alive until something stops it, for the tests that need a
+/// real process to own, record, and kill. One owner for the whole supervisor's
+/// tests, so no test module keeps a second spawn recipe.
+#[cfg(test)]
+pub(super) fn spawn_test_sleeper() -> Child {
+    use std::process::{Command, Stdio};
+
+    #[cfg(windows)]
+    let mut command = {
+        let mut command = Command::new("cmd");
+        command.args(["/C", "ping", "-n", "31", "127.0.0.1"]);
+        command
+    };
+    #[cfg(not(windows))]
+    let mut command = {
+        let mut command = Command::new("sh");
+        command.args(["-c", "sleep 30"]);
+        command
+    };
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("spawn the test sleeper")
+}
+
+/// A child that has already finished by the time the test looks at it.
+#[cfg(test)]
+pub(super) fn spawn_test_exited_child() -> Child {
+    use std::process::{Command, Stdio};
+
+    #[cfg(windows)]
+    let mut command = {
+        let mut command = Command::new("cmd");
+        command.args(["/C", "exit", "0"]);
+        command
+    };
+    #[cfg(not(windows))]
+    let mut command = {
+        let mut command = Command::new("sh");
+        command.args(["-c", "exit 0"]);
+        command
+    };
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("spawn the test child");
+    child.wait().expect("wait for the test child");
+    child
 }
 
 pub(super) fn process_state(

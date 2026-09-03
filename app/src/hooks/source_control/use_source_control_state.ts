@@ -44,6 +44,7 @@ export function useSourceControlState(repoId: string): SourceControlState {
   const [pendingAction, setPendingAction] = useState<SourceControlActionKind | null>(null);
   const [actionError, setActionError] = useState<SourceControlActionError | null>(null);
   const [hookNotice, setHookNotice] = useState<string[] | null>(null);
+  const [hookAddedNotice, setHookAddedNotice] = useState<string[] | null>(null);
   const [lastCommit, setLastCommit] = useState<SourceControlCommit | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
 
@@ -126,6 +127,7 @@ export function useSourceControlState(repoId: string): SourceControlState {
       setPendingAction(action.kind);
       setActionError(null);
       setHookNotice(null);
+      setHookAddedNotice(null);
       scheduler.actionStarted();
       let appliedAt: number | null = null;
       let refreshAfterReject = false;
@@ -140,6 +142,10 @@ export function useSourceControlState(repoId: string): SourceControlState {
         }
         if (result.hookChangedPaths !== undefined && result.hookChangedPaths.length > 0) {
           setHookNotice(result.hookChangedPaths);
+        }
+        // Paths no reviewed row covered: the commit landed with content the user never saw.
+        if (result.hookAddedPaths !== undefined && result.hookAddedPaths.length > 0) {
+          setHookAddedNotice(result.hookAddedPaths);
         }
       } catch (err: unknown) {
         if (repoIdRef.current !== requestRepoId) return;
@@ -178,6 +184,7 @@ export function useSourceControlState(repoId: string): SourceControlState {
     setPendingAction(null);
     setActionError(null);
     setHookNotice(null);
+    setHookAddedNotice(null);
     setLastCommit(null);
     setCommitMessage("");
   }, [reconciliation, repoId, scheduler]);
@@ -221,6 +228,7 @@ export function useSourceControlState(repoId: string): SourceControlState {
   const commands = useSourceControlCommands(runAction);
   const dismissActionError = useCallback(() => { setActionError(null); }, []);
   const dismissHookNotice = useCallback(() => { setHookNotice(null); }, []);
+  const dismissHookAddedNotice = useCallback(() => { setHookAddedNotice(null); }, []);
   const refresh = useCallback(() => {
     retryAttemptRef.current = 0;
     scheduler.requestRefresh();
@@ -238,11 +246,13 @@ export function useSourceControlState(repoId: string): SourceControlState {
     pendingAction,
     actionError,
     hookNotice,
+    hookAddedNotice,
     lastCommit,
     commitMessage,
     setCommitMessage,
     dismissActionError,
     dismissHookNotice,
+    dismissHookAddedNotice,
     refresh,
     ...commands,
   };

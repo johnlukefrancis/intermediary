@@ -99,6 +99,7 @@ pub(super) async fn run_connected(
                             event_bus,
                             logger,
                             generation,
+                            outstanding_mutations,
                         );
                     }
                     Ok(Message::Close(_)) => {

@@ -219,6 +219,7 @@ fn command_issue(failure: GitCommandFailure) -> GitCaptureIssue {
         GitCommandFailureKind::SpawnFailed
         | GitCommandFailureKind::InputWriteFailed
         | GitCommandFailureKind::OutputReadFailed
+        | GitCommandFailureKind::NoProcessTreeOwner { .. }
         | GitCommandFailureKind::NotGitRepository
         | GitCommandFailureKind::NonZeroExit => (
             "commandFailure",

@@ -187,10 +187,10 @@ impl AgentSupervisor {
     /// lock is held only for the poll itself, never across an await.
     fn recorded_host_child_exited(&self) -> Option<bool> {
         let mut state = self.state.lock().ok()?;
-        let child = process_state_mut(&mut state, ProcessKind::Host)
-            .child
+        let process = process_state_mut(&mut state, ProcessKind::Host)
+            .process
             .as_mut()?;
-        match child.try_wait() {
+        match process.child.try_wait() {
             Ok(status) => Some(status.is_some()),
             Err(_) => Some(false),
         }

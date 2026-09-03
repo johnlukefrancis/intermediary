@@ -68,8 +68,14 @@ export const SourceControlStatusSchema = z.object({
   worktree: z.array(SourceControlEntrySchema),
   conflicts: z.array(SourceControlEntrySchema),
   omitted: SourceControlOmittedSchema,
-  /** Tree `git write-tree` would produce from this index; a commit's reviewed-state precondition */
+  /** Tree `git write-tree` would produce from this index; what the listed rows were read from */
   indexTreeSha: z.string(),
+  /**
+   * Identity of the reviewed snapshot this status is. A commit carries it back as its precondition
+   * and the agent refuses when the repository has moved past it. `""` means the review was torn —
+   * the repository changed while the status was being read — so no commit may be sent from it.
+   */
+  snapshotId: z.string(),
   /** The physical mutation lock for this repo was held while the status was read */
   mutationInProgress: z.boolean(),
   /** Git's own answer: the index differs from HEAD, or a merge is in progress */
@@ -111,10 +117,11 @@ export const SourceControlActionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("commit"),
     message: z.string().min(1),
-    /** The index the user reviewed; the agent refuses the commit when the index moved since */
-    expectedIndexTreeSha: z.string(),
-    /** The HEAD the user reviewed (status.headSha); null on an unborn branch */
-    expectedHeadSha: z.string().nullable(),
+    /**
+     * `snapshotId` of the status the user reviewed; the agent refuses the commit when the
+     * repository moved past that snapshot. Never sent empty — a torn review cannot commit.
+     */
+    expectedSnapshotId: z.string().min(1),
   }),
   z.object({ kind: z.literal("push") }),
   z.object({ kind: z.literal("pull") }),
@@ -135,6 +142,8 @@ export type SourceControlActionKind = z.infer<typeof SourceControlActionKindSche
 export const SOURCE_CONTROL_STATE_CHANGED_CODE = "SOURCE_CONTROL_STATE_CHANGED";
 /** The agent is shutting down and accepts no new mutations */
 export const AGENT_DRAINING_CODE = "AGENT_DRAINING";
+/** The repository layout puts the action out of reach (a discard on a cross-volume linked worktree) */
+export const SOURCE_CONTROL_UNSUPPORTED_LAYOUT_CODE = "SOURCE_CONTROL_UNSUPPORTED_LAYOUT";
 
 /**
  * Effect certainty every mutation error carries in `details.effect`. `notApplied` is the agent's
@@ -198,6 +207,8 @@ export const SourceControlActionResultSchema = z.object({
   commitSha: z.string().optional(),
   /** A commit hook (e.g. lint-staged) re-staged these reviewed-root paths; not an error */
   hookChangedPaths: z.array(z.string()).optional(),
+  /** A commit hook staged these paths, which were in no reviewed row; the commit still landed */
+  hookAddedPaths: z.array(z.string()).optional(),
 });
 export type SourceControlActionResult = z.infer<typeof SourceControlActionResultSchema>;
 

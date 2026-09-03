@@ -61,15 +61,20 @@ Depends on: ADR-000, ADR-007
 
 ---
 
-## Source Control — deliberately deferred
+## Source Control — accepted boundaries and decisions
 
-Recorded from `docs/reports/source_control_adversarial_review_20260903.md`'s P2-10 findings. These are
-accepted end states, not open defects; kept here so they are not mistaken for oversights.
+Recorded from the P2 findings of `docs/reports/source_control_adversarial_review_20260903.md` and
+`docs/reports/source_control_hardening_review_20260903.md`. These are accepted end states, not open
+defects; kept here so they are not mistaken for oversights. The rejected findings of the third review
+(private commit transaction, per-status content digests, the `git restore` TOCTOU window, cross-volume
+linked worktrees) are recorded as accepted boundaries in `docs/design/source_control_design.md`.
 
-- 2026-09-03: `app/src/components/source_control/` (10 sibling modules) and `crates/im_agent/src/source_control/`
-  (15 sibling modules) both sit at or over ADR-000's 10-sibling split threshold. Splitting now would land
-  mid-merge with the tree-decorations/icon-rocker/conflict-prominence/image-diff follow-up commits on
-  `master`, so the folder split is deferred to land together with that merge rather than fixed twice.
+- 2026-09-03: `app/src/components/source_control/` stays at its 10 sibling modules. ADR-000's split
+  threshold exists to break up folders that hold more than one concern; this one is a single concern —
+  the Source Control column and the rows, commit box, notices, warnings, and copy it is made of — and
+  every sibling is under the LOC cap. Splitting it would invent buckets rather than owners. The Rust
+  `crates/im_agent/src/source_control/` folder, which did hold several concerns, was split by owner
+  (`status/`, `commit/`, `discard/`, `actions/`, `diff/`, `locks/`, `runner/`) instead.
 - 2026-09-03: Host in-process source-control reads (status/diff for host-rooted repos) are bounded by
   their Git timeout only and are not cancellable — the host agent has no cancellation path to serve one,
   so no UI cancel control is offered for a host read. WSL-routed reads remain cancellable.
@@ -83,14 +88,16 @@ accepted end states, not open defects; kept here so they are not mistaken for ov
 
 ## Resolved (recent)
 
-- 2026-09-03: On Windows the Git process tree had no owner, so a descendant (hook, `ssh`, credential
-  helper) that outlived Git and kept its handle open was detached rather than terminated when the
-  runner's post-exit drain expired. Closed by `crates/im_bundle/src/git_capture/{command_tree,command_job}.rs`:
-  every Git child now runs inside a Job Object assigned immediately after the spawn, and that tree is
-  terminated on forced stop (timeout or cancellation), drain expiry, and shutdown finalization; the job
-  carries no kill-on-close limit, so helpers that close their pipes outlive Git as on Unix. Unverified on
-  Windows: the arm type-checks for `x86_64-pc-windows-msvc` but has not been exercised against a real
-  `git.exe` (see the round-2 report).
+- 2026-09-03: On Windows neither the Git process tree nor the host agent's own tree had an owner, so a
+  descendant (hook, `ssh`, credential helper) that outlived its parent was detached rather than
+  terminated. Closed by `crates/im_bundle/src/process_job.rs` with `git_capture/command_tree.rs` (every
+  Git child runs inside a Job Object assigned immediately after the spawn; a mutation that cannot be
+  given one is refused before it spawns) and by `src-tauri/src/lib/agent/process_control.rs` (the
+  supervisor spawns the host agent into a supervisor-owned job and terminates it on the emergency kill
+  path). Neither job carries a kill-on-close limit, so helpers that close their pipes outlive Git as on
+  Unix; an adopted agent has no job and is stopped by binary identity. **Unverified on Windows:** both
+  job objects type-check and cross-compile for `x86_64-pc-windows-msvc` but neither has been exercised
+  at runtime against a real `git.exe` or a real hung agent.
 - 2026-08-17: Windows installer tasks could sync current WSL source to the default D: mirror but
   build a separately configured C: mirror, producing a successful installer from stale source.
   Fixed by exporting the configured Windows mirror through `WSLENV` with path translation before

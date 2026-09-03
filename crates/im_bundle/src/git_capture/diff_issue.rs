@@ -42,7 +42,8 @@ pub(super) fn command_issue(
         ),
         GitCommandFailureKind::SpawnFailed
         | GitCommandFailureKind::InputWriteFailed
-        | GitCommandFailureKind::OutputReadFailed => (
+        | GitCommandFailureKind::OutputReadFailed
+        | GitCommandFailureKind::NoProcessTreeOwner { .. } => (
             "commandFailure",
             "A Git evidence command could not be executed or read.",
         ),

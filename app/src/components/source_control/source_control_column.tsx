@@ -16,11 +16,14 @@ import { SourceControlBody } from "./source_control_body.js";
 import { SourceControlCommitBox } from "./source_control_commit_box.js";
 import { buildSourceControlContextMenuItems } from "./source_control_context_menu.js";
 import {
+  HOOK_ADDED_HEADING,
+  NO_SNAPSHOT_HINT,
   STAGE_TO_COMMIT_HINT,
   TRUNCATED_HINT,
   actionErrorHeading,
   branchLabel,
   discardConfirmMessage,
+  hookAddedMessage,
   hookChangedHeading,
   hookChangedMessage,
   resolveConflictsHint,
@@ -82,9 +85,9 @@ export function SourceControlColumn({
   const [pendingCommit, setPendingCommit] = useState<PendingCommitRequest | null>(null);
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
   const {
-    status, phase, pendingAction, actionError, hookNotice, lastCommit, commitMessage,
-    setCommitMessage, dismissActionError, dismissHookNotice, refresh,
-    stage, unstage, discard, commit, push, pull,
+    status, phase, pendingAction, actionError, hookNotice, hookAddedNotice, lastCommit,
+    commitMessage, setCommitMessage, dismissActionError, dismissHookNotice,
+    dismissHookAddedNotice, refresh, stage, unstage, discard, commit, push, pull,
   } = state;
   // A background refetch (loading with a status in hand) never disables the controls;
   // the action result supersedes any in-flight read.
@@ -107,13 +110,16 @@ export function SourceControlColumn({
   // Git's own committability (index differs from HEAD, or a merge is in progress) decides,
   // not the root-projected list: a merge resolved to HEAD's tree still needs its commit.
   // Unmerged paths make Git refuse the commit outright, so they outrank every other hint.
+  // An empty snapshotId is the torn review: there is no state the agent could check a commit
+  // against, so it is the last blocker in the chain rather than a banner of its own.
   const conflictCount = status === null ? 0 : totalConflictCount(status);
   const hint =
     status === null ? null
       : conflictCount > 0 ? resolveConflictsHint(conflictCount)
         : !status.committable ? STAGE_TO_COMMIT_HINT
           : status.truncated ? TRUNCATED_HINT
-            : null;
+            : status.snapshotId.length === 0 ? NO_SNAPSHOT_HINT
+              : null;
   const canCommit =
     status !== null && !actionsDisabled && hint === null && commitMessage.trim().length > 0;
 
@@ -123,8 +129,7 @@ export function SourceControlColumn({
     if (!canCommit) return;
     const request: PendingCommitRequest = {
       message: commitMessage,
-      expectedIndexTreeSha: status.indexTreeSha,
-      expectedHeadSha: status.headSha,
+      expectedSnapshotId: status.snapshotId,
       stagedOutsideRootCount: status.omitted.stagedOutsideRoot,
     };
     if (request.stagedOutsideRootCount > 0) {
@@ -192,6 +197,17 @@ export function SourceControlColumn({
           </span>
           <span className="source-control-notice__message">{hookChangedMessage(hookNotice)}</span>
           <button type="button" className="dir-action-btn" onClick={dismissHookNotice}>
+            Dismiss
+          </button>
+        </div>
+      )}
+      {hookAddedNotice && (
+        <div className="source-control-notice source-control-notice--warning" role="alert">
+          <span className="source-control-notice__heading">{HOOK_ADDED_HEADING}</span>
+          <span className="source-control-notice__message">
+            {hookAddedMessage(hookAddedNotice)}
+          </span>
+          <button type="button" className="dir-action-btn" onClick={dismissHookAddedNotice}>
             Dismiss
           </button>
         </div>

@@ -21,7 +21,8 @@ mod client_loop;
 mod timeouts;
 
 /// Request ids of forwarded mutations this client has sent to the WSL agent
-/// and not had confirmed back. Shared with the request loop, which is the one
+/// and not had confirmed back. Shared with the connection's decode site, which
+/// sees every confirmed answer, and with the request loop, which is the one
 /// place that knows a request never reached the wire.
 pub(super) type OutstandingMutations = Arc<Mutex<HashSet<String>>>;
 
@@ -160,29 +161,33 @@ impl WslBackendClient {
         }
 
         let timeout_ms = timeout_duration.as_millis();
-        let outcome = match timeout(timeout_duration, response_rx).await {
+        // Waiting here never clears the ledger. A decoded response envelope —
+        // result or error alike — is the confirmation, and the decode site
+        // untracks the id as it arrives, including one that crosses this
+        // timeout and decodes after the caller has already been answered.
+        // Every exit below is either that confirmation (already untracked) or
+        // a transport failure, which proves nothing about the Git process on
+        // the other side and must leave the mutation outstanding for the
+        // shutdown drain. A mutation that times out therefore stays
+        // outstanding for good: the Cancel sent below cannot produce a late
+        // envelope, because a `SourceControlAction` is cancelled passively in
+        // the WSL agent and that agent suppresses the answer to a request it
+        // has been told to cancel rather than sending it.
+        match timeout(timeout_duration, response_rx).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => Err(wsl_unavailable_error(
                 "WSL backend closed before returning a response",
             )),
             Err(_) => {
-                let _ = self.request_tx.send(RequestLoopMessage::Cancel {
-                    request_id: request_id.clone(),
-                });
+                let _ = self
+                    .request_tx
+                    .send(RequestLoopMessage::Cancel { request_id });
                 Err(AgentError::new(
                     WSL_BACKEND_TIMEOUT,
                     format!("WSL backend timed out after {timeout_ms}ms waiting for response"),
                 ))
             }
-        };
-        // Only a confirmed round trip proves the mutation is done, whatever
-        // its own outcome; every other exit here leaves it tracked so a
-        // shutdown drain keeps waiting rather than trusting a transport
-        // failure to mean the Git process on the other side is gone too.
-        if is_mutation && outcome.is_ok() {
-            self.untrack_outstanding(&request_id);
         }
-        outcome
     }
 
     fn track_outstanding(&self, request_id: &str) {
@@ -200,8 +205,10 @@ impl WslBackendClient {
         format!("host_wsl_req_{next}")
     }
 }
-/// A forwarded request stops being outstanding: it is either confirmed done
-/// or proven never to have reached the WSL agent at all.
+/// A forwarded request stops being outstanding: the WSL agent answered it with
+/// a decoded envelope — result or error alike — or it is proven never to have
+/// reached the WSL agent at all. Ids that were never tracked (reads, and the
+/// shutdown command itself) are absent, so removing one is a harmless no-op.
 pub(super) fn untrack_outstanding(outstanding: &OutstandingMutations, request_id: &str) {
     if let Ok(mut set) = outstanding.lock() {
         set.remove(request_id);

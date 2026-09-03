@@ -3,16 +3,19 @@
 
 //! One Git command owns a whole process tree, not just the process this crate
 //! spawned: hooks, `ssh`, credential helpers and `git-remote-*` all inherit its
-//! output pipes and can outlive it. This module is that tree's only owner. It
-//! is created before the spawn, attached to the child immediately after it, and
-//! it is what a timeout, a cancellation, a post-exit pipe holder, or a shutdown
-//! emergency deadline terminates — never a bare `Child::kill`, which reaches
-//! the direct child alone.
+//! output pipes and can outlive it. This module is that tree's only owner —
+//! created before the spawn, attached to the child immediately after it, and
+//! terminated by a timeout, a cancellation, a post-exit pipe holder, or a
+//! shutdown deadline; never a bare `Child::kill`, which reaches the direct
+//! child alone. Termination is always explicit, so a helper that closed Git's
+//! pipes and kept running is left alone.
 //!
-//! Termination is always explicit on both platforms: dropping the owner ends
-//! nothing, so a helper that closed Git's pipes and kept running (a
-//! credential-cache daemon) is left alone, and only a forced stop, an expired
-//! post-exit drain, or shutdown finalization kills the tree.
+//! A mutation ([`KillPolicy::Graceful`]) never runs without that owner: if the
+//! tree cannot be created or the child cannot be joined to it, the command is
+//! refused rather than silently downgraded to a `Child::kill` that cannot reach
+//! a hook holding `.git/index.lock`. A read runs on unowned and says so once.
+//! Which of those two a failure earns, and how it is worded, belongs to
+//! `command_tree_owner`; this module owns the tree itself.
 //!
 //! Every live tree is also registered process-wide, so the one caller that owns
 //! finality rather than one command — an agent that has reached its shutdown
@@ -20,6 +23,7 @@
 //! [`terminate_git_process_trees`] instead of exiting over the top of it.
 
 use std::collections::BTreeMap;
+use std::io;
 use std::process::{Child, Command};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -28,7 +32,11 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::atomic::AtomicU32;
 
 #[cfg(windows)]
-use super::command_job::JobHandle;
+use crate::process_job::JobHandle;
+
+use super::command::KillPolicy;
+use super::command_failure::GitCommandFailure;
+use super::command_tree_owner::{log_unowned_read_once, no_owner_failure};
 
 static NEXT_TREE_ID: AtomicU64 = AtomicU64::new(0);
 static LIVE_TREES: Mutex<BTreeMap<u64, Arc<TreeOwner>>> = Mutex::new(BTreeMap::new());
@@ -44,10 +52,10 @@ pub(super) struct GitProcessTree {
 }
 
 impl GitProcessTree {
-    pub(super) fn create() -> Self {
+    pub(super) fn from_owner(owner: TreeOwner) -> Self {
         Self {
             id: NEXT_TREE_ID.fetch_add(1, Ordering::Relaxed),
-            owner: Arc::new(TreeOwner::new()),
+            owner: Arc::new(owner),
             registered: false,
         }
     }
@@ -59,12 +67,28 @@ impl GitProcessTree {
         self.owner.prepare(command);
     }
 
-    /// Claims the freshly spawned child. Until this runs the tree owns nothing,
-    /// so a `terminate` before it reports `false` rather than pretending.
-    pub(super) fn attach(&mut self, child: &Child) {
-        if self.owner.attach(child) {
-            live_trees().insert(self.id, Arc::clone(&self.owner));
-            self.registered = true;
+    /// Claims the freshly spawned child. A mutation whose child cannot be
+    /// joined gets the same refusal the pre-spawn path returns, and its caller
+    /// stops the child; a read is logged once and runs on unowned. Until this
+    /// succeeds the tree owns nothing, so a `terminate` before it is `false`.
+    pub(super) fn attach(
+        &mut self,
+        child: &Child,
+        kill_policy: KillPolicy,
+    ) -> Result<(), GitCommandFailure> {
+        match self.owner.attach(child) {
+            Ok(()) => {
+                if self.owner.attached.load(Ordering::SeqCst) {
+                    live_trees().insert(self.id, Arc::clone(&self.owner));
+                    self.registered = true;
+                }
+                Ok(())
+            }
+            Err(error) if kill_policy == KillPolicy::Graceful => Err(no_owner_failure(&error, true)),
+            Err(error) => {
+                log_unowned_read_once(&error);
+                Ok(())
+            }
         }
     }
 
@@ -112,7 +136,7 @@ fn live_trees() -> MutexGuard<'static, BTreeMap<u64, Arc<TreeOwner>>> {
 /// The platform half: a process group id on unix, a job object on Windows.
 /// `attached` is the shared half — nothing may be signalled before the child is
 /// actually in the tree.
-struct TreeOwner {
+pub(super) struct TreeOwner {
     attached: AtomicBool,
     #[cfg(unix)]
     pgid: AtomicU32,
@@ -122,7 +146,13 @@ struct TreeOwner {
 
 #[cfg(unix)]
 impl TreeOwner {
-    fn new() -> Self {
+    /// Infallible: a process group costs nothing until the spawn asks for it,
+    /// so unix has no unowned case and `unowned` is simply the same owner.
+    pub(super) fn new() -> io::Result<Self> {
+        Ok(Self::unowned())
+    }
+
+    pub(super) fn unowned() -> Self {
         Self {
             attached: AtomicBool::new(false),
             pgid: AtomicU32::new(0),
@@ -137,10 +167,10 @@ impl TreeOwner {
     }
 
     /// The group id is the child's own pid, which only exists after the spawn.
-    fn attach(&self, child: &Child) -> bool {
+    fn attach(&self, child: &Child) -> io::Result<()> {
         self.pgid.store(child.id(), Ordering::SeqCst);
         self.attached.store(true, Ordering::SeqCst);
-        true
+        Ok(())
     }
 
     fn terminate(&self) -> bool {
@@ -168,10 +198,19 @@ impl TreeOwner {
 
 #[cfg(windows)]
 impl TreeOwner {
-    fn new() -> Self {
+    pub(super) fn new() -> io::Result<Self> {
+        Ok(Self {
+            attached: AtomicBool::new(false),
+            job: Some(JobHandle::create()?),
+        })
+    }
+
+    /// A read that could not get a job object: it owns nothing, so it claims
+    /// nothing and terminates nothing.
+    pub(super) fn unowned() -> Self {
         Self {
             attached: AtomicBool::new(false),
-            job: JobHandle::create(),
+            job: None,
         }
     }
 
@@ -180,10 +219,13 @@ impl TreeOwner {
     /// group is.
     fn prepare(&self, _command: &mut Command) {}
 
-    fn attach(&self, child: &Child) -> bool {
-        let assigned = self.job.as_ref().is_some_and(|job| job.assign(child));
-        self.attached.store(assigned, Ordering::SeqCst);
-        assigned
+    fn attach(&self, child: &Child) -> io::Result<()> {
+        let Some(job) = self.job.as_ref() else {
+            return Ok(());
+        };
+        job.assign(child)?;
+        self.attached.store(true, Ordering::SeqCst);
+        Ok(())
     }
 
     /// The job carries no kill-on-close limit, so this call — never the
@@ -192,30 +234,13 @@ impl TreeOwner {
         if !self.attached.load(Ordering::SeqCst) {
             return false;
         }
-        self.job.as_ref().is_some_and(JobHandle::terminate)
+        self.job
+            .as_ref()
+            .is_some_and(|job| job.terminate().is_ok())
     }
 
     /// Windows has no cooperative termination signal for a console child, so
     /// the caller's timeout is the only bound and terminating the job is final.
-    fn request_termination(&self) -> bool {
-        false
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-impl TreeOwner {
-    fn new() -> Self {
-        Self {
-            attached: AtomicBool::new(false),
-        }
-    }
-    fn prepare(&self, _command: &mut Command) {}
-    fn attach(&self, _child: &Child) -> bool {
-        false
-    }
-    fn terminate(&self) -> bool {
-        false
-    }
     fn request_termination(&self) -> bool {
         false
     }

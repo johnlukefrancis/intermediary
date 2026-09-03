@@ -17,7 +17,9 @@ use super::command_child::{
 };
 use super::command_drain::{drain_after_exit, drain_after_forced_stop};
 use super::command_stop::stop_child;
-use super::command_tree::GitProcessTree;
+use super::command_tree_owner::owner_for;
+
+pub use super::command_failure::{GitCommandFailure, GitCommandFailureKind};
 
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 const STDERR_LIMIT: usize = 64 * 1024;
@@ -33,62 +35,10 @@ pub struct GitCommandOutput {
     pub exit_code: i32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GitCommandFailureKind {
-    MissingExecutable,
-    TimedOut,
-    SpawnFailed,
-    InputWriteFailed,
-    OutputReadFailed,
-    NotGitRepository,
-    NonZeroExit,
-}
-
-/// Why a Git command did not produce usable output, plus whatever Git wrote on
-/// both streams before failing. Bounded like successful output.
-#[derive(Debug, Clone)]
-pub struct GitCommandFailure {
-    pub kind: GitCommandFailureKind,
-    pub exit_code: Option<i32>,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
-}
-
-impl GitCommandFailure {
-    fn bare(kind: GitCommandFailureKind) -> Self {
-        Self {
-            kind,
-            exit_code: None,
-            stdout: Vec::new(),
-            stderr: Vec::new(),
-        }
-    }
-
-    fn from_streams(kind: GitCommandFailureKind, output: Collected) -> Self {
-        Self {
-            kind,
-            exit_code: None,
-            stdout: output.stdout.bytes(),
-            stderr: output.stderr.bytes(),
-        }
-    }
-
-    /// Git's explanation, preferring stderr and falling back to stdout
-    /// (`git commit` reports "nothing to commit" on stdout).
-    pub fn message(&self) -> String {
-        let stderr = String::from_utf8_lossy(&self.stderr);
-        let trimmed = stderr.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
-        String::from_utf8_lossy(&self.stdout).trim().to_string()
-    }
-}
-
-/// How a still-running Git child is stopped on timeout or cancellation.
-/// `Graceful` is required for commands that take Git's mandatory locks
-/// (`add`, `reset`, `commit`, `push`, `pull`): an immediate kill bypasses Git's
-/// lockfile cleanup and can leave `.git/index.lock` behind.
+/// How a still-running Git child is stopped, and the marker for a mutation:
+/// `Graceful` commands take Git's mandatory locks (`add`, `reset`, `commit`,
+/// `push`, `pull`), so they are asked to end before the tree is killed — and
+/// they refuse to run at all without an owner for that tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KillPolicy {
     Immediate,
@@ -116,13 +66,12 @@ pub fn run_git(
     )
 }
 
-/// The child's fate after the wait loop.
+/// The child's fate after the wait loop: exited by itself (its streams get the
+/// bounded post-exit drain), stopped on timeout (a bounded wait), or never
+/// waitable at all, in which case nothing about it is trustworthy.
 enum Exit {
-    /// Git exited by itself; its streams get the bounded post-exit drain.
     Completed(ExitStatus),
-    /// Git was stopped on timeout; the streams get a bounded wait.
     TimedOut,
-    /// The child could not be waited on; nothing about it is trustworthy.
     WaitFailed,
 }
 
@@ -155,13 +104,15 @@ pub fn run_git_with_input(
         })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    // The tree that owns every descendant this command starts. It is created
-    // before the spawn (the Windows job object has to exist first), joined to
-    // the child immediately after it, and dropped once the drain below is
-    // finished. Dropping it terminates nothing on either platform: the tree
-    // dies only where this file asks for it — a forced stop below, an expired
-    // post-exit drain, or the agent's shutdown finalization.
-    let mut tree = GitProcessTree::create();
+    // The tree that owns every descendant this command starts, created before
+    // the spawn and dropped once the drain below is finished. Dropping it
+    // terminates nothing: the tree dies only where this file asks for it — a
+    // forced stop below, an expired post-exit drain, or shutdown finalization.
+    // A mutation that cannot be given one is refused here, before the spawn.
+    let mut tree = match owner_for(kill_policy) {
+        Ok(tree) => tree,
+        Err(failure) => return Ok(Err(failure)),
+    };
     tree.prepare(&mut command);
 
     let mut child = match command.spawn() {
@@ -177,7 +128,10 @@ pub fn run_git_with_input(
             )))
         }
     };
-    tree.attach(&child);
+    if let Err(failure) = tree.attach(&child, kill_policy) {
+        stop_child(&mut child, KillPolicy::Immediate, &tree);
+        return Ok(Err(failure));
+    }
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
         stop_child(&mut child, KillPolicy::Immediate, &tree);
         return Ok(Err(GitCommandFailure::bare(
@@ -204,8 +158,7 @@ pub fn run_git_with_input(
         stdin,
     };
     // Kept before the wait loop reaps the child, purely so a stuck-pipe log
-    // line can name the process the descendants came from; the tree above is
-    // what actually still holds them.
+    // line can name the process the descendants came from.
     let child_pid = child.id();
     let started = Instant::now();
 

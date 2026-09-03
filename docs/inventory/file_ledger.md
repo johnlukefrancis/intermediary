@@ -296,39 +296,41 @@ crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running 
 crates/im_agent/src/server/shutdown.rs - The one drain-then-exit owner shared by the shutdown command and the process signals
 crates/im_agent/src/server/shutdown/tests.rs - Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
-crates/im_agent/src/source_control/actions_commit_retract.rs - Post-commit tree comparison against the reviewed state, and the CAS retraction of a hook overreach
-crates/im_agent/src/source_control/actions_commit.rs - Commit under the reviewed index+HEAD precondition, with timeout recovery and hook finalization
-crates/im_agent/src/source_control/actions_discard_claim.rs - Atomic per-target quarantine claim, verification, release, and rollback for discard
-crates/im_agent/src/source_control/actions_discard_target.rs - Executes one discard target: claim, classify, mutate, and release/rollback the claim
-crates/im_agent/src/source_control/actions_discard.rs - Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
-crates/im_agent/src/source_control/actions_remote.rs - Push and pull for one repo root, including upstream selection
-crates/im_agent/src/source_control/actions_stage.rs - Stage and unstage one section or an explicit path list, never a pathspec wildcard
-crates/im_agent/src/source_control/actions.rs - Dispatches one source-control mutation and reads the status that follows it
-crates/im_agent/src/source_control/diff.rs - Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)
-crates/im_agent/src/source_control/discard_quarantine.rs - Quarantine directory naming for a discard operation and the bounded startup sweep of stale ones
-crates/im_agent/src/source_control/git_version.rs - Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)
-crates/im_agent/src/source_control/image_diff_sides.rs - Reads one image-diff side from a Git blob or from the working tree, bounded and base64-encoded
-crates/im_agent/src/source_control/image_diff.rs - Chooses the before/after Git snapshots of one changed image and assembles both sides
-crates/im_agent/src/source_control/locks.rs - Mutation serialization keyed by the physical Git directory, plus the drain gate
+crates/im_agent/src/source_control/actions/mod.rs - Dispatches one source-control mutation and reads the status that follows it
+crates/im_agent/src/source_control/actions/remote.rs - Push and pull for one repo root, including upstream selection
+crates/im_agent/src/source_control/actions/stage.rs - Stage and unstage one section or an explicit path list, never a pathspec wildcard
+crates/im_agent/src/source_control/actions/tests.rs - Real-git tempdir tests for stage, unstage, discard, push, and pull actions
+crates/im_agent/src/source_control/commit/finalize.rs - Post-commit comparison of the landed tree against the reviewed one, split into hook-changed and hook-added paths
+crates/im_agent/src/source_control/commit/mod.rs - Commit under the reviewed-snapshot precondition, with timeout recovery and hook reporting
+crates/im_agent/src/source_control/commit/tests_hooks.rs - Real-git tests for what a commit hook did to a landed commit: reviewed rewrites and unreviewed additions are both rep...
+crates/im_agent/src/source_control/commit/tests_preconditions.rs - Real-git tests binding a commit to the reviewed snapshot identity, and row/section ownership
+crates/im_agent/src/source_control/commit/tests.rs - Real-git tests for the commit oracle, its snapshot precondition, and the landed-but-unread error
+crates/im_agent/src/source_control/diff/image_sides.rs - Reads one image-diff side from a Git blob or from the working tree, bounded and base64-encoded
+crates/im_agent/src/source_control/diff/image.rs - Chooses the before/after Git snapshots of one changed image and assembles both sides
+crates/im_agent/src/source_control/diff/mod.rs - Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)
+crates/im_agent/src/source_control/diff/tests_image.rs - Real-git tempdir tests for before/after image-diff side selection
+crates/im_agent/src/source_control/diff/tests.rs - Real-git tempdir tests for bounded per-file diff capture
+crates/im_agent/src/source_control/discard/claim.rs - Per-target quarantine claim, verification, release, and rollback for discard
+crates/im_agent/src/source_control/discard/mod.rs - Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
+crates/im_agent/src/source_control/discard/quarantine.rs - Quarantine directory naming and phase files for a discard operation, and the bounded startup sweep
+crates/im_agent/src/source_control/discard/target.rs - Executes one discard target: claim, classify, mutate, and release/rollback the claim
+crates/im_agent/src/source_control/discard/tests_quarantine.rs - Real-git tests for the discard quarantine's phase files, its per-target directories, and retention
+crates/im_agent/src/source_control/discard/tests_stamps.rs - Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)
+crates/im_agent/src/source_control/discard/tests_sweep.rs - Tests for the once-per-process discard quarantine sweep: what it finishes, what it spares, and what it survives
+crates/im_agent/src/source_control/locks/mod.rs - Mutation serialization keyed by the physical Git directory, plus the drain gate
+crates/im_agent/src/source_control/locks/tests.rs - Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress
 crates/im_agent/src/source_control/mod.rs - Git working-tree status, per-file diff, and index/commit/remote actions for one repo root
 crates/im_agent/src/source_control/paths.rs - UI path validation and normalization, NUL-joined pathspec input, and the in-root containment guard
-crates/im_agent/src/source_control/runner_failure.rs - Maps a Git command failure onto an AgentError and, for mutations, its proven effect
-crates/im_agent/src/source_control/runner.rs - spawn_blocking bridge and Git failure to AgentError mapping for source control
-crates/im_agent/src/source_control/status_index_tree.rs - Read-only identity of the whole-repository index (`git write-tree` without writing)
-crates/im_agent/src/source_control/status_project.rs - Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root
-crates/im_agent/src/source_control/status_stamp.rs - Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader
-crates/im_agent/src/source_control/status.rs - Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape
-crates/im_agent/src/source_control/tests_actions.rs - Real-git tempdir tests for stage, unstage, discard, push, and pull actions
-crates/im_agent/src/source_control/tests_commit_hooks.rs - Real-git tests for what a commit hook may change: the reviewed set is accepted, anything beyond it is retracted
-crates/im_agent/src/source_control/tests_commit.rs - Real-git tests for the commit oracle, its index/HEAD preconditions, and the landed-but-unread error
-crates/im_agent/src/source_control/tests_diff.rs - Real-git tempdir tests for bounded per-file diff capture
-crates/im_agent/src/source_control/tests_discard_quarantine.rs - Real-git tests for the discard quarantine directory's cleanup and startup sweep
-crates/im_agent/src/source_control/tests_discard_stamps.rs - Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)
-crates/im_agent/src/source_control/tests_image_diff.rs - Real-git tempdir tests for before/after image-diff side selection
-crates/im_agent/src/source_control/tests_locks.rs - Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress
-crates/im_agent/src/source_control/tests_preconditions.rs - Real-git tests binding a commit to the reviewed index identity, and row/section ownership
+crates/im_agent/src/source_control/runner/failure.rs - Maps a Git command failure onto an AgentError and, for mutations, its proven effect
+crates/im_agent/src/source_control/runner/git_version.rs - Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)
+crates/im_agent/src/source_control/runner/mod.rs - spawn_blocking bridge and Git failure to AgentError mapping for source control
+crates/im_agent/src/source_control/status/index_tree.rs - Read-only identity of the whole-repository index (`git write-tree` without writing)
+crates/im_agent/src/source_control/status/mod.rs - Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape
+crates/im_agent/src/source_control/status/project.rs - Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root
+crates/im_agent/src/source_control/status/snapshot.rs - One reviewed-snapshot identity over branch, HEAD, index tree, and in-progress merge state
+crates/im_agent/src/source_control/status/stamp.rs - Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader
+crates/im_agent/src/source_control/status/tests_projection.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/source_control/tests_support.rs - Real-git tempdir fixtures shared by the source-control tests
-crates/im_agent/src/source_control/tests.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
 crates/im_agent/src/staging/mod.rs - Staging module exports
 crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-accessible directory
@@ -336,11 +338,13 @@ crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scan
 crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan and zip operations
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
+crates/im_bundle/src/fs_atomic.rs - Rename that refuses to replace an existing destination, on the two platforms the product runs on
 crates/im_bundle/src/git_capture/command_child.rs - Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner
 crates/im_bundle/src/git_capture/command_drain.rs - Bounded pipe drain for the Git runner: grace after exit, then termination of the whole process tree
-crates/im_bundle/src/git_capture/command_job.rs - Windows Job Object primitives: create the job, assign a spawned child, terminate the tree on demand
+crates/im_bundle/src/git_capture/command_failure.rs - Why a Git command produced no usable output, and the bounded streams it failed with
 crates/im_bundle/src/git_capture/command_stop.rs - Forced stop of a running Git child: ask the process tree to end, then kill it and reap the child
 crates/im_bundle/src/git_capture/command_tests.rs - Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers
+crates/im_bundle/src/git_capture/command_tree_owner.rs - Getting a process-tree owner for one Git command, and how being refused one is reported
 crates/im_bundle/src/git_capture/command_tree.rs - The process tree one Git child owns (unix process group, Windows job object) and the live-tree registry
 crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution shared by bundle evidence and source control
 crates/im_bundle/src/git_capture/diff_issue.rs - Artifact-specific issue classification for selected Git diff capture
@@ -370,6 +374,7 @@ crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
 crates/im_bundle/src/omission.rs - Why a changed repository path fell outside the bundle selection
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
+crates/im_bundle/src/process_job.rs - Windows Job Object ownership of a spawned process tree, shared by the Git runner and the app's agent supervisor
 crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
@@ -436,6 +441,7 @@ src-tauri/src/lib/agent/install_tests.rs - Agent bundle installation and package
 src-tauri/src/lib/agent/install.rs - Install bundled agent runtimes into app local data with platform-specific requirements
 src-tauri/src/lib/agent/mod.rs - Host-agent supervisor module exports (with optional Windows WSL backend)
 src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
+src-tauri/src/lib/agent/process_control/log_tail.rs - Reads the agent log written since a spawn cursor, bounded by bytes and lines, for early-exit reporting
 src-tauri/src/lib/agent/runtime_identity.rs - Bounded SHA-256 identity for packaged and installed agent executables
 src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
 src-tauri/src/lib/agent/supervisor/graceful_stop.rs - Ask the managed host agent to drain and exit before any kill path runs
@@ -443,8 +449,9 @@ src-tauri/src/lib/agent/supervisor/graceful_stop/tests.rs - Ack-parsing/route te
 src-tauri/src/lib/agent/supervisor/host.rs - Host-agent startup and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 src-tauri/src/lib/agent/supervisor/managed_processes.rs - Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers
+src-tauri/src/lib/agent/supervisor/managed_processes/tests.rs - State transitions for the supervisor's recorded process and the tree owner it carries
 src-tauri/src/lib/agent/supervisor/probes.rs - Async supervisor probe helpers for port, websocket auth, and origin compatibility
-src-tauri/src/lib/agent/supervisor/process_kill.rs - Blocking child-process termination helpers for supervisor-owned processes
+src-tauri/src/lib/agent/supervisor/process_kill.rs - Blocking termination of a supervisor-owned process and the tree it started
 src-tauri/src/lib/agent/supervisor/runtime.rs - Supervisor runtime path, port, and installed-bundle preference helpers
 src-tauri/src/lib/agent/supervisor/shutdown_ws_client.rs - One authenticated shutdown request/response exchange with a managed agent
 src-tauri/src/lib/agent/supervisor/shutdown.rs - App-exit teardown: stop agents, then free WSL VM RAM when the distro is idle

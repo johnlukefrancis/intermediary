@@ -35,12 +35,12 @@ export interface SourceControlCommit {
 /**
  * The exact reviewed snapshot the COMMIT click (or the outside-root confirm modal) freezes.
  * A background status refresh while a commit is pending never rebinds these fields — the agent
- * itself refuses when the live index or HEAD has moved past what was frozen here.
+ * itself refuses when the repository has moved past the snapshot frozen here.
  */
 export interface SourceControlCommitRequest {
   message: string;
-  expectedIndexTreeSha: string;
-  expectedHeadSha: string | null;
+  /** `snapshotId` of the status that was on screen at the click; never empty */
+  expectedSnapshotId: string;
 }
 
 export interface SourceControlState {
@@ -56,12 +56,15 @@ export interface SourceControlState {
   actionError: SourceControlActionError | null;
   /** Paths a commit hook changed on the last successful commit; shown as a dismissible notice */
   hookNotice: string[] | null;
+  /** Paths a commit hook added that no reviewed row covered; a dismissible warning-tone notice */
+  hookAddedNotice: string[] | null;
   lastCommit: SourceControlCommit | null;
   /** Draft commit message lives here so it survives rail switches; cleared on commit success */
   commitMessage: string;
   setCommitMessage: (message: string) => void;
   dismissActionError: () => void;
   dismissHookNotice: () => void;
+  dismissHookAddedNotice: () => void;
   refresh: () => void;
   stage: (scope: SourceControlScope) => void;
   unstage: (scope: SourceControlScope) => void;

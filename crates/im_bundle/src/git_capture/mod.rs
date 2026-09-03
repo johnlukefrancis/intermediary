@@ -4,10 +4,10 @@
 pub(crate) mod command;
 mod command_child;
 mod command_drain;
-#[cfg(windows)]
-mod command_job;
+mod command_failure;
 mod command_stop;
 pub(crate) mod command_tree;
+mod command_tree_owner;
 pub(crate) mod diff;
 mod diff_issue;
 pub(crate) mod discovery;

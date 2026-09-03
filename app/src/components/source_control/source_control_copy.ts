@@ -4,6 +4,7 @@
 import {
   AGENT_DRAINING_CODE,
   SOURCE_CONTROL_STATE_CHANGED_CODE,
+  SOURCE_CONTROL_UNSUPPORTED_LAYOUT_CODE,
   type SourceControlActionKind,
   type SourceControlEntry,
   type SourceControlStatus,
@@ -24,6 +25,8 @@ export const NO_CHANGES = "NO CHANGES";
 export const NO_CHANGES_IN_FOLDER = "NO CHANGES IN THIS FOLDER";
 export const STAGE_TO_COMMIT_HINT = "Stage changes to commit";
 export const TRUNCATED_HINT = "Status truncated; refresh before committing";
+/** status.snapshotId is "": the review was torn, so there is nothing a commit can be checked against */
+export const NO_SNAPSHOT_HINT = "Review did not capture a stable snapshot; refresh before committing";
 export const MERGE_CONFLICTS_TITLE = "MERGE CONFLICTS";
 export const MERGE_CONFLICT_SUBTITLE = "MERGE CONFLICT";
 
@@ -48,6 +51,7 @@ export function reconcilingCopy(action: SourceControlActionKind): string {
 export function actionErrorHeading(action: SourceControlActionKind, code: string): string {
   if (code === SOURCE_CONTROL_STATE_CHANGED_CODE) return "STATE CHANGED — REVIEW AGAIN";
   if (code === AGENT_DRAINING_CODE) return "AGENT SHUTTING DOWN";
+  if (code === SOURCE_CONTROL_UNSUPPORTED_LAYOUT_CODE) return "UNSUPPORTED REPOSITORY LAYOUT";
   return `${ACTION_LABELS[action]} FAILED`;
 }
 
@@ -58,6 +62,19 @@ export function hookChangedHeading(count: number): string {
 
 export function hookChangedMessage(paths: string[]): string {
   return paths.join("\n");
+}
+
+/** A commit hook staged paths no reviewed row covered: the commit carries content never shown */
+export const HOOK_ADDED_HEADING = "COMMIT HOOK ADDED UNREVIEWED FILES";
+
+/**
+ * Plain words only, no shell: the remedy is named, never pasted (ADR-012 covers UI copy too).
+ */
+export function hookAddedMessage(paths: string[]): string {
+  return (
+    `A commit hook added ${paths.length} path(s) you did not review: ${paths.join(", ")}. ` +
+    "The commit stands; undo it with a soft reset of the last commit if that was not intended."
+  );
 }
 
 /** What a discard does to one of the row's targets */

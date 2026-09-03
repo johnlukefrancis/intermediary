@@ -79,7 +79,7 @@ export {
 } from "./protocol_repo_commands.js";
 export {
   AGENT_DRAINING_CODE, ImageDiffSideSchema, ImageDiffSourceSchema,
-  SOURCE_CONTROL_STATE_CHANGED_CODE,
+  SOURCE_CONTROL_STATE_CHANGED_CODE, SOURCE_CONTROL_UNSUPPORTED_LAYOUT_CODE,
   SourceControlActionCommandSchema, SourceControlActionKindSchema, SourceControlActionResultSchema,
   SourceControlActionSchema, SourceControlAreaSchema, SourceControlChangeSchema,
   SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlDiscardTargetSchema,

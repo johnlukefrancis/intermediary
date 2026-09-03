@@ -17,46 +17,13 @@
 //! changed, and it is `notApplied` only where a site proved it.
 
 mod actions;
-mod actions_commit;
-mod actions_commit_retract;
-mod actions_discard;
-mod actions_discard_claim;
-mod actions_discard_target;
-mod actions_remote;
-mod actions_stage;
+mod commit;
 mod diff;
-mod discard_quarantine;
-mod git_version;
-mod image_diff;
-mod image_diff_sides;
+mod discard;
 mod locks;
 mod paths;
 mod runner;
-mod runner_failure;
 mod status;
-mod status_index_tree;
-mod status_project;
-mod status_stamp;
-#[cfg(test)]
-mod tests;
-#[cfg(test)]
-mod tests_actions;
-#[cfg(test)]
-mod tests_commit;
-#[cfg(test)]
-mod tests_commit_hooks;
-#[cfg(test)]
-mod tests_diff;
-#[cfg(test)]
-mod tests_discard_quarantine;
-#[cfg(test)]
-mod tests_discard_stamps;
-#[cfg(test)]
-mod tests_image_diff;
-#[cfg(test)]
-mod tests_locks;
-#[cfg(test)]
-mod tests_preconditions;
 #[cfg(test)]
 mod tests_support;
 
@@ -91,13 +58,15 @@ pub struct SourceControlImageDiff {
 }
 
 /// Outcome of a mutation: the fresh status read after the action, plus the
-/// new HEAD for commits and, for a commit whose hook changed anything, the
-/// paths it changed (empty for every other action kind).
+/// new HEAD for commits and, for a commit a hook touched, what it did — the
+/// reviewed paths it rewrote and the unreviewed paths it added. Both are
+/// `None` for every other action kind, and for a commit no hook touched.
 #[derive(Debug, Clone)]
 pub struct SourceControlActionOutcome {
     pub status: SourceControlStatus,
     pub commit_sha: Option<String>,
-    pub hook_changed_paths: Vec<String>,
+    pub hook_changed_paths: Option<Vec<String>>,
+    pub hook_added_paths: Option<Vec<String>>,
 }
 
 /// Whole-repository status projected onto the configured root. The locks
@@ -133,7 +102,7 @@ pub async fn source_control_image_diff(
     area: SourceControlArea,
     cancel_token: Option<BundleCancelToken>,
 ) -> Result<SourceControlImageDiff, AgentError> {
-    image_diff::capture_image_diff(repo_root, path, original_path, area, cancel_token).await
+    diff::image::capture_image_diff(repo_root, path, original_path, area, cancel_token).await
 }
 
 /// Runs one mutation under the lock of the physical Git directory that owns

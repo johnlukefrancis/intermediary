@@ -10,14 +10,23 @@ use im_agent::server::EventBus;
 use tokio::sync::oneshot;
 
 use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
-use crate::wsl::wsl_backend_client::ForwardedWslResponse;
+use crate::wsl::wsl_backend_client::{
+    untrack_outstanding, ForwardedWslResponse, OutstandingMutations,
+};
 
+/// Decodes one message from the WSL agent. A decoded response envelope is the
+/// single confirmation point for a forwarded request: whether it carries a
+/// result or an error, the WSL side has finished with that request id, so the
+/// id stops being an outstanding mutation here — including when the host
+/// already timed out and cancelled and this is the late answer. Transport
+/// failures never reach this decode, so they leave the ledger alone.
 pub(super) fn handle_backend_message(
     text: &str,
     pending: &mut HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>>,
     event_bus: &EventBus,
     logger: &Logger,
     generation: u64,
+    outstanding: &OutstandingMutations,
 ) {
     let value: serde_json::Value = match serde_json::from_str(text) {
         Ok(value) => value,
@@ -57,6 +66,7 @@ pub(super) fn handle_backend_message(
             payload,
             ..
         } => {
+            untrack_outstanding(outstanding, &request_id);
             if let Some(response_tx) = pending.remove(&request_id) {
                 let _ = response_tx.send(Ok(ForwardedWslResponse {
                     response: payload,
@@ -67,6 +77,7 @@ pub(super) fn handle_backend_message(
         ResponseEnvelope::Error {
             request_id, error, ..
         } => {
+            untrack_outstanding(outstanding, &request_id);
             if let Some(response_tx) = pending.remove(&request_id) {
                 let mut mapped = AgentError::new(error.code, error.message);
                 if let Some(details) = error.details {

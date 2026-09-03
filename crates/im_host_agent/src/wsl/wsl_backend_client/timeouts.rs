@@ -4,7 +4,7 @@
 //! Every constant here bounds one whole forwarded request, and a forwarded
 //! source-control request runs a *sequence* of Git commands in the WSL agent,
 //! each with its own bound (read 20 s, index 60 s, commit 120 s, remote 180 s;
-//! `crates/im_agent/src/source_control/runner.rs`). The numbers below are
+//! `crates/im_agent/src/source_control/runner/mod.rs`). The numbers below are
 //! therefore stated as sums of those bounds, not guesses.
 //!
 //! The unit that recurs is one status capture: `rev-parse --show-prefix`,

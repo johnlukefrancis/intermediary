@@ -3,10 +3,13 @@
 
 use super::graceful_stop::GracefulStopPath;
 use super::{AgentSupervisor, SPAWN_BACKOFF};
-use crate::agent::supervisor::process_kill::{kill_and_wait, KillAndWaitOutcome};
-use crate::agent::supervisor::state::{process_state, process_state_mut, ProcessKind};
+use crate::agent::supervisor::process_kill::{
+    discard_process, kill_and_wait, terminate_tree, KillAndWaitOutcome,
+};
+use crate::agent::supervisor::state::{
+    process_state, process_state_mut, ProcessKind, SupervisedChild,
+};
 use crate::obs::logging;
-use std::process::Child;
 use std::time::Instant;
 
 impl AgentSupervisor {
@@ -86,13 +89,17 @@ impl AgentSupervisor {
         Ok(())
     }
 
+    /// Records a freshly started process, after the one it replaces has been
+    /// reconciled: that reconciliation is what terminates and drops the stale
+    /// tree owner, so two owners are never recorded and none is ever dropped
+    /// while the processes inside it are still running.
     pub(super) async fn replace_child(
         &self,
         kind: ProcessKind,
-        child: Child,
+        process: impl Into<SupervisedChild>,
     ) -> Result<(), String> {
         self.reconcile_recorded_child(kind, "replace_child").await?;
-        self.store_child(kind, child)
+        self.store_child(kind, process.into())
     }
 
     pub(super) async fn reconcile_recorded_child(
@@ -100,16 +107,21 @@ impl AgentSupervisor {
         kind: ProcessKind,
         reason: &str,
     ) -> Result<(), String> {
-        let Some(mut child) = self.take_child(kind)? else {
+        let Some(mut process) = self.take_child(kind)? else {
             return Ok(());
         };
 
-        let pid = child.id();
-        match child
+        let pid = process.child.id();
+        match process
+            .child
             .try_wait()
             .map_err(|err| format!("Failed to poll {} process: {err}", kind.label()))?
         {
             Some(status) => {
+                // The process is gone but whatever it started is not: the tree
+                // owner outlives it and kills nothing when dropped, so it is
+                // spent here rather than released.
+                terminate_tree(process.job.as_ref(), pid);
                 logging::log(
                     "info",
                     "agent",
@@ -128,7 +140,7 @@ impl AgentSupervisor {
                     "kill_start",
                     &format!("kind={} pid={pid} reason={reason}", kind.log_key()),
                 );
-                let result = tauri::async_runtime::spawn_blocking(move || kill_and_wait(child))
+                let result = tauri::async_runtime::spawn_blocking(move || kill_and_wait(process))
                     .await
                     .map_err(|err| format!("{} kill task failed: {err}", kind.label()))?;
 
@@ -145,8 +157,8 @@ impl AgentSupervisor {
                         );
                         Ok(())
                     }
-                    KillAndWaitOutcome::Failed(child, err) => {
-                        self.restore_child(kind, child)?;
+                    KillAndWaitOutcome::Failed(process, err) => {
+                        self.restore_child(kind, process)?;
                         let message =
                             format!("Failed to terminate {} process: {err}", kind.log_key());
                         logging::log(
@@ -174,48 +186,53 @@ impl AgentSupervisor {
         Ok(())
     }
 
-    fn take_child(&self, kind: ProcessKind) -> Result<Option<Child>, String> {
+    /// The child and its tree owner leave the slot together: a stop that held
+    /// only one of them could not end the other.
+    fn take_child(&self, kind: ProcessKind) -> Result<Option<SupervisedChild>, String> {
         let mut state = self
             .state
             .lock()
             .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        Ok(process_state_mut(&mut state, kind).child.take())
+        Ok(process_state_mut(&mut state, kind).process.take())
     }
 
-    fn restore_child(&self, kind: ProcessKind, mut child: Child) -> Result<(), String> {
+    fn restore_child(&self, kind: ProcessKind, process: SupervisedChild) -> Result<(), String> {
         let mut state = self
             .state
             .lock()
             .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        let slot = &mut process_state_mut(&mut state, kind).child;
+        let slot = &mut process_state_mut(&mut state, kind).process;
         if slot.is_some() {
-            let _ = child.kill();
-            let _ = child.wait();
+            discard_process(process);
             return Err(format!(
                 "Failed to restore {} process handle: slot was already occupied",
                 kind.log_key()
             ));
         }
-        *slot = Some(child);
+        *slot = Some(process);
         Ok(())
     }
 
-    fn store_child(&self, kind: ProcessKind, mut child: Child) -> Result<(), String> {
-        let mut state = self.state.lock().map_err(|_| {
-            let _ = child.kill();
-            let _ = child.wait();
-            "Agent supervisor lock poisoned".to_string()
-        })?;
-        let slot = &mut process_state_mut(&mut state, kind).child;
+    fn store_child(&self, kind: ProcessKind, process: SupervisedChild) -> Result<(), String> {
+        let mut state = match self.state.lock() {
+            Ok(state) => state,
+            Err(_) => {
+                discard_process(process);
+                return Err("Agent supervisor lock poisoned".to_string());
+            }
+        };
+        let slot = &mut process_state_mut(&mut state, kind).process;
         if slot.is_some() {
-            let _ = child.kill();
-            let _ = child.wait();
+            discard_process(process);
             return Err(format!(
                 "Failed to store {} process handle: slot already occupied",
                 kind.log_key()
             ));
         }
-        *slot = Some(child);
+        *slot = Some(process);
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

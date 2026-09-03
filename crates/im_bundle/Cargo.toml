@@ -28,15 +28,17 @@ zip = { version = "2.1", default-features = false, features = ["deflate"] }
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-# Job Object ownership of the Git process tree (git_capture/command_job.rs):
+# Job Object ownership of a spawned process tree (src/process_job.rs):
 # CreateJobObjectW (no limits set), AssignProcessToJobObject,
 # TerminateJobObject, CloseHandle. Version is the copy the workspace lock
 # already resolved. Win32_Security and Win32_System_Threading are not called
 # into: the JobObjects module's own signatures name SECURITY_ATTRIBUTES and
-# IO_COUNTERS, so it does not compile without them.
+# IO_COUNTERS, so it does not compile without them. Win32_Storage_FileSystem
+# is MoveFileExW, the no-replace rename in src/fs_atomic.rs.
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
     "Win32_Security",
+    "Win32_Storage_FileSystem",
     "Win32_System_JobObjects",
     "Win32_System_Threading",
 ] }

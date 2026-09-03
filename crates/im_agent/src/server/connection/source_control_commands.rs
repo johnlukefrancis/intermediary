@@ -99,6 +99,7 @@ pub async fn source_control_action_command(
             status: outcome.status,
             commit_sha: outcome.commit_sha,
             hook_changed_paths: outcome.hook_changed_paths,
+            hook_added_paths: outcome.hook_added_paths,
         },
     ))
 }

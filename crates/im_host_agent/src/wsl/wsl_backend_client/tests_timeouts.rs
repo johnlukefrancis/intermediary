@@ -89,8 +89,7 @@ fn every_source_control_class_keeps_its_own_budget() {
 
     let commit = action(SourceControlActionPayload::Commit {
         message: "message".to_string(),
-        expected_index_tree_sha: "sha".to_string(),
-        expected_head_sha: None,
+        expected_snapshot_id: "snapshot".to_string(),
     });
     assert_eq!(timeout_for_command(&commit), Duration::from_secs(380));
 
