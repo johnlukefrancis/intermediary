@@ -78,6 +78,11 @@ linked worktrees) are recorded as accepted boundaries in `docs/design/source_con
 - 2026-09-03: Host in-process source-control reads (status/diff for host-rooted repos) are bounded by
   their Git timeout only and are not cancellable — the host agent has no cancellation path to serve one,
   so no UI cancel control is offered for a host read. WSL-routed reads remain cancellable.
+- 2026-09-03: A forwarded WSL mutation that hits the host's timeout stays in the outstanding-mutation
+  ledger for the rest of the host process: the action is cancelled passively, so the WSL agent suppresses
+  its late answer and the host never learns the outcome. Consequence: a later shutdown while the WSL
+  backend is offline waits the full emergency bound instead of treating the backend as drained. Timeouts
+  sit at 280–420 s, so this is rare; the fix (let a cancelled mutation still answer) is outside the ledger.
 - 2026-09-03: MERGE CONFLICTS has no section-wide stage/unstage. This is intentional, not a gap: conflicts
   are resolved per row so a bulk action can never mark a conflict-marker file resolved by accident.
 - 2026-09-03: Paths Git reports that are not valid UTF-8 cannot cross the protocol, so they are counted in
