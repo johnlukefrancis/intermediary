@@ -1170,6 +1170,10 @@
       "summary": "Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained"
     },
     {
+      "path": "crates/im_agent/src/server/stdin_eof.rs",
+      "summary": "The supervisor's stdin pipe as a shutdown owner - EOF on fd 0 is a drain request"
+    },
+    {
       "path": "crates/im_agent/src/server/ws_server.rs",
       "summary": "WebSocket accept loop and connection dispatch"
     },
@@ -1654,6 +1658,10 @@
       "summary": "The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable"
     },
     {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests_outstanding.rs",
+      "summary": "Unit tests for the outstanding-mutation ledger: decode-site clearing, timeouts, and offline answers"
+    },
+    {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs",
       "summary": "Unit tests for the per-command forward timeout ladder"
     },
@@ -1822,8 +1830,12 @@
       "summary": "Blocking websocket auth and origin probes used by the supervisor"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_backend_record.rs",
+      "summary": "What the supervisor records about the WSL backend it owns this session"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/wsl_control.rs",
-      "summary": "WSL backend termination, stale-port remediation, and launch-target bookkeeping"
+      "summary": "WSL backend termination and stale-port remediation for the supervisor"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/wsl_logging.rs",
@@ -1842,8 +1854,16 @@
       "summary": "Same-port Intermediary WSL agent termination for supervisor remediation"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_spawn.rs",
+      "summary": "Starting the WSL backend and recording it, with the stdin pipe that outlives the launch"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/wsl_terminate_logging.rs",
+      "summary": "How a WSL emergency-stop outcome is named in the supervisor log"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/wsl.rs",
-      "summary": "WSL backend startup and ownership detection for the supervisor"
+      "summary": "The ensure-running decision for the WSL backend: ownership detection, adoption, remediation"
     },
     {
       "path": "src-tauri/src/lib/agent/types.rs",
@@ -1858,20 +1878,44 @@
       "summary": "Pre-WebView websocket authentication state and durable token persistence"
     },
     {
+      "path": "src-tauri/src/lib/agent/wsl_agent_discovery_tests.rs",
+      "summary": "Tests for WSL agent pid discovery parsing"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_agent_discovery.rs",
+      "summary": "In-distro discovery of the Intermediary WSL agent pids a stop is responsible for"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_agent_termination_channel.rs",
+      "summary": "The live in-distro channel an emergency WSL stop signals through"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_agent_termination_tests.rs",
+      "summary": "Tests for the WSL emergency stop's drain envelope and process-tree escalation"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_agent_termination.rs",
+      "summary": "The supervisor's WSL emergency stop - TERM, the agent's own drain, then its process trees"
+    },
+    {
       "path": "src-tauri/src/lib/agent/wsl_command_runner.rs",
       "summary": "Bounded WSL command execution helpers for agent process control"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_process_control_commands.rs",
-      "summary": "Shared command-line builders and quoting helpers for WSL process control"
-    },
-    {
-      "path": "src-tauri/src/lib/agent/wsl_process_control_tests.rs",
-      "summary": "Tests for WSL process-control parsing helpers"
+      "summary": "Command-line builders and quoting helpers for launching and signalling the WSL agent"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_process_control.rs",
-      "summary": "WSL agent launch target resolution, spawning, and in-WSL termination helpers"
+      "summary": "WSL agent launch target resolution and spawning"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_process_probe_commands.rs",
+      "summary": "In-distro probe scripts that report Intermediary agent pids and distro idleness"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/wsl_process_tree_commands.rs",
+      "summary": "The in-distro script that kills a WSL agent's descendant process groups, then the agent"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_shutdown.rs",

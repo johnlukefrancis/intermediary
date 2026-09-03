@@ -295,6 +295,7 @@ crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running agent executable identity during WebSocket handshake
 crates/im_agent/src/server/shutdown.rs - The one drain-then-exit owner shared by the shutdown command and the process signals
 crates/im_agent/src/server/shutdown/tests.rs - Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained
+crates/im_agent/src/server/stdin_eof.rs - The supervisor's stdin pipe as a shutdown owner - EOF on fd 0 is a drain request
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_agent/src/source_control/actions/mod.rs - Dispatches one source-control mutation and reads the status that follows it
 crates/im_agent/src/source_control/actions/remote.rs - Push and pull for one repo root, including upstream selection
@@ -416,6 +417,7 @@ crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop 
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
 crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
 crates/im_host_agent/src/wsl/wsl_backend_client/client_loop.rs - The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable
+crates/im_host_agent/src/wsl/wsl_backend_client/tests_outstanding.rs - Unit tests for the outstanding-mutation ledger: decode-site clearing, timeouts, and offline answers
 crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs - Unit tests for the per-command forward timeout ladder
 crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarding, cancellation, and outstanding-mutation tracking
 crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs - The host->WSL request-timeout ladder and the agent-side worst case each tier covers
@@ -458,19 +460,28 @@ src-tauri/src/lib/agent/supervisor/shutdown.rs - App-exit teardown: stop agents,
 src-tauri/src/lib/agent/supervisor/state.rs - Shared supervisor process state and process-kind labels
 src-tauri/src/lib/agent/supervisor/websocket_frame.rs - Minimal RFC 6455 client framing used by the supervisor's graceful-shutdown request
 src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth and origin probes used by the supervisor
-src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
+src-tauri/src/lib/agent/supervisor/wsl_backend_record.rs - What the supervisor records about the WSL backend it owns this session
+src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_logging.rs - Structured WSL backend ownership and authentication lifecycle logging
 src-tauri/src/lib/agent/supervisor/wsl_mode.rs - WSL backend mode parsing and ownership-policy helpers for the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_runtime.rs - Shared WSL supervisor timing constants
 src-tauri/src/lib/agent/supervisor/wsl_same_port_termination.rs - Same-port Intermediary WSL agent termination for supervisor remediation
-src-tauri/src/lib/agent/supervisor/wsl.rs - WSL backend startup and ownership detection for the supervisor
+src-tauri/src/lib/agent/supervisor/wsl_spawn.rs - Starting the WSL backend and recording it, with the stdin pipe that outlives the launch
+src-tauri/src/lib/agent/supervisor/wsl_terminate_logging.rs - How a WSL emergency-stop outcome is named in the supervisor log
+src-tauri/src/lib/agent/supervisor/wsl.rs - The ensure-running decision for the WSL backend: ownership detection, adoption, remediation
 src-tauri/src/lib/agent/types.rs - Types for supervising host agent lifecycle with optional Windows WSL backend
 src-tauri/src/lib/agent/websocket_auth_tests.rs - Durable websocket authentication token persistence tests
 src-tauri/src/lib/agent/websocket_auth.rs - Pre-WebView websocket authentication state and durable token persistence
+src-tauri/src/lib/agent/wsl_agent_discovery_tests.rs - Tests for WSL agent pid discovery parsing
+src-tauri/src/lib/agent/wsl_agent_discovery.rs - In-distro discovery of the Intermediary WSL agent pids a stop is responsible for
+src-tauri/src/lib/agent/wsl_agent_termination_channel.rs - The live in-distro channel an emergency WSL stop signals through
+src-tauri/src/lib/agent/wsl_agent_termination_tests.rs - Tests for the WSL emergency stop's drain envelope and process-tree escalation
+src-tauri/src/lib/agent/wsl_agent_termination.rs - The supervisor's WSL emergency stop - TERM, the agent's own drain, then its process trees
 src-tauri/src/lib/agent/wsl_command_runner.rs - Bounded WSL command execution helpers for agent process control
-src-tauri/src/lib/agent/wsl_process_control_commands.rs - Shared command-line builders and quoting helpers for WSL process control
-src-tauri/src/lib/agent/wsl_process_control_tests.rs - Tests for WSL process-control parsing helpers
-src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution, spawning, and in-WSL termination helpers
+src-tauri/src/lib/agent/wsl_process_control_commands.rs - Command-line builders and quoting helpers for launching and signalling the WSL agent
+src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution and spawning
+src-tauri/src/lib/agent/wsl_process_probe_commands.rs - In-distro probe scripts that report Intermediary agent pids and distro idleness
+src-tauri/src/lib/agent/wsl_process_tree_commands.rs - The in-distro script that kills a WSL agent's descendant process groups, then the agent
 src-tauri/src/lib/agent/wsl_shutdown.rs - Conditional WSL distro teardown to free VM RAM when no interactive session remains
 src-tauri/src/lib/commands/agent_control.rs - Tauri commands to manage host + optional WSL agent supervision
 src-tauri/src/lib/commands/agent_probe.rs - Probe local host-agent port availability for diagnostics

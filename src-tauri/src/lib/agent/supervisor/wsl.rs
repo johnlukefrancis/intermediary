@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/agent/supervisor/wsl.rs
-// Description: WSL backend startup and ownership detection for the supervisor
+// Description: The ensure-running decision for the WSL backend: ownership detection, adoption, remediation
 
 use super::wsl_logging::{
     log_wsl_external_auth_failure, log_wsl_owner_detection, log_wsl_owner_mismatch,
@@ -7,16 +7,13 @@ use super::wsl_logging::{
 use super::wsl_mode::{
     backend_mode_allows_owner, resolve_wsl_backend_mode, WslBackendMode, WslBackendOwner,
 };
+use super::wsl_spawn::spawn_wsl_supervised;
 use super::{AgentSupervisor, EnsureProcessResult};
 use crate::agent::install::AgentBundlePaths;
-use crate::agent::process_control::{capture_log_cursor, wait_for_agent_ready};
 use crate::agent::supervisor::state::ProcessKind;
-use crate::agent::wsl_process_control::{
-    build_wsl_launch_target, format_wsl_target, spawn_wsl_agent_process,
-};
+use crate::agent::wsl_process_control::{build_wsl_launch_target, format_wsl_target};
 use crate::agent::AgentWebSocketAuth;
 use crate::obs::logging;
-use std::process::Child;
 
 impl AgentSupervisor {
     pub(super) async fn ensure_wsl_running(
@@ -107,9 +104,25 @@ impl AgentSupervisor {
                 } else {
                     // Adopt the healthy running backend as ours to manage, recording the kill
                     // target so stop/exit can terminate it. Skipped in external mode.
+                    //
+                    // An adopted agent was spawned by some earlier process, so this
+                    // supervisor holds no `Child` and therefore no stdin pipe: its
+                    // shutdown owners are the `shutdown` command and SIGTERM only,
+                    // never EOF (`im_agent::server::stdin_eof`). Logged, because it
+                    // is the one route where losing this supervisor does not by
+                    // itself ask the agent to drain.
                     if reclaimable_owner {
                         self.record_owned_wsl_backend(&target, wsl_port)?;
                     }
+                    logging::log(
+                        "info",
+                        "agent",
+                        "wsl_adopt",
+                        &format!(
+                            "kind=wsl phase=adopt outcome=adopted port={wsl_port} stdin_pipe=none reclaimable={reclaimable_owner} {}",
+                            format_wsl_target(&target)
+                        ),
+                    );
                     return Ok(EnsureProcessResult::AlreadyRunning);
                 }
             }
@@ -218,69 +231,5 @@ mod tests {
     #[test]
     fn external_backend_is_never_replaced_for_identity() {
         assert!(!should_respawn_for_runtime_identity(false, false));
-    }
-}
-
-async fn spawn_wsl_supervised(
-    supervisor: &AgentSupervisor,
-    bundle: &AgentBundlePaths,
-    target: &crate::agent::wsl_process_control::WslLaunchTarget,
-    wsl_port: u16,
-    wsl_ws_token: &str,
-) -> Result<EnsureProcessResult, String> {
-    let target_summary = format_wsl_target(target);
-    logging::log(
-        "info",
-        "agent",
-        "spawn_start",
-        &format!("kind=wsl port={wsl_port} {target_summary}"),
-    );
-    let bundle_for_spawn = bundle.clone();
-    let target_for_spawn = target.clone();
-    let wsl_ws_token = wsl_ws_token.to_string();
-    let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-        let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
-        let log_offset = capture_log_cursor(&log_file);
-        let mut child = spawn_wsl_agent_process(
-            &bundle_for_spawn,
-            &target_for_spawn,
-            wsl_port,
-            &wsl_ws_token,
-        )?;
-        wait_for_agent_ready(
-            &mut child,
-            wsl_port,
-            ProcessKind::Wsl.label(),
-            &log_file,
-            log_offset,
-        )?;
-        Ok(child)
-    })
-    .await
-    .map_err(|err| format!("WSL agent spawn task failed: {err}"))?;
-
-    match spawned {
-        Ok(child) => {
-            let pid = child.id();
-            supervisor.replace_child(ProcessKind::Wsl, child).await?;
-            supervisor.update_last_spawn(ProcessKind::Wsl)?;
-            logging::log(
-                "info",
-                "agent",
-                "spawn_ready",
-                &format!("kind=wsl port={wsl_port} pid={pid} {target_summary}"),
-            );
-            Ok(EnsureProcessResult::Started)
-        }
-        Err(err) => {
-            logging::log(
-                "error",
-                "agent",
-                "spawn_exit_early",
-                &format!("kind=wsl port={wsl_port} {target_summary} error={err}"),
-            );
-            supervisor.set_last_error(Some(err.clone()))?;
-            Err(err)
-        }
     }
 }

@@ -10,9 +10,14 @@ mod runtime_identity;
 pub mod supervisor;
 pub mod types;
 mod websocket_auth;
+mod wsl_agent_discovery;
+mod wsl_agent_termination;
+mod wsl_agent_termination_channel;
 mod wsl_command_runner;
 mod wsl_process_control;
 mod wsl_process_control_commands;
+mod wsl_process_probe_commands;
+mod wsl_process_tree_commands;
 mod wsl_shutdown;
 
 pub use supervisor::AgentSupervisor;

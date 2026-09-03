@@ -6,6 +6,7 @@ mod event_bus;
 mod handshake_auth;
 mod runtime_identity;
 pub mod shutdown;
+pub mod stdin_eof;
 mod ws_server;
 
 pub use event_bus::EventBus;
@@ -14,4 +15,5 @@ pub use shutdown::{
     drain_source_control, drain_source_control_bounded, finalize_shutdown, schedule_process_exit,
     wait_for_shutdown_signal, DrainOutcome, SHUTDOWN_EMERGENCY_BOUND,
 };
+pub use stdin_eof::{stdin_is_supervisor_pipe, wait_for_stdin_eof, STDIN_EOF_REASON};
 pub use ws_server::{run_server, ServerConfig};

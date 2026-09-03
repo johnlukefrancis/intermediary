@@ -2,9 +2,10 @@
 // Description: The one drain-then-exit owner shared by the shutdown command and the process signals
 
 //! Both agents stop the same way, whether the request arrives as a `shutdown`
-//! command on the authenticated socket or as SIGTERM/ctrl-c: admission of new
-//! mutations is closed, the mutations already running are given a bounded
-//! window to reach a terminal state, and only then does the process exit.
+//! command on the authenticated socket, as SIGTERM/ctrl-c, or as EOF on the
+//! supervisor's stdin pipe: admission of new mutations is closed, the mutations
+//! already running are given a bounded window to reach a terminal state, and
+//! only then does the process exit.
 //!
 //! Killing a running `git commit` bypasses Git's own lockfile cleanup and
 //! leaves `.git/index.lock` behind, so the drain — not the kill — is the
@@ -21,6 +22,7 @@ use std::time::Duration;
 use im_bundle::git::terminate_git_process_trees;
 use serde_json::json;
 
+use super::stdin_eof::wait_for_stdin_eof;
 use crate::logging::Logger;
 use crate::source_control::SourceControlLocks;
 
@@ -163,10 +165,16 @@ pub fn schedule_process_exit(logger: Logger, reason: &'static str) {
     });
 }
 
-/// Resolves when the operating system asks this process to stop. SIGTERM is the
-/// signal a supervisor or `wsl --terminate` actually sends; ctrl-c is the
-/// interactive equivalent.
+/// Resolves when something outside this process asks it to stop. Three owners,
+/// one drain: SIGTERM is the signal a supervisor or `wsl --terminate` actually
+/// sends, ctrl-c is the interactive equivalent, and EOF on the supervisor's
+/// stdin pipe is the one that still arrives when the supervisor died without a
+/// chance to send anything (see [`crate::server::stdin_eof`]). Whichever wins
+/// names itself, and every one of them takes the same drain path.
 pub async fn wait_for_shutdown_signal(logger: &Logger) -> &'static str {
+    let stdin_eof = wait_for_stdin_eof(logger);
+    tokio::pin!(stdin_eof);
+
     #[cfg(unix)]
     {
         use tokio::signal::unix::{signal, SignalKind};
@@ -178,17 +186,24 @@ pub async fn wait_for_shutdown_signal(logger: &Logger) -> &'static str {
                     "Failed to install the SIGTERM handler",
                     Some(json!({"error": err.to_string()})),
                 );
-                return wait_for_ctrl_c(logger).await;
+                return tokio::select! {
+                    reason = wait_for_ctrl_c(logger) => reason,
+                    reason = &mut stdin_eof => reason,
+                };
             }
         };
         tokio::select! {
             _ = terminate.recv() => "sigterm",
             reason = wait_for_ctrl_c(logger) => reason,
+            reason = &mut stdin_eof => reason,
         }
     }
     #[cfg(not(unix))]
     {
-        wait_for_ctrl_c(logger).await
+        tokio::select! {
+            reason = wait_for_ctrl_c(logger) => reason,
+            reason = &mut stdin_eof => reason,
+        }
     }
 }
 

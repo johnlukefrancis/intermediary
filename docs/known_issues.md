@@ -88,11 +88,45 @@ linked worktrees) are recorded as accepted boundaries in `docs/design/source_con
 - 2026-09-03: Paths Git reports that are not valid UTF-8 cannot cross the protocol, so they are counted in
   `omitted.unrepresentablePath` and never listed. Because a section action enumerates only the paths its
   section listed, STAGE ALL does not reach them either; they can only be staged from a terminal.
+- 2026-09-03: The WSL emergency stop's descendant sweep does not reach a hook that started its own
+  session. It walks the agent's descendants from one `ps -e -o pid=,ppid=,pgid=` snapshot and kills their
+  process groups; a hook that called `setsid` has by definition left the agent's tree, so nothing above
+  it can claim it by ownership and reaching it would mean killing by heuristic. Accepted: `setsid` in a
+  hook is a deliberate detachment. The agent's *own* process group is likewise never group-killed —
+  `wsl.exe` puts unrelated processes in it — so same-group descendants are killed one pid at a time.
+- 2026-09-03: A WSL agent the app adopted rather than spawned has no supervisor stdin pipe, so losing the
+  Tauri process does not by itself ask it to drain (`stdin_pipe=none` in the adoption log). It is still
+  stopped by the `shutdown` command and by the emergency route on the next stop/exit, and the next launch
+  reclaims it by port.
+- 2026-09-03: Finality is chosen over speed at exit, and the two stop waits compound. `stop()` runs the
+  host graceful stop first (up to `HOST_STOP_WAIT_BOUND`, 480 s) and only then the WSL emergency stop,
+  whose drain wait is that same 480 s constant — so an app exit where *both* agents are wedged
+  mid-mutation can take about 16 minutes before either emergency tree kill runs, and the startup
+  stale-port remediation retries the same route (two attempts) when a wedged agent still holds the port.
+  That is the accepted cost of never killing into a drain that may still hold `.git/index.lock`: the
+  bound is the emergency, not the plan. Ordinary exits are unaffected — a drained agent has already
+  exited, so the host wait ends on its ack and the WSL route's first probe returns `NoMatch` at once.
 
 ---
 
 ## Resolved (recent)
 
+- 2026-09-03: The WSL agent's process tree had no owner once the supervisor killed the agent. The
+  emergency route TERMed the agent and KILLed it 750 ms later, but the WSL agent's own SIGTERM drain runs
+  up to 450 s and every Git command inside it owns a separate Unix process group — so the KILL orphaned
+  those groups (hooks still mutating the worktree, still holding `.git/index.lock`) while the outer distro
+  termination is deliberately skipped when host finality is unknown or an interactive WSL session is open.
+  Closed by `src-tauri/src/lib/agent/wsl_agent_termination.rs`: TERM, then the agent's own drain waited out
+  for the same 480 s envelope the host stop uses (one shared `HOST_STOP_WAIT_BOUND`), and only on expiry an
+  in-distro sweep (`wsl_process_tree_commands.rs`) that kills every descendant process group, then the
+  same-group descendants, then the agent — with the signalled count in the log. An already-exited agent
+  still returns `NoMatch` on the first probe, so the ordinary stop/restart is unchanged.
+- 2026-09-03: The design doc claimed the WSL agent drained on "SIGTERM/EOF" but no EOF owner existed —
+  websocket EOF only ends a connection handler, correctly, because the host reconnects. Closed by
+  `crates/im_agent/src/server/stdin_eof.rs` (a `spawn_blocking` reader on fd 0 when it is a pipe or socket,
+  resolving the shutdown signal with `reason: "stdin-eof"` into the same drain SIGTERM takes) and by
+  `spawn_wsl_agent_process` giving the WSL backend a piped stdin whose write end lives inside the recorded
+  `Child`. A tty or `/dev/null` launch is never claimed, so terminal and script runs are unaffected.
 - 2026-09-03: On Windows neither the Git process tree nor the host agent's own tree had an owner, so a
   descendant (hook, `ssh`, credential helper) that outlived its parent was detached rather than
   terminated. Closed by `crates/im_bundle/src/process_job.rs` with `git_capture/command_tree.rs` (every
@@ -133,7 +167,7 @@ linked worktrees) are recorded as accepted boundaries in `docs/design/source_con
 - 2026-07-07: WSL agent detection and termination were silently corrupted when scripts were marshalled through `wsl.exe -- bash -lc "<script>"`: the Windows→WSL argument boundary mangled embedded newlines/quotes/`$()` (observed `syntax error near '<n>'`), and the login profile injected terminal-size errors plus a `$PATH` full of `Program Files (x86)` landmines. So port reclamation and stale-agent detection returned nothing and a wedged agent stayed branded `external` — the reclamation fixes below never actually ran on Windows. Fixed by feeding every WSL control/detection script over **stdin** to `bash --noprofile --norc -s`, so the script never crosses wsl.exe's argument parser and no login profile runs. Verified end-to-end through real `wsl.exe` from Rust.
 - 2026-07-07: Reinstalling the app (or launching then closing the WSL dev task) could permanently wedge the WSL backend — a surviving `im_agent` held port 3142 with a mismatched token and was branded an `external` process the supervisor refused to terminate in mode=auto, with no in-app recovery. Fixed by making kill authority port-anchored: the supervisor now finds the port owner via `ss`, confirms it is an Intermediary `im_agent` (comm/exe/token-env), and reclaims it (TERM→KILL) — so any of our own stale/mismatched agents on the reserved port are reclaimed while foreign listeners are still left alone. Also relocated `ws_auth.json` out of the installer-wiped `agent/` dir (with migration) so reinstalls reuse the token and reconnect cleanly.
 - 2026-07-07: "Restart Agent" could silently no-op — `stop()` only killed the in-distro agent when it held a launch target it recorded this session, and a forced restart still short-circuited to `AlreadyRunning`. Fixed by reclaiming the backend by port on stop/restart (durable distro+port handle) and honoring `force` so a restart always tears down and respawns, recovering the app even from a wedged state.
-- 2026-07-07: Closing the app left the WSL `im_agent` running, so the WSL VM lingered holding 4–6 GB of RAM. Fixed by reliably stopping the agent by port on exit and then terminating the distro (`wsl --terminate <distro>`) only when it is otherwise idle (no interactive `pts/*` session open); open WSL shells and external-mode backends are left untouched. A Task-Manager force-kill still skips cleanup, but the next launch reclaims the orphaned agent by port.
+- 2026-07-07: Closing the app left the WSL `im_agent` running, so the WSL VM lingered holding 4–6 GB of RAM. Fixed by reliably stopping the agent by port on exit and then terminating the distro (`wsl --terminate <distro>`) only when it is otherwise idle (no interactive `pts/*` session open); open WSL shells and external-mode backends are left untouched. A Task-Manager force-kill of the Tauri process no longer orphans the agent: killing the supervisor closes the stdin pipe it holds open, and the WSL agent's stdin-EOF reader resolves that into the same drain SIGTERM takes, so the agent finishes its mutation and exits on its own. What a force-kill still skips is the distro teardown — nothing runs the idle probe or `wsl --terminate`, so the VM keeps its RAM until WSL's own idle timeout. Reclaiming the agent by port on the next launch is therefore no longer the ordinary path; it remains the recovery for the two cases where no EOF drain finished: an agent that was mid-mutation and is still draining when the next launch starts, and an adopted agent that never had a supervisor pipe (recorded under *Source Control — accepted boundaries and decisions*).
 - 2026-07-07: Background GPU usage from substrate and status animations when the window was unfocused. The motion governor only paused on hide/minimize, and its CSS gate only paused the substrate. Fixed by pausing on any focus loss (shared `isForegroundWindow()` foreground test) and gating all animation via a universal `[data-motion="paused"]` rule, so the whole window's animation halts (GPU → near-idle) when it is not foreground and resumes on refocus.
 - 2026-05-23: Settings Restart Agent could no-op after `WSL backend port 3142 is occupied by an external process that rejected the current websocket token` because the auto-mode error path cleared the WSL launch target before returning. Fixed by preserving the configured launch target before surfacing the auto-mode refusal, allowing Restart Agent to terminate the exact app-local backend path when it is the stale listener.
 - 2026-05-22: Opening files in the containing folder could fail for Windows-path files. Fixed by passing Explorer's reveal selection and target path as one `/select,<path>` argument.

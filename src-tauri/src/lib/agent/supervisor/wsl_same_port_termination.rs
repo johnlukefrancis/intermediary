@@ -1,12 +1,11 @@
 // Path: src-tauri/src/lib/agent/supervisor/wsl_same_port_termination.rs
 // Description: Same-port Intermediary WSL agent termination for supervisor remediation
 
-use super::wsl_runtime::{WSL_TERMINATE_POLL, WSL_TERMINATE_TERM_GRACE};
+use super::wsl_runtime::WSL_TERMINATE_BUDGET;
+use super::wsl_terminate_logging::{outcome_label, outcome_level};
 use super::AgentSupervisor;
-use crate::agent::wsl_process_control::{
-    format_wsl_target, terminate_intermediary_wsl_agent_processes_by_port, WslLaunchTarget,
-    WslTerminateOutcome,
-};
+use crate::agent::wsl_agent_termination::terminate_intermediary_wsl_agent_processes_by_port;
+use crate::agent::wsl_process_control::{format_wsl_target, WslLaunchTarget};
 use crate::obs::logging;
 
 impl AgentSupervisor {
@@ -31,28 +30,21 @@ impl AgentSupervisor {
             terminate_intermediary_wsl_agent_processes_by_port(
                 &target_for_kill,
                 wsl_port,
-                WSL_TERMINATE_TERM_GRACE,
-                WSL_TERMINATE_POLL,
+                WSL_TERMINATE_BUDGET,
             )
         })
         .await
         .map_err(|err| format!("WSL same-port termination task failed: {err}"))?;
 
         match result {
-            Ok(WslTerminateOutcome::NoMatch) => log_same_port_done(
-                "info",
+            Ok(outcome) => log_same_port_done(
+                outcome_level(outcome),
                 reason,
                 attempt,
                 wsl_port,
-                "no_match",
+                &outcome_label(outcome),
                 &target_summary,
             ),
-            Ok(WslTerminateOutcome::TerminatedWithTerm) => {
-                log_same_port_done("info", reason, attempt, wsl_port, "term", &target_summary)
-            }
-            Ok(WslTerminateOutcome::TerminatedWithKill) => {
-                log_same_port_done("warn", reason, attempt, wsl_port, "kill", &target_summary)
-            }
             Err(err) => {
                 logging::log(
                     "error",

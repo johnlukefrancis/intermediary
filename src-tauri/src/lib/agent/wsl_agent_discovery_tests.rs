@@ -1,5 +1,5 @@
-// Path: src-tauri/src/lib/agent/wsl_process_control_tests.rs
-// Description: Tests for WSL process-control parsing helpers
+// Path: src-tauri/src/lib/agent/wsl_agent_discovery_tests.rs
+// Description: Tests for WSL agent pid discovery parsing
 
 use super::parse_pid_list;
 

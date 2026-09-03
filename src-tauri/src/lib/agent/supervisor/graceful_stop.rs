@@ -16,7 +16,11 @@ use std::time::{Duration, Instant};
 /// expires; when it does expire anyway (no ack at all, or the process outlives
 /// its own honest answer) the caller falls through to `Child::kill`, the
 /// emergency bound, not the plan.
-const HOST_STOP_WAIT_BOUND: Duration = Duration::from_secs(480);
+///
+/// The WSL emergency stop waits the same envelope for the same reason
+/// (`wsl_runtime::WSL_TERMINATE_BUDGET`), so the two share this one constant
+/// rather than each carrying a copy of 480.
+pub(super) const HOST_STOP_WAIT_BOUND: Duration = Duration::from_secs(480);
 const EXIT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Which route actually stopped the host agent this time.

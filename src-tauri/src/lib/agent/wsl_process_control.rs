@@ -1,19 +1,13 @@
 // Path: src-tauri/src/lib/agent/wsl_process_control.rs
-// Description: WSL agent launch target resolution, spawning, and in-WSL termination helpers
+// Description: WSL agent launch target resolution and spawning
 
 use super::install::AgentBundlePaths;
-use super::wsl_command_runner::{run_wsl_bash, run_wsl_signal_command, sanitize_stream_text};
 use super::wsl_process_control_commands::{
-    build_wsl_bash_args, build_wsl_list_exact_pids_command_line,
-    build_wsl_list_intermediary_agent_pids_command_line,
-    build_wsl_list_port_listener_pids_command_line, build_wsl_signal_pids_command_line,
-    build_wsl_spawn_command_line, distro_label, normalize_distro,
+    build_wsl_bash_args, build_wsl_spawn_command_line, distro_label, normalize_distro,
 };
 use crate::paths::wsl_convert::windows_to_wsl_path;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
-use std::thread;
-use std::time::{Duration, Instant};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -25,13 +19,6 @@ pub struct WslLaunchTarget {
     pub distro: Option<String>,
     pub agent_dir_wsl: String,
     pub agent_bin_wsl: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WslTerminateOutcome {
-    NoMatch,
-    TerminatedWithTerm,
-    TerminatedWithKill,
 }
 
 pub fn build_wsl_launch_target(
@@ -66,6 +53,21 @@ pub fn build_wsl_launch_target(
     })
 }
 
+/// Starts the WSL backend with a **piped stdin the supervisor never writes to**.
+/// That pipe is the agent's third shutdown owner (`im_agent::server::stdin_eof`):
+/// its write end lives inside the returned [`Child`] and therefore closes exactly
+/// when the supervisor stops intending this process to run — including when the
+/// supervisor itself dies without a chance to send `shutdown` or SIGTERM. The
+/// agent then takes the same drain path it takes for SIGTERM, so a Git mutation
+/// in flight finishes and its process trees are never orphaned.
+///
+/// The handle is deliberately not `take()`n anywhere: moving it out would split
+/// the pipe's lifetime from the process it governs, which is the one thing this
+/// owner must not allow. A WSL agent this supervisor adopted rather than spawned
+/// has no `Child` and therefore no pipe — logged where the adoption happens.
+///
+/// stdout/stderr stay null: the agent writes its own log file, and an undrained
+/// pipe there would stall it (`INTERMEDIARY_AGENT_STDIO_LOGGING=0`).
 pub fn spawn_wsl_agent_process(
     bundle: &AgentBundlePaths,
     target: &WslLaunchTarget,
@@ -87,225 +89,16 @@ pub fn spawn_wsl_agent_process(
     let mut command = build_wsl_bash_command(target.distro.as_deref(), &command_line);
 
     command
+        .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|err| format_wsl_spawn_error(err, target.distro.as_deref()))
 }
 
-pub fn terminate_wsl_agent_process(
-    target: &WslLaunchTarget,
-    term_grace: Duration,
-    poll: Duration,
-) -> Result<WslTerminateOutcome, String> {
-    if !cfg!(target_os = "windows") {
-        return Ok(WslTerminateOutcome::NoMatch);
-    }
-
-    terminate_matching_wsl_agent_processes(
-        target.distro.as_deref(),
-        term_grace,
-        poll,
-        || list_exact_wsl_agent_pids(target),
-        &target.agent_bin_wsl,
-    )
-}
-
-pub fn terminate_intermediary_wsl_agent_processes_by_port(
-    target: &WslLaunchTarget,
-    wsl_port: u16,
-    term_grace: Duration,
-    poll: Duration,
-) -> Result<WslTerminateOutcome, String> {
-    if !cfg!(target_os = "windows") {
-        return Ok(WslTerminateOutcome::NoMatch);
-    }
-
-    let distro = target.distro.clone();
-    terminate_matching_wsl_agent_processes(
-        distro.as_deref(),
-        term_grace,
-        poll,
-        || list_reclaimable_wsl_agent_pids_by_port(target, wsl_port),
-        &format!("INTERMEDIARY_AGENT_PORT={wsl_port} or port-listener :{wsl_port}"),
-    )
-}
-
-/// Reclaims (TERM→KILL) any Intermediary `im_agent` bound to `wsl_port`, using only the
-/// port-listener probe. Used by config-less callers (`stop`, app exit) that know the distro and
-/// port but may not hold a full launch target for the running backend.
-pub fn terminate_wsl_agent_by_port_listener(
-    distro: Option<&str>,
-    wsl_port: u16,
-    term_grace: Duration,
-    poll: Duration,
-) -> Result<WslTerminateOutcome, String> {
-    if !cfg!(target_os = "windows") {
-        return Ok(WslTerminateOutcome::NoMatch);
-    }
-
-    terminate_matching_wsl_agent_processes(
-        distro,
-        term_grace,
-        poll,
-        || list_wsl_agent_pids_by_port_listener(distro, wsl_port),
-        &format!("port-listener :{wsl_port}"),
-    )
-}
-
-fn terminate_matching_wsl_agent_processes<F>(
-    distro: Option<&str>,
-    term_grace: Duration,
-    poll: Duration,
-    mut list_pids: F,
-    match_description: &str,
-) -> Result<WslTerminateOutcome, String>
-where
-    F: FnMut() -> Result<Vec<u32>, String>,
-{
-    let mut matching_pids = list_pids()?;
-    if matching_pids.is_empty() {
-        return Ok(WslTerminateOutcome::NoMatch);
-    }
-
-    let mut signal_errors: Vec<String> = Vec::new();
-
-    let term_command = build_wsl_signal_pids_command_line(&matching_pids, "TERM");
-    if let Some(error) = run_wsl_signal_command(distro, &term_command, "TERM")? {
-        signal_errors.push(error);
-    }
-    if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
-        return Ok(WslTerminateOutcome::TerminatedWithTerm);
-    }
-
-    matching_pids = list_pids()?;
-    if matching_pids.is_empty() {
-        return Ok(WslTerminateOutcome::TerminatedWithTerm);
-    }
-
-    let kill_command = build_wsl_signal_pids_command_line(&matching_pids, "KILL");
-    if let Some(error) = run_wsl_signal_command(distro, &kill_command, "KILL")? {
-        signal_errors.push(error);
-    }
-    if wait_for_wsl_agent_exit(term_grace, poll, &mut list_pids)? {
-        return Ok(WslTerminateOutcome::TerminatedWithKill);
-    }
-
-    let mut error =
-        format!("WSL agent process matched by {match_description} did not exit after TERM/KILL");
-    if !signal_errors.is_empty() {
-        error = format!("{error}. {}", signal_errors.join("; "));
-    }
-
-    Err(error)
-}
-
 pub fn format_wsl_target(target: &WslLaunchTarget) -> String {
     let distro = target.distro.as_deref().unwrap_or("default");
     format!("distro={distro} agent_bin_wsl={}", target.agent_bin_wsl)
-}
-
-pub fn list_exact_wsl_agent_pids(target: &WslLaunchTarget) -> Result<Vec<u32>, String> {
-    let command_line = build_wsl_list_exact_pids_command_line(&target.agent_bin_wsl);
-    let output = run_wsl_bash(target.distro.as_deref(), &command_line)?;
-    if !output.status.success() {
-        let status = output
-            .status
-            .code()
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "signal".to_string());
-        let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-        return Err(format!(
-            "Failed to list matching WSL agent pids (exit={status}, {}): {stderr}",
-            format_wsl_target(target)
-        ));
-    }
-
-    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
-}
-
-pub fn list_intermediary_wsl_agent_pids_by_port(
-    target: &WslLaunchTarget,
-    wsl_port: u16,
-) -> Result<Vec<u32>, String> {
-    let command_line = build_wsl_list_intermediary_agent_pids_command_line(wsl_port);
-    let output = run_wsl_bash(target.distro.as_deref(), &command_line)?;
-    if !output.status.success() {
-        let status = output
-            .status
-            .code()
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "signal".to_string());
-        let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-        return Err(format!(
-            "Failed to list same-port Intermediary WSL agent pids (exit={status}, port={wsl_port}, {}): {stderr}",
-            format_wsl_target(target)
-        ));
-    }
-
-    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
-}
-
-/// Lists PIDs that are (a) TCP listeners on `wsl_port` and (b) confirmed Intermediary `im_agent`
-/// processes. Uses `ss` inside the distro; if `ss` is unavailable it yields an empty list rather
-/// than erroring, so callers degrade to the path/env detectors.
-pub fn list_wsl_agent_pids_by_port_listener(
-    distro: Option<&str>,
-    wsl_port: u16,
-) -> Result<Vec<u32>, String> {
-    let command_line = build_wsl_list_port_listener_pids_command_line(wsl_port);
-    let output = run_wsl_bash(distro, &command_line)?;
-    if !output.status.success() {
-        let status = output
-            .status
-            .code()
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "signal".to_string());
-        let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
-        return Err(format!(
-            "Failed to list WSL agent port listeners (exit={status}, port={wsl_port}, distro={}): {stderr}",
-            distro_label(distro)
-        ));
-    }
-
-    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
-}
-
-/// Union of the env-signature detector and the port-listener detector: every Intermediary
-/// `im_agent` reachable on `wsl_port`, regardless of how it was launched. This is the authoritative
-/// reclamation set for a stale/mismatched backend occupying our reserved port.
-pub fn list_reclaimable_wsl_agent_pids_by_port(
-    target: &WslLaunchTarget,
-    wsl_port: u16,
-) -> Result<Vec<u32>, String> {
-    let mut pids = list_intermediary_wsl_agent_pids_by_port(target, wsl_port)?;
-    pids.extend(list_wsl_agent_pids_by_port_listener(
-        target.distro.as_deref(),
-        wsl_port,
-    )?);
-    pids.sort_unstable();
-    pids.dedup();
-    Ok(pids)
-}
-
-fn wait_for_wsl_agent_exit<F>(
-    term_grace: Duration,
-    poll: Duration,
-    list_pids: &mut F,
-) -> Result<bool, String>
-where
-    F: FnMut() -> Result<Vec<u32>, String>,
-{
-    let start = Instant::now();
-    loop {
-        if list_pids()?.is_empty() {
-            return Ok(true);
-        }
-        if start.elapsed() >= term_grace {
-            return Ok(false);
-        }
-        thread::sleep(poll);
-    }
 }
 
 fn build_wsl_bash_command(distro: Option<&str>, command_line: &str) -> Command {
@@ -339,24 +132,21 @@ fn format_wsl_spawn_error(err: std::io::Error, distro: Option<&str>) -> String {
     }
 }
 
-fn parse_pid_list(raw: &str) -> Result<Vec<u32>, String> {
-    let mut parsed: Vec<u32> = Vec::new();
-    for line in raw.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let pid = trimmed
-            .parse::<u32>()
-            .map_err(|_| format!("Invalid pid entry returned by WSL command: {trimmed}"))?;
-        parsed.push(pid);
-    }
-
-    parsed.sort_unstable();
-    parsed.dedup();
-    Ok(parsed)
-}
-
 #[cfg(test)]
-#[path = "wsl_process_control_tests.rs"]
-mod tests;
+mod tests {
+    use super::format_wsl_target;
+    use crate::agent::wsl_process_control::WslLaunchTarget;
+
+    #[test]
+    fn a_target_without_a_distro_is_summarised_as_the_default_one() {
+        let target = WslLaunchTarget {
+            distro: None,
+            agent_dir_wsl: "/mnt/c/agent".to_string(),
+            agent_bin_wsl: "/mnt/c/agent/im_agent".to_string(),
+        };
+        assert_eq!(
+            format_wsl_target(&target),
+            "distro=default agent_bin_wsl=/mnt/c/agent/im_agent"
+        );
+    }
+}

@@ -193,8 +193,20 @@ and are recorded as decisions, not as open defects. Each names what the product 
 - **Adopted agents have no process-tree owner.** An `im_agent`/`im_host_agent` the app reclaimed rather
   than spawned is stopped by binary identity; its Git descendants are not owned by any job.
 - **Ownership stops at the Tauri process.** It is the outermost owner this product has; beyond it,
-  finality belongs to Git's own crash safety. On Linux/WSL the agent drains on SIGTERM/EOF and distro
-  termination is the outer owner — there is no supervisor above the supervisor.
+  finality belongs to Git's own crash safety. On Linux/WSL the agent has three shutdown owners that take
+  the same drain: SIGTERM, the authenticated `shutdown` command, and EOF on the stdin pipe the supervisor
+  holds for exactly as long as it intends the agent to run (`crates/im_agent/src/server/stdin_eof.rs`).
+  EOF is the one that still arrives when the Tauri process dies without a chance to send anything; a
+  WSL agent this supervisor *adopted* rather than spawned has no pipe and therefore only the first two.
+  Behind them, the supervisor's own WSL emergency route waits that drain out (480 s, the same envelope
+  the host stop uses) and only then terminates the agent's descendant process groups before the agent
+  itself — so a hook holding `.git/index.lock` is never orphaned by the stop. Distro termination stays
+  conditional (skipped while host finality is unknown or an interactive WSL session is open) and is
+  therefore never the thing relied on to sweep up.
+- **A descendant that starts its own session escapes the sweep.** The emergency route walks the agent's
+  descendants from one `ps` snapshot and signals their process groups; a hook that called `setsid` has
+  by definition left the agent's tree and is not reached. Accepted: `setsid` in a hook is a deliberate
+  detachment, and reaching it would mean killing by heuristic rather than by ownership.
 
 ## Acceptance
 

@@ -78,6 +78,13 @@ pub fn spawn_host_agent_process(
             path_to_string(&bundle.log_dir_host)?,
         )
         .env("INTERMEDIARY_AGENT_STDIO_LOGGING", "0")
+        // Explicitly *not* a supervisor pipe. The WSL backend is given a piped
+        // stdin on purpose, because closing it is the only way to ask an agent
+        // inside the distro to drain when this process dies
+        // (`im_agent::server::stdin_eof`). The host agent needs no such owner —
+        // it dies with its Job Object — and inheriting this process's stdin
+        // would let an unrelated pipe closing read as a shutdown request.
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
 

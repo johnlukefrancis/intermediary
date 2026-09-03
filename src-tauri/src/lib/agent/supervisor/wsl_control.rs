@@ -1,15 +1,18 @@
 // Path: src-tauri/src/lib/agent/supervisor/wsl_control.rs
-// Description: WSL backend termination, stale-port remediation, and launch-target bookkeeping
+// Description: WSL backend termination and stale-port remediation for the supervisor
 
 use super::wsl_mode::{WslBackendMode, WslBackendOwner};
-use super::wsl_runtime::{WSL_STALE_RETRY_BACKOFF, WSL_TERMINATE_POLL, WSL_TERMINATE_TERM_GRACE};
+use super::wsl_runtime::{WSL_STALE_RETRY_BACKOFF, WSL_TERMINATE_BUDGET};
+use super::wsl_terminate_logging::{outcome_label, outcome_level};
 use super::AgentSupervisor;
-use crate::agent::supervisor::state::{ProcessKind, WslBackendHandle};
-use crate::agent::wsl_process_control::{
-    format_wsl_target, list_exact_wsl_agent_pids, list_reclaimable_wsl_agent_pids_by_port,
-    terminate_wsl_agent_by_port_listener, terminate_wsl_agent_process, WslLaunchTarget,
-    WslTerminateOutcome,
+use crate::agent::supervisor::state::ProcessKind;
+use crate::agent::wsl_agent_discovery::{
+    list_exact_wsl_agent_pids, list_reclaimable_wsl_agent_pids_by_port,
 };
+use crate::agent::wsl_agent_termination::{
+    terminate_wsl_agent_by_port_listener, terminate_wsl_agent_process,
+};
+use crate::agent::wsl_process_control::{format_wsl_target, WslLaunchTarget};
 use crate::obs::logging;
 
 impl AgentSupervisor {
@@ -56,8 +59,7 @@ impl AgentSupervisor {
             terminate_wsl_agent_by_port_listener(
                 distro_owned.as_deref(),
                 wsl_port,
-                WSL_TERMINATE_TERM_GRACE,
-                WSL_TERMINATE_POLL,
+                WSL_TERMINATE_BUDGET,
             )
         })
         .await
@@ -66,17 +68,13 @@ impl AgentSupervisor {
         let distro_label = distro.unwrap_or("default");
         match result {
             Ok(outcome) => {
-                let outcome_label = match outcome {
-                    WslTerminateOutcome::NoMatch => "no_match",
-                    WslTerminateOutcome::TerminatedWithTerm => "term",
-                    WslTerminateOutcome::TerminatedWithKill => "kill",
-                };
                 logging::log(
-                    "info",
+                    outcome_level(outcome),
                     "agent",
                     "wsl_port_reclaim_done",
                     &format!(
-                        "reason={reason} port={wsl_port} outcome={outcome_label} distro={distro_label}"
+                        "reason={reason} port={wsl_port} outcome={} distro={distro_label}",
+                        outcome_label(outcome)
                     ),
                 );
                 Ok(())
@@ -93,55 +91,6 @@ impl AgentSupervisor {
                 Err(err)
             }
         }
-    }
-
-    pub(super) fn set_wsl_launch_target(
-        &self,
-        target: Option<WslLaunchTarget>,
-    ) -> Result<(), String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        state.wsl_launch_target = target;
-        Ok(())
-    }
-
-    /// Commits this backend as supervisor-owned: records both the exact-path kill target and the
-    /// durable (distro, port) handle used by config-less reclamation. Call ONLY once ownership is
-    /// confirmed reclaimable — adopting a healthy backend, remediating our own occupant, or right
-    /// before a managed spawn — never for a foreign/ExternalUnmanaged occupant, whose distro must
-    /// not be torn down on app exit (ADR-013 boundary).
-    pub(super) fn record_owned_wsl_backend(
-        &self,
-        target: &WslLaunchTarget,
-        wsl_port: u16,
-    ) -> Result<(), String> {
-        self.set_wsl_launch_target(Some(target.clone()))?;
-        self.set_last_wsl_backend(Some(WslBackendHandle {
-            distro: target.distro.clone(),
-            port: wsl_port,
-        }))
-    }
-
-    pub(super) fn set_last_wsl_backend(
-        &self,
-        handle: Option<WslBackendHandle>,
-    ) -> Result<(), String> {
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        state.last_wsl_backend = handle;
-        Ok(())
-    }
-
-    pub(super) fn last_wsl_backend_snapshot(&self) -> Result<Option<WslBackendHandle>, String> {
-        let state = self
-            .state
-            .lock()
-            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        Ok(state.last_wsl_backend.clone())
     }
 
     pub(super) async fn remediate_stale_wsl_port(
@@ -215,14 +164,6 @@ impl AgentSupervisor {
         .map(|pids| pids.len())
     }
 
-    pub(super) fn wsl_launch_target_snapshot(&self) -> Result<Option<WslLaunchTarget>, String> {
-        let state = self
-            .state
-            .lock()
-            .map_err(|_| "Agent supervisor lock poisoned".to_string())?;
-        Ok(state.wsl_launch_target.clone())
-    }
-
     async fn terminate_wsl_backend_target(
         &self,
         target: &WslLaunchTarget,
@@ -238,40 +179,21 @@ impl AgentSupervisor {
         );
         let target_for_kill = target.clone();
         let result = tauri::async_runtime::spawn_blocking(move || {
-            terminate_wsl_agent_process(
-                &target_for_kill,
-                WSL_TERMINATE_TERM_GRACE,
-                WSL_TERMINATE_POLL,
-            )
+            terminate_wsl_agent_process(&target_for_kill, WSL_TERMINATE_BUDGET)
         })
         .await
         .map_err(|err| format!("WSL termination task failed: {err}"))?;
 
         match result {
-            Ok(WslTerminateOutcome::NoMatch) => {
+            Ok(outcome) => {
                 logging::log(
-                    "info",
+                    outcome_level(outcome),
                     "agent",
                     "wsl_terminate_done",
-                    &format!("reason={reason} attempt={attempt} outcome=no_match {target_summary}"),
-                );
-                Ok(())
-            }
-            Ok(WslTerminateOutcome::TerminatedWithTerm) => {
-                logging::log(
-                    "info",
-                    "agent",
-                    "wsl_terminate_done",
-                    &format!("reason={reason} attempt={attempt} outcome=term {target_summary}"),
-                );
-                Ok(())
-            }
-            Ok(WslTerminateOutcome::TerminatedWithKill) => {
-                logging::log(
-                    "warn",
-                    "agent",
-                    "wsl_terminate_done",
-                    &format!("reason={reason} attempt={attempt} outcome=kill {target_summary}"),
+                    &format!(
+                        "reason={reason} attempt={attempt} outcome={} {target_summary}",
+                        outcome_label(outcome)
+                    ),
                 );
                 Ok(())
             }

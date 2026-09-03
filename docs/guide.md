@@ -55,6 +55,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/reports/source_control_adversarial_review_20260903.md](reports/source_control_adversarial_review_20260903.md) | External adversarial review of the Source Control mutation transaction (P0/P1 findings and their required end state) |
 | [docs/reports/source_control_fix_layer_review_20260903.md](reports/source_control_fix_layer_review_20260903.md) | External closure review of the hardening layer: two remaining P0 owners (effect-boundary binding, drain-governed shutdown) |
 | [docs/reports/source_control_hardening_review_20260903.md](reports/source_control_hardening_review_20260903.md) | External hardening review of the split tree: reviewed-snapshot commit identity, post-publication hook reporting, discard quarantine safety, and process-tree ownership |
+| [docs/reports/source_control_shutdown_owner_review_20260903.md](reports/source_control_shutdown_owner_review_20260903.md) | Fourth external review: one remaining P0 — the WSL emergency-stop route killed the agent after 750 ms, orphaning its Git process groups |
 
 ## Environment
 
@@ -92,6 +93,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
 | [docs/commands/kill_agent_ports_windows.md](commands/kill_agent_ports_windows.md) | Clear stale Windows or WSL listeners from the Intermediary agent port |
 | [docs/commands/verify_wsl_port_detection.md](commands/verify_wsl_port_detection.md) | Manually verify WSL port-listener detection end-to-end through wsl.exe |
+| [docs/commands/verify_wsl_agent_tree_kill.md](commands/verify_wsl_agent_tree_kill.md) | Manually verify the WSL emergency stop's process-tree sweep and the agent's stdin-EOF shutdown owner |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/release_windows.md](commands/release_windows.md) | Windows-first release flow, version bumping, and GitHub release automation |
 | [docs/commands/build_installer_from_wsl.md](commands/build_installer_from_wsl.md) | Build, silently install, and relaunch the Windows installer from a WSL shell |

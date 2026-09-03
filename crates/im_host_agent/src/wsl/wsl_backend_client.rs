@@ -218,4 +218,6 @@ pub(super) fn untrack_outstanding(outstanding: &OutstandingMutations, request_id
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_outstanding;
+#[cfg(test)]
 mod tests_timeouts;
