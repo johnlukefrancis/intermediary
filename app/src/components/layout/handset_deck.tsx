@@ -9,6 +9,7 @@ import {
   type DeckSectionOption,
 } from "./deck_section_switcher.js";
 import { buildRailSections } from "./repo_rail.js";
+import { FilesIcon } from "./deck_section_icons.js";
 import "../../styles/handset_deck.css";
 import "../../styles/handset_chassis.css";
 
@@ -33,7 +34,7 @@ export function HandsetDeck({
   sourceContent,
 }: HandsetDeckProps): React.JSX.Element {
   const sections: DeckSectionOption<DeckSection>[] = [
-    { value: "files", label: "FILES" },
+    { value: "files", label: "FILES", icon: <FilesIcon /> },
     ...buildRailSections(sourceCount),
   ];
   const sectionSwitcher = (

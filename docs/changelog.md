@@ -7,6 +7,8 @@
 - Promoted the bounded Git runner, porcelain parser, and repo-prefix capture behind a public `im_bundle::git` facade shared by bundle evidence and source control; the runner now keeps stderr/stdout for actionable errors and stops mutations gracefully on timeout so `.git/index.lock` is never left behind.
 - Host agent source-control commands are dispatched without holding the runtime write lock, and the two duplicated repo-id routing tables were replaced by one exhaustive `UiCommand::repo_id()`.
 - Fixed `pnpm` 11 build-script approval (`pnpm-workspace.yaml`) so `pnpm exec` works again in WSL.
+- ZIPS file explorer rows now carry Git-status decorations when the active repo has a changed working tree: changed files get a tinted name and change-letter badge, directories get a tinted name and a count of distinct changed paths beneath them (colored by the worst change beneath), and expanded directories re-list in place on `sourceControlChanged` so a newly created file appears with its badge without collapsing the tree.
+- The right-rail `DeckSectionSwitcher` is now a segmented icon rocker (archive-box ZIPS / git-branch SOURCE, plus a stacked-documents FILES cell on handset) instead of the bracket text tabs; the SOURCE count sits beside its glyph and the section name remains the accessible name and tooltip.
 
 ## 0.1.13 — 2026-09-01
 

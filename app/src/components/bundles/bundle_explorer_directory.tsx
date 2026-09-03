@@ -14,13 +14,8 @@ import {
   isFileEnabled,
   isFileIncluded,
 } from "../../lib/bundles/bundle_selection_visibility.js";
-
-export interface DirectoryListingState {
-  status: "idle" | "loading" | "ready" | "error";
-  dirs: string[];
-  files: string[];
-  error?: string;
-}
+import type { DirectoryListingState } from "../../hooks/bundles/use_directory_listings.js";
+import { useDirectoryDecoration } from "../../hooks/source_control/use_tree_decorations.js";
 
 interface BundleExplorerDirectoryProps {
   path: string;
@@ -57,6 +52,7 @@ export function BundleExplorerDirectory({
   const isIncluded = isDirectoryIncluded(path, selection);
   const isIndeterminate = isIncluded && directoryHasExclusions(path, selection);
   const id = checkboxId(path);
+  const decoration = useDirectoryDecoration(path);
 
   const handleExpand = useCallback(() => {
     onToggleExpanded(path);
@@ -67,6 +63,7 @@ export function BundleExplorerDirectory({
       <div
         className={`bundle-explorer-dir-row bundle-explorer-row--depth-${Math.min(depth, 4)}`}
         data-disabled={!isEnabled || undefined}
+        data-change={decoration?.variant}
       >
         <button
           className="dir-expand-btn"
@@ -84,9 +81,20 @@ export function BundleExplorerDirectory({
           disabled={!isEnabled}
           onChange={() => { onToggleDirectory(path); }}
         />
-        <label className="bundle-explorer-dir-name" htmlFor={id} title={path}>
+        <label
+          className="bundle-explorer-dir-name"
+          htmlFor={id}
+          title={decoration === null ? path : `${path} — ${decoration.label}`}
+        >
           {baseName(path)}
         </label>
+        <span className="bundle-explorer-row__meta">
+          {decoration !== null && (
+            <span className="bundle-explorer-row__count" title={decoration.label}>
+              {decoration.count}
+            </span>
+          )}
+        </span>
       </div>
 
       {isExpanded && (

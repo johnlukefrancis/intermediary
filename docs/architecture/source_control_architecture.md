@@ -16,7 +16,8 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 | Host-agent dispatch | `crates/im_host_agent/src/server/dispatch.rs` (`dispatch_source_control`) + `runtime/local_host_source_control_backend.rs` | Backend resolved under a short read lock; host repos run Git with no runtime lock held; WSL repos are forwarded. |
 | Refresh signal | `crates/im_agent/src/repos/source_control_watch/` (detector, coalescer, git dirs) wired into `repo_watcher*.rs` | Emits `AgentEvent::SourceControlChanged { repoId }`, coalesced to one event per 250 ms with a trailing emit. |
 | UI state | `app/src/hooks/source_control/use_source_control_state.ts`, `app/src/hooks/use_deck_section.ts` | One hook instance per active repo feeds the rail count and the column. |
-| UI surface | `app/src/components/layout/{deck_section_switcher,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx` | Rail switch, column, rows, commit box, diff kind of the shared workspace. |
+| UI surface | `app/src/components/layout/{deck_section_switcher,deck_section_icons,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx` | Rail switch (segmented icon rocker), column, rows, commit box, diff kind of the shared workspace. |
+| Tree decorations | `app/src/lib/source_control/{change_badges,tree_decorations}.ts`, `app/src/hooks/source_control/use_tree_decorations.tsx`, `app/src/hooks/bundles/use_directory_listings.ts` | Pure projection of the status onto the ZIPS explorer tree via a React context; the listing hook re-lists expanded directories on `sourceControlChanged`. |
 | Persisted choice | `uiState.activeRail` in `app/src/shared/config/persisted_config.ts` | Global; defaulted, no migration. |
 
 ## Routing and lifecycle
@@ -45,6 +46,8 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 ## Invariants
 
 - The UI never runs Git; every read and mutation is an agent request routed by repoId.
+- The ZIPS tree never runs Git; decorations are a pure projection of the status snapshot, directory counts
+  are distinct paths, and deleted files count toward their directory without a row of their own.
 - Mutations on one repo are serialized (`SourceControlLocks`); the per-repo lock is cloned out and awaited
   with no runtime guard held.
 - Mutations are never killed mid-command by cancellation. On timeout they are stopped gracefully

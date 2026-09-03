@@ -74,7 +74,10 @@ Intermediary uses a **host-routed architecture**:
     unusable `INTERMEDIARY_LOG_DIR` emits a diagnostic and falls back to app-local storage before
     startup continues. Explicit pre-build/setup/build-complete stage markers preserve the payload,
     source location, process id, and reached lifecycle stage of pre-setup callback failures
-  - Two-column layout per repo: Auto Files and a right rail that switches between Zip Bundles and Source Control (`[ ZIPS ] [ SOURCE n ]`, persisted globally as `uiState.activeRail`; handset mode exposes the same three sections)
+  - Two-column layout per repo: Auto Files and a right rail that switches between Zip Bundles and Source
+    Control via a segmented icon rocker (archive-box / git-branch glyphs, SOURCE count beside its glyph),
+    persisted globally as `uiState.activeRail`; handset mode exposes the same rocker with a stacked-
+    documents FILES cell added
   - Source Control column: branch/upstream status line with refresh, pull, and push; commit box (Ctrl+Enter); STAGED CHANGES / CHANGES / MERGE CHANGES sections with per-row and per-section stage/unstage, per-file discard behind a confirm, and a read-only diff kind in the shared workspace. Git runs in the agent that owns the repo root; the UI never mutates a repo directly
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
@@ -84,7 +87,12 @@ Intermediary uses a **host-routed architecture**:
   - Auto Files is scoped by the active Zip Bundles preset after repo topology is ready: files excluded by the visible bundle selection are hidden from the left picker until the active preset selection includes them again
   - File-row and opened text-file title right-click context menus with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
-  - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name context menus reuse the same OS file actions as Auto Files rows
+  - Zip Bundles column includes a lazy file explorer: root files are visible, expanded directories fetch
+    direct child files/subdirectories on demand, file icon clicks toggle bundle inclusion, and file-name
+    context menus reuse the same OS file actions as Auto Files rows. Changed files and directories carry
+    Git-status decorations (tinted name + change-letter badge on files, tinted name + changed-path count on
+    directories) derived from the same source-control status that feeds the SOURCE count; expanded
+    directories re-list on `sourceControlChanged` so newly created files appear with their badge
   - Latest built bundle rows remain native drag surfaces and expose a right-side location/download button that reveals the generated ZIP in the host file manager
   - Image previews render from Blob URLs created from agent-provided bytes; raw filesystem paths and `file://` sources are not used in the webview
   - Native drag-out via `tauri-plugin-drag`

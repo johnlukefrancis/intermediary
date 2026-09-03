@@ -114,8 +114,12 @@
       "summary": "Fit-to-panel image preview surface for shared repo workspaces"
     },
     {
+      "path": "app/src/components/layout/deck_section_icons.tsx",
+      "summary": "Inline 24x24 stroke glyphs for the deck section switcher (stroke supplied by CSS)"
+    },
+    {
       "path": "app/src/components/layout/deck_section_switcher.tsx",
-      "summary": "Bracketed tablist switching deck sections; the host renders the matching tabpanel"
+      "summary": "Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel"
     },
     {
       "path": "app/src/components/layout/handset_deck.tsx",
@@ -123,7 +127,7 @@
     },
     {
       "path": "app/src/components/layout/repo_rail.tsx",
-      "summary": "Right-rail instrument panel: slim [ ZIPS ] [ SOURCE n ] header over the active rail body"
+      "summary": "Right-rail instrument panel: slim icon-rocker header over the active rail body"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
@@ -314,6 +318,10 @@
       "summary": "Bundle list refresh flow with transient WSL retry handling"
     },
     {
+      "path": "app/src/hooks/bundles/use_directory_listings.ts",
+      "summary": "Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change"
+    },
+    {
       "path": "app/src/hooks/repo_workspace_types.ts",
       "summary": "RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook"
     },
@@ -336,6 +344,10 @@
     {
       "path": "app/src/hooks/source_control/use_source_control_state.ts",
       "summary": "Per-repo source-control status state machine with event-driven refresh and serialized actions"
+    },
+    {
+      "path": "app/src/hooks/source_control/use_tree_decorations.tsx",
+      "summary": "Context delivering the built tree decorations to the recursive bundle explorer rows"
     },
     {
       "path": "app/src/hooks/use_agent.tsx",
@@ -488,6 +500,14 @@
     {
       "path": "app/src/lib/icons/index.ts",
       "summary": "Barrel export for file-type icon system"
+    },
+    {
+      "path": "app/src/lib/source_control/change_badges.ts",
+      "summary": "Single badge map (letter, variant, label) for every source-control change kind"
+    },
+    {
+      "path": "app/src/lib/source_control/tree_decorations.ts",
+      "summary": "Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations"
     },
     {
       "path": "app/src/lib/theme/accent_utils.ts",
@@ -675,7 +695,7 @@
     },
     {
       "path": "app/src/styles/deck_section_switcher.css",
-      "summary": "Bracketed deck section tablist shared by the handset deck and the right rail"
+      "summary": "Segmented icon-rocker deck section tablist shared by the handset deck and the right rail"
     },
     {
       "path": "app/src/styles/diff_workspace.css",

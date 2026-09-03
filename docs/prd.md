@@ -74,7 +74,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 * **Two main columns per tab:**
 
   1. **Auto Files** (docs, code, and images ranked by auto, latest, or activity mode)
-  2. **Rail** with a bracket switch `[ ZIPS ] [ SOURCE n ]` between **Zip bundles** (bundle presets + recently built outputs) and **Source Control** (working-tree status and commit controls). The active rail persists globally; the SOURCE label carries the change count.
+  2. **Rail** with a segmented icon rocker (archive-box / git-branch glyphs) between **Zip bundles** (bundle presets + recently built outputs, with Git-status decorations on changed files/directories in the explorer tree) and **Source Control** (working-tree status and commit controls). The active rail persists globally; the SOURCE cell carries the change count beside its glyph.
 
 ### Responsive mode behavior
 

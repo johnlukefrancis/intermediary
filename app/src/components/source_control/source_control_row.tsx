@@ -5,7 +5,7 @@ import type React from "react";
 import { useCallback } from "react";
 import type { SourceControlEntry } from "../../shared/protocol.js";
 import { FileIcon, getFileFamily } from "../../lib/icons/index.js";
-import { CHANGE_BADGES } from "./source_control_copy.js";
+import { CHANGE_BADGES } from "../../lib/source_control/change_badges.js";
 import { MinusIcon, PlusIcon } from "./source_control_icons.js";
 
 export type RowActionKind = "stage" | "unstage";

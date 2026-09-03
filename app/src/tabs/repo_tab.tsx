@@ -21,6 +21,7 @@ import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
 import { useSourceControlState } from "../hooks/source_control/use_source_control_state.js";
+import { TreeDecorationsProvider } from "../hooks/source_control/use_tree_decorations.js";
 import {
   buildAutoFileFeed,
   type FileSortMode,
@@ -173,14 +174,16 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     />
   );
   const zipsContent = (
-    <BundleColumn
-      repoId={repoId}
-      bundleState={bundleState}
-      topLevelFiles={topLevelFiles}
-      onDragStart={handleBundleDragStart}
-      onOpenFile={repoWorkspace.openFile}
-      emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
-    />
+    <TreeDecorationsProvider status={sourceControl.status}>
+      <BundleColumn
+        repoId={repoId}
+        bundleState={bundleState}
+        topLevelFiles={topLevelFiles}
+        onDragStart={handleBundleDragStart}
+        onOpenFile={repoWorkspace.openFile}
+        emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
+      />
+    </TreeDecorationsProvider>
   );
   const sourceContent = (
     <SourceControlColumn

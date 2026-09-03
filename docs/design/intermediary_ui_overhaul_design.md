@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-09-03 (Source Control rail and column; shared deck section switcher)
+Updated on: 2026-09-03 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -199,14 +199,33 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
 - File rows use the same `FileIcon` family/color system as Auto Files rows; the icon is the include/exclude toggle for that file.
 - Included file icons carry a strong `currentColor` glow derived from the icon color; excluded files keep the same icon color with lower opacity and a softer glow.
 - File-name right-click menus reuse the existing file actions (`Open Containing Folder`, `Open File`, `Copy Relative Path`), and double-click opens through the shared workspace.
+- File and directory rows carry Git-status decorations when the active repo has a changed working tree: a
+  changed file gets a tinted name plus a trailing `[letter]` badge (the same `CHANGE_BADGES` palette as the
+  SOURCE rows — A/U green, M/T info-blue, D red, R/C amber, `!` conflict red); a directory gets a tinted
+  name plus a trailing count of distinct changed paths beneath it, colored by the worst change beneath
+  (conflict > deleted > modified/renamed/copied/type-changed > new/untracked). Deleted files have no row on
+  disk but still count toward and color their directory. Decorations are a pure client-side projection of
+  the same source-control status that feeds the SOURCE count; the tree never runs Git, and double-click
+  still opens the file — diffs stay in SOURCE.
+- Expanded directories re-list in place (keeping expansion state) on `sourceControlChanged` for the repo, so
+  a file created inside an already-expanded directory appears with its decoration. The existing topology
+  reset still wins where it applies: `repoTopologyChanged` (any directory create/remove or rename at
+  ≤ depth 4, root-level file create/remove; `repo_topology_change.rs`) yields fresh top-level arrays, which
+  collapse expansion and drop a pending re-list. Save-by-rename editors therefore collapse the tree for
+  files at ≤ depth 4; in-place writes re-list in place.
 
 ## Rail and Source Control
 
-The right column is a rail with a slim (~36px) header holding one shared bracket tablist
-(`DeckSectionSwitcher`, `[ ZIPS ] [ SOURCE n ]`); the same component drives the handset deck's
-`[ FILES ] [ ZIPS ] [ SOURCE n ]`. The active rail persists globally (`uiState.activeRail`); the
-handset FILES choice is local and the ZIPS/SOURCE choice writes through, so a resize across the
-980/860 band never loses SOURCE. The SOURCE label shows the change count in accent and hides it at zero.
+The right column is a rail with a slim (~36px) header holding one shared segmented icon rocker
+(`DeckSectionSwitcher`): a bordered, elevated cluster of cells — ZIPS an archive-box glyph, SOURCE a
+git-branch glyph — with the active cell lit (accent glyph on a soft accent fill with glow) and inactive
+cells muted; the same component drives the handset deck's rocker, which prepends a stacked-documents FILES
+cell. The section word survives as the accessible name (screen-reader-only text, so the SOURCE cell reads
+"SOURCE 3") and as the `title` tooltip; the bracket `[ ]` idiom stays on panel titles and badges, only the
+switcher dropped it. The active rail persists globally (`uiState.activeRail`); the handset FILES choice is
+local and the ZIPS/SOURCE choice writes through, so a resize across the 980/860 band never loses SOURCE.
+The SOURCE cell shows the change count in accent tabular numerals beside the branch glyph and hides it at
+zero.
 
 - Rows fit the 300px workspace-mode rail: `28px minmax(0,1fr) auto` grid, `FileIcon`, name over
   directory (`.auto-files-copy` idiom), a bracket badge (`--add/--modify/--delete/--warning` for rename,

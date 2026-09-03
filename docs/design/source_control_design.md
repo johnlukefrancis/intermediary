@@ -22,6 +22,8 @@ working tree can be managed without leaving the app.
   socket, port, or Tauri surface (ADR-010).
 - Stay current without polling: the watcher signals Git-state and working-tree changes.
 - Fit every existing mode: standard deck, workspace (file open), and handset.
+- Surface the same awareness in the ZIPS file explorer: changed files and directories carry Git-status
+  decorations derived from the same status, so work is visible without opening SOURCE.
 
 ## Non-goals
 
@@ -32,11 +34,12 @@ working tree can be managed without leaving the app.
 
 ## MVP
 
-Right-rail instrument switch `[ ZIPS ] [ SOURCE n ]` on the existing right column; the Source Control
-column with status line (branch, ahead/behind, sha, refresh, pull, push), warnings, commit box, three
-sections, and rows; diff kind in the shared workspace; handset switcher `[ FILES ] [ ZIPS ] [ SOURCE n ]`;
-`uiState.activeRail` persisted globally. Protocol: `sourceControlStatus`, `sourceControlDiff`, and one
-tagged `sourceControlAction` (stage, unstage, discard, commit, push, pull); event `sourceControlChanged`.
+Right-rail segmented icon rocker (`DeckSectionSwitcher`: archive-box ZIPS cell, git-branch SOURCE cell) on
+the existing right column; the Source Control column with status line (branch, ahead/behind, sha, refresh,
+pull, push), warnings, commit box, three sections, and rows; diff kind in the shared workspace; handset
+rocker prepends a stacked-documents FILES cell; `uiState.activeRail` persisted globally. Protocol:
+`sourceControlStatus`, `sourceControlDiff`, and one tagged `sourceControlAction` (stage, unstage, discard,
+commit, push, pull); event `sourceControlChanged`.
 
 ## Naming
 
@@ -51,7 +54,8 @@ never used for Git state.
 | --- | --- |
 | Repo tab opens (any mode) | Status is fetched for the active repo; the SOURCE tab shows the total change count in accent (hidden at zero). |
 | SOURCE rail selected in the standard deck or workspace mode | The right column shows the Source Control column; ZIPS is one click away; the choice persists across restarts and across the 980/860 resize band. |
-| Handset deck | Switcher is `[ FILES ] [ ZIPS ] [ SOURCE n ]`; picking ZIPS/SOURCE also sets the persisted rail. With a file or diff open, handset shows the workspace only (close returns to the deck section). |
+| Handset deck | The icon rocker shows FILES / ZIPS / SOURCE cells (stacked-documents / archive-box / git-branch glyphs); picking ZIPS/SOURCE also sets the persisted rail. With a file or diff open, handset shows the workspace only (close returns to the deck section). |
+| ZIPS rail with a changed working tree | File rows whose path is in the status carry a tinted name and a `[letter]` badge (the same `CHANGE_BADGES` palette as SOURCE rows); directory rows carry a tinted name and a count of distinct changed paths beneath them, colored by the worst change beneath; deleted files count toward their directory without a row of their own; expanded directories re-list in place on `sourceControlChanged` so a newly created file appears with its badge. |
 | File edited, created, deleted, or renamed in the working tree (not under node_modules/target or the repo's ignore globs) | `sourceControlChanged` arrives within ~250 ms (coalesced); the column refetches once after a 300 ms trailing debounce. |
 | External `git add` / `git commit` / branch switch in a terminal, main repo or linked worktree | Same as above via `.git` metadata watches (`index`, `HEAD`, `refs/**`, `packed-refs`, `MERGE_HEAD`…); linked worktrees watch their real git dir under the main repo. |
 | Click + on a CHANGES row / − on a STAGED row / the section's + or − | The action runs, all action buttons disable meanwhile, the returned fresh status replaces the lists. |
@@ -79,7 +83,7 @@ summed worst case of one request): status/diff 20/90/120 s; stage/unstage/discar
 
 - The zips panel was headerless; the rail adds a slim (~36px) header so the bundle explorer keeps its rows.
 - With one bundle preset the preset selector is empty; when a second preset ships it stays inside the ZIPS
-  body under the rail header, never as a second bracket tablist in the header.
+  body under the rail header, never as a second segmented rocker in the header.
 - Rows use the stacked name-over-directory idiom and must fit the 300px workspace-mode rail.
 
 ## Acceptance
@@ -91,3 +95,6 @@ summed worst case of one request): status/diff 20/90/120 s; stage/unstage/discar
    refresh; a `cargo build` writing `target/` does not cause a refresh storm.
 4. SOURCE survives a resize across the handset/standard band and an app restart.
 5. No `.git/index.lock` remains after closing the app mid-commit.
+6. ZIPS tree decorations (file badges, directory counts/colors) match `git status` for a WSL repo and a
+   host repo; a file created inside an already-expanded directory appears with its badge without a manual
+   refresh.

@@ -31,9 +31,10 @@ app/src/components/empty_repo_state.tsx - Empty state UI when no repos are confi
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
-app/src/components/layout/deck_section_switcher.tsx - Bracketed tablist switching deck sections; the host renders the matching tabpanel
+app/src/components/layout/deck_section_icons.tsx - Inline 24x24 stroke glyphs for the deck section switcher (stroke supplied by CSS)
+app/src/components/layout/deck_section_switcher.tsx - Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel
 app/src/components/layout/handset_deck.tsx - Handset deck layout switching between Auto files, zip bundles, and source control
-app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim [ ZIPS ] [ SOURCE n ] header over the active rail body
+app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim icon-rocker header over the active rail body
 app/src/components/layout/three_column.tsx - Standard layout component with Auto files and the right rail
 app/src/components/layout/workspace_layout.tsx - Layout that replaces Auto files with a shared workspace
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
@@ -81,12 +82,14 @@ app/src/hooks/bundles/bundle_state_types.ts - Bundle state contracts shared by b
 app/src/hooks/bundles/use_bundle_build_actions.ts - Build and cancel actions for bundle presets
 app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle build state
 app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
+app/src/hooks/bundles/use_directory_listings.ts - Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change
 app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook
 app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
 app/src/hooks/source_control/source_control_failures.ts - Classify agent rejections for source-control reads and actions
 app/src/hooks/source_control/source_control_refresh.ts - Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
 app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
+app/src/hooks/source_control/use_tree_decorations.tsx - Context delivering the built tree decorations to the recursive bundle explorer rows
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
@@ -125,6 +128,8 @@ app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
 app/src/lib/icons/index.ts - Barrel export for file-type icon system
+app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
+app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
 app/src/lib/window/effective_ui_mode_policy.ts - Resolves runtime effective UI mode from preferred mode and window state
@@ -171,7 +176,7 @@ app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar
 app/src/styles/columns.css - Standard deck grid layout with Auto files and Zips
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
-app/src/styles/deck_section_switcher.css - Bracketed deck section tablist shared by the handset deck and the right rail
+app/src/styles/deck_section_switcher.css - Segmented icon-rocker deck section tablist shared by the handset deck and the right rail
 app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the workspace editor shell
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities

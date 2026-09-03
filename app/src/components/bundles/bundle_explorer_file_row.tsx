@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback } from "react";
 import { FileIcon, getFileFamily } from "../../lib/icons/index.js";
 import { baseName } from "../../lib/bundles/bundle_selection_visibility.js";
+import { useFileDecoration } from "../../hooks/source_control/use_tree_decorations.js";
 
 interface BundleExplorerFileRowProps {
   path: string;
@@ -52,15 +53,17 @@ export function BundleExplorerFileRow({
   );
 
   const family = getFileFamily(path);
+  const decoration = useFileDecoration(path);
 
   return (
     <div
       className={`bundle-explorer-file-row bundle-explorer-row--depth-${Math.min(depth, 4)}`}
       data-included={included || undefined}
       data-disabled={!enabled || undefined}
+      data-change={decoration?.variant}
       onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
-      title={path}
+      title={decoration === null ? path : `${path} — ${decoration.label}`}
     >
       <button
         type="button"
@@ -73,6 +76,13 @@ export function BundleExplorerFileRow({
         <FileIcon family={family} />
       </button>
       <span className="bundle-explorer-file-name">{baseName(path)}</span>
+      <span className="bundle-explorer-row__meta">
+        {decoration !== null && (
+          <span className={`badge badge--${decoration.variant}`} title={decoration.label}>
+            {decoration.letter}
+          </span>
+        )}
+      </span>
     </div>
   );
 }

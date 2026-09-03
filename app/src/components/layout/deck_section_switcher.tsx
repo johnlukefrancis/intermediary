@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/deck_section_switcher.tsx
-// Description: Bracketed tablist switching deck sections; the host renders the matching tabpanel
+// Description: Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel
 
 import type React from "react";
 import { flushSync } from "react-dom";
@@ -7,8 +7,10 @@ import "../../styles/deck_section_switcher.css";
 
 export interface DeckSectionOption<T extends string> {
   value: T;
+  /** Accessible name and tooltip; not rendered visually */
   label: string;
-  /** Rendered in accent after the label; omitted at zero */
+  icon: React.JSX.Element;
+  /** Rendered in accent after the icon; omitted at zero */
   count?: number;
 }
 
@@ -55,7 +57,7 @@ export function DeckSectionSwitcher<T extends string>({
 }: DeckSectionSwitcherProps<T>): React.JSX.Element {
   return (
     <div role="tablist" className="deck-switcher" aria-label={ariaLabel}>
-      {sections.map(({ value, label, count }, index) => {
+      {sections.map(({ value, label, icon, count }, index) => {
         const isActive = active === value;
         return (
           <button
@@ -67,6 +69,7 @@ export function DeckSectionSwitcher<T extends string>({
             aria-controls={panelId}
             tabIndex={isActive ? 0 : -1}
             data-section={value}
+            title={label}
             className={`deck-switcher__tab${isActive ? " deck-switcher__tab--active" : ""}`}
             onClick={() => { onChange(value); }}
             onKeyDown={(event) => {
@@ -79,7 +82,8 @@ export function DeckSectionSwitcher<T extends string>({
               document.getElementById(deckSectionTabId(idPrefix, next))?.focus();
             }}
           >
-            {label}
+            <span className="deck-switcher__icon" aria-hidden="true">{icon}</span>
+            <span className="sr-only">{label}</span>
             {count !== undefined && count > 0 && (
               <span className="deck-switcher__count">{count}</span>
             )}

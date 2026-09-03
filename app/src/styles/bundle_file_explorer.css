@@ -28,7 +28,7 @@
 .bundle-explorer-file-row,
 .bundle-explorer-dir-row {
   display: grid;
-  grid-template-columns: 18px 28px minmax(0, 1fr);
+  grid-template-columns: 18px 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-2);
   min-height: 24px;
@@ -37,7 +37,7 @@
 }
 
 .bundle-explorer-file-row {
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   cursor: default;
   transition:
     background var(--duration-normal) var(--ease-out),
@@ -133,6 +133,53 @@
 .bundle-explorer-dir-name {
   color: var(--color-text-secondary);
   cursor: pointer;
+}
+
+/* Trailing cell of both row grids: change badge on files, change count on directories */
+.bundle-explorer-row__meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.bundle-explorer-row__count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+/*
+ * Git decoration tints. These follow the [data-included] name rule above on purpose:
+ * equal specificity, so source order within this one file decides which color wins.
+ */
+.bundle-explorer-file-row[data-change="add"] .bundle-explorer-file-name,
+.bundle-explorer-file-row[data-change="untracked"] .bundle-explorer-file-name,
+.bundle-explorer-dir-row[data-change="add"] .bundle-explorer-dir-name,
+.bundle-explorer-dir-row[data-change="add"] .bundle-explorer-row__count {
+  color: var(--color-success);
+}
+
+.bundle-explorer-file-row[data-change="modify"] .bundle-explorer-file-name,
+.bundle-explorer-file-row[data-change="typechange"] .bundle-explorer-file-name,
+.bundle-explorer-dir-row[data-change="modify"] .bundle-explorer-dir-name,
+.bundle-explorer-dir-row[data-change="modify"] .bundle-explorer-row__count {
+  color: var(--color-info);
+}
+
+.bundle-explorer-file-row[data-change="delete"] .bundle-explorer-file-name,
+.bundle-explorer-file-row[data-change="error"] .bundle-explorer-file-name,
+.bundle-explorer-dir-row[data-change="delete"] .bundle-explorer-dir-name,
+.bundle-explorer-dir-row[data-change="delete"] .bundle-explorer-row__count,
+.bundle-explorer-dir-row[data-change="error"] .bundle-explorer-dir-name,
+.bundle-explorer-dir-row[data-change="error"] .bundle-explorer-row__count {
+  color: var(--color-error);
+}
+
+.bundle-explorer-file-row[data-change="warning"] .bundle-explorer-file-name {
+  color: var(--color-warning);
 }
 
 .bundle-explorer-children {

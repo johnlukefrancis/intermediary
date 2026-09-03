@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/repo_rail.tsx
-// Description: Right-rail instrument panel: slim [ ZIPS ] [ SOURCE n ] header over the active rail body
+// Description: Right-rail instrument panel: slim icon-rocker header over the active rail body
 
 import type React from "react";
 import type { ActiveRail } from "../../shared/config.js";
@@ -8,6 +8,7 @@ import {
   deckSectionTabId,
   type DeckSectionOption,
 } from "./deck_section_switcher.js";
+import { ZipsIcon, SourceIcon } from "./deck_section_icons.js";
 import "../../styles/repo_rail.css";
 
 const RAIL_PANEL_ID = "repo-rail-panel";
@@ -16,8 +17,8 @@ const RAIL_ID_PREFIX = "repo-rail";
 /** Rail sections shared by the standard rail and the handset deck (which prepends FILES) */
 export function buildRailSections(sourceCount: number): DeckSectionOption<ActiveRail>[] {
   return [
-    { value: "zips", label: "ZIPS" },
-    { value: "source", label: "SOURCE", count: sourceCount },
+    { value: "zips", label: "ZIPS", icon: <ZipsIcon /> },
+    { value: "source", label: "SOURCE", icon: <SourceIcon />, count: sourceCount },
   ];
 }
 

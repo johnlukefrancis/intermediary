@@ -2,12 +2,11 @@
 // Description: Lazy file explorer for bundle directory and file inclusion
 
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
-import { sendListRepoDirectory } from "../../lib/agent/messages.js";
-import { useAgent } from "../../hooks/use_agent.js";
 import { useConfig } from "../../hooks/use_config.js";
-import { BundleExplorerDirectory, type DirectoryListingState } from "./bundle_explorer_directory.js";
+import { useDirectoryListings } from "../../hooks/bundles/use_directory_listings.js";
+import { BundleExplorerDirectory } from "./bundle_explorer_directory.js";
 import { BundleFileContextMenu } from "./bundle_file_context_menu.js";
 import { BundleExplorerFileRow } from "./bundle_explorer_file_row.js";
 import {
@@ -41,95 +40,18 @@ export function BundleFileExplorer({
   onSelectionChange,
   onOpenFile,
 }: BundleFileExplorerProps): React.JSX.Element {
-  const { client, helloState } = useAgent();
   const { config } = useConfig();
-  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() => new Set());
-  const [listings, setListings] = useState<Map<string, DirectoryListingState>>(() => new Map());
+  const { expandedDirs, listings, toggleExpanded } = useDirectoryListings({
+    repoId,
+    topLevelDirs,
+    topLevelFiles,
+  });
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const listingScopeRef = useRef({ repoId, generation: 0 });
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
 
   const allSelected =
     topLevelDirs.length > 0 && selection.topLevelDirs.length === topLevelDirs.length;
   const noneSelected = selection.topLevelDirs.length === 0;
-
-  useEffect(() => {
-    listingScopeRef.current = {
-      repoId,
-      generation: listingScopeRef.current.generation + 1,
-    };
-    setExpandedDirs(new Set());
-    setListings(new Map());
-  }, [repoId, topLevelDirs, topLevelFiles]);
-
-  const loadDirectory = useCallback(
-    (path: string) => {
-      if (!client || helloState.status !== "ok") {
-        setListings((prev) => new Map(prev).set(path, {
-          status: "error",
-          dirs: [],
-          files: [],
-          error: "Agent session initializing",
-        }));
-        return;
-      }
-
-      const current = listings.get(path);
-      if (current?.status === "loading" || current?.status === "ready") return;
-
-      setListings((prev) => new Map(prev).set(path, { status: "loading", dirs: [], files: [] }));
-      const requestScope = listingScopeRef.current;
-      const requestRepoId = repoId;
-      const requestPath = path;
-      void sendListRepoDirectory(client, requestRepoId, requestPath)
-        .then((result) => {
-          const activeScope = listingScopeRef.current;
-          if (
-            activeScope.repoId !== requestRepoId ||
-            activeScope.generation !== requestScope.generation ||
-            result.repoId !== requestRepoId ||
-            result.path !== requestPath
-          ) {
-            return;
-          }
-          setListings((prev) => new Map(prev).set(requestPath, {
-            status: "ready",
-            dirs: result.dirs,
-            files: result.files,
-          }));
-        })
-        .catch((error: unknown) => {
-          const activeScope = listingScopeRef.current;
-          if (
-            activeScope.repoId !== requestRepoId ||
-            activeScope.generation !== requestScope.generation
-          ) {
-            return;
-          }
-          const message = error instanceof Error ? error.message : "Unable to load directory";
-          setListings((prev) => new Map(prev).set(requestPath, {
-            status: "error",
-            dirs: [],
-            files: [],
-            error: message,
-          }));
-        });
-    },
-    [client, helloState.status, listings, repoId]
-  );
-
-  const handleToggleExpanded = useCallback((path: string) => {
-    setExpandedDirs((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-        loadDirectory(path);
-      }
-      return next;
-    });
-  }, [loadDirectory]);
 
   const handleIncludeRootChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,7 +176,7 @@ export function BundleFileExplorer({
             selection={selection}
             expandedDirs={expandedDirs}
             listings={listings}
-            onToggleExpanded={handleToggleExpanded}
+            onToggleExpanded={toggleExpanded}
             onToggleDirectory={handleToggleDirectory}
             onToggleFile={handleToggleFile}
             onOpenFile={onOpenFile}
