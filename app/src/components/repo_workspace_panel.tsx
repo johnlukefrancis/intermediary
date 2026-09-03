@@ -1,5 +1,5 @@
 // Path: app/src/components/repo_workspace_panel.tsx
-// Description: Repo workspace renderer for notes, text scratch buffers, image previews, and diffs
+// Description: Repo workspace renderer for notes, text buffers, image previews, and text/image diffs
 
 import type React from "react";
 import { useCallback, useState } from "react";
@@ -7,6 +7,7 @@ import { ContextMenu, type ContextMenuItem } from "./context_menu.js";
 import { buildSingleFileContextMenuItems } from "./file_context_menu_items.js";
 import { DiffWorkspaceViewer } from "./diff_workspace.js";
 import { MERGE_CONFLICT_SUBTITLE } from "./source_control/source_control_copy.js";
+import { ImageDiffWorkspaceViewer } from "./image_diff_workspace.js";
 import { ImageWorkspaceViewer } from "./image_workspace.js";
 import { TextWorkspaceEditor } from "./text_workspace.js";
 import { WorkspaceLayout } from "./layout/workspace_layout.js";
@@ -42,7 +43,7 @@ const MARKDOWN_LIKE_EXTENSIONS = new Set(["adoc", "asciidoc", "md", "mdx", "rst"
 
 function workspaceTitle(workspace: ActiveRepoWorkspace): string {
   if (workspace.kind === "note") return "Note";
-  if (workspace.kind === "diff") return workspace.path;
+  if (workspace.kind === "diff" || workspace.kind === "imageDiff") return workspace.path;
   return getFileName(workspace.path);
 }
 
@@ -52,6 +53,10 @@ function workspaceSubtitle(workspace: ActiveRepoWorkspace): string {
     if (workspace.conflict) return MERGE_CONFLICT_SUBTITLE;
     return workspace.area === "index" ? "STAGED DIFF" : "WORKTREE DIFF";
   }
+  if (workspace.kind === "imageDiff") {
+    if (workspace.conflict) return MERGE_CONFLICT_SUBTITLE;
+    return workspace.area === "index" ? "STAGED IMAGE DIFF" : "WORKTREE IMAGE DIFF";
+  }
   return workspace.path;
 }
 
@@ -59,6 +64,7 @@ function workspaceSubtitle(workspace: ActiveRepoWorkspace): string {
 function titleFilePath(workspace: ActiveRepoWorkspace): string | null {
   if (workspace.kind === "textFile") return workspace.path;
   if (workspace.kind === "diff" && workspace.fileExists) return workspace.path;
+  if (workspace.kind === "imageDiff" && workspace.fileExists) return workspace.path;
   return null;
 }
 
@@ -144,6 +150,15 @@ export function RepoWorkspacePanel({
         binary={workspace.status === "ready" ? workspace.binary : undefined}
         conflict={workspace.conflict}
       />
+    ) : workspace.kind === "imageDiff" ? (
+      <ImageDiffWorkspaceViewer
+        path={workspace.path}
+        isLoading={workspace.status === "loading"}
+        error={workspace.status === "error" ? workspace.error : null}
+        before={workspace.status === "ready" ? workspace.before : null}
+        after={workspace.status === "ready" ? workspace.after : null}
+        conflict={workspace.conflict}
+      />
     ) : (
       <ImageWorkspaceViewer
         path={workspace.path}
@@ -162,7 +177,11 @@ export function RepoWorkspacePanel({
       <WorkspaceLayout
         title={workspaceTitle(workspace)}
         subtitle={workspaceSubtitle(workspace)}
-        subtitleTone={workspace.kind === "diff" && workspace.conflict ? "alert" : undefined}
+        subtitleTone={
+          (workspace.kind === "diff" || workspace.kind === "imageDiff") && workspace.conflict
+            ? "alert"
+            : undefined
+        }
         onClose={onClose}
         onTitleContextMenu={filePath !== null && repoRoot ? handleTitleContextMenu : undefined}
         onTitleDragStart={

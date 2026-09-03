@@ -110,6 +110,14 @@
       "summary": "Remove button for grouped repos with confirmation"
     },
     {
+      "path": "app/src/components/image_diff_pane.tsx",
+      "summary": "One side of an image diff: Git-labelled header, checkerboard image slot, size footer"
+    },
+    {
+      "path": "app/src/components/image_diff_workspace.tsx",
+      "summary": "Side-by-side before/after viewer for a changed image opened from source control"
+    },
+    {
       "path": "app/src/components/image_workspace.tsx",
       "summary": "Fit-to-panel image preview surface for shared repo workspaces"
     },
@@ -199,7 +207,7 @@
     },
     {
       "path": "app/src/components/repo_workspace_panel.tsx",
-      "summary": "Repo workspace renderer for notes, text scratch buffers, image previews, and diffs"
+      "summary": "Repo workspace renderer for notes, text buffers, image previews, and text/image diffs"
     },
     {
       "path": "app/src/components/source_control/source_control_body.tsx",
@@ -322,8 +330,12 @@
       "summary": "Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change"
     },
     {
+      "path": "app/src/hooks/repo_workspace_diff_loaders.ts",
+      "summary": "Diff loaders for the repo workspace hook: text patches and two-sided image snapshots"
+    },
+    {
       "path": "app/src/hooks/repo_workspace_types.ts",
-      "summary": "RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook"
+      "summary": "RepoWorkspace union (note, text, image, diff, image diff) and path helpers for the workspace hook"
     },
     {
       "path": "app/src/hooks/source_control/source_control_commands.ts",
@@ -402,6 +414,10 @@
       "summary": "Multi-file selection state hook with shift-range and ctrl/cmd-toggle support"
     },
     {
+      "path": "app/src/hooks/use_image_blob_url.ts",
+      "summary": "Base64 image payload to a revocable Blob URL for workspace image and image-diff panes"
+    },
+    {
       "path": "app/src/hooks/use_mode_window_bounds_persistence.ts",
       "summary": "Persists window bounds per mode from live resize events"
     },
@@ -423,7 +439,7 @@
     },
     {
       "path": "app/src/hooks/use_repo_workspace.ts",
-      "summary": "Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs"
+      "summary": "Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs"
     },
     {
       "path": "app/src/hooks/use_resume_detector.ts",
@@ -484,6 +500,10 @@
     {
       "path": "app/src/lib/files/file_feed.ts",
       "summary": "Auto file feed filtering, ranking, and row metric helpers"
+    },
+    {
+      "path": "app/src/lib/format_bytes.ts",
+      "summary": "Byte-count formatting shared by bundle rows and image-diff pane footers"
     },
     {
       "path": "app/src/lib/icons/file_family.ts",
@@ -724,6 +744,10 @@
     {
       "path": "app/src/styles/handset_deck.css",
       "summary": "Handset mode single-panel vertical deck layout"
+    },
+    {
+      "path": "app/src/styles/image_diff_workspace.css",
+      "summary": "Side-by-side image diff panes, checkerboard slots, and handset stacking"
     },
     {
       "path": "app/src/styles/main.css",
@@ -1118,6 +1142,14 @@
       "summary": "Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)"
     },
     {
+      "path": "crates/im_agent/src/source_control/image_diff_sides.rs",
+      "summary": "Reads one image-diff side from a Git blob or from the working tree, bounded and base64-encoded"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/image_diff.rs",
+      "summary": "Chooses the before/after Git snapshots of one changed image and assembles both sides"
+    },
+    {
       "path": "crates/im_agent/src/source_control/locks.rs",
       "summary": "Per-repo mutation serialization for source-control actions"
     },
@@ -1152,6 +1184,10 @@
     {
       "path": "crates/im_agent/src/source_control/tests_diff.rs",
       "summary": "Real-git tempdir tests for bounded per-file diff capture"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_image_diff.rs",
+      "summary": "Real-git tempdir tests for before/after image-diff side selection"
     },
     {
       "path": "crates/im_agent/src/source_control/tests_support.rs",

@@ -4,8 +4,8 @@
 use serde_json::json;
 
 use super::{
-    AgentEvent, ClientHelloCommand, ClientHelloResult, InboundRequestEnvelope, RequestEnvelope,
-    ResponseEnvelope, UiCommand, UiResponse,
+    AgentEvent, ClientHelloCommand, ClientHelloResult, ImageDiffSource, InboundRequestEnvelope,
+    RequestEnvelope, ResponseEnvelope, SourceControlArea, UiCommand, UiResponse,
 };
 use crate::runtime::RepoRoot;
 
@@ -301,6 +301,62 @@ fn read_image_file_command_and_result_roundtrip() {
         }
         _ => panic!("expected ReadImageFileResult"),
     }
+}
+
+#[test]
+fn source_control_image_diff_command_and_result_roundtrip() {
+    let command_json = json!({
+        "type": "sourceControlImageDiff",
+        "repoId": "repo",
+        "path": "art/new.png",
+        "originalPath": "art/old.png",
+        "area": "index"
+    });
+    let command: UiCommand =
+        serde_json::from_value(command_json).expect("parse sourceControlImageDiff");
+    match command {
+        UiCommand::SourceControlImageDiff(command) => {
+            assert_eq!(command.repo_id, "repo");
+            assert_eq!(command.path, "art/new.png");
+            assert_eq!(command.original_path.as_deref(), Some("art/old.png"));
+            assert_eq!(command.area, SourceControlArea::Index);
+        }
+        _ => panic!("expected SourceControlImageDiff"),
+    }
+
+    let response_json = json!({
+        "type": "sourceControlImageDiffResult",
+        "repoId": "repo",
+        "path": "art/new.png",
+        "area": "index",
+        "before": {
+            "source": "head",
+            "dataBase64": "cG5n",
+            "mimeType": "image/png",
+            "bytes": 3,
+            "truncated": false
+        },
+        "after": null
+    });
+    let response: UiResponse =
+        serde_json::from_value(response_json.clone()).expect("parse sourceControlImageDiffResult");
+    match &response {
+        UiResponse::SourceControlImageDiffResult(result) => {
+            assert_eq!(result.repo_id, "repo");
+            assert_eq!(result.area, SourceControlArea::Index);
+            let before = result.before.as_ref().expect("before side");
+            assert_eq!(before.source, ImageDiffSource::Head);
+            assert_eq!(before.data_base64, "cG5n");
+            assert_eq!(before.mime_type, "image/png");
+            assert_eq!(before.bytes, 3);
+            assert!(!before.truncated);
+            assert!(result.after.is_none());
+        }
+        _ => panic!("expected SourceControlImageDiffResult"),
+    }
+
+    let reserialized = serde_json::to_value(&response).expect("serialize image diff result");
+    assert_eq!(reserialized, response_json, "a missing side stays explicit null");
 }
 
 #[test]

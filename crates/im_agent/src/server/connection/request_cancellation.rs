@@ -14,7 +14,7 @@ use crate::staging::StageFileCancelToken;
 pub(super) enum RequestCancellation {
     Bundle(BundleCancelToken),
     StageFile(StageFileCancelToken),
-    /// Source-control reads (status, diff) may be killed on cancel; actions
+    /// Source-control reads (status, diff, image diff) may be killed on cancel; actions
     /// deliberately stay `Passive` so a mutation is never killed mid-child.
     SourceControlRead(BundleCancelToken),
     Passive(Arc<AtomicBool>),
@@ -25,7 +25,9 @@ impl RequestCancellation {
         match command {
             UiCommand::BuildBundle(_) => Self::Bundle(BundleCancelToken::new()),
             UiCommand::StageFile(_) => Self::StageFile(StageFileCancelToken::new()),
-            UiCommand::SourceControlStatus(_) | UiCommand::SourceControlDiff(_) => {
+            UiCommand::SourceControlStatus(_)
+            | UiCommand::SourceControlDiff(_)
+            | UiCommand::SourceControlImageDiff(_) => {
                 Self::SourceControlRead(BundleCancelToken::new())
             }
             _ => Self::Passive(Arc::new(AtomicBool::new(false))),

@@ -32,6 +32,7 @@ import {
 import {
   SourceControlActionCommandSchema, SourceControlActionResultSchema,
   SourceControlDiffCommandSchema, SourceControlDiffResultSchema,
+  SourceControlImageDiffCommandSchema, SourceControlImageDiffResultSchema,
   SourceControlStatusCommandSchema, SourceControlStatusResultSchema,
 } from "./protocol_source_control.js";
 export {
@@ -77,15 +78,19 @@ export {
   type RefreshResult, type SetOptionsResult, type StageFileResult, type WatchRepoResult,
 } from "./protocol_repo_commands.js";
 export {
+  ImageDiffSideSchema, ImageDiffSourceSchema,
   SourceControlActionCommandSchema, SourceControlActionKindSchema, SourceControlActionResultSchema,
   SourceControlActionSchema, SourceControlAreaSchema, SourceControlChangeSchema,
   SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlEntryAreaSchema,
-  SourceControlEntrySchema, SourceControlOmittedSchema, SourceControlScopeSchema,
+  SourceControlEntrySchema, SourceControlImageDiffCommandSchema,
+  SourceControlImageDiffResultSchema, SourceControlOmittedSchema, SourceControlScopeSchema,
   SourceControlStatusCommandSchema, SourceControlStatusResultSchema, SourceControlStatusSchema,
+  type ImageDiffSide, type ImageDiffSource,
   type SourceControlAction, type SourceControlActionCommand, type SourceControlActionKind,
   type SourceControlActionResult, type SourceControlArea, type SourceControlChange,
   type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlEntry,
-  type SourceControlEntryArea, type SourceControlOmitted, type SourceControlScope,
+  type SourceControlEntryArea, type SourceControlImageDiffCommand,
+  type SourceControlImageDiffResult, type SourceControlOmitted, type SourceControlScope,
   type SourceControlStatus, type SourceControlStatusCommand, type SourceControlStatusResult,
 } from "./protocol_source_control.js";
 
@@ -110,6 +115,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   TrFleetActionCommandSchema,
   SourceControlStatusCommandSchema,
   SourceControlDiffCommandSchema,
+  SourceControlImageDiffCommandSchema,
   SourceControlActionCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
@@ -131,6 +137,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   TrFleetActionResultSchema,
   SourceControlStatusResultSchema,
   SourceControlDiffResultSchema,
+  SourceControlImageDiffResultSchema,
   SourceControlActionResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;

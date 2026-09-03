@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import type { SourceControlEntry } from "../../shared/protocol.js";
 import { FileIcon, getFileFamily } from "../../lib/icons/index.js";
 import { CHANGE_BADGES } from "../../lib/source_control/change_badges.js";
+import { isPreviewImagePath } from "../../hooks/repo_workspace_types.js";
 import { MinusIcon, PlusIcon } from "./source_control_icons.js";
 
 export type RowActionKind = "stage" | "unstage";
@@ -47,13 +48,15 @@ export function SourceControlRow({
     entry.originalPath !== undefined ? `${entry.originalPath} → ${entry.path}` : entry.path;
   const actionLabel = `${actionKind === "stage" ? "Stage" : "Unstage"} ${entry.path}`;
 
+  // A deleted text file has no diff to show; a deleted image still has its previous version.
+  const opensDiff = !deleted || isPreviewImagePath(entry.path);
   const handleDoubleClick = useCallback(
     (event: React.MouseEvent) => {
-      if (deleted || (event.target as HTMLElement).closest("button")) return;
+      if (!opensDiff || (event.target as HTMLElement).closest("button")) return;
       event.preventDefault();
       onOpenDiff(entry);
     },
-    [deleted, entry, onOpenDiff]
+    [entry, onOpenDiff, opensDiff]
   );
 
   const handleAction = useCallback(
@@ -71,7 +74,11 @@ export function SourceControlRow({
       role="listitem"
       data-change={entry.change}
       data-deleted={deleted || undefined}
-      title={deleted ? `${title} (deleted)` : `${title} — double-click for diff`}
+      title={
+        deleted
+          ? `${title} (deleted)${opensDiff ? " — double-click for image diff" : ""}`
+          : `${title} — double-click for diff`
+      }
       onDoubleClick={handleDoubleClick}
       onContextMenu={(event) => {
         event.preventDefault();

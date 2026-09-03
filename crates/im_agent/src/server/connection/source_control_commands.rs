@@ -6,7 +6,8 @@ use std::path::Path;
 use crate::error::AgentError;
 use crate::protocol::{self, UiResponse};
 use crate::source_control::{
-    run_source_control_action, source_control_diff, source_control_status, SourceControlLocks,
+    run_source_control_action, source_control_diff, source_control_image_diff,
+    source_control_status, SourceControlLocks,
 };
 
 use super::request_cancellation::RequestCancellation;
@@ -51,6 +52,31 @@ pub async fn source_control_diff_command(
             patch: diff.patch,
             truncated: diff.truncated,
             binary: diff.binary,
+        },
+    ))
+}
+
+pub async fn source_control_image_diff_command(
+    command: protocol::SourceControlImageDiffCommand,
+    ctx: &ConnectionContext,
+    cancellation: &RequestCancellation,
+) -> Result<UiResponse, AgentError> {
+    let repo_root = command_repo_root(&command.repo_id, ctx).await?;
+    let diff = source_control_image_diff(
+        Path::new(&repo_root),
+        &command.path,
+        command.original_path.as_deref(),
+        command.area,
+        Some(cancellation.source_control_read_token()?),
+    )
+    .await?;
+    Ok(UiResponse::SourceControlImageDiffResult(
+        protocol::SourceControlImageDiffResult {
+            repo_id: command.repo_id,
+            path: command.path,
+            area: command.area,
+            before: diff.before,
+            after: diff.after,
         },
     ))
 }

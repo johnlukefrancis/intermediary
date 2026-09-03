@@ -38,10 +38,11 @@ working tree can be managed without leaving the app.
 
 Right-rail segmented icon rocker (`DeckSectionSwitcher`: archive-box ZIPS cell, git-branch SOURCE cell) on
 the existing right column; the Source Control column with status line (branch, ahead/behind, sha, refresh,
-pull, push), warnings, commit box, three sections, and rows; diff kind in the shared workspace; handset
-rocker prepends a stacked-documents FILES cell; `uiState.activeRail` persisted globally. Protocol:
-`sourceControlStatus`, `sourceControlDiff`, and one tagged `sourceControlAction` (stage, unstage, discard,
-commit, push, pull); event `sourceControlChanged`.
+pull, push), warnings, commit box, three sections, and rows; diff kind in the shared workspace, with a
+changed image opening a side-by-side image diff instead of `BINARY FILE`; handset rocker prepends a
+stacked-documents FILES cell; `uiState.activeRail` persisted globally. Protocol: `sourceControlStatus`,
+`sourceControlDiff`, `sourceControlImageDiff`, and one tagged `sourceControlAction` (stage, unstage,
+discard, commit, push, pull); event `sourceControlChanged`.
 
 ## Naming
 
@@ -67,7 +68,15 @@ never used for Git state.
 | COMMIT when nothing is committable (index equals HEAD, no merge in progress) or the message is blank | Button disabled with hint "Stage changes to commit"; the agent additionally refuses with `GIT_NOTHING_TO_COMMIT`. A merge resolved to HEAD's tree remains committable. |
 | `omitted.stagedOutsideRoot > 0` (repo entry rooted below the Git top level) | Warning row "N STAGED OUTSIDE THIS FOLDER WILL ALSO BE COMMITTED"; COMMIT asks for confirmation; COMMIT stays enabled because `status.committable` is Git's answer, not the listed rows. |
 | `truncated` status (Git output over 8 MiB) | Degraded banner; STAGE ALL and COMMIT disabled. |
-| Double-click a row | Diff opens in the shared workspace: index diff for STAGED rows, worktree diff for CHANGES rows, whole file as added for untracked; deleted rows do not open. |
+| Double-click a row | Diff opens in the shared workspace: a text file opens the text diff (index diff for STAGED rows, worktree diff for CHANGES rows, whole file as added for untracked; deleted text rows do not open); an image file (`png`/`jpg`/`jpeg`/`webp`/`gif`/`bmp`/`avif`) opens the side-by-side image diff instead. |
+| Double-click a staged image row | Image diff opens with panes `PREVIOUS · HEAD` / `CURRENT · INDEX`; a rename shows the HEAD side read from `originalPath`. |
+| Double-click an unstaged (CHANGES) image row | Image diff opens with panes `PREVIOUS · INDEX` / `CURRENT · WORKTREE`. |
+| Double-click a new/untracked image row | Nothing to compare, so a single full-width pane shows the image headed `NEW · WORKTREE` (`NEW · INDEX` when staged). |
+| Double-click a deleted image row | Unlike deleted text rows, deleted image rows open: a single full-width pane shows the last-known image headed `DELETED · INDEX` (`DELETED · HEAD` for a staged deletion). |
+| Double-click a conflicted image row | Image diff opens with panes `OURS` / `THEIRS` and the `MERGE CONFLICT` subtitle in the error tone; a stage missing from the conflict (delete/modify) shows its labelled empty slot. |
+| An image diff side exceeds the 12 MiB per-side bound | That pane shows `TOO LARGE TO PREVIEW` with the reported size instead of the image; the other side still renders normally if it is within bound. |
+| A changed file is a non-image binary | Diff stays on the existing `BINARY FILE` state; no image route. |
+| Image diff on handset | The two panes stack vertically instead of sitting side by side. |
 | Discard Changes on a CHANGES row | Confirm modal (destructive); tracked files restore from the index, untracked files are deleted; never directories. |
 | PULL / PUSH | `git pull --ff-only`; `git push` to the upstream, or `push -u <remote> HEAD` when exactly one remote exists; failures surface Git's message. |
 | Git missing / not a repository / older installed agent | `GIT NOT FOUND` / `NOT A GIT REPOSITORY` / `AGENT UPDATE REQUIRED` empty states. |
@@ -105,3 +114,7 @@ summed worst case of one request): status/diff 20/90/120 s; stage/unstage/discar
 7. With unmerged paths, the SOURCE cell reads as an alert without opening the column, MERGE CONFLICTS is
    the first section, COMMIT is disabled with the resolve hint, and a conflict diff shows the MERGE
    CONFLICT subtitle, notice, and highlighted markers; all of it clears once every conflict is staged.
+8. On a WSL repo and a host repo: a staged, unstaged, new/untracked, deleted, and conflicted image each open
+   the correct side-by-side image diff with correct pane labels, dimensions and bytes in each footer, and
+   transparency reading on the checkerboard; an oversized side shows `TOO LARGE TO PREVIEW`; a non-image
+   binary still shows `BINARY FILE`; handset stacks the panes.

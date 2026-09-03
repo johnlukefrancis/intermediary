@@ -28,7 +28,8 @@ pub use commands_tr_fleet::{
 };
 pub use commands_source_control::{
     SourceControlActionCommand, SourceControlActionKind, SourceControlActionPayload,
-    SourceControlArea, SourceControlDiffCommand, SourceControlScope, SourceControlStatusCommand,
+    SourceControlArea, SourceControlDiffCommand, SourceControlImageDiffCommand,
+    SourceControlScope, SourceControlStatusCommand,
 };
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, InboundRequestEnvelope, RequestEnvelope, ResponseEnvelope,
@@ -50,8 +51,10 @@ pub use responses::{
 };
 pub use responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 pub use responses_source_control::{
-    SourceControlActionResult, SourceControlChange, SourceControlDiffResult, SourceControlEntry,
-    SourceControlEntryArea, SourceControlOmitted, SourceControlStatus, SourceControlStatusResult,
+    ImageDiffSide, ImageDiffSource, SourceControlActionResult, SourceControlChange,
+    SourceControlDiffResult, SourceControlEntry, SourceControlEntryArea,
+    SourceControlImageDiffResult, SourceControlOmitted, SourceControlStatus,
+    SourceControlStatusResult,
 };
 pub use responses_tr_fleet::{
     GetTrFleetStatusResult, TrFleetActionKind, TrFleetActionResult, TrFleetEndpointError,

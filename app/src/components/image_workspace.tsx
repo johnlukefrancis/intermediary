@@ -2,7 +2,8 @@
 // Description: Fit-to-panel image preview surface for shared repo workspaces
 
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+import { useImageBlobUrl } from "../hooks/use_image_blob_url.js";
 
 const DRAG_START_DISTANCE_PX = 6;
 
@@ -15,20 +16,6 @@ interface ImageWorkspaceViewerProps {
   onDragStart: () => void | Promise<void>;
 }
 
-type ImageSourceState =
-  | { kind: "none" }
-  | { kind: "ready"; url: string }
-  | { kind: "error"; message: string };
-
-function base64ToBlob(dataBase64: string, mimeType: string): Blob {
-  const binary = globalThis.atob(dataBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new Blob([bytes], { type: mimeType });
-}
-
 export function ImageWorkspaceViewer({
   path,
   dataBase64,
@@ -37,33 +24,12 @@ export function ImageWorkspaceViewer({
   error,
   onDragStart,
 }: ImageWorkspaceViewerProps): React.JSX.Element {
-  const [source, setSource] = useState<ImageSourceState>({ kind: "none" });
+  const source = useImageBlobUrl(dataBase64, mimeType);
   const dragStartRef = useRef<{
     pointerId: number;
     x: number;
     y: number;
   } | null>(null);
-
-  useEffect(() => {
-    if (!dataBase64 || !mimeType) {
-      setSource({ kind: "none" });
-      return undefined;
-    }
-
-    let url: string;
-    try {
-      url = URL.createObjectURL(base64ToBlob(dataBase64, mimeType));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to decode image preview";
-      setSource({ kind: "error", message });
-      return undefined;
-    }
-
-    setSource({ kind: "ready", url });
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [dataBase64, mimeType]);
 
   const clearPointerCapture = useCallback((target: Element, pointerId: number): void => {
     if (!(target instanceof HTMLElement) || !target.hasPointerCapture(pointerId)) return;
@@ -72,7 +38,7 @@ export function ImageWorkspaceViewer({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent) => {
-      if (event.button !== 0 || source.kind !== "ready") return;
+      if (event.button !== 0 || source.status !== "ready") return;
       dragStartRef.current = {
         pointerId: event.pointerId,
         x: event.clientX,
@@ -80,7 +46,7 @@ export function ImageWorkspaceViewer({
       };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [source.kind]
+    [source.status]
   );
 
   const handlePointerMove = useCallback(
@@ -121,11 +87,11 @@ export function ImageWorkspaceViewer({
     return <p className="text-workspace-error text-workspace-error--inline">{error}</p>;
   }
 
-  if (source.kind === "error") {
+  if (source.status === "error") {
     return <p className="text-workspace-error text-workspace-error--inline">{source.message}</p>;
   }
 
-  if (source.kind !== "ready") {
+  if (source.status !== "ready") {
     return <p className="empty-state empty-state--waiting">Preparing image</p>;
   }
 

@@ -5,11 +5,12 @@ use std::path::Path;
 
 use im_agent::error::AgentError;
 use im_agent::protocol::{
-    SourceControlActionResult, SourceControlDiffResult, SourceControlStatusResult, UiCommand,
-    UiResponse,
+    SourceControlActionResult, SourceControlDiffResult, SourceControlImageDiffResult,
+    SourceControlStatusResult, UiCommand, UiResponse,
 };
 use im_agent::source_control::{
-    run_source_control_action, source_control_diff, source_control_status, SourceControlLocks,
+    run_source_control_action, source_control_diff, source_control_image_diff,
+    source_control_status, SourceControlLocks,
 };
 
 use crate::runtime::local_host_backend::LocalHostBackend;
@@ -68,6 +69,25 @@ pub async fn execute_host_source_control(
                 truncated: diff.truncated,
                 binary: diff.binary,
             }))
+        }
+        UiCommand::SourceControlImageDiff(command) => {
+            let diff = source_control_image_diff(
+                repo_root,
+                &command.path,
+                command.original_path.as_deref(),
+                command.area,
+                None,
+            )
+            .await?;
+            Ok(UiResponse::SourceControlImageDiffResult(
+                SourceControlImageDiffResult {
+                    repo_id: command.repo_id,
+                    path: command.path,
+                    area: command.area,
+                    before: diff.before,
+                    after: diff.after,
+                },
+            ))
         }
         UiCommand::SourceControlAction(command) => {
             let kind = command.action.kind();

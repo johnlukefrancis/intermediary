@@ -1,0 +1,139 @@
+/*
+ * Path: app/src/styles/image_diff_workspace.css
+ * Description: Side-by-side image diff panes, checkerboard slots, and handset stacking
+ */
+
+.image-diff-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-editor-bg);
+}
+
+.image-diff-workspace > .empty-state,
+.image-diff-workspace > .text-workspace-error--inline {
+  margin: auto;
+}
+
+/* Same band idiom as the text diff notice: the conflict resolve step stays visible above the panes */
+.image-diff-workspace__notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-error-muted);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Two equal columns; the 1px divider is the gap filled by the pane track background */
+.image-diff-workspace__panes {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-border-subtle);
+}
+
+.image-diff-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-editor-bg);
+}
+
+.image-diff-pane__header,
+.image-diff-pane__footer {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.image-diff-pane__header {
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-elevated);
+}
+
+.image-diff-pane[data-empty="true"] .image-diff-pane__header {
+  color: var(--color-text-muted);
+}
+
+.image-diff-pane__footer {
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-elevated);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Checkerboard from tokens only: two offset conic gradients over the elevated surface */
+.image-diff-pane__body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow: hidden;
+  background-color: var(--color-bg-elevated);
+  background-image:
+    conic-gradient(
+      var(--color-bg-hover) 0deg 90deg,
+      transparent 90deg 180deg,
+      var(--color-bg-hover) 180deg 270deg,
+      transparent 270deg 360deg
+    );
+  background-size: 16px 16px;
+  background-position: 0 0;
+}
+
+.image-diff-pane__image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Missing or unpreviewable side: the slot states why instead of showing an empty pane */
+.image-diff-pane__slot {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* One-sided change: a single full-width pane, no empty slot to compare against */
+.image-diff-workspace__panes[data-layout="single"] {
+  grid-template-columns: 1fr;
+}
+
+.app[data-ui-mode="handset"] .image-diff-workspace__panes[data-layout="single"] {
+  grid-template-rows: 1fr;
+}
+
+.app[data-ui-mode="handset"] .image-diff-workspace__panes {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+}

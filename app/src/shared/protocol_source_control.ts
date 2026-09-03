@@ -136,3 +136,38 @@ export const SourceControlActionResultSchema = z.object({
   commitSha: z.string().optional(),
 });
 export type SourceControlActionResult = z.infer<typeof SourceControlActionResultSchema>;
+
+/** Which snapshot of a changed image a pane shows; the agent picks the pair from the Git state. */
+export const ImageDiffSourceSchema = z.enum(["head", "index", "worktree", "ours", "theirs"]);
+export type ImageDiffSource = z.infer<typeof ImageDiffSourceSchema>;
+
+/** One side of an image diff; `truncated` carries an empty payload past the per-side bound. */
+export const ImageDiffSideSchema = z.object({
+  source: ImageDiffSourceSchema,
+  dataBase64: z.string(),
+  mimeType: z.string(),
+  bytes: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+});
+export type ImageDiffSide = z.infer<typeof ImageDiffSideSchema>;
+
+export const SourceControlImageDiffCommandSchema = z.object({
+  type: z.literal("sourceControlImageDiff"),
+  repoId: z.string(),
+  path: z.string(),
+  /** Rename source for renamed/copied entries so the HEAD side can be located */
+  originalPath: z.string().optional(),
+  area: SourceControlAreaSchema,
+});
+export type SourceControlImageDiffCommand = z.infer<typeof SourceControlImageDiffCommandSchema>;
+
+/** A side that does not exist (added, deleted, unborn HEAD) is null, never an error. */
+export const SourceControlImageDiffResultSchema = z.object({
+  type: z.literal("sourceControlImageDiffResult"),
+  repoId: z.string(),
+  path: z.string(),
+  area: SourceControlAreaSchema,
+  before: ImageDiffSideSchema.nullable(),
+  after: ImageDiffSideSchema.nullable(),
+});
+export type SourceControlImageDiffResult = z.infer<typeof SourceControlImageDiffResultSchema>;

@@ -1,15 +1,10 @@
 // Path: app/src/hooks/use_repo_workspace.ts
-// Description: Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs
+// Description: Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SourceControlArea, SourceControlEntry } from "../shared/protocol.js";
 import { sendReadImageFile, sendReadTextFile } from "../lib/agent/messages.js";
-import { sendSourceControlDiff } from "../lib/agent/messages_source_control.js";
-import {
-  computeTransientRetryDelayMs,
-  isTransientWslTransportError,
-} from "../lib/agent/transient_wsl_error.js";
-import { agentErrorMessage } from "./source_control/source_control_failures.js";
+import { loadImageDiff, loadTextDiff } from "./repo_workspace_diff_loaders.js";
 import { useAgent } from "./use_agent.js";
 import {
   errorMessage,
@@ -144,8 +139,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
     (entry: SourceControlEntry) => {
       const requestToken = nextRequestToken();
       const area: SourceControlArea = entry.area === "index" ? "index" : "worktree";
-      const base = {
-        kind: "diff" as const,
+      const entryFacts = {
         repoId,
         path: entry.path,
         area,
@@ -154,38 +148,22 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
         conflict: entry.area === "conflict",
       };
       const isStale = (): boolean => requestTokenRef.current !== requestToken;
+      const isImage = isPreviewImagePath(entry.path);
+      const base = isImage
+        ? { kind: "imageDiff" as const, ...entryFacts }
+        : { kind: "diff" as const, ...entryFacts };
 
       if (!client || helloState.status !== "ok") {
         setWorkspace({ ...base, status: "error", error: AGENT_INITIALIZING });
         return;
       }
 
-      setWorkspace({ ...base, status: "loading" });
-
-      const load = (attempt: number): void => {
-        void sendSourceControlDiff(client, repoId, entry.path, area, entry.originalPath)
-          .then((result) => {
-            if (isStale()) return;
-            setWorkspace({
-              ...base,
-              status: "ready",
-              patch: result.patch,
-              truncated: result.truncated,
-              binary: result.binary,
-            });
-          })
-          .catch((err: unknown) => {
-            if (isStale()) return;
-            if (isTransientWslTransportError(err)) {
-              setTimeout(() => {
-                if (!isStale()) load(attempt + 1);
-              }, computeTransientRetryDelayMs(attempt));
-              return;
-            }
-            setWorkspace({ ...base, status: "error", error: agentErrorMessage(err) });
-          });
-      };
-      load(0);
+      const context = { client, repoId, isStale, setWorkspace };
+      if (base.kind === "imageDiff") {
+        loadImageDiff(context, base);
+        return;
+      }
+      loadTextDiff(context, base);
     },
     [client, helloState.status, nextRequestToken, repoId]
   );

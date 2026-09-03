@@ -92,6 +92,7 @@ impl HostRuntime {
             | UiCommand::ListBundles(_)
             | UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)
+            | UiCommand::SourceControlImageDiff(_)
             | UiCommand::SourceControlAction(_) => {
                 self.dispatch_repo_command(command, event_bus).await
             }

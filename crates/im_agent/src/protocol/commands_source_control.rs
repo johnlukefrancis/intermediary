@@ -29,6 +29,18 @@ pub struct SourceControlDiffCommand {
     pub area: SourceControlArea,
 }
 
+/// Both snapshots of one changed image. `original_path` names the rename
+/// source so the HEAD side of a renamed entry resolves to the old path.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceControlImageDiffCommand {
+    pub repo_id: String,
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub original_path: Option<String>,
+    pub area: SourceControlArea,
+}
+
 /// Pathspec scope for stage/unstage. `All` means everything under the configured
 /// repo root (`-- .`), never the whole repository. `Paths` with an empty list is
 /// rejected by the agent before any process spawns.

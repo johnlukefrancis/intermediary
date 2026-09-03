@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 use super::responses_legacy_wire::{BuildBundleResultWire, BundleInfoWire, StageFileResultWire};
 use super::responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 use super::responses_source_control::{
-    SourceControlActionResult, SourceControlDiffResult, SourceControlStatusResult,
+    SourceControlActionResult, SourceControlDiffResult, SourceControlImageDiffResult,
+    SourceControlStatusResult,
 };
 use super::responses_tr_fleet::{GetTrFleetStatusResult, TrFleetActionResult};
 
@@ -153,6 +154,8 @@ pub enum UiResponse {
     SourceControlStatusResult(SourceControlStatusResult),
     #[serde(rename = "sourceControlDiffResult")]
     SourceControlDiffResult(SourceControlDiffResult),
+    #[serde(rename = "sourceControlImageDiffResult")]
+    SourceControlImageDiffResult(SourceControlImageDiffResult),
     #[serde(rename = "sourceControlActionResult")]
     SourceControlActionResult(SourceControlActionResult),
 }

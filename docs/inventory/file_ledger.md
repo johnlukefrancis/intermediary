@@ -30,6 +30,8 @@ app/src/components/drag_error_notice.tsx - Small inline error notice for drag fa
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
+app/src/components/image_diff_pane.tsx - One side of an image diff: Git-labelled header, checkerboard image slot, size footer
+app/src/components/image_diff_workspace.tsx - Side-by-side before/after viewer for a changed image opened from source control
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
 app/src/components/layout/deck_section_icons.tsx - Inline 24x24 stroke glyphs for the deck section switcher (stroke supplied by CSS)
 app/src/components/layout/deck_section_switcher.tsx - Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel
@@ -52,7 +54,7 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
-app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text scratch buffers, image previews, and diffs
+app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text buffers, image previews, and text/image diffs
 app/src/components/source_control/source_control_body.tsx - Phase-dependent body of the Source Control column: empty states or the three sections
 app/src/components/source_control/source_control_column.tsx - Source Control column frame: status line, warnings, commit box, notices, body, menus, confirms
 app/src/components/source_control/source_control_commit_box.tsx - Commit message textarea (Ctrl+Enter) and compact COMMIT button for the Source Control column
@@ -83,7 +85,8 @@ app/src/hooks/bundles/use_bundle_build_actions.ts - Build and cancel actions for
 app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle build state
 app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
 app/src/hooks/bundles/use_directory_listings.ts - Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change
-app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook
+app/src/hooks/repo_workspace_diff_loaders.ts - Diff loaders for the repo workspace hook: text patches and two-sided image snapshots
+app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff, image diff) and path helpers for the workspace hook
 app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
 app/src/hooks/source_control/source_control_failures.ts - Classify agent rejections for source-control reads and actions
 app/src/hooks/source_control/source_control_refresh.ts - Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup
@@ -103,12 +106,13 @@ app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_effective_ui_mode.ts - Derives runtime effective UI mode from preferred mode and live window state
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
+app/src/hooks/use_image_blob_url.ts - Base64 image payload to a revocable Blob URL for workspace image and image-diff panes
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
 app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU
 app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
-app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs
+app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
 app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
@@ -124,6 +128,7 @@ app/src/lib/agent/messages.ts - Typed helper functions for sending agent command
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
+app/src/lib/format_bytes.ts - Byte-count formatting shared by bundle rows and image-diff pane footers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
@@ -184,6 +189,7 @@ app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vigne
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout
+app/src/styles/image_diff_workspace.css - Side-by-side image diff panes, checkerboard slots, and handset stacking
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
@@ -282,6 +288,8 @@ crates/im_agent/src/source_control/actions_discard.rs - Discard worktree changes
 crates/im_agent/src/source_control/actions.rs - Stage, unstage, commit, push, and pull for one repo root; every mutation returns a fresh status
 crates/im_agent/src/source_control/diff.rs - Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)
 crates/im_agent/src/source_control/git_version.rs - Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)
+crates/im_agent/src/source_control/image_diff_sides.rs - Reads one image-diff side from a Git blob or from the working tree, bounded and base64-encoded
+crates/im_agent/src/source_control/image_diff.rs - Chooses the before/after Git snapshots of one changed image and assembles both sides
 crates/im_agent/src/source_control/locks.rs - Per-repo mutation serialization for source-control actions
 crates/im_agent/src/source_control/mod.rs - Git working-tree status, per-file diff, and index/commit/remote actions for one repo root
 crates/im_agent/src/source_control/paths.rs - UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution
@@ -291,6 +299,7 @@ crates/im_agent/src/source_control/status.rs - Capture `git status --porcelain=v
 crates/im_agent/src/source_control/tests_actions.rs - Real-git tempdir tests for stage, unstage, discard, push, and pull actions
 crates/im_agent/src/source_control/tests_commit.rs - Real-git tempdir tests for the commit oracle, commit outcomes, and the landed-but-unread error
 crates/im_agent/src/source_control/tests_diff.rs - Real-git tempdir tests for bounded per-file diff capture
+crates/im_agent/src/source_control/tests_image_diff.rs - Real-git tempdir tests for before/after image-diff side selection
 crates/im_agent/src/source_control/tests_support.rs - Real-git tempdir fixtures shared by the source-control tests
 crates/im_agent/src/source_control/tests.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs

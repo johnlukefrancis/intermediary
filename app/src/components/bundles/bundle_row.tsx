@@ -4,6 +4,7 @@
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { formatBytes } from "../../lib/format_bytes.js";
 import { useConfig } from "../../hooks/use_config.js";
 import type { BundleInfo } from "../../shared/protocol.js";
 
@@ -15,12 +16,6 @@ interface BundleRowProps {
   onDragStart: (hostPath: string) => Promise<void>;
   /** Timestamp (ms) when bundle was last built, for fresh pulse animation */
   freshlyBuiltAt?: number | null | undefined;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatRelativeTime(mtimeMs: number): string {

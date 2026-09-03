@@ -7,7 +7,8 @@ use serde_json::Value;
 
 use super::commands_tr_fleet::{GetTrFleetStatusCommand, TrFleetActionCommand};
 use super::commands_source_control::{
-    SourceControlActionCommand, SourceControlDiffCommand, SourceControlStatusCommand,
+    SourceControlActionCommand, SourceControlDiffCommand, SourceControlImageDiffCommand,
+    SourceControlStatusCommand,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -207,6 +208,8 @@ pub enum UiCommand {
     SourceControlStatus(SourceControlStatusCommand),
     #[serde(rename = "sourceControlDiff")]
     SourceControlDiff(SourceControlDiffCommand),
+    #[serde(rename = "sourceControlImageDiff")]
+    SourceControlImageDiff(SourceControlImageDiffCommand),
     #[serde(rename = "sourceControlAction")]
     SourceControlAction(SourceControlActionCommand),
     #[serde(other)]
@@ -232,6 +235,7 @@ impl UiCommand {
             UiCommand::TrFleetAction(_) => "trFleetAction",
             UiCommand::SourceControlStatus(_) => "sourceControlStatus",
             UiCommand::SourceControlDiff(_) => "sourceControlDiff",
+            UiCommand::SourceControlImageDiff(_) => "sourceControlImageDiff",
             UiCommand::SourceControlAction(_) => "sourceControlAction",
             UiCommand::Unknown => "unknown",
         }
@@ -254,6 +258,7 @@ impl UiCommand {
             UiCommand::ListBundles(command) => Some(&command.repo_id),
             UiCommand::SourceControlStatus(command) => Some(&command.repo_id),
             UiCommand::SourceControlDiff(command) => Some(&command.repo_id),
+            UiCommand::SourceControlImageDiff(command) => Some(&command.repo_id),
             UiCommand::SourceControlAction(command) => Some(&command.repo_id),
             UiCommand::ClientHello(_)
             | UiCommand::SetOptions(_)

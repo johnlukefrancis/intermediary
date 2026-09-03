@@ -2,7 +2,7 @@
 // Description: Unit tests for WSL backend forwarded command timeout routing
 
 use super::*;
-use im_agent::protocol::{BundleSelection, SetOptionsResult};
+use im_agent::protocol::{BundleSelection, SetOptionsResult, SourceControlArea};
 
 fn client_for_test(request_tx: mpsc::UnboundedSender<RequestLoopMessage>) -> WslBackendClient {
     WslBackendClient {
@@ -108,6 +108,33 @@ fn build_bundle_uses_extended_timeout_budget() {
         timeout_for_command(&command),
         FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE
     );
+}
+
+#[test]
+fn source_control_image_diff_uses_the_source_control_read_budget() {
+    let command = UiCommand::SourceControlImageDiff(im_agent::protocol::SourceControlImageDiffCommand {
+        repo_id: "repo".to_string(),
+        path: "art/logo.png".to_string(),
+        original_path: None,
+        area: SourceControlArea::Worktree,
+    });
+
+    assert_eq!(
+        timeout_for_command(&command),
+        FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ
+    );
+}
+
+/// An image-diff response can carry two bounded blobs, about 32 MiB of base64
+/// in one frame. tungstenite's 16 MiB default frame bound would drop the whole
+/// connection here, so this hop must stay explicitly configured.
+#[test]
+fn wsl_backend_frame_bound_admits_a_two_sided_image_diff() {
+    let config = wsl_backend_ws_config();
+    let two_sides = 32 * 1024 * 1024;
+
+    assert!(config.max_frame_size.expect("frame bound") > two_sides);
+    assert!(config.max_message_size.expect("message bound") > two_sides);
 }
 
 #[test]

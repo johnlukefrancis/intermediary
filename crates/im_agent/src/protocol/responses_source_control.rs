@@ -94,6 +94,42 @@ pub struct SourceControlDiffResult {
     pub binary: bool,
 }
 
+/// Which Git snapshot one image-diff side was read from. Names the Git term
+/// the UI pairs with its plain label (`PREVIOUS · HEAD`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ImageDiffSource {
+    Head,
+    Index,
+    Worktree,
+    Ours,
+    Theirs,
+}
+
+/// One rendered snapshot of a changed image. `truncated` means the blob
+/// exceeded the per-side bound: `data_base64` is empty and `bytes` reports the
+/// bound, so the UI can say "too large to preview" instead of showing a broken
+/// image. A side that does not exist is `None`, never an error.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImageDiffSide {
+    pub source: ImageDiffSource,
+    pub data_base64: String,
+    pub mime_type: String,
+    pub bytes: u64,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceControlImageDiffResult {
+    pub repo_id: String,
+    pub path: String,
+    pub area: SourceControlArea,
+    pub before: Option<ImageDiffSide>,
+    pub after: Option<ImageDiffSide>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SourceControlActionResult {

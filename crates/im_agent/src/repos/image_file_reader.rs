@@ -102,7 +102,9 @@ pub async fn read_image_file(
     })
 }
 
-fn mime_type_for_path(relative_path: &str) -> Option<&'static str> {
+/// The one extension-to-MIME mapping for previewable images; shared with the
+/// source-control image diff so both routes accept exactly the same set.
+pub(crate) fn mime_type_for_path(relative_path: &str) -> Option<&'static str> {
     let extension = Path::new(relative_path)
         .extension()
         .and_then(|value| value.to_str())?

@@ -10,21 +10,22 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 | Concern | Owner | Notes |
 | --- | --- | --- |
 | Running Git (bounded, cancellable, stderr-preserving) | `crates/im_bundle/src/git.rs` facade over `git_capture/{command,command_child,porcelain,path,prefix,diff}.rs` | One runner for bundle evidence and source control. `GitCommandFailure { kind, exit_code, stdout, stderr }`; `KillPolicy::{Immediate, Graceful}`. |
-| Status projection, diff, actions | `crates/im_agent/src/source_control/` | `source_control_status`, `source_control_diff`, `run_source_control_action`; `SourceControlLocks` (per-repo mutation mutex) lives on `AgentRuntime`. |
+| Status projection, diff, actions | `crates/im_agent/src/source_control/`, `source_control/image_diff.rs` | `source_control_status`, `source_control_diff`, `source_control_image_diff`, `run_source_control_action`; `SourceControlLocks` (per-repo mutation mutex) lives on `AgentRuntime`. |
 | Wire types | `crates/im_agent/src/protocol/{commands,responses}_source_control.rs` and `app/src/shared/protocol_source_control.ts` | Hand-kept in sync; serde `camelCase`, tagged unions (`kind`, `mode`). |
 | WSL-agent dispatch | `crates/im_agent/src/server/connection/source_control_commands.rs` | Reads get a `SourceControlRead` cancel token; actions are `Passive`. |
 | Host-agent dispatch | `crates/im_host_agent/src/server/dispatch.rs` (`dispatch_source_control`) + `runtime/local_host_source_control_backend.rs` | Backend resolved under a short read lock; host repos run Git with no runtime lock held; WSL repos are forwarded. |
 | Refresh signal | `crates/im_agent/src/repos/source_control_watch/` (detector, coalescer, git dirs) wired into `repo_watcher*.rs` | Emits `AgentEvent::SourceControlChanged { repoId }`, coalesced to one event per 250 ms with a trailing emit. |
 | UI state | `app/src/hooks/source_control/use_source_control_state.ts`, `app/src/hooks/use_deck_section.ts`, `app/src/lib/source_control/conflict_count.ts` | One hook instance per active repo feeds the rail count, the conflict alert, and the column. |
-| UI surface | `app/src/components/layout/{deck_section_switcher,deck_section_icons,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx` | Rail switch (segmented icon rocker with a `DeckSectionAlert` form for conflicts), column, rows, commit box, diff kind of the shared workspace (`conflict` flag flags marker lines). |
+| UI surface | `app/src/components/layout/{deck_section_switcher,deck_section_icons,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx`, `app/src/components/image_diff_workspace.tsx`, `app/src/hooks/repo_workspace_diff_loaders.ts`, `app/src/hooks/use_image_blob_url.ts` | Rail switch (segmented icon rocker with a `DeckSectionAlert` form for conflicts), column, rows, commit box, diff kind of the shared workspace (`conflict` flag flags marker lines); `image_diff_workspace.tsx` renders the two-pane image diff from Blob URLs, `repo_workspace_diff_loaders.ts` owns the text and image diff loaders, `use_image_blob_url.ts` owns the Blob-URL lifecycle shared with the image previewer. |
 | Tree decorations | `app/src/lib/source_control/{change_badges,tree_decorations}.ts`, `app/src/hooks/source_control/use_tree_decorations.tsx`, `app/src/hooks/bundles/use_directory_listings.ts` | Pure projection of the status onto the ZIPS explorer tree via a React context; the listing hook re-lists expanded directories on `sourceControlChanged`. |
 | Persisted choice | `uiState.activeRail` in `app/src/shared/config/persisted_config.ts` | Global; defaulted, no migration. |
 
 ## Routing and lifecycle
 
-1. The UI sends `sourceControlStatus` / `sourceControlDiff` / `sourceControlAction` to the host agent
-   over the existing token-authenticated socket on `127.0.0.1:3141` (no new port; ADR-010 unchanged).
-2. `server/dispatch.rs` intercepts the three commands before the `&mut self` catch-all. It resolves the
+1. The UI sends `sourceControlStatus` / `sourceControlDiff` / `sourceControlImageDiff` / `sourceControlAction`
+   to the host agent over the existing token-authenticated socket on `127.0.0.1:3141` (no new port; ADR-010
+   unchanged).
+2. `server/dispatch.rs` intercepts the four commands before the `&mut self` catch-all. It resolves the
    repo backend under a read lock and drops it. Host-rooted repos: `LocalHostBackend::source_control_context`
    clones the root path and the lock registry, then `execute_host_source_control` runs Git with no runtime
    lock held. WSL-rooted repos: the command is forwarded verbatim to `im_agent` with the per-kind timeout
@@ -83,6 +84,13 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
   90 s host→WSL, 120 s UI; stage/unstage/discard 60/120/150 s; commit 120/240/300 s; push/pull
   180/300/360 s. A UI timeout cancels nothing agent-side.
 - Bounds: status output 8 MiB (`truncated`), diff 2 MiB (`truncated`), other outputs 1 MiB, stderr 64 KiB.
+- Image diff sides are read by the agent with `git show` (`HEAD:`, `:0:`, `:2:`, `:3:`) or the worktree
+  reader, never the webview; each side is bounded independently (12 MiB raw) and a side over the bound is
+  flagged `truncated` rather than failing the whole request. A side with no blob at its snapshot (added,
+  deleted, or a stage absent from a conflict) is `null`, never an error. MIME type for every side derives
+  from the one extension map shared with `readImageFile`; the UI routes a path to the image diff only when
+  `isPreviewImagePath(path)` is true, so unsupported extensions and non-image binaries stay on the text diff
+  path and keep `BINARY FILE`.
 
 ## Failure modes
 

@@ -33,6 +33,7 @@ export function getRequestTimeoutMs(command: UiCommand): number {
       return BUILD_BUNDLE_TIMEOUT_MS;
     case "sourceControlStatus":
     case "sourceControlDiff":
+    case "sourceControlImageDiff":
       return SOURCE_CONTROL_READ_TIMEOUT_MS;
     case "sourceControlAction":
       return sourceControlActionTimeoutMs(command.action.kind);

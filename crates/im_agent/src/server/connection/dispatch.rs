@@ -215,6 +215,10 @@ pub async fn dispatch_command(
         UiCommand::SourceControlDiff(command) => {
             source_control_commands::source_control_diff_command(command, ctx, cancellation).await
         }
+        UiCommand::SourceControlImageDiff(command) => {
+            source_control_commands::source_control_image_diff_command(command, ctx, cancellation)
+                .await
+        }
         UiCommand::SourceControlAction(command) => {
             source_control_commands::source_control_action_command(command, ctx).await
         }

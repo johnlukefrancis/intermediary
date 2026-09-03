@@ -32,6 +32,7 @@ import "./styles/source_control.css";
 import "./styles/source_control_sections.css";
 import "./styles/source_control_rows.css";
 import "./styles/diff_workspace.css";
+import "./styles/image_diff_workspace.css";
 
 const container = document.getElementById("root");
 if (!container) {

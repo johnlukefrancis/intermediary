@@ -16,6 +16,8 @@ mod actions;
 mod actions_discard;
 mod diff;
 mod git_version;
+mod image_diff;
+mod image_diff_sides;
 mod locks;
 mod paths;
 mod runner;
@@ -30,6 +32,8 @@ mod tests_commit;
 #[cfg(test)]
 mod tests_diff;
 #[cfg(test)]
+mod tests_image_diff;
+#[cfg(test)]
 mod tests_support;
 
 use std::path::Path;
@@ -37,7 +41,9 @@ use std::path::Path;
 use im_bundle::cancel::BundleCancelToken;
 
 use crate::error::AgentError;
-use crate::protocol::{SourceControlActionPayload, SourceControlArea, SourceControlStatus};
+use crate::protocol::{
+    ImageDiffSide, SourceControlActionPayload, SourceControlArea, SourceControlStatus,
+};
 
 pub use locks::SourceControlLocks;
 
@@ -49,6 +55,15 @@ pub struct SourceControlDiff {
     pub patch: String,
     pub truncated: bool,
     pub binary: bool,
+}
+
+/// Both snapshots of one changed image. Either side is `None` when that
+/// snapshot does not exist (added, deleted, unborn HEAD, missing merge stage);
+/// a side past the per-side bound arrives `truncated` with no bytes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceControlImageDiff {
+    pub before: Option<ImageDiffSide>,
+    pub after: Option<ImageDiffSide>,
 }
 
 /// Outcome of a mutation: the fresh status read after the action, plus the
@@ -76,6 +91,18 @@ pub async fn source_control_diff(
     cancel_token: Option<BundleCancelToken>,
 ) -> Result<SourceControlDiff, AgentError> {
     diff::capture_diff(repo_root, path, original_path, area, cancel_token).await
+}
+
+/// Bounded before/after image snapshots for one repo-root-relative path. The
+/// index decides a conflict; the requested area decides everything else.
+pub async fn source_control_image_diff(
+    repo_root: &Path,
+    path: &str,
+    original_path: Option<&str>,
+    area: SourceControlArea,
+    cancel_token: Option<BundleCancelToken>,
+) -> Result<SourceControlImageDiff, AgentError> {
+    image_diff::capture_image_diff(repo_root, path, original_path, area, cancel_token).await
 }
 
 /// Runs one mutation under the repo's mutation lock and returns the status

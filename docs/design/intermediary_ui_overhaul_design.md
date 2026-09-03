@@ -189,6 +189,7 @@ The shared workspace is the clean, full-pane surface used for per-repo notes, op
 - Opened text-file titles support the same staged drag-out and single-file context-menu actions as Auto Files rows; repo notes do not expose file actions.
 - Line and character counts sit inside text editors at bottom-right using muted mono metadata styling.
 - Image previews use the same panel footprint, center the image with `object-fit: contain`, and keep drag-out on the preview surface without exposing filesystem paths in the DOM.
+- A changed image opened from SOURCE renders as an image diff instead of a single preview: two equal panes split by a divider, each header pairing a plain word with the Git term (`PREVIOUS · HEAD`, `CURRENT · INDEX`, etc.), each image centered on a checkerboard so transparency reads, each footer showing dimensions and bytes; a one-sided change (new or deleted) collapses to one full-width pane headed `NEW · WORKTREE` / `DELETED · INDEX` and so on, an over-bound side shows a `TOO LARGE TO PREVIEW` slot; the panes stack vertically on handset instead of sitting side by side.
 
 ## Bundle File Explorer
 

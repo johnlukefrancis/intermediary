@@ -63,6 +63,7 @@ impl HostRuntime {
             // reaching them here is a routing defect, not a supported path.
             UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)
+            | UiCommand::SourceControlImageDiff(_)
             | UiCommand::SourceControlAction(_) => Err(AgentError::internal(
                 "Source-control commands must be dispatched without the runtime lock",
             )),

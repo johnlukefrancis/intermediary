@@ -31,6 +31,9 @@ pub(super) const REMOTE_TIMEOUT: Duration = Duration::from_secs(180);
 pub(super) const STATUS_LIMIT: usize = 8 * 1024 * 1024;
 pub(super) const DIFF_LIMIT: usize = 2 * 1024 * 1024;
 pub(super) const ACTION_LIMIT: usize = 1024 * 1024;
+/// Raw bytes accepted per image-diff side. Two sides at the bound are about
+/// 32 MiB of base64 on the wire, which the WebSocket frame limits allow.
+pub(super) const IMAGE_DIFF_SIDE_LIMIT: usize = 12 * 1024 * 1024;
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const PROBE_LIMIT: usize = 4096;
 

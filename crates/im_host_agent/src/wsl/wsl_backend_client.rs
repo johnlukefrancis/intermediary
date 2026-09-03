@@ -14,11 +14,27 @@ use im_agent::protocol::{
 use im_agent::server::EventBus;
 use tokio::sync::{mpsc, oneshot};
 use tokio::time::{sleep, timeout};
-use tokio_tungstenite::connect_async;
+use tokio_tungstenite::connect_async_with_config;
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 use super::wsl_backend_connection::run_connected;
 use super::wsl_backend_messages::wsl_unavailable_error;
 const RECONNECT_DELAY_MS: u64 = 750;
+/// tungstenite sends one message as one frame and reads with a 16 MiB frame
+/// bound by default, so an image-diff response carrying two 12 MiB blobs
+/// (~32 MiB of base64) would be rejected on this hop. The frame bound is
+/// raised to the 64 MiB message bound; the per-side byte bound stays in the
+/// agent, where the semantics live.
+const WSL_BACKEND_MAX_FRAME_BYTES: usize = 64 * 1024 * 1024;
+const WSL_BACKEND_MAX_MESSAGE_BYTES: usize = 64 * 1024 * 1024;
+
+fn wsl_backend_ws_config() -> WebSocketConfig {
+    WebSocketConfig {
+        max_message_size: Some(WSL_BACKEND_MAX_MESSAGE_BYTES),
+        max_frame_size: Some(WSL_BACKEND_MAX_FRAME_BYTES),
+        ..WebSocketConfig::default()
+    }
+}
 const FORWARD_REQUEST_TIMEOUT_DEFAULT: Duration = Duration::from_secs(60);
 const FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO: Duration = Duration::from_secs(12);
 const FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE: Duration = Duration::from_secs(5 * 60);
@@ -132,9 +148,9 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
     match command {
         UiCommand::ClientHello(_) => FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO,
         UiCommand::BuildBundle(_) => FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE,
-        UiCommand::SourceControlStatus(_) | UiCommand::SourceControlDiff(_) => {
-            FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ
-        }
+        UiCommand::SourceControlStatus(_)
+        | UiCommand::SourceControlDiff(_)
+        | UiCommand::SourceControlImageDiff(_) => FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ,
         UiCommand::SourceControlAction(command) => match command.action.kind() {
             SourceControlActionKind::Stage
             | SourceControlActionKind::Unstage
@@ -171,7 +187,13 @@ async fn run_client_loop(
     let mut logged_offline_connect_failure = false;
     let mut offline_emitted_generation: Option<u64> = None;
     loop {
-        match connect_async(endpoint_connect.as_str()).await {
+        match connect_async_with_config(
+            endpoint_connect.as_str(),
+            Some(wsl_backend_ws_config()),
+            false,
+        )
+        .await
+        {
             Ok((stream, _)) => {
                 let generation = connection_generation.fetch_add(1, Ordering::SeqCst) + 1;
                 logged_offline_connect_failure = false;

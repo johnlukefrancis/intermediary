@@ -7,6 +7,7 @@ import type {
   SourceControlActionResult,
   SourceControlArea,
   SourceControlDiffResult,
+  SourceControlImageDiffResult,
   SourceControlStatusResult,
 } from "../../shared/protocol.js";
 
@@ -29,6 +30,23 @@ export async function sendSourceControlDiff(
 ): Promise<SourceControlDiffResult> {
   return client.send<SourceControlDiffResult>({
     type: "sourceControlDiff",
+    repoId,
+    path,
+    ...(originalPath === undefined ? {} : { originalPath }),
+    area,
+  });
+}
+
+/** Both snapshots of a changed image in one bounded read; a missing side comes back null. */
+export async function sendSourceControlImageDiff(
+  client: AgentClient,
+  repoId: string,
+  path: string,
+  area: SourceControlArea,
+  originalPath?: string
+): Promise<SourceControlImageDiffResult> {
+  return client.send<SourceControlImageDiffResult>({
+    type: "sourceControlImageDiff",
     repoId,
     path,
     ...(originalPath === undefined ? {} : { originalPath }),

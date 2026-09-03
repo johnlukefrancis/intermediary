@@ -20,6 +20,7 @@ pub async fn dispatch_command(
         }
         UiCommand::SourceControlStatus(_)
         | UiCommand::SourceControlDiff(_)
+        | UiCommand::SourceControlImageDiff(_)
         | UiCommand::SourceControlAction(_) => {
             return dispatch_source_control(command, ctx).await;
         }
