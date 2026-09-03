@@ -3,8 +3,10 @@
 
 use notify::event::{CreateKind, ModifyKind, RemoveKind};
 use notify::{Event, EventKind};
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+const GIT_DIR_ENTRY: &str = ".git";
 const ROOT_FILE_METADATA_DEPTH: usize = 1;
 const DIRECTORY_SELECTOR_METADATA_DEPTH: usize = 4;
 
@@ -61,13 +63,22 @@ async fn any_existing_dir_at_or_above_depth(
     false
 }
 
+/// Depth of `path` below the root, or `None` when the path cannot change
+/// top-level metadata. Everything *inside* `.git/` is excluded: Git's own
+/// bookkeeping never adds or removes a repo entry, and every index write used
+/// to cost a `getRepoTopLevel` round trip. `.git` itself at depth 1 still
+/// counts, so `git init` and `git worktree add` keep invalidating metadata.
 fn relative_depth(root_path: &Path, path: &Path) -> Option<usize> {
     let relative = path.strip_prefix(root_path).ok()?;
-    let depth = relative
+    let mut components = relative
         .components()
-        .filter(|component| matches!(component, std::path::Component::Normal(_)))
-        .count();
-    (depth > 0).then_some(depth)
+        .filter(|component| matches!(component, std::path::Component::Normal(_)));
+    let first = components.next()?;
+    let depth = 1 + components.count();
+    if depth > ROOT_FILE_METADATA_DEPTH && first.as_os_str() == OsStr::new(GIT_DIR_ENTRY) {
+        return None;
+    }
+    Some(depth)
 }
 
 #[cfg(test)]
@@ -108,6 +119,31 @@ mod tests {
             .add_path("/repo/Docs/Architecture/ADRs/Drafts".into());
 
         assert!(event_affects_top_level_metadata(Path::new("/repo"), &event).await);
+    }
+
+    #[tokio::test]
+    async fn git_internal_rename_does_not_invalidate_metadata() {
+        let event = Event::new(EventKind::Modify(ModifyKind::Name(RenameMode::Both)))
+            .add_path("/repo/.git/index.lock".into())
+            .add_path("/repo/.git/index".into());
+
+        assert!(!event_affects_top_level_metadata(Path::new("/repo"), &event).await);
+    }
+
+    #[tokio::test]
+    async fn git_dir_creation_still_invalidates_metadata() {
+        let event =
+            Event::new(EventKind::Create(CreateKind::Folder)).add_path("/repo/.git".into());
+
+        assert!(event_affects_top_level_metadata(Path::new("/repo"), &event).await);
+    }
+
+    #[tokio::test]
+    async fn git_internal_folder_create_does_not_invalidate_metadata() {
+        let event = Event::new(EventKind::Create(CreateKind::Folder))
+            .add_path("/repo/.git/refs/heads".into());
+
+        assert!(!event_affects_top_level_metadata(Path::new("/repo"), &event).await);
     }
 
     #[tokio::test]

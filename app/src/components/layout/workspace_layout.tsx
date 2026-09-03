@@ -15,7 +15,7 @@ interface WorkspaceLayoutProps {
   onTitleContextMenu?: ((event: React.MouseEvent) => void) | undefined;
   onTitleDragStart?: (() => void | Promise<void>) | undefined;
   content: React.ReactNode;
-  zipsContent: React.ReactNode;
+  railContent: React.ReactNode;
   isHandset: boolean;
 }
 
@@ -123,14 +123,6 @@ function WorkspacePanel({
   );
 }
 
-function ZipsPanel({ zipsContent }: { zipsContent: React.ReactNode }): React.JSX.Element {
-  return (
-    <section className="panel" data-panel="zips">
-      <div className="panel-content">{zipsContent}</div>
-    </section>
-  );
-}
-
 export function WorkspaceLayout({
   title,
   subtitle,
@@ -138,7 +130,7 @@ export function WorkspaceLayout({
   onTitleContextMenu,
   onTitleDragStart,
   content,
-  zipsContent,
+  railContent,
   isHandset,
 }: WorkspaceLayoutProps): React.JSX.Element {
   const panel = (
@@ -152,6 +144,7 @@ export function WorkspaceLayout({
     />
   );
 
+  // Handset with an open workspace stays workspace-only; close is the route back to the deck.
   if (isHandset) {
     return (
       <div className="handset-deck text-workspace-handset">
@@ -163,7 +156,7 @@ export function WorkspaceLayout({
   return (
     <div className="text-workspace-layout">
       {panel}
-      <ZipsPanel zipsContent={zipsContent} />
+      {railContent}
     </div>
   );
 }

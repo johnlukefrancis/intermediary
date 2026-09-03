@@ -39,6 +39,7 @@ export type { AppConfig } from "./config/app_config.js";
 export { CONFIG_VERSION } from "./config/version.js";
 
 export {
+  ActiveRailSchema,
   BundleSelectionSchema,
   BundleSelectionsSchema,
   PersistedConfigSchema,
@@ -54,6 +55,7 @@ export {
   parsePersistedConfig,
 } from "./config/persisted_config.js";
 export type {
+  ActiveRail,
   BundleSelection,
   BundleSelections,
   LoadConfigResult,

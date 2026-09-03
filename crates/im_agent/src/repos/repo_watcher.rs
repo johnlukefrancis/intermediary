@@ -4,6 +4,7 @@
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{mpsc, watch, Mutex, RwLock};
 
 use crate::error::AgentError;
@@ -13,7 +14,10 @@ use crate::repos::categorizer::Categorizer;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
-use crate::repos::repo_watcher_events::{handle_event, raw_os_code};
+use crate::repos::repo_watcher_events::{handle_event, raw_os_code, EventContext};
+use crate::repos::source_control_watch::{
+    resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
+};
 use crate::repos::watcher_error::build_watcher_error_event;
 use crate::server::EventBus;
 
@@ -38,6 +42,7 @@ pub struct RepoWatcher {
     logger: Logger,
     event_bus: EventBus,
     watcher: Mutex<Option<RecommendedWatcher>>,
+    extra_watch_paths: Vec<PathBuf>,
     stop_tx: watch::Sender<bool>,
     task: tokio::task::JoinHandle<()>,
 }
@@ -64,8 +69,25 @@ impl RepoWatcher {
             mru.load_from(initial_entries);
         }
 
+        // A linked worktree keeps its git dir outside the root, so `git status`
+        // can move without a single event under the watched tree.
+        let root_path = PathBuf::from(&config.root_path);
+        let external_watches = resolve_external_watches(&root_path, &config.logger).await;
+        let detector = SourceControlChangeDetector::new(
+            &root_path,
+            external_watches.detector_dirs,
+            &config.ignore_globs,
+        )?;
+        let extra_watch_paths: Vec<PathBuf> = external_watches
+            .watch_paths
+            .iter()
+            .map(|(path, _)| path.clone())
+            .collect();
+
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Result<Event, notify::Error>>();
         let watch_root = config.root_path.clone();
+        let extra_watches = external_watches.watch_paths;
+        let watch_logger = config.logger.clone();
         let watcher = tokio::task::spawn_blocking(move || {
             let mut watcher = notify::recommended_watcher(move |res| {
                 let _ = event_tx.send(res);
@@ -75,6 +97,17 @@ impl RepoWatcher {
             watcher
                 .watch(Path::new(&watch_root), RecursiveMode::Recursive)
                 .map_err(|err| AgentError::internal(format!("Failed to watch repo: {err}")))?;
+            for (path, mode) in &extra_watches {
+                if let Err(err) = watcher.watch(path, *mode) {
+                    watch_logger.warn(
+                        "Failed to watch external git dir",
+                        Some(serde_json::json!({
+                            "path": path.to_string_lossy(),
+                            "error": err.to_string(),
+                        })),
+                    );
+                }
+            }
             Ok::<RecommendedWatcher, AgentError>(watcher)
         })
         .await
@@ -83,7 +116,6 @@ impl RepoWatcher {
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
         let repo_id = config.repo_id.clone();
-        let root_path = PathBuf::from(&config.root_path);
         let logger = config.logger.clone();
         let event_bus = config.event_bus.clone();
         let recent_store = config.recent_store.clone();
@@ -91,10 +123,34 @@ impl RepoWatcher {
         let mru_lock = Arc::new(RwLock::new(mru));
         let mru_clone = Arc::clone(&mru_lock);
         let task = tokio::spawn(async move {
+            let source_control =
+                SourceControlWatch::new(repo_id.clone(), event_bus.clone(), detector);
+            let context = EventContext {
+                repo_id: &repo_id,
+                root_path: &root_path,
+                categorizer: &categorizer,
+                ignore_matcher: &ignore_matcher,
+                mru: &mru_clone,
+                recent_store: &recent_store,
+                event_bus: &event_bus,
+                logger: &logger,
+                source_control: &source_control,
+            };
+
+            // Armed only while the coalescer owes a trailing event, so an idle
+            // watcher holds no timer and never spins.
+            let flush_timer = tokio::time::sleep(Duration::ZERO);
+            tokio::pin!(flush_timer);
+            let mut source_control_pending = false;
+
             loop {
                 tokio::select! {
                     _ = stop_rx.changed() => {
                         break;
+                    }
+                    _ = &mut flush_timer, if source_control_pending => {
+                        source_control_pending = false;
+                        source_control.flush();
                     }
                     message = event_rx.recv() => {
                         let message = match message {
@@ -104,7 +160,13 @@ impl RepoWatcher {
 
                         match message {
                             Ok(event) => {
-                                handle_event(&repo_id, &root_path, event, &categorizer, &ignore_matcher, &mru_clone, &recent_store, &event_bus, &logger).await;
+                                handle_event(&context, event).await;
+                                if let Some(deadline) = source_control.pending_deadline() {
+                                    flush_timer
+                                        .as_mut()
+                                        .reset(tokio::time::Instant::from_std(deadline));
+                                    source_control_pending = true;
+                                }
                             }
                             Err(err) => {
                                 let raw_code = raw_os_code(&err);
@@ -128,6 +190,7 @@ impl RepoWatcher {
             logger: config.logger,
             event_bus: config.event_bus,
             watcher: Mutex::new(Some(watcher)),
+            extra_watch_paths,
             stop_tx,
             task,
         })
@@ -141,8 +204,12 @@ impl RepoWatcher {
         let _ = self.stop_tx.send(true);
         if let Some(mut watcher) = self.watcher.lock().await.take() {
             let root_path = self.root_path.clone();
+            let extra_watch_paths = self.extra_watch_paths.clone();
             let _ = tokio::task::spawn_blocking(move || {
                 let _ = watcher.unwatch(&root_path);
+                for path in &extra_watch_paths {
+                    let _ = watcher.unwatch(path);
+                }
             })
             .await;
         }

@@ -147,6 +147,13 @@ export type WslBackendConnectionStatus = z.infer<
   typeof WslBackendConnectionStatusSchema
 >;
 
+/** The repo's Git state or working tree moved; coalesced by the agent watcher */
+export const SourceControlChangedEventSchema = z.object({
+  type: z.literal("sourceControlChanged"),
+  repoId: z.string(),
+});
+export type SourceControlChangedEvent = z.infer<typeof SourceControlChangedEventSchema>;
+
 export const WslBackendStatusEventSchema = z.object({
   type: z.literal("wslBackendStatus"),
   status: WslBackendConnectionStatusSchema,
@@ -163,5 +170,6 @@ export const AgentEventSchema = z.discriminatedUnion("type", [
   BundleBuildProgressEventSchema,
   ErrorEventSchema,
   WslBackendStatusEventSchema,
+  SourceControlChangedEventSchema,
 ]);
 export type AgentEvent = z.infer<typeof AgentEventSchema>;

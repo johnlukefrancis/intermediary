@@ -5,7 +5,6 @@ use im_agent::error::AgentError;
 use im_agent::protocol::{BuildBundleCommand, CancelBundleBuildCommand, UiCommand, UiResponse};
 use im_agent::server::EventBus;
 
-use crate::runtime::host_runtime_helpers::repo_id_from_command;
 use crate::runtime::router::resolve_repo_backend;
 use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
@@ -55,7 +54,7 @@ impl HostRuntime {
                 Ok(self.wsl_client(event_bus))
             }
             RepoBackend::Wsl => Err(Self::unsupported_wsl_root_error(
-                repo_id_from_command(command).map(str::to_string),
+                command.repo_id().map(str::to_string),
             )),
         }
     }

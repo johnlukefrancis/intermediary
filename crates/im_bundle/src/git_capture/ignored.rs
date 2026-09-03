@@ -9,7 +9,7 @@ use crate::cancel::BundleCancelToken;
 use crate::error::Result;
 use crate::scanner::ScanEntry;
 
-use super::command::{run_git_with_input, GitCommandFailure};
+use super::command::{run_git_with_input, GitCommandFailure, GitCommandFailureKind, KillPolicy};
 use super::diff::common_git_config_args;
 use super::path::{path_to_bytes, GitPath};
 use super::verification::capture_current_digests;
@@ -173,6 +173,7 @@ fn capture_selected_ignored(
         IGNORED_OUTPUT_LIMIT,
         config.command_timeout,
         cancel_token,
+        KillPolicy::Immediate,
     )?;
     let output = match result {
         Ok(output) => output,
@@ -206,20 +207,20 @@ fn capture_selected_ignored(
 }
 
 fn command_issue(failure: GitCommandFailure) -> GitCaptureIssue {
-    let (kind, detail) = match failure {
-        GitCommandFailure::MissingExecutable => (
+    let (kind, detail) = match failure.kind {
+        GitCommandFailureKind::MissingExecutable => (
             "gitUnavailable",
             "Git became unavailable while selected ignored files were reconciled.",
         ),
-        GitCommandFailure::TimedOut => (
+        GitCommandFailureKind::TimedOut => (
             "commandTimeout",
             "The bounded Git ignore-reconciliation command timed out.",
         ),
-        GitCommandFailure::SpawnFailed
-        | GitCommandFailure::InputWriteFailed
-        | GitCommandFailure::OutputReadFailed
-        | GitCommandFailure::NotGitRepository
-        | GitCommandFailure::NonZeroExit => (
+        GitCommandFailureKind::SpawnFailed
+        | GitCommandFailureKind::InputWriteFailed
+        | GitCommandFailureKind::OutputReadFailed
+        | GitCommandFailureKind::NotGitRepository
+        | GitCommandFailureKind::NonZeroExit => (
             "commandFailure",
             "Selected ignored files could not be reconciled against Git ignore rules.",
         ),

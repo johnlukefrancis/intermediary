@@ -28,6 +28,10 @@ import "./styles/chrome.css";
 import "./styles/bundle_column.css";
 import "./styles/text_workspace.css";
 import "./styles/text_workspace_semantics.css";
+import "./styles/source_control.css";
+import "./styles/source_control_sections.css";
+import "./styles/source_control_rows.css";
+import "./styles/diff_workspace.css";
 
 const container = document.getElementById("root");
 if (!container) {

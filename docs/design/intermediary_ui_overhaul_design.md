@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-07-07 (Motion governor pauses on any focus loss, not only minimize; universal animation gate)
+Updated on: 2026-09-03 (Source Control rail and column; shared deck section switcher)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -199,6 +199,31 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
 - File rows use the same `FileIcon` family/color system as Auto Files rows; the icon is the include/exclude toggle for that file.
 - Included file icons carry a strong `currentColor` glow derived from the icon color; excluded files keep the same icon color with lower opacity and a softer glow.
 - File-name right-click menus reuse the existing file actions (`Open Containing Folder`, `Open File`, `Copy Relative Path`), and double-click opens through the shared workspace.
+
+## Rail and Source Control
+
+The right column is a rail with a slim (~36px) header holding one shared bracket tablist
+(`DeckSectionSwitcher`, `[ ZIPS ] [ SOURCE n ]`); the same component drives the handset deck's
+`[ FILES ] [ ZIPS ] [ SOURCE n ]`. The active rail persists globally (`uiState.activeRail`); the
+handset FILES choice is local and the ZIPS/SOURCE choice writes through, so a resize across the
+980/860 band never loses SOURCE. The SOURCE label shows the change count in accent and hides it at zero.
+
+- Rows fit the 300px workspace-mode rail: `28px minmax(0,1fr) auto` grid, `FileIcon`, name over
+  directory (`.auto-files-copy` idiom), a bracket badge (`--add/--modify/--delete/--warning` for rename,
+  `--error` for conflict, `--untracked`, `--typechange`), and a hover stage/unstage icon. Deleted rows
+  strike the name and disable open actions. `.badge--staged` keeps its drag-handoff meaning and is never
+  used for Git state.
+- COMMIT uses the build-button language; while in flight the label reads `COMMITTING…` with `aria-busy`
+  (the sweep alone is invisible under reduced motion). There is no cancel affordance: mutations are
+  deliberately non-cancellable.
+- Section headers carry one always-visible `+` / `−` icon action (stage all / unstage all), the same
+  glyphs as the row hover actions; sections cap at 500 rows with a `+N MORE` footer in the empty-state
+  language.
+- Diffs open in the shared workspace as a read-only line grid in the editor shell styling: old/new
+  line-number gutters, hunk headers muted, additions success-tinted, deletions error-tinted; `BINARY FILE`
+  and `DIFF TRUNCATED AT 2 MiB` notices.
+- Empty states follow the console prompt style: `> READING WORKING TREE`, `NO CHANGES`,
+  `NOT A GIT REPOSITORY`, `GIT NOT FOUND`, `AGENT UPDATE REQUIRED`, `COMMIT RESULT UNKNOWN — REFRESHING`.
 
 ## Auto Files
 

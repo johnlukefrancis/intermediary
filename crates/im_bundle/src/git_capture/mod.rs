@@ -1,18 +1,21 @@
 // Path: crates/im_bundle/src/git_capture/mod.rs
 // Description: Versioned selection-bounded Git evidence capture for bundle archives
 
-mod command;
-mod diff;
+pub(crate) mod command;
+mod command_child;
+mod command_stop;
+pub(crate) mod diff;
 mod diff_issue;
-mod discovery;
+pub(crate) mod discovery;
 mod finalize;
 mod ignored;
 mod index;
 mod index_tree;
 mod initial_state;
-mod path;
+pub(crate) mod path;
 mod pathspec_batches;
-mod porcelain;
+pub(crate) mod porcelain;
+pub(crate) mod prefix;
 mod render;
 mod render_omitted;
 mod session;
@@ -185,5 +188,7 @@ fn empty_manifest() -> BundleGitCapture {
     }
 }
 
+#[cfg(test)]
+mod command_tests;
 #[cfg(test)]
 mod tests;

@@ -5,6 +5,11 @@ use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::commands_tr_fleet::{GetTrFleetStatusCommand, TrFleetActionCommand};
+use super::commands_source_control::{
+    SourceControlActionCommand, SourceControlDiffCommand, SourceControlStatusCommand,
+};
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClientHelloCommand {
@@ -167,39 +172,6 @@ pub struct ListBundlesCommand {
     pub preset_id: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetTrFleetStatusCommand {}
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum TrFleetWatchBackend {
-    #[default]
-    Auto,
-    Native,
-    Poll,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "action", rename_all = "camelCase")]
-pub enum TrFleetActionPayload {
-    Rebuild {
-        port: u16,
-    },
-    RestartWatch {
-        port: u16,
-        #[serde(default)]
-        backend: TrFleetWatchBackend,
-    },
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TrFleetActionCommand {
-    #[serde(flatten)]
-    pub payload: TrFleetActionPayload,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum UiCommand {
@@ -231,6 +203,12 @@ pub enum UiCommand {
     GetTrFleetStatus(GetTrFleetStatusCommand),
     #[serde(rename = "trFleetAction")]
     TrFleetAction(TrFleetActionCommand),
+    #[serde(rename = "sourceControlStatus")]
+    SourceControlStatus(SourceControlStatusCommand),
+    #[serde(rename = "sourceControlDiff")]
+    SourceControlDiff(SourceControlDiffCommand),
+    #[serde(rename = "sourceControlAction")]
+    SourceControlAction(SourceControlActionCommand),
     #[serde(other)]
     Unknown,
 }
@@ -252,7 +230,36 @@ impl UiCommand {
             UiCommand::ListBundles(_) => "listBundles",
             UiCommand::GetTrFleetStatus(_) => "getTrFleetStatus",
             UiCommand::TrFleetAction(_) => "trFleetAction",
+            UiCommand::SourceControlStatus(_) => "sourceControlStatus",
+            UiCommand::SourceControlDiff(_) => "sourceControlDiff",
+            UiCommand::SourceControlAction(_) => "sourceControlAction",
             UiCommand::Unknown => "unknown",
+        }
+    }
+
+    /// The repository a command targets, or `None` for global commands. Kept
+    /// exhaustive on purpose: a new repo-scoped command that is not listed here
+    /// must fail to compile rather than silently become unroutable.
+    pub fn repo_id(&self) -> Option<&str> {
+        match self {
+            UiCommand::WatchRepo(command) => Some(&command.repo_id),
+            UiCommand::Refresh(command) => Some(&command.repo_id),
+            UiCommand::StageFile(command) => Some(&command.repo_id),
+            UiCommand::ReadTextFile(command) => Some(&command.repo_id),
+            UiCommand::ReadImageFile(command) => Some(&command.repo_id),
+            UiCommand::BuildBundle(command) => Some(&command.repo_id),
+            UiCommand::CancelBundleBuild(command) => Some(&command.repo_id),
+            UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),
+            UiCommand::ListRepoDirectory(command) => Some(&command.repo_id),
+            UiCommand::ListBundles(command) => Some(&command.repo_id),
+            UiCommand::SourceControlStatus(command) => Some(&command.repo_id),
+            UiCommand::SourceControlDiff(command) => Some(&command.repo_id),
+            UiCommand::SourceControlAction(command) => Some(&command.repo_id),
+            UiCommand::ClientHello(_)
+            | UiCommand::SetOptions(_)
+            | UiCommand::GetTrFleetStatus(_)
+            | UiCommand::TrFleetAction(_)
+            | UiCommand::Unknown => None,
         }
     }
 }

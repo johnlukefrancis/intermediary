@@ -10,21 +10,26 @@ use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
 use crate::repos::repo_topology_change::event_affects_top_level_metadata;
+use crate::repos::source_control_watch::SourceControlWatch;
 use crate::server::EventBus;
 use notify::event::{ModifyKind, RenameMode};
 use notify::{Event, EventKind};
 use std::path::{Path, PathBuf};
 use tokio::sync::RwLock;
 
-struct EventContext<'a> {
-    repo_id: &'a str,
-    root_path: &'a Path,
-    categorizer: &'a Categorizer,
-    ignore_matcher: &'a IgnoreMatcher,
-    mru: &'a RwLock<MruIndex>,
-    recent_store: &'a RecentFilesStore,
-    event_bus: &'a EventBus,
-    logger: &'a Logger,
+/// Everything one watcher task needs to interpret a raw `notify` event. Built
+/// once per watcher and reused for every event, so new signals ride here
+/// instead of lengthening `handle_event`.
+pub(crate) struct EventContext<'a> {
+    pub(crate) repo_id: &'a str,
+    pub(crate) root_path: &'a Path,
+    pub(crate) categorizer: &'a Categorizer,
+    pub(crate) ignore_matcher: &'a IgnoreMatcher,
+    pub(crate) mru: &'a RwLock<MruIndex>,
+    pub(crate) recent_store: &'a RecentFilesStore,
+    pub(crate) event_bus: &'a EventBus,
+    pub(crate) logger: &'a Logger,
+    pub(crate) source_control: &'a SourceControlWatch,
 }
 
 impl<'a> EventContext<'a> {
@@ -121,32 +126,27 @@ impl<'a> EventContext<'a> {
     }
 }
 
-pub(crate) async fn handle_event(
-    repo_id: &str,
-    root_path: &Path,
-    event: Event,
-    categorizer: &Categorizer,
-    ignore_matcher: &IgnoreMatcher,
-    mru: &RwLock<MruIndex>,
-    recent_store: &RecentFilesStore,
-    event_bus: &EventBus,
-    logger: &Logger,
-) {
-    let context = EventContext {
-        repo_id,
-        root_path,
-        categorizer,
-        ignore_matcher,
-        mru,
-        recent_store,
-        event_bus,
-        logger,
-    };
-
+pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
     context.maybe_broadcast_topology_changed(&event).await;
 
+    // Before the rename branch and before `map_event_kind` drops unhandled
+    // kinds: `git status` moves for paths `apply_change` never sees (ignored
+    // globs, `FileKind::Other`, git metadata).
+    context.source_control.note_event(&event);
+
+    // An event from an external git-dir watch (a linked worktree's git dir or
+    // common dir) has no path under the root; the detector above was its only
+    // consumer, so it yields no file event and no log.
+    if !event
+        .paths
+        .iter()
+        .any(|path| path.starts_with(context.root_path))
+    {
+        return;
+    }
+
     if let EventKind::Modify(ModifyKind::Name(mode)) = event.kind {
-        handle_rename_event(&context, mode, &event.paths).await;
+        handle_rename_event(context, mode, &event.paths).await;
         return;
     }
 

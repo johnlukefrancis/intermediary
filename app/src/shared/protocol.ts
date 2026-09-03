@@ -1,8 +1,7 @@
 // Path: app/src/shared/protocol.ts
-// Description: Agent<->UI WebSocket protocol types with Zod validation
+// Description: Agent<->UI WebSocket protocol unions and envelopes with Zod validation
 
 import { z } from "zod";
-import { AppConfigSchema } from "./config.js";
 import { AgentEventSchema, type AgentEvent } from "./protocol_events.js";
 import {
   BuildBundleCommandSchema,
@@ -23,18 +22,30 @@ import {
   ListRepoDirectoryCommandSchema,
   ListRepoDirectoryResultSchema,
 } from "./protocol_repo_topology.js";
+import {
+  ClientHelloCommandSchema, ClientHelloResultSchema, ListBundlesCommandSchema,
+  ReadImageFileCommandSchema, ReadImageFileResultSchema, ReadTextFileCommandSchema,
+  ReadTextFileResultSchema, RefreshCommandSchema, RefreshResultSchema, SetOptionsCommandSchema,
+  SetOptionsResultSchema, StageFileCommandSchema, StageFileResultSchema, WatchRepoCommandSchema,
+  WatchRepoResultSchema,
+} from "./protocol_repo_commands.js";
+import {
+  SourceControlActionCommandSchema, SourceControlActionResultSchema,
+  SourceControlDiffCommandSchema, SourceControlDiffResultSchema,
+  SourceControlStatusCommandSchema, SourceControlStatusResultSchema,
+} from "./protocol_source_control.js";
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
   BundleBuiltEventSchema, ErrorEventSchema, FileActivityBucketSchema, FileActivitySchema,
   FileChangeTypeSchema, FileChangedEventSchema,
   FileEntrySchema, FileKindSchema, HelloEventSchema, RepoTopologyChangedEventSchema,
-  SnapshotEventSchema, StagedInfoSchema, WslBackendConnectionStatusSchema,
-  WslBackendStatusEventSchema, type AgentErrorCode, type AgentErrorEvent, type AgentEvent,
+  SnapshotEventSchema, SourceControlChangedEventSchema, StagedInfoSchema,
+  WslBackendConnectionStatusSchema, WslBackendStatusEventSchema,
+  type AgentErrorCode, type AgentErrorEvent, type AgentEvent,
   type BundleBuildPhase, type BundleBuildProgressEvent, type BundleBuiltEvent,
   type FileActivity, type FileActivityBucket, type FileChangeType, type FileChangedEvent,
-  type FileEntry, type FileKind, type RepoTopologyChangedEvent, type StagedInfo,
-  type WslBackendConnectionStatus,
-  type WslBackendStatusEvent,
+  type FileEntry, type FileKind, type RepoTopologyChangedEvent, type SourceControlChangedEvent,
+  type StagedInfo, type WslBackendConnectionStatus, type WslBackendStatusEvent,
 } from "./protocol_events.js";
 export {
   BuildBundleCommandSchema, BuildBundleResultSchema, BundleInfoSchema, BundleSelectionSchema,
@@ -57,66 +68,30 @@ export {
   type GetRepoTopLevelCommand, type GetRepoTopLevelResult,
   type ListRepoDirectoryCommand, type ListRepoDirectoryResult,
 } from "./protocol_repo_topology.js";
+export {
+  ClientHelloCommandSchema, ClientHelloResultSchema, ListBundlesCommandSchema,
+  ReadImageFileCommandSchema, ReadImageFileResultSchema, ReadTextFileCommandSchema,
+  ReadTextFileResultSchema, RefreshCommandSchema, RefreshResultSchema, SetOptionsCommandSchema,
+  SetOptionsResultSchema, StageFileCommandSchema, StageFileResultSchema, WatchRepoCommandSchema,
+  WatchRepoResultSchema, type ClientHelloResult, type ReadImageFileResult, type ReadTextFileResult,
+  type RefreshResult, type SetOptionsResult, type StageFileResult, type WatchRepoResult,
+} from "./protocol_repo_commands.js";
+export {
+  SourceControlActionCommandSchema, SourceControlActionKindSchema, SourceControlActionResultSchema,
+  SourceControlActionSchema, SourceControlAreaSchema, SourceControlChangeSchema,
+  SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlEntryAreaSchema,
+  SourceControlEntrySchema, SourceControlOmittedSchema, SourceControlScopeSchema,
+  SourceControlStatusCommandSchema, SourceControlStatusResultSchema, SourceControlStatusSchema,
+  type SourceControlAction, type SourceControlActionCommand, type SourceControlActionKind,
+  type SourceControlActionResult, type SourceControlArea, type SourceControlChange,
+  type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlEntry,
+  type SourceControlEntryArea, type SourceControlOmitted, type SourceControlScope,
+  type SourceControlStatus, type SourceControlStatusCommand, type SourceControlStatusResult,
+} from "./protocol_source_control.js";
 
 // -----------------------------------------------------------------------------
-// UI -> Agent commands (payloads)
+// Unions
 // -----------------------------------------------------------------------------
-
-export const WatchRepoCommandSchema = z.object({
-  type: z.literal("watchRepo"),
-  repoId: z.string(),
-});
-
-export const RefreshCommandSchema = z.object({
-  type: z.literal("refresh"),
-  repoId: z.string(),
-});
-
-export const StageFileCommandSchema = z.object({
-  type: z.literal("stageFile"),
-  repoId: z.string(),
-  path: z.string(),
-});
-
-export const ReadTextFileCommandSchema = z.object({
-  type: z.literal("readTextFile"),
-  repoId: z.string(),
-  path: z.string(),
-});
-
-export const ReadImageFileCommandSchema = z.object({
-  type: z.literal("readImageFile"),
-  repoId: z.string(),
-  path: z.string(),
-});
-
-/** Handshake from UI with config and staging paths */
-export const ClientHelloCommandSchema = z.object({
-  type: z.literal("clientHello"),
-  /** Full app configuration */
-  config: AppConfigSchema,
-  /** Host-native staging root path (Windows path on Windows, POSIX on macOS). */
-  stagingHostRoot: z.string(),
-  /** Legacy compatibility for agents that still expect stagingWinRoot. */
-  stagingWinRoot: z.string().optional(),
-  /** Optional WSL path for staging files (Windows + WSL bridge only). */
-  stagingWslRoot: z.string().optional(),
-  /** Whether to auto-stage classified feed files on change */
-  autoStageOnChange: z.boolean().optional(),
-});
-
-/** Toggle agent options at runtime */
-export const SetOptionsCommandSchema = z.object({
-  type: z.literal("setOptions"),
-  autoStageOnChange: z.boolean().optional(),
-});
-
-/** Request list of existing bundles for a preset */
-export const ListBundlesCommandSchema = z.object({
-  type: z.literal("listBundles"),
-  repoId: z.string(),
-  presetId: z.string(),
-});
 
 export const UiCommandSchema = z.discriminatedUnion("type", [
   WatchRepoCommandSchema,
@@ -133,65 +108,11 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   ListBundlesCommandSchema,
   GetTrFleetStatusCommandSchema,
   TrFleetActionCommandSchema,
+  SourceControlStatusCommandSchema,
+  SourceControlDiffCommandSchema,
+  SourceControlActionCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
-
-// -----------------------------------------------------------------------------
-// UI -> Agent responses (payloads)
-// -----------------------------------------------------------------------------
-
-export const WatchRepoResultSchema = z.object({
-  type: z.literal("watchRepoResult"),
-  repoId: z.string(),
-});
-
-export const RefreshResultSchema = z.object({
-  type: z.literal("refreshResult"),
-  repoId: z.string(),
-});
-
-export const StageFileResultSchema = z.object({
-  type: z.literal("stageFileResult"),
-  repoId: z.string(),
-  path: z.string(),
-  hostPath: z.string(),
-  wslPath: z.string().optional(),
-  bytesCopied: z.number().int().nonnegative(),
-  mtimeMs: z.number(),
-});
-
-export const ReadTextFileResultSchema = z.object({
-  type: z.literal("readTextFileResult"),
-  repoId: z.string(),
-  path: z.string(),
-  content: z.string(),
-  bytes: z.number().int().nonnegative(),
-  mtimeMs: z.number().int().nonnegative(),
-  encoding: z.literal("utf-8"),
-});
-
-export const ReadImageFileResultSchema = z.object({
-  type: z.literal("readImageFileResult"),
-  repoId: z.string(),
-  path: z.string(),
-  dataBase64: z.string(),
-  mimeType: z.string(),
-  bytes: z.number().int().nonnegative(),
-  mtimeMs: z.number().int().nonnegative(),
-});
-
-/** Response to clientHello with agent info */
-export const ClientHelloResultSchema = z.object({
-  type: z.literal("clientHelloResult"),
-  agentVersion: z.string(),
-  watchedRepoIds: z.array(z.string()),
-});
-
-/** Acknowledgment for setOptions */
-export const SetOptionsResultSchema = z.object({
-  type: z.literal("setOptionsResult"),
-  autoStageOnChange: z.boolean(),
-});
 
 export const UiResponseSchema = z.discriminatedUnion("type", [
   WatchRepoResultSchema,
@@ -208,17 +129,11 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   ListBundlesResultSchema,
   GetTrFleetStatusResultSchema,
   TrFleetActionResultSchema,
+  SourceControlStatusResultSchema,
+  SourceControlDiffResultSchema,
+  SourceControlActionResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
-
-// Individual result types for typed command helpers
-export type WatchRepoResult = z.infer<typeof WatchRepoResultSchema>;
-export type RefreshResult = z.infer<typeof RefreshResultSchema>;
-export type StageFileResult = z.infer<typeof StageFileResultSchema>;
-export type ReadTextFileResult = z.infer<typeof ReadTextFileResultSchema>;
-export type ReadImageFileResult = z.infer<typeof ReadImageFileResultSchema>;
-export type ClientHelloResult = z.infer<typeof ClientHelloResultSchema>;
-export type SetOptionsResult = z.infer<typeof SetOptionsResultSchema>;
 
 // -----------------------------------------------------------------------------
 // Protocol envelopes

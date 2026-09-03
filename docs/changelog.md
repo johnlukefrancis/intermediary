@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.14 — 2026-09-03
+
+- Added Source Control to the right rail (`[ ZIPS ] [ SOURCE n ]`, also a third handset section): branch, upstream, and ahead/behind status; STAGED CHANGES / CHANGES / MERGE CHANGES sections with per-row and per-section stage and unstage; commit box with Ctrl+Enter; per-file discard behind a confirm; read-only staged/worktree diffs in the shared workspace; pull (fast-forward only) and push. Git runs in the agent that owns the repo root, so WSL and Windows repos both work without leaving the app.
+- The repo watcher now emits a coalesced `sourceControlChanged` event for Git metadata writes (including linked worktrees' real git dir) and working-tree changes, so external commits refresh the view without polling; topology refresh no longer fires for writes inside `.git`.
+- Promoted the bounded Git runner, porcelain parser, and repo-prefix capture behind a public `im_bundle::git` facade shared by bundle evidence and source control; the runner now keeps stderr/stdout for actionable errors and stops mutations gracefully on timeout so `.git/index.lock` is never left behind.
+- Host agent source-control commands are dispatched without holding the runtime write lock, and the two duplicated repo-id routing tables were replaced by one exhaustive `UiCommand::repo_id()`.
+- Fixed `pnpm` 11 build-script approval (`pnpm-workspace.yaml`) so `pnpm exec` works again in WSL.
+
 ## 0.1.13 — 2026-09-01
 
 - When a bundle Git patch that includes deleted-file bodies exceeds an 8 MiB reviewable budget (or the 32 MiB hard bound), capture now retries with header-only deletions (`--irreversible-delete`) instead of shipping a truncated or deletion-dominated patch, records `patchDeletions: headerOnly` in the manifest, and says so in `BUNDLE_GIT_STATUS.txt`. Ordinary patches keep full deletion bodies.

@@ -14,6 +14,7 @@ use crate::protocol::{
 };
 use crate::repos::{is_valid_repo_root, RecentFilesStore, RepoWatcher};
 use crate::server::EventBus;
+use crate::source_control::SourceControlLocks;
 use crate::staging::PathBridgeConfig;
 
 use super::{compute_config_fingerprint, AppConfig, RepoConfig, RepoRootKind};
@@ -29,6 +30,8 @@ pub struct AgentRuntime {
     pub mounted_windows_path_warned_repos: HashSet<String>,
     pub auto_stage_on_change: bool,
     pub recent_files_limit: usize,
+    /// Per-repo serialization for source-control mutations; cloned out and awaited without holding this runtime.
+    pub source_control_locks: SourceControlLocks,
 }
 
 impl AgentRuntime {
@@ -48,6 +51,7 @@ impl AgentRuntime {
             mounted_windows_path_warned_repos: HashSet::new(),
             auto_stage_on_change: true,
             recent_files_limit: 40,
+            source_control_locks: SourceControlLocks::new(),
         }
     }
 

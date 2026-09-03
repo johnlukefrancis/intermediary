@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-08-17
+Updated on: 2026-09-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -38,12 +38,14 @@ Architectural Decision Records — the primary contracts for this codebase.
 | Document | Purpose |
 |----------|---------|
 | [docs/design/intermediary_ui_overhaul_design.md](design/intermediary_ui_overhaul_design.md) | UI design system, tokens, and visual guidelines |
+| [docs/design/source_control_design.md](design/source_control_design.md) | Source Control view: goals, behaviour table, cancellation/timeouts, acceptance |
 
 ## Architecture
 
 | Document | Purpose |
 |----------|---------|
 | [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) | Bundle v2 generated handoff entries, selection-bounded Git evidence, coherence, and failure semantics |
+| [docs/architecture/source_control_architecture.md](architecture/source_control_architecture.md) | Source Control ownership, protocol, watcher signal, cancellation and timeout ladder |
 
 ## Reports
 
@@ -89,6 +91,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/verify_wsl_port_detection.md](commands/verify_wsl_port_detection.md) | Manually verify WSL port-listener detection end-to-end through wsl.exe |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/release_windows.md](commands/release_windows.md) | Windows-first release flow, version bumping, and GitHub release automation |
+| [docs/commands/build_installer_from_wsl.md](commands/build_installer_from_wsl.md) | Build, silently install, and relaunch the Windows installer from a WSL shell |
 | [docs/commands/bundle_cli.md](commands/bundle_cli.md) | Build and verify the Rust bundle CLI |
 | [docs/commands/fix_inotify_limits.md](commands/fix_inotify_limits.md) | Raise inotify limits in WSL for large repos |
 | [docs/commands/zip_bundles.md](commands/zip_bundles.md) | Context bundle creation for ChatGPT |

@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-07-10
+Updated on: 2026-09-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -32,7 +32,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 ## 3. Non-goals
 
 * Full file manager replacement (no directory browsing UI beyond what’s needed).
-* Git operations UI (commit/push/merge not required).
+* A full Git client: branch management, merge/rebase tooling, history, blame, and hunk-level staging are out of scope. Source Control covers status, stage/unstage, commit, discard, per-file diff, push, and pull.
 * Direct ChatGPT API integration (drag-and-drop to browser is the target).
 * Cloud sync / multi-device.
 
@@ -74,7 +74,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 * **Two main columns per tab:**
 
   1. **Auto Files** (docs, code, and images ranked by auto, latest, or activity mode)
-  2. **Zip bundles** (bundle presets + recently built outputs)
+  2. **Rail** with a bracket switch `[ ZIPS ] [ SOURCE n ]` between **Zip bundles** (bundle presets + recently built outputs) and **Source Control** (working-tree status and commit controls). The active rail persists globally; the SOURCE label carries the change count.
 
 ### Responsive mode behavior
 
@@ -132,6 +132,18 @@ Auto Files is one unified table, not separate Docs and Code or Latest and Active
 * Rows show quiet activity dots, trend arrows, last active time, update count, and a 24-hour pulse strip.
 
 Legacy starred-file config may still exist in older user configs, but the current UI no longer exposes favourites.
+
+### Source Control
+
+The SOURCE rail shows the active repo/worktree as Git sees it and lets the working tree be managed without VS Code.
+
+* Status line: branch (or detached sha), ahead/behind when an upstream exists, short HEAD sha, and refresh / pull / push controls.
+* Commit box: message textarea (Ctrl+Enter commits) and a COMMIT button that is disabled until something is staged and a message is present.
+* Sections `STAGED CHANGES [n]` (with a − unstage-all icon), `CHANGES [n]` (with a + stage-all icon), and `MERGE CHANGES [n]` when conflicts exist; rows show the file icon, name over directory, a `[M] [A] [D] [R] [C] [T] [U] [!]` badge, and a hover stage/unstage action. Deleted rows cannot be opened.
+* Row double-click opens the diff in the shared workspace (staged diff for STAGED rows, worktree diff for CHANGES rows, untracked files as all-added). Right-click offers Stage/Unstage, Open Diff, Open File, Open Containing Folder, Copy Relative Path, and Discard Changes (confirm modal).
+* Warnings surface staged paths outside the configured root (commit then asks for confirmation) and truncated status output (STAGE ALL and COMMIT disabled).
+* Refresh is event-driven: the agent watcher emits `sourceControlChanged` for `.git` metadata writes (including linked worktrees' real git dir) and working-tree changes outside the repo's structural ignore globs, coalesced agent-side; the UI also refetches on window focus and after every action. No interval polling.
+* Git runs inside the agent that owns the repo root (Windows host agent for host roots, WSL agent for WSL roots). Mutations are serialized per repo and are never killed mid-command; reads are cancellable.
 
 ### Workspace previews
 
@@ -341,6 +353,7 @@ Host agent → UI events:
 * `snapshot { repoId, recent: FileEntry[] }`
 * `repoTopologyChanged { repoId }`
 * `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
+* `sourceControlChanged { repoId }`
 * `error { scope, message, details? }`
 
 UI → Host agent commands:
@@ -356,6 +369,9 @@ UI → Host agent commands:
 * `cancelBundleBuild { repoId, presetId, buildId } -> cancelBundleBuildResult`
 * `getRepoTopLevel { repoId } -> getRepoTopLevelResult`
 * `listBundles { repoId, presetId } -> listBundlesResult`
+* `sourceControlStatus { repoId } -> sourceControlStatusResult`
+* `sourceControlDiff { repoId, path, originalPath?, area } -> sourceControlDiffResult`
+* `sourceControlAction { repoId, action } -> sourceControlActionResult` (action kinds: stage, unstage, discard, commit, push, pull)
 
 ### 9.4 Staging path translation
 

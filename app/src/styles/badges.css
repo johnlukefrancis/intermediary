@@ -1,6 +1,6 @@
 /*
  * Path: app/src/styles/badges.css
- * Description: Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
+ * Description: Bracket-style badge tags for status indicators [A] [M] [D] [U] [T] [STAGED] [LATEST]
  */
 
 /* ===== BASE BADGE (Bracket Tag) ===== */
@@ -46,6 +46,16 @@
 
 .badge--delete {
   color: var(--color-error);
+}
+
+/* Git-only variants (source control never uses --staged, which means drag-handoff staging) */
+.badge--untracked {
+  color: var(--color-success);
+  font-weight: var(--weight-normal);
+}
+
+.badge--typechange {
+  color: var(--color-info);
 }
 
 /* ===== STATUS VARIANTS ===== */

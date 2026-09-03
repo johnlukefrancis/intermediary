@@ -25,14 +25,16 @@ app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that 
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
+app/src/components/diff_workspace.tsx - Read-only unified diff viewer inside the shared workspace shell
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
-app/src/components/layout/handset_deck.tsx - Handset deck layout for Auto files and zip bundles
-app/src/components/layout/handset_section_switcher.tsx - Bracketed tab switcher for handset mode sections (Files | Zips)
-app/src/components/layout/three_column.tsx - Standard layout component with Auto files and zip bundles
+app/src/components/layout/deck_section_switcher.tsx - Bracketed tablist switching deck sections; the host renders the matching tabpanel
+app/src/components/layout/handset_deck.tsx - Handset deck layout switching between Auto files, zip bundles, and source control
+app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim [ ZIPS ] [ SOURCE n ] header over the active rail body
+app/src/components/layout/three_column.tsx - Standard layout component with Auto files and the right rail
 app/src/components/layout/workspace_layout.tsx - Layout that replaces Auto files with a shared workspace
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
@@ -49,7 +51,17 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
-app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text scratch buffers, and image previews
+app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text scratch buffers, image previews, and diffs
+app/src/components/source_control/source_control_body.tsx - Phase-dependent body of the Source Control column: empty states or the three sections
+app/src/components/source_control/source_control_column.tsx - Source Control column frame: status line, warnings, commit box, notices, body, menus, confirms
+app/src/components/source_control/source_control_commit_box.tsx - Commit message textarea (Ctrl+Enter) and compact COMMIT button for the Source Control column
+app/src/components/source_control/source_control_context_menu.ts - Right-click menu items for a source-control row, composed over the shared file items
+app/src/components/source_control/source_control_copy.ts - Badge letters, branch labels, and empty-state/error copy for the Source Control column
+app/src/components/source_control/source_control_icons.tsx - Inline 24x24 stroke glyphs for source-control controls (stroke supplied by CSS)
+app/src/components/source_control/source_control_row.tsx - One changed-path row: icon, name over dir, change badge, and a hover stage/unstage action
+app/src/components/source_control/source_control_section.tsx - Collapsible STAGED CHANGES / CHANGES / MERGE CHANGES section with capped rows and a bulk action
+app/src/components/source_control/source_control_status_line.tsx - Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column
+app/src/components/source_control/source_control_warnings.tsx - Warning rows for omitted paths and truncated status in the Source Control column
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
@@ -69,13 +81,21 @@ app/src/hooks/bundles/bundle_state_types.ts - Bundle state contracts shared by b
 app/src/hooks/bundles/use_bundle_build_actions.ts - Build and cancel actions for bundle presets
 app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle build state
 app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
+app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook
+app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
+app/src/hooks/source_control/source_control_failures.ts - Classify agent rejections for source-control reads and actions
+app/src/hooks/source_control/source_control_refresh.ts - Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup
+app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
+app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
+app/src/hooks/use_config_actions_rail.ts - Config action for the persisted right-rail deck section (zips | source)
 app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
+app/src/hooks/use_deck_section.ts - One owner for the deck section: persisted right rail plus the handset-only FILES flag
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_effective_ui_mode.ts - Derives runtime effective UI mode from preferred mode and live window state
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
@@ -85,15 +105,18 @@ app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the 
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU
 app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
-app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text scratch buffers, and image previews
+app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
 app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
+app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope normalization for older agent payloads
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
+app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
+app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-control status, diff, and action commands
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
@@ -124,9 +147,11 @@ app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
+app/src/shared/protocol_repo_commands.ts - Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas
 app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
+app/src/shared/protocol_source_control.ts - Source-control status, diff, and action command/result schemas shared with the agents
 app/src/shared/protocol_tr_fleet.ts - TR fleet command/response schemas for build-server status and recovery controls
-app/src/shared/protocol.ts - Agent<->UI WebSocket protocol types with Zod validation
+app/src/shared/protocol.ts - Agent<->UI WebSocket protocol unions and envelopes with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
 app/src/styles/agent_offline_banner.css - Banner styling for offline WSL agent diagnostics
@@ -134,7 +159,7 @@ app/src/styles/auto_files_controls.css - Header controls for the Auto files pane
 app/src/styles/auto_files_responsive.css - Responsive rules for the Auto files panel
 app/src/styles/auto_files_telemetry.css - Activity and pulse telemetry for Auto files rows
 app/src/styles/auto_files.css - Unified Auto files table matching the ranked mockup reference
-app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]
+app/src/styles/badges.css - Bracket-style badge tags for status indicators [A] [M] [D] [U] [T] [STAGED] [LATEST]
 app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main window becomes ready
 app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
 app/src/styles/bundle_column_layout.css - Bundle column layout and preset selector styles
@@ -146,11 +171,13 @@ app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar
 app/src/styles/columns.css - Standard deck grid layout with Auto files and Zips
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
+app/src/styles/deck_section_switcher.css - Bracketed deck section tablist shared by the handset deck and the right rail
+app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the workspace editor shell
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
-app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout and section switcher
+app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
@@ -159,7 +186,11 @@ app/src/styles/options_layout.css - Two-column grid layout, sections, rows, foot
 app/src/styles/options_overlay.css - Overlay backdrop, panel shell, and keyframe animations
 app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
+app/src/styles/repo_rail.css - Right-rail panel with a slim section-switch header above the zips or source body
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
+app/src/styles/source_control_rows.css - Source Control change rows: icon, name over dir, badge, and hover stage/unstage action
+app/src/styles/source_control_sections.css - Source Control collapsible section headers, bulk actions, and row containers
+app/src/styles/source_control.css - Source Control column: status line, warnings, commit box, and notices
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
@@ -170,7 +201,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files and zip bundles
+app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files, the right rail (zips | source), and the workspace
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
@@ -188,12 +219,17 @@ crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_l
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
 crates/im_agent/src/protocol/cancel_bundle_tests.rs - Protocol tests for cancellable bundle build messages
+crates/im_agent/src/protocol/commands_source_control.rs - UI-to-agent source-control command payloads (status, diff, tagged actions)
+crates/im_agent/src/protocol/commands_tr_fleet.rs - TR fleet command payloads for host-agent build-server status and recovery controls
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
+crates/im_agent/src/protocol/events_legacy_wire.rs - Legacy hostPath/windowsPath wire shapes and conversions for staged-info and bundle-built events
 crates/im_agent/src/protocol/events_runtime.rs - Runtime status and error event payloads
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
+crates/im_agent/src/protocol/responses_legacy_wire.rs - Legacy hostPath/windowsPath wire shapes and conversions for staged and bundle responses
 crates/im_agent/src/protocol/responses_repo.rs - Repository topology and directory listing response payloads
+crates/im_agent/src/protocol/responses_source_control.rs - Agent-to-UI source-control payloads: working-tree status, per-file diff, action outcome
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization and backward-compat tests
@@ -213,6 +249,10 @@ crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
+crates/im_agent/src/repos/source_control_watch/coalescer.rs - Rate-limit sourceControlChanged emission with a guaranteed trailing event
+crates/im_agent/src/repos/source_control_watch/detector.rs - Decide whether a raw watcher event can move `git status` for a repo
+crates/im_agent/src/repos/source_control_watch/git_dirs.rs - Resolve a repo's git dir and common dir so linked worktrees stay watched
+crates/im_agent/src/repos/source_control_watch/mod.rs - Watcher-side source control signal: detection, coalescing, git dir resolution
 crates/im_agent/src/repos/text_file_reader.rs - Repo-relative UTF-8 text file reader for in-app scratch viewing
 crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
@@ -226,11 +266,27 @@ crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
 crates/im_agent/src/server/connection/repo_commands.rs - Repo file-read and topology command handlers for WebSocket dispatch
 crates/im_agent/src/server/connection/request_cancellation.rs - Cooperative cancellation handles for active backend requests
+crates/im_agent/src/server/connection/source_control_commands.rs - Source-control command handlers for WebSocket dispatch (status, diff, actions)
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running agent executable identity during WebSocket handshake
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
+crates/im_agent/src/source_control/actions_discard.rs - Discard worktree changes: restore tracked paths through Git, remove untracked regular files in Rust
+crates/im_agent/src/source_control/actions.rs - Stage, unstage, commit, push, and pull for one repo root; every mutation returns a fresh status
+crates/im_agent/src/source_control/diff.rs - Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)
+crates/im_agent/src/source_control/git_version.rs - Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)
+crates/im_agent/src/source_control/locks.rs - Per-repo mutation serialization for source-control actions
+crates/im_agent/src/source_control/mod.rs - Git working-tree status, per-file diff, and index/commit/remote actions for one repo root
+crates/im_agent/src/source_control/paths.rs - UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution
+crates/im_agent/src/source_control/runner.rs - spawn_blocking bridge and Git failure to AgentError mapping for source control
+crates/im_agent/src/source_control/status_project.rs - Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root
+crates/im_agent/src/source_control/status.rs - Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape
+crates/im_agent/src/source_control/tests_actions.rs - Real-git tempdir tests for stage, unstage, discard, push, and pull actions
+crates/im_agent/src/source_control/tests_commit.rs - Real-git tempdir tests for the commit oracle, commit outcomes, and the landed-but-unread error
+crates/im_agent/src/source_control/tests_diff.rs - Real-git tempdir tests for bounded per-file diff capture
+crates/im_agent/src/source_control/tests_support.rs - Real-git tempdir fixtures shared by the source-control tests
+crates/im_agent/src/source_control/tests.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
 crates/im_agent/src/staging/mod.rs - Staging module exports
 crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-accessible directory
@@ -238,7 +294,10 @@ crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scan
 crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan and zip operations
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
-crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution for bundle evidence
+crates/im_bundle/src/git_capture/command_child.rs - Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner
+crates/im_bundle/src/git_capture/command_stop.rs - Forced stop of a running Git child: process-group signalling on unix, kill-and-reap everywhere
+crates/im_bundle/src/git_capture/command_tests.rs - Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers
+crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution shared by bundle evidence and source control
 crates/im_bundle/src/git_capture/diff_issue.rs - Artifact-specific issue classification for selected Git diff capture
 crates/im_bundle/src/git_capture/diff.rs - Bounded selected-path Git diff, stat, and name-status capture
 crates/im_bundle/src/git_capture/discovery.rs - Git discovery failure classification and raw prefix normalization
@@ -251,12 +310,14 @@ crates/im_bundle/src/git_capture/mod.rs - Versioned selection-bounded Git eviden
 crates/im_bundle/src/git_capture/path.rs - Lossless Git path transport and model-readable quoting helpers
 crates/im_bundle/src/git_capture/pathspec_batches.rs - Host-safe Git pathspec argument batching with atomic rename pairs
 crates/im_bundle/src/git_capture/porcelain.rs - Strict parser for NUL-delimited Git porcelain-v2 records
+crates/im_bundle/src/git_capture/prefix.rs - Shared bounded capture of the Git repository prefix for a configured root
 crates/im_bundle/src/git_capture/render_omitted.rs - Model-readable listing of changed paths the bundle selection omitted
 crates/im_bundle/src/git_capture/render.rs - Selection-safe human-readable Git status and bundle handoff artifacts
 crates/im_bundle/src/git_capture/session.rs - Git capture discovery, initial status, and safety-bound setup
 crates/im_bundle/src/git_capture/status.rs - Raw porcelain-v2 Git status parsing and selection-safe projection
 crates/im_bundle/src/git_capture/tests.rs - Failure, timeout, and drift tests for bounded Git capture
 crates/im_bundle/src/git_capture/verification.rs - Streaming selected-file coherence verification for Git bundle capture
+crates/im_bundle/src/git.rs - Public Git primitives shared by bundle evidence capture and agent source control
 crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
@@ -280,12 +341,14 @@ crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent d
 crates/im_host_agent/src/main.rs - Host agent daemon entry point
 crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
 crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Build-bundle host dispatch and WSL forwarding helpers for HostRuntime
+crates/im_host_agent/src/runtime/host_runtime/host_dispatch.rs - Host-rooted repo command dispatch onto the local backend for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs - WSL transport transition tests for host runtime routing
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
 crates/im_host_agent/src/runtime/local_host_repo_backend.rs - Host-native repo read and topology operations
+crates/im_host_agent/src/runtime/local_host_source_control_backend.rs - Host-native source-control execution that never holds the runtime lock across Git
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
 crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection

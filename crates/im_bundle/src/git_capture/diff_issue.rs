@@ -1,7 +1,7 @@
 // Path: crates/im_bundle/src/git_capture/diff_issue.rs
 // Description: Artifact-specific issue classification for selected Git diff capture
 
-use super::command::GitCommandFailure;
+use super::command::{GitCommandFailure, GitCommandFailureKind};
 use super::pathspec_batches::PathspecBatchError;
 use super::{
     GitCaptureIssue, GIT_DIFF_NAME, GIT_INDEX_DIFF_NAME, GIT_STATUS_NAME, GIT_WORKTREE_DIFF_NAME,
@@ -31,22 +31,22 @@ pub(super) fn command_issue(
     output_kind: DiffOutput,
     failure: GitCommandFailure,
 ) -> GitCaptureIssue {
-    let (kind, detail) = match failure {
-        GitCommandFailure::MissingExecutable => (
+    let (kind, detail) = match failure.kind {
+        GitCommandFailureKind::MissingExecutable => (
             "gitUnavailable",
             "The Git executable became unavailable during evidence capture.",
         ),
-        GitCommandFailure::TimedOut => (
+        GitCommandFailureKind::TimedOut => (
             "commandTimeout",
             "A bounded Git evidence command timed out.",
         ),
-        GitCommandFailure::SpawnFailed
-        | GitCommandFailure::InputWriteFailed
-        | GitCommandFailure::OutputReadFailed => (
+        GitCommandFailureKind::SpawnFailed
+        | GitCommandFailureKind::InputWriteFailed
+        | GitCommandFailureKind::OutputReadFailed => (
             "commandFailure",
             "A Git evidence command could not be executed or read.",
         ),
-        GitCommandFailure::NotGitRepository | GitCommandFailure::NonZeroExit => (
+        GitCommandFailureKind::NotGitRepository | GitCommandFailureKind::NonZeroExit => (
             "commandFailure",
             "A Git evidence command returned a non-zero status.",
         ),

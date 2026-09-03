@@ -259,13 +259,13 @@ fn diff_args(
     args
 }
 
-pub(super) fn common_git_args() -> Vec<OsString> {
+pub fn common_git_args() -> Vec<OsString> {
     let mut args = vec![OsString::from("--literal-pathspecs")];
     args.extend(common_git_config_args());
     args
 }
 
-pub(super) fn common_git_config_args() -> Vec<OsString> {
+pub fn common_git_config_args() -> Vec<OsString> {
     [
         "-c",
         "core.fsmonitor=false",

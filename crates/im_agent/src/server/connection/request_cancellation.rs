@@ -14,6 +14,9 @@ use crate::staging::StageFileCancelToken;
 pub(super) enum RequestCancellation {
     Bundle(BundleCancelToken),
     StageFile(StageFileCancelToken),
+    /// Source-control reads (status, diff) may be killed on cancel; actions
+    /// deliberately stay `Passive` so a mutation is never killed mid-child.
+    SourceControlRead(BundleCancelToken),
     Passive(Arc<AtomicBool>),
 }
 
@@ -22,13 +25,16 @@ impl RequestCancellation {
         match command {
             UiCommand::BuildBundle(_) => Self::Bundle(BundleCancelToken::new()),
             UiCommand::StageFile(_) => Self::StageFile(StageFileCancelToken::new()),
+            UiCommand::SourceControlStatus(_) | UiCommand::SourceControlDiff(_) => {
+                Self::SourceControlRead(BundleCancelToken::new())
+            }
             _ => Self::Passive(Arc::new(AtomicBool::new(false))),
         }
     }
 
     pub(super) fn cancel(&self) {
         match self {
-            Self::Bundle(token) => token.cancel(),
+            Self::Bundle(token) | Self::SourceControlRead(token) => token.cancel(),
             Self::StageFile(token) => token.cancel(),
             Self::Passive(cancelled) => cancelled.store(true, Ordering::SeqCst),
         }
@@ -36,7 +42,7 @@ impl RequestCancellation {
 
     pub(super) fn is_cancelled(&self) -> bool {
         match self {
-            Self::Bundle(token) => token.is_cancelled(),
+            Self::Bundle(token) | Self::SourceControlRead(token) => token.is_cancelled(),
             Self::StageFile(token) => token.is_cancelled(),
             Self::Passive(cancelled) => cancelled.load(Ordering::SeqCst),
         }
@@ -47,6 +53,15 @@ impl RequestCancellation {
             Self::Bundle(token) => Ok(token.clone()),
             _ => Err(AgentError::internal(
                 "Bundle request is missing its cancellation token",
+            )),
+        }
+    }
+
+    pub(super) fn source_control_read_token(&self) -> Result<BundleCancelToken, AgentError> {
+        match self {
+            Self::SourceControlRead(token) => Ok(token.clone()),
+            _ => Err(AgentError::internal(
+                "Source-control read request is missing its cancellation token",
             )),
         }
     }

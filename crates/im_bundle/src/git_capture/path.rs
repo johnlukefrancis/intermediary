@@ -5,31 +5,31 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub(crate) struct GitPath(Vec<u8>);
+pub struct GitPath(Vec<u8>);
 
 impl GitPath {
-    pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
+    pub fn from_bytes(bytes: &[u8]) -> Self {
         Self(bytes.to_vec())
     }
 
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
-    pub(crate) fn to_path_buf(&self) -> Option<PathBuf> {
+    pub fn to_path_buf(&self) -> Option<PathBuf> {
         bytes_to_path(&self.0)
     }
 
-    pub(crate) fn to_os_string(&self) -> Option<OsString> {
+    pub fn to_os_string(&self) -> Option<OsString> {
         bytes_to_os_string(&self.0)
     }
 
-    pub(crate) fn display(&self) -> String {
+    pub fn display(&self) -> String {
         quote_path(&self.0)
     }
 }
 
-pub(crate) fn strip_repo_prefix<'a>(path: &'a [u8], prefix: &[u8]) -> Option<&'a [u8]> {
+pub fn strip_repo_prefix<'a>(path: &'a [u8], prefix: &[u8]) -> Option<&'a [u8]> {
     if prefix.is_empty() {
         return Some(path);
     }
@@ -37,22 +37,22 @@ pub(crate) fn strip_repo_prefix<'a>(path: &'a [u8], prefix: &[u8]) -> Option<&'a
         .filter(|relative| !relative.is_empty())
 }
 
-pub(crate) fn bytes_to_path(bytes: &[u8]) -> Option<PathBuf> {
+pub fn bytes_to_path(bytes: &[u8]) -> Option<PathBuf> {
     bytes_to_os_string(bytes).map(PathBuf::from)
 }
 
 #[cfg(unix)]
-pub(crate) fn path_to_bytes(path: &Path) -> Option<Vec<u8>> {
+pub fn path_to_bytes(path: &Path) -> Option<Vec<u8>> {
     use std::os::unix::ffi::OsStrExt;
     Some(path.as_os_str().as_bytes().to_vec())
 }
 
 #[cfg(not(unix))]
-pub(crate) fn path_to_bytes(path: &Path) -> Option<Vec<u8>> {
+pub fn path_to_bytes(path: &Path) -> Option<Vec<u8>> {
     path.to_str().map(|value| value.as_bytes().to_vec())
 }
 
-pub(crate) fn display_ref(bytes: &[u8]) -> String {
+pub fn display_ref(bytes: &[u8]) -> String {
     String::from_utf8(bytes.to_vec()).unwrap_or_else(|_| quote_path(bytes))
 }
 

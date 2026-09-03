@@ -90,6 +90,10 @@
       "summary": "Generic reusable right-click context menu with glass aesthetic"
     },
     {
+      "path": "app/src/components/diff_workspace.tsx",
+      "summary": "Read-only unified diff viewer inside the shared workspace shell"
+    },
+    {
       "path": "app/src/components/drag_error_notice.tsx",
       "summary": "Small inline error notice for drag failures"
     },
@@ -110,16 +114,20 @@
       "summary": "Fit-to-panel image preview surface for shared repo workspaces"
     },
     {
-      "path": "app/src/components/layout/handset_deck.tsx",
-      "summary": "Handset deck layout for Auto files and zip bundles"
+      "path": "app/src/components/layout/deck_section_switcher.tsx",
+      "summary": "Bracketed tablist switching deck sections; the host renders the matching tabpanel"
     },
     {
-      "path": "app/src/components/layout/handset_section_switcher.tsx",
-      "summary": "Bracketed tab switcher for handset mode sections (Files | Zips)"
+      "path": "app/src/components/layout/handset_deck.tsx",
+      "summary": "Handset deck layout switching between Auto files, zip bundles, and source control"
+    },
+    {
+      "path": "app/src/components/layout/repo_rail.tsx",
+      "summary": "Right-rail instrument panel: slim [ ZIPS ] [ SOURCE n ] header over the active rail body"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
-      "summary": "Standard layout component with Auto files and zip bundles"
+      "summary": "Standard layout component with Auto files and the right rail"
     },
     {
       "path": "app/src/components/layout/workspace_layout.tsx",
@@ -187,7 +195,47 @@
     },
     {
       "path": "app/src/components/repo_workspace_panel.tsx",
-      "summary": "Repo workspace renderer for notes, text scratch buffers, and image previews"
+      "summary": "Repo workspace renderer for notes, text scratch buffers, image previews, and diffs"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_body.tsx",
+      "summary": "Phase-dependent body of the Source Control column: empty states or the three sections"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_column.tsx",
+      "summary": "Source Control column frame: status line, warnings, commit box, notices, body, menus, confirms"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_commit_box.tsx",
+      "summary": "Commit message textarea (Ctrl+Enter) and compact COMMIT button for the Source Control column"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_context_menu.ts",
+      "summary": "Right-click menu items for a source-control row, composed over the shared file items"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_copy.ts",
+      "summary": "Badge letters, branch labels, and empty-state/error copy for the Source Control column"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_icons.tsx",
+      "summary": "Inline 24x24 stroke glyphs for source-control controls (stroke supplied by CSS)"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_row.tsx",
+      "summary": "One changed-path row: icon, name over dir, change badge, and a hover stage/unstage action"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_section.tsx",
+      "summary": "Collapsible STAGED CHANGES / CHANGES / MERGE CHANGES section with capped rows and a bulk action"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_status_line.tsx",
+      "summary": "Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_warnings.tsx",
+      "summary": "Warning rows for omitted paths and truncated status in the Source Control column"
     },
     {
       "path": "app/src/components/status_bar.tsx",
@@ -266,6 +314,30 @@
       "summary": "Bundle list refresh flow with transient WSL retry handling"
     },
     {
+      "path": "app/src/hooks/repo_workspace_types.ts",
+      "summary": "RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook"
+    },
+    {
+      "path": "app/src/hooks/source_control/source_control_commands.ts",
+      "summary": "Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner"
+    },
+    {
+      "path": "app/src/hooks/source_control/source_control_failures.ts",
+      "summary": "Classify agent rejections for source-control reads and actions"
+    },
+    {
+      "path": "app/src/hooks/source_control/source_control_refresh.ts",
+      "summary": "Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup"
+    },
+    {
+      "path": "app/src/hooks/source_control/source_control_types.ts",
+      "summary": "State-machine and action contract exposed by useSourceControlState"
+    },
+    {
+      "path": "app/src/hooks/source_control/use_source_control_state.ts",
+      "summary": "Per-repo source-control status state machine with event-driven refresh and serialized actions"
+    },
+    {
       "path": "app/src/hooks/use_agent.tsx",
       "summary": "Agent context provider and connection management hook"
     },
@@ -282,6 +354,10 @@
       "summary": "Extended config actions for theme, legacy starred files, and recent files limit"
     },
     {
+      "path": "app/src/hooks/use_config_actions_rail.ts",
+      "summary": "Config action for the persisted right-rail deck section (zips | source)"
+    },
+    {
       "path": "app/src/hooks/use_config_actions.ts",
       "summary": "Core config action factory functions for repo and bundle management"
     },
@@ -292,6 +368,10 @@
     {
       "path": "app/src/hooks/use_config.tsx",
       "summary": "Config persistence context provider and hook"
+    },
+    {
+      "path": "app/src/hooks/use_deck_section.ts",
+      "summary": "One owner for the deck section: persisted right rail plus the handset-only FILES flag"
     },
     {
       "path": "app/src/hooks/use_drag.ts",
@@ -331,7 +411,7 @@
     },
     {
       "path": "app/src/hooks/use_repo_workspace.ts",
-      "summary": "Repo-tab workspace state for notes, text scratch buffers, and image previews"
+      "summary": "Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs"
     },
     {
       "path": "app/src/hooks/use_resume_detector.ts",
@@ -354,8 +434,16 @@
       "summary": "Hook for adding worktrees to existing groups or single repos"
     },
     {
+      "path": "app/src/lib/agent/agent_client_legacy.ts",
+      "summary": "Legacy hostPath/windowsPath envelope normalization for older agent payloads"
+    },
+    {
       "path": "app/src/lib/agent/agent_client.ts",
       "summary": "WebSocket client with reconnection and message correlation"
+    },
+    {
+      "path": "app/src/lib/agent/agent_request_timeouts.ts",
+      "summary": "Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)"
     },
     {
       "path": "app/src/lib/agent/connection_state.ts",
@@ -364,6 +452,10 @@
     {
       "path": "app/src/lib/agent/error_codes.ts",
       "summary": "Parse backend response error codes from agent_client error messages"
+    },
+    {
+      "path": "app/src/lib/agent/messages_source_control.ts",
+      "summary": "Typed helpers for sending source-control status, diff, and action commands"
     },
     {
       "path": "app/src/lib/agent/messages.ts",
@@ -486,8 +578,16 @@
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
     {
+      "path": "app/src/shared/protocol_repo_commands.ts",
+      "summary": "Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas"
+    },
+    {
       "path": "app/src/shared/protocol_repo_topology.ts",
       "summary": "Repo topology and lazy directory listing protocol schemas"
+    },
+    {
+      "path": "app/src/shared/protocol_source_control.ts",
+      "summary": "Source-control status, diff, and action command/result schemas shared with the agents"
     },
     {
       "path": "app/src/shared/protocol_tr_fleet.ts",
@@ -495,7 +595,7 @@
     },
     {
       "path": "app/src/shared/protocol.ts",
-      "summary": "Agent<->UI WebSocket protocol types with Zod validation"
+      "summary": "Agent<->UI WebSocket protocol unions and envelopes with Zod validation"
     },
     {
       "path": "app/src/shared/repo_utils.ts",
@@ -527,7 +627,7 @@
     },
     {
       "path": "app/src/styles/badges.css",
-      "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [STAGED] [LATEST]"
+      "summary": "Bracket-style badge tags for status indicators [A] [M] [D] [U] [T] [STAGED] [LATEST]"
     },
     {
       "path": "app/src/styles/boot.css",
@@ -574,6 +674,14 @@
       "summary": "Right-click context menu with glass aesthetic"
     },
     {
+      "path": "app/src/styles/deck_section_switcher.css",
+      "summary": "Bracketed deck section tablist shared by the handset deck and the right rail"
+    },
+    {
+      "path": "app/src/styles/diff_workspace.css",
+      "summary": "Read-only diff viewer styling mirroring the workspace editor shell"
+    },
+    {
       "path": "app/src/styles/drag_error_notice.css",
       "summary": "Inline glass toast for drag errors"
     },
@@ -591,7 +699,7 @@
     },
     {
       "path": "app/src/styles/handset_deck.css",
-      "summary": "Handset mode single-panel vertical deck layout and section switcher"
+      "summary": "Handset mode single-panel vertical deck layout"
     },
     {
       "path": "app/src/styles/main.css",
@@ -626,8 +734,24 @@
       "summary": "Modular deck panel surfaces with framed edges and etched headers"
     },
     {
+      "path": "app/src/styles/repo_rail.css",
+      "summary": "Right-rail panel with a slim section-switch header above the zips or source body"
+    },
+    {
       "path": "app/src/styles/scrollbars.css",
       "summary": "Thin dark scrollbar styling with accent hints"
+    },
+    {
+      "path": "app/src/styles/source_control_rows.css",
+      "summary": "Source Control change rows: icon, name over dir, badge, and hover stage/unstage action"
+    },
+    {
+      "path": "app/src/styles/source_control_sections.css",
+      "summary": "Source Control collapsible section headers, bulk actions, and row containers"
+    },
+    {
+      "path": "app/src/styles/source_control.css",
+      "summary": "Source Control column: status line, warnings, commit box, and notices"
     },
     {
       "path": "app/src/styles/status_bar.css",
@@ -671,7 +795,7 @@
     },
     {
       "path": "app/src/tabs/repo_tab.tsx",
-      "summary": "Generic repo tab component with Auto files and zip bundles"
+      "summary": "Generic repo tab component with Auto files, the right rail (zips | source), and the workspace"
     },
     {
       "path": "app/src/types/agent_supervisor.ts",
@@ -742,12 +866,24 @@
       "summary": "Protocol tests for cancellable bundle build messages"
     },
     {
+      "path": "crates/im_agent/src/protocol/commands_source_control.rs",
+      "summary": "UI-to-agent source-control command payloads (status, diff, tagged actions)"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/commands_tr_fleet.rs",
+      "summary": "TR fleet command payloads for host-agent build-server status and recovery controls"
+    },
+    {
       "path": "crates/im_agent/src/protocol/commands.rs",
       "summary": "UI-to-agent command payloads for the WebSocket protocol"
     },
     {
       "path": "crates/im_agent/src/protocol/envelopes.rs",
       "summary": "Protocol envelope types for request/response messaging"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/events_legacy_wire.rs",
+      "summary": "Legacy hostPath/windowsPath wire shapes and conversions for staged-info and bundle-built events"
     },
     {
       "path": "crates/im_agent/src/protocol/events_runtime.rs",
@@ -762,8 +898,16 @@
       "summary": "WebSocket protocol types for the agent"
     },
     {
+      "path": "crates/im_agent/src/protocol/responses_legacy_wire.rs",
+      "summary": "Legacy hostPath/windowsPath wire shapes and conversions for staged and bundle responses"
+    },
+    {
       "path": "crates/im_agent/src/protocol/responses_repo.rs",
       "summary": "Repository topology and directory listing response payloads"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/responses_source_control.rs",
+      "summary": "Agent-to-UI source-control payloads: working-tree status, per-file diff, action outcome"
     },
     {
       "path": "crates/im_agent/src/protocol/responses_tr_fleet.rs",
@@ -842,6 +986,22 @@
       "summary": "Notify-based repo watcher with MRU and event emission"
     },
     {
+      "path": "crates/im_agent/src/repos/source_control_watch/coalescer.rs",
+      "summary": "Rate-limit sourceControlChanged emission with a guaranteed trailing event"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/detector.rs",
+      "summary": "Decide whether a raw watcher event can move `git status` for a repo"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/git_dirs.rs",
+      "summary": "Resolve a repo's git dir and common dir so linked worktrees stay watched"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/mod.rs",
+      "summary": "Watcher-side source control signal: detection, coalescing, git dir resolution"
+    },
+    {
       "path": "crates/im_agent/src/repos/text_file_reader.rs",
       "summary": "Repo-relative UTF-8 text file reader for in-app scratch viewing"
     },
@@ -894,6 +1054,10 @@
       "summary": "Cooperative cancellation handles for active backend requests"
     },
     {
+      "path": "crates/im_agent/src/server/connection/source_control_commands.rs",
+      "summary": "Source-control command handlers for WebSocket dispatch (status, diff, actions)"
+    },
+    {
       "path": "crates/im_agent/src/server/event_bus.rs",
       "summary": "Broadcast agent events to connected WebSocket clients"
     },
@@ -912,6 +1076,66 @@
     {
       "path": "crates/im_agent/src/server/ws_server.rs",
       "summary": "WebSocket accept loop and connection dispatch"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_discard.rs",
+      "summary": "Discard worktree changes: restore tracked paths through Git, remove untracked regular files in Rust"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions.rs",
+      "summary": "Stage, unstage, commit, push, and pull for one repo root; every mutation returns a fresh status"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/diff.rs",
+      "summary": "Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/git_version.rs",
+      "summary": "Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/locks.rs",
+      "summary": "Per-repo mutation serialization for source-control actions"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/mod.rs",
+      "summary": "Git working-tree status, per-file diff, and index/commit/remote actions for one repo root"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/paths.rs",
+      "summary": "UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/runner.rs",
+      "summary": "spawn_blocking bridge and Git failure to AgentError mapping for source control"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/status_project.rs",
+      "summary": "Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/status.rs",
+      "summary": "Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_actions.rs",
+      "summary": "Real-git tempdir tests for stage, unstage, discard, push, and pull actions"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_commit.rs",
+      "summary": "Real-git tempdir tests for the commit oracle, commit outcomes, and the landed-but-unread error"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_diff.rs",
+      "summary": "Real-git tempdir tests for bounded per-file diff capture"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_support.rs",
+      "summary": "Real-git tempdir fixtures shared by the source-control tests"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests.rs",
+      "summary": "Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping"
     },
     {
       "path": "crates/im_agent/src/staging/layout.rs",
@@ -942,8 +1166,20 @@
       "summary": "Error types for bundle scanning and zip writing"
     },
     {
+      "path": "crates/im_bundle/src/git_capture/command_child.rs",
+      "summary": "Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command_stop.rs",
+      "summary": "Forced stop of a running Git child: process-group signalling on unix, kill-and-reap everywhere"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command_tests.rs",
+      "summary": "Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/command.rs",
-      "summary": "Bounded, cancellable Git subprocess execution for bundle evidence"
+      "summary": "Bounded, cancellable Git subprocess execution shared by bundle evidence and source control"
     },
     {
       "path": "crates/im_bundle/src/git_capture/diff_issue.rs",
@@ -994,6 +1230,10 @@
       "summary": "Strict parser for NUL-delimited Git porcelain-v2 records"
     },
     {
+      "path": "crates/im_bundle/src/git_capture/prefix.rs",
+      "summary": "Shared bounded capture of the Git repository prefix for a configured root"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/render_omitted.rs",
       "summary": "Model-readable listing of changed paths the bundle selection omitted"
     },
@@ -1016,6 +1256,10 @@
     {
       "path": "crates/im_bundle/src/git_capture/verification.rs",
       "summary": "Streaming selected-file coherence verification for Git bundle capture"
+    },
+    {
+      "path": "crates/im_bundle/src/git.rs",
+      "summary": "Public Git primitives shared by bundle evidence capture and agent source control"
     },
     {
       "path": "crates/im_bundle/src/global_excludes_summary.rs",
@@ -1110,6 +1354,10 @@
       "summary": "Build-bundle host dispatch and WSL forwarding helpers for HostRuntime"
     },
     {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/host_dispatch.rs",
+      "summary": "Host-rooted repo command dispatch onto the local backend for HostRuntime"
+    },
+    {
       "path": "crates/im_host_agent/src/runtime/host_runtime/mod.rs",
       "summary": "Host runtime command routing and clientHello orchestration for host and WSL backends"
     },
@@ -1132,6 +1380,10 @@
     {
       "path": "crates/im_host_agent/src/runtime/local_host_repo_backend.rs",
       "summary": "Host-native repo read and topology operations"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/local_host_source_control_backend.rs",
+      "summary": "Host-native source-control execution that never holds the runtime lock across Git"
     },
     {
       "path": "crates/im_host_agent/src/runtime/mod.rs",

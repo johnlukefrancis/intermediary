@@ -11,7 +11,6 @@ use im_agent::protocol::{
 use im_agent::server::EventBus;
 
 use crate::error_codes::{WSL_BACKEND_TIMEOUT, WSL_BACKEND_UNAVAILABLE};
-use crate::runtime::host_runtime_helpers::repo_id_from_command;
 use crate::wsl::WslBackendClient;
 
 use super::HostRuntime;
@@ -83,7 +82,7 @@ impl HostRuntime {
         command: UiCommand,
         event_bus: &EventBus,
     ) -> Result<UiResponse, AgentError> {
-        let repo_id = repo_id_from_command(&command).map(str::to_string);
+        let repo_id = command.repo_id().map(str::to_string);
 
         match self
             .wsl_client(event_bus)

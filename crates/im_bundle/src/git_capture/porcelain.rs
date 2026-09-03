@@ -7,34 +7,50 @@ use crate::selection::SelectedPathKind;
 
 use super::path::{bytes_to_path, display_ref, strip_repo_prefix, GitPath};
 
-pub(crate) struct PorcelainStatus {
-    pub(crate) head_sha: Option<String>,
-    pub(crate) branch: Option<String>,
-    pub(crate) records: Vec<StatusRecord>,
+/// Parsed `git status --porcelain=v2 -z --branch` output. `branch` is `None`
+/// when HEAD is detached; `head_sha` is `None` on an unborn branch; the
+/// upstream fields are `None` when no upstream is configured.
+pub struct PorcelainStatus {
+    pub head_sha: Option<String>,
+    pub branch: Option<String>,
+    pub upstream: Option<String>,
+    pub ahead: Option<u64>,
+    pub behind: Option<u64>,
+    pub records: Vec<StatusRecord>,
 }
 
 #[derive(Debug)]
-pub(crate) struct StatusRecord {
-    pub(crate) xy: String,
-    pub(crate) current: GitPath,
-    pub(crate) original: Option<GitPath>,
+pub struct StatusRecord {
+    pub xy: String,
+    pub current: GitPath,
+    pub original: Option<GitPath>,
     head_mode: Vec<u8>,
     worktree_mode: Vec<u8>,
-    pub(crate) score: Option<String>,
+    pub score: Option<String>,
     record_type: u8,
 }
 
 impl StatusRecord {
-    pub(crate) fn is_untracked(&self) -> bool {
+    pub fn is_untracked(&self) -> bool {
         self.record_type == b'?'
     }
 
-    pub(crate) fn is_unmerged(&self) -> bool {
+    pub fn is_unmerged(&self) -> bool {
         self.record_type == b'u'
     }
 
-    pub(crate) fn is_deleted(&self) -> bool {
+    pub fn is_deleted(&self) -> bool {
         self.xy.as_bytes().contains(&b'D')
+    }
+
+    /// Octal mode of the HEAD-side entry as Git printed it (`000000` when absent).
+    pub fn head_mode(&self) -> &[u8] {
+        &self.head_mode
+    }
+
+    /// Octal mode of the worktree-side entry as Git printed it (`000000` when absent).
+    pub fn worktree_mode(&self) -> &[u8] {
+        &self.worktree_mode
     }
 
     pub(crate) fn current_kind(&self, repo_root: &Path, repo_prefix: &[u8]) -> SelectedPathKind {
@@ -63,10 +79,9 @@ impl StatusRecord {
     }
 }
 
-pub(crate) fn parse_porcelain(output: &[u8]) -> std::result::Result<PorcelainStatus, String> {
+pub fn parse_porcelain(output: &[u8]) -> std::result::Result<PorcelainStatus, String> {
     let mut fields = output.split(|byte| *byte == 0).peekable();
-    let mut head_sha = None;
-    let mut branch = None;
+    let mut headers = BranchHeaders::default();
     let mut records = Vec::new();
 
     while let Some(field) = fields.next() {
@@ -74,7 +89,7 @@ pub(crate) fn parse_porcelain(output: &[u8]) -> std::result::Result<PorcelainSta
             continue;
         }
         match field.first().copied() {
-            Some(b'#') => parse_header(field, &mut head_sha, &mut branch),
+            Some(b'#') => parse_header(field, &mut headers),
             Some(b'1') => records.push(parse_ordinary(field)?),
             Some(b'2') => {
                 let original = fields
@@ -91,21 +106,43 @@ pub(crate) fn parse_porcelain(output: &[u8]) -> std::result::Result<PorcelainSta
         }
     }
     Ok(PorcelainStatus {
-        head_sha,
-        branch,
+        head_sha: headers.head_sha,
+        branch: headers.branch,
+        upstream: headers.upstream,
+        ahead: headers.ahead,
+        behind: headers.behind,
         records,
     })
 }
 
-fn parse_header(field: &[u8], head_sha: &mut Option<String>, branch: &mut Option<String>) {
+#[derive(Default)]
+struct BranchHeaders {
+    head_sha: Option<String>,
+    branch: Option<String>,
+    upstream: Option<String>,
+    ahead: Option<u64>,
+    behind: Option<u64>,
+}
+
+fn parse_header(field: &[u8], headers: &mut BranchHeaders) {
     if let Some(value) = field.strip_prefix(b"# branch.oid ") {
         if value != b"(initial)" {
-            *head_sha = String::from_utf8(value.to_vec()).ok();
+            headers.head_sha = String::from_utf8(value.to_vec()).ok();
         }
     } else if let Some(value) = field.strip_prefix(b"# branch.head ") {
         if value != b"(detached)" {
-            *branch = Some(display_ref(value));
+            headers.branch = Some(display_ref(value));
         }
+    } else if let Some(value) = field.strip_prefix(b"# branch.upstream ") {
+        headers.upstream = Some(display_ref(value));
+    } else if let Some(value) = field.strip_prefix(b"# branch.ab ") {
+        // `# branch.ab +<ahead> -<behind>`
+        let text = String::from_utf8_lossy(value);
+        let mut parts = text.split_whitespace();
+        let ahead = parts.next().and_then(|part| part.strip_prefix('+')).and_then(|n| n.parse().ok());
+        let behind = parts.next().and_then(|part| part.strip_prefix('-')).and_then(|n| n.parse().ok());
+        headers.ahead = ahead;
+        headers.behind = behind;
     }
 }
 

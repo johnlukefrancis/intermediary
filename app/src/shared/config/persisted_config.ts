@@ -38,6 +38,11 @@ export const UiWindowBoundsByModeSchema = z.object({
 
 export type UiWindowBoundsByMode = z.infer<typeof UiWindowBoundsByModeSchema>;
 
+/** Right-rail instrument selection: zip bundles or source control */
+export const ActiveRailSchema = z.enum(["zips", "source"]);
+
+export type ActiveRail = z.infer<typeof ActiveRailSchema>;
+
 /** Remembered UI state */
 export const UiStateSchema = z.object({
   /** Last active repo (by repoId) */
@@ -46,6 +51,8 @@ export const UiStateSchema = z.object({
   lastActiveGroupRepoIds: z.record(z.string(), z.string()).default({}),
   /** Remembered window bounds by UI mode */
   windowBoundsByMode: UiWindowBoundsByModeSchema.default({}),
+  /** Right-rail section shown in the deck (defaulted, so no migration is needed) */
+  activeRail: ActiveRailSchema.default("zips"),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -211,6 +218,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
       lastActiveTabId: null,
       lastActiveGroupRepoIds: {},
       windowBoundsByMode: {},
+      activeRail: "zips",
     },
     bundleSelections: {},
     globalExcludes: {

@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-07-15
+Updated on: 2026-09-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -74,7 +74,8 @@ Intermediary uses a **host-routed architecture**:
     unusable `INTERMEDIARY_LOG_DIR` emits a diagnostic and falls back to app-local storage before
     startup continues. Explicit pre-build/setup/build-complete stage markers preserve the payload,
     source location, process id, and reached lifecycle stage of pre-setup callback failures
-  - Two-column layout per repo: Auto Files and Zip Bundles
+  - Two-column layout per repo: Auto Files and a right rail that switches between Zip Bundles and Source Control (`[ ZIPS ] [ SOURCE n ]`, persisted globally as `uiState.activeRail`; handset mode exposes the same three sections)
+  - Source Control column: branch/upstream status line with refresh, pull, and push; commit box (Ctrl+Enter); STAGED CHANGES / CHANGES / MERGE CHANGES sections with per-row and per-section stage/unstage, per-file discard behind a confirm, and a read-only diff kind in the shared workspace. Git runs in the agent that owns the repo root; the UI never mutates a repo directly
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
@@ -124,6 +125,7 @@ Intermediary uses a **host-routed architecture**:
   - Owns one bounded timeout per forwarded request; timed-out requests send a request-id-scoped cooperative cancellation to the WSL backend and let the operation retain its cleanup guards until work stops
   - Attributes every successful forwarded response to the connection generation that produced it, including `clientHello`, options, build, and build-cancellation paths, so an older response cannot clear a newer transport error
   - Emits explicit backend-availability errors without taking down Windows repos
+  - Dispatches source-control commands without holding the runtime write lock: the backend is resolved under a short read lock, then host repos run Git in-process and WSL repos are forwarded, so a long push never freezes other repos or WSL forwards
 
 ### WSL Backend Agent
 
@@ -132,6 +134,8 @@ Intermediary uses a **host-routed architecture**:
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
   - Recursive native watcher registration/unregistration runs on blocking workers, with independent repo watchers started and reset concurrently during `clientHello` bootstrap
+  - Emits `sourceControlChanged` (coalesced to at most one per 250ms with a trailing emit) for `.git` metadata writes and working-tree changes outside the repo's structural ignore globs; linked worktrees get a second watch on their real git dir
+  - Source-control commands run Git through the shared `im_bundle::git` facade on blocking workers, serialized per repo for mutations, with reads cancellable and mutations bounded by timeout only
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
   - Bundle building via `im_bundle` with a v2 manifest, selection-bounded captured-HEAD Git status/patch evidence, host-safe batching for Windows-scale selected path sets, and generated handoff orientation (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
   - Atomic file staging for WSL repo operations, with cooperative cancellation removing temporary copies before the request completes
@@ -156,6 +160,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `snapshot { repoId, recent: FileEntry[] }`
 - `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or bundle-selector subdirectory metadata up to repo depth 4
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
+- `sourceControlChanged { repoId }` emitted (coalesced) when Git metadata or the working tree changes in a way that can move `git status`
 - `error { scope, message, details? }`
 - `wslBackendStatus { status: "online" | "offline", generation }` emitted on WSL transport transitions; generation increments on each successful reconnect
 - `hello` is defined in protocol types but not emitted in the current agent; handshake uses `clientHello` → `clientHelloResult`.
@@ -174,6 +179,9 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
+- `sourceControlStatus { repoId } → sourceControlStatusResult { repoId, status }`; whole-repository porcelain-v2 status projected onto the configured root (staged paths above the root and non-UTF-8 paths are counted in `status.omitted`, `status.committable` is Git's own answer, output over 8 MiB sets `status.truncated`)
+- `sourceControlDiff { repoId, path, originalPath?, area: "index" | "worktree" } → sourceControlDiffResult` (2 MiB bound, `binary` and `truncated` flags)
+- `sourceControlAction { repoId, action } → sourceControlActionResult { repoId, kind, status, commitSha? }`; `action.kind` is `stage` / `unstage` (scope `all` or `paths`), `discard` (paths), `commit` (message), `push`, `pull`. Mutations are serialized per repo, return the fresh status, and are never cancelled mid-command; timeouts are strictly nested per Git command < host→WSL request < UI request (status/diff 20/90/120 s, index actions 60/120/150 s, commit 120/240/300 s, push/pull 180/300/360 s)
 - `getTrFleetStatus {} → getTrFleetStatusResult` (host-agent only; polls TR build ports 5601–5605 `__trdev/status` + `__trdev/doctor`)
 - `trFleetAction { action, port, backend? } → trFleetActionResult` (host-agent only; `rebuild` / `restartWatch` with control header)
 
@@ -276,6 +284,7 @@ intermediary/
 │       ├── bundles/        # Bundle building
 │       ├── repos/          # File watching
 │       ├── server/         # WebSocket server, router
+│       ├── source_control/ # Git status, diff, and index/commit/remote actions
 │       ├── staging/        # File staging, path bridge
 │       └── util/           # Logger, errors, categorizer
 ├── docs/                   # Documentation
@@ -296,3 +305,4 @@ intermediary/
 
 - [docs/prd.md](prd.md) — Full product requirements
 - [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) — Bundle v2 and captured Git evidence contract
+- [docs/architecture/source_control_architecture.md](architecture/source_control_architecture.md) — Source Control ownership, refresh signal, cancellation, and timeout contract

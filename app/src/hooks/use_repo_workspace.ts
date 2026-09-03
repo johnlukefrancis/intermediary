@@ -1,80 +1,34 @@
 // Path: app/src/hooks/use_repo_workspace.ts
-// Description: Repo-tab workspace state for notes, text scratch buffers, and image previews
+// Description: Repo-tab workspace state for notes, text scratch buffers, image previews, and diffs
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { SourceControlArea, SourceControlEntry } from "../shared/protocol.js";
 import { sendReadImageFile, sendReadTextFile } from "../lib/agent/messages.js";
+import { sendSourceControlDiff } from "../lib/agent/messages_source_control.js";
+import {
+  computeTransientRetryDelayMs,
+  isTransientWslTransportError,
+} from "../lib/agent/transient_wsl_error.js";
+import { agentErrorMessage } from "./source_control/source_control_failures.js";
 import { useAgent } from "./use_agent.js";
+import {
+  errorMessage,
+  isPreviewImagePath,
+  isUnsupportedImagePath,
+  type RepoWorkspace,
+} from "./repo_workspace_types.js";
 
-const IMAGE_PREVIEW_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif"]);
-const UNSUPPORTED_IMAGE_EXTENSIONS = new Set(["tif", "tiff", "heic", "heif"]);
+export { getFileName, type RepoWorkspace } from "./repo_workspace_types.js";
 
-export type RepoWorkspace =
-  | { kind: "none" }
-  | { kind: "note"; repoId: string }
-  | {
-      kind: "textFile";
-      repoId: string;
-      path: string;
-      content: string;
-      bytes: number;
-      mtimeMs: number;
-    }
-  | {
-      kind: "imageFile";
-      repoId: string;
-      path: string;
-      status: "loading";
-    }
-  | {
-      kind: "imageFile";
-      repoId: string;
-      path: string;
-      status: "ready";
-      dataBase64: string;
-      mimeType: string;
-      bytes: number;
-      mtimeMs: number;
-    }
-  | {
-      kind: "imageFile";
-      repoId: string;
-      path: string;
-      status: "error";
-      error: string;
-    };
+const AGENT_INITIALIZING = "Agent session initializing; retry in a moment.";
 
 interface RepoWorkspaceState {
   workspace: RepoWorkspace;
   openNote: () => void;
   openFile: (path: string) => void;
+  openDiff: (entry: SourceControlEntry) => void;
   updateTextScratch: (content: string) => void;
   closeWorkspace: () => void;
-}
-
-export function getFileName(path: string): string {
-  const parts = path.split("/");
-  return parts[parts.length - 1] ?? path;
-}
-
-function getExtension(path: string): string | null {
-  const fileName = getFileName(path);
-  const dotIndex = fileName.lastIndexOf(".");
-  if (dotIndex === -1 || dotIndex === fileName.length - 1) return null;
-  return fileName.slice(dotIndex + 1).toLowerCase();
-}
-
-function isPreviewImagePath(path: string): boolean {
-  const extension = getExtension(path);
-  return extension !== null && IMAGE_PREVIEW_EXTENSIONS.has(extension);
-}
-
-function isUnsupportedImagePath(path: string): boolean {
-  const extension = getExtension(path);
-  return extension !== null && UNSUPPORTED_IMAGE_EXTENSIONS.has(extension);
-}
-
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
 }
 
 export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
@@ -82,20 +36,24 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
   const [workspace, setWorkspace] = useState<RepoWorkspace>({ kind: "none" });
   const requestTokenRef = useRef(0);
 
-  const closeWorkspace = useCallback(() => {
+  const nextRequestToken = useCallback((): number => {
     requestTokenRef.current += 1;
-    setWorkspace({ kind: "none" });
+    return requestTokenRef.current;
   }, []);
 
+  const closeWorkspace = useCallback(() => {
+    nextRequestToken();
+    setWorkspace({ kind: "none" });
+  }, [nextRequestToken]);
+
   const openNote = useCallback(() => {
-    requestTokenRef.current += 1;
+    nextRequestToken();
     setWorkspace({ kind: "note", repoId });
-  }, [repoId]);
+  }, [nextRequestToken, repoId]);
 
   const openTextFile = useCallback(
     (path: string) => {
-      const requestToken = requestTokenRef.current + 1;
-      requestTokenRef.current = requestToken;
+      const requestToken = nextRequestToken();
       if (!client || helloState.status !== "ok") return;
 
       void sendReadTextFile(client, repoId, path)
@@ -115,22 +73,15 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
           console.info("[useRepoWorkspace] readTextFile skipped:", err);
         });
     },
-    [client, helloState.status, repoId]
+    [client, helloState.status, nextRequestToken, repoId]
   );
 
   const openImageFile = useCallback(
     (path: string) => {
-      const requestToken = requestTokenRef.current + 1;
-      requestTokenRef.current = requestToken;
+      const requestToken = nextRequestToken();
 
       if (!client || helloState.status !== "ok") {
-        setWorkspace({
-          kind: "imageFile",
-          repoId,
-          path,
-          status: "error",
-          error: "Agent session initializing; retry in a moment.",
-        });
+        setWorkspace({ kind: "imageFile", repoId, path, status: "error", error: AGENT_INITIALIZING });
         return;
       }
 
@@ -161,7 +112,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
           });
         });
     },
-    [client, helloState.status, repoId]
+    [client, helloState.status, nextRequestToken, repoId]
   );
 
   const openFile = useCallback(
@@ -172,7 +123,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
       }
 
       if (isUnsupportedImagePath(path)) {
-        requestTokenRef.current += 1;
+        nextRequestToken();
         setWorkspace({
           kind: "imageFile",
           repoId,
@@ -185,7 +136,57 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
 
       openTextFile(path);
     },
-    [openImageFile, openTextFile, repoId]
+    [nextRequestToken, openImageFile, openTextFile, repoId]
+  );
+
+  /** Index diff for STAGED rows, worktree diff for CHANGES/MERGE rows (untracked shows as all-added) */
+  const openDiff = useCallback(
+    (entry: SourceControlEntry) => {
+      const requestToken = nextRequestToken();
+      const area: SourceControlArea = entry.area === "index" ? "index" : "worktree";
+      const base = {
+        kind: "diff" as const,
+        repoId,
+        path: entry.path,
+        area,
+        originalPath: entry.originalPath ?? null,
+        fileExists: entry.change !== "deleted",
+      };
+      const isStale = (): boolean => requestTokenRef.current !== requestToken;
+
+      if (!client || helloState.status !== "ok") {
+        setWorkspace({ ...base, status: "error", error: AGENT_INITIALIZING });
+        return;
+      }
+
+      setWorkspace({ ...base, status: "loading" });
+
+      const load = (attempt: number): void => {
+        void sendSourceControlDiff(client, repoId, entry.path, area, entry.originalPath)
+          .then((result) => {
+            if (isStale()) return;
+            setWorkspace({
+              ...base,
+              status: "ready",
+              patch: result.patch,
+              truncated: result.truncated,
+              binary: result.binary,
+            });
+          })
+          .catch((err: unknown) => {
+            if (isStale()) return;
+            if (isTransientWslTransportError(err)) {
+              setTimeout(() => {
+                if (!isStale()) load(attempt + 1);
+              }, computeTransientRetryDelayMs(attempt));
+              return;
+            }
+            setWorkspace({ ...base, status: "error", error: agentErrorMessage(err) });
+          });
+      };
+      load(0);
+    },
+    [client, helloState.status, nextRequestToken, repoId]
   );
 
   const updateTextScratch = useCallback((content: string) => {
@@ -209,6 +210,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
     workspace: effectiveWorkspace,
     openNote,
     openFile,
+    openDiff,
     updateTextScratch,
     closeWorkspace,
   };

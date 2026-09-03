@@ -8,4 +8,5 @@ pub mod protocol;
 pub mod repos;
 pub mod runtime;
 pub mod server;
+pub mod source_control;
 pub mod staging;

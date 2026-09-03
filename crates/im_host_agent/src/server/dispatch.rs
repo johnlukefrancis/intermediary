@@ -5,7 +5,7 @@ use im_agent::error::AgentError;
 use im_agent::protocol::{UiCommand, UiResponse};
 
 use super::connection::ConnectionContext;
-use crate::runtime::RepoBackend;
+use crate::runtime::{execute_host_source_control, RepoBackend};
 
 pub async fn dispatch_command(
     command: UiCommand,
@@ -17,6 +17,11 @@ pub async fn dispatch_command(
         }
         UiCommand::CancelBundleBuild(command) => {
             return dispatch_cancel_bundle_build(command, ctx).await;
+        }
+        UiCommand::SourceControlStatus(_)
+        | UiCommand::SourceControlDiff(_)
+        | UiCommand::SourceControlAction(_) => {
+            return dispatch_source_control(command, ctx).await;
         }
         command => {
             let mut runtime = ctx.runtime.write().await;
@@ -97,6 +102,54 @@ async fn dispatch_cancel_bundle_build(
             let result = client
                 .forward_command_with_generation(UiCommand::CancelBundleBuild(command))
                 .await;
+            let mut runtime = ctx.runtime.write().await;
+            match result {
+                Ok(forwarded) => {
+                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
+                    Ok(forwarded.response)
+                }
+                Err(err) => {
+                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
+                    Err(err)
+                }
+            }
+        }
+        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
+    }
+}
+
+/// Source-control commands run Git for up to minutes; they resolve their
+/// backend under a short read lock and then run with no runtime lock held, so
+/// a long push never freezes other repos, clientHello, or WSL forwards.
+async fn dispatch_source_control(
+    command: UiCommand,
+    ctx: &ConnectionContext,
+) -> Result<UiResponse, AgentError> {
+    let repo_id = command
+        .repo_id()
+        .map(str::to_string)
+        .ok_or_else(|| AgentError::new("UNKNOWN_COMMAND", "Unsupported command"))?;
+    let backend = {
+        let runtime = ctx.runtime.read().await;
+        runtime.repo_backend_for_command(&command)?
+    };
+
+    match backend {
+        Some(RepoBackend::Host) => {
+            let context = {
+                let runtime = ctx.runtime.read().await;
+                runtime.host_source_control_context(&repo_id)?
+            };
+            execute_host_source_control(command, context).await
+        }
+        Some(RepoBackend::Wsl) => {
+            let client = {
+                let mut runtime = ctx.runtime.write().await;
+                runtime
+                    .prepare_wsl_client_for_command(&command, &ctx.event_bus)
+                    .await?
+            };
+            let result = client.forward_command_with_generation(command).await;
             let mut runtime = ctx.runtime.write().await;
             match result {
                 Ok(forwarded) => {

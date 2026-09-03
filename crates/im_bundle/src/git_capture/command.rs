@@ -1,8 +1,8 @@
 // Path: crates/im_bundle/src/git_capture/command.rs
-// Description: Bounded, cancellable Git subprocess execution for bundle evidence
+// Description: Bounded, cancellable Git subprocess execution shared by bundle evidence and source control
 
 use std::ffi::OsString;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::{Command, ExitStatus, Stdio};
 use std::thread;
@@ -11,17 +11,33 @@ use std::time::{Duration, Instant};
 use crate::cancel::BundleCancelToken;
 use crate::error::{BundleError, Result};
 
+use super::command_child::{
+    accepted_exit_status, contains_not_repository, read_bounded, spawn_worker, Collected, Streams,
+    Wait,
+};
+use super::command_stop::{own_process_group, stop_child};
+
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 const STDERR_LIMIT: usize = 64 * 1024;
+/// How long a forced stop waits for the stream workers after the child and
+/// its process group were signalled. A grandchild that escaped the group can
+/// still hold a pipe; after this the workers are detached and the stop result
+/// carries no output.
+const FORCED_STOP_STREAM_WAIT: Duration = Duration::from_secs(2);
 
+/// Captured output of a completed Git command. `stderr` is bounded and kept so
+/// callers can surface Git's own explanation of a failure; `exit_code` is zero
+/// unless the caller accepted the non-zero code Git returned.
 #[derive(Debug)]
-pub(crate) struct GitCommandOutput {
-    pub(crate) stdout: Vec<u8>,
-    pub(crate) stdout_truncated: bool,
+pub struct GitCommandOutput {
+    pub stdout: Vec<u8>,
+    pub stdout_truncated: bool,
+    pub stderr: Vec<u8>,
+    pub exit_code: i32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum GitCommandFailure {
+pub enum GitCommandFailureKind {
     MissingExecutable,
     TimedOut,
     SpawnFailed,
@@ -31,7 +47,58 @@ pub(crate) enum GitCommandFailure {
     NonZeroExit,
 }
 
-pub(crate) fn run_git(
+/// Why a Git command did not produce usable output, plus whatever Git wrote on
+/// both streams before failing. Bounded like successful output.
+#[derive(Debug, Clone)]
+pub struct GitCommandFailure {
+    pub kind: GitCommandFailureKind,
+    pub exit_code: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+}
+
+impl GitCommandFailure {
+    fn bare(kind: GitCommandFailureKind) -> Self {
+        Self {
+            kind,
+            exit_code: None,
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        }
+    }
+
+    fn from_streams(kind: GitCommandFailureKind, output: Collected) -> Self {
+        Self {
+            kind,
+            exit_code: None,
+            stdout: output.stdout.map(|(bytes, _)| bytes).unwrap_or_default(),
+            stderr: output.stderr.map(|(bytes, _)| bytes).unwrap_or_default(),
+        }
+    }
+
+    /// Git's explanation, preferring stderr and falling back to stdout
+    /// (`git commit` reports "nothing to commit" on stdout).
+    pub fn message(&self) -> String {
+        let stderr = String::from_utf8_lossy(&self.stderr);
+        let trimmed = stderr.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+        String::from_utf8_lossy(&self.stdout).trim().to_string()
+    }
+}
+
+/// How a still-running Git child is stopped on timeout or cancellation.
+/// `Graceful` is required for commands that take Git's mandatory locks
+/// (`add`, `reset`, `commit`, `push`, `pull`): an immediate kill bypasses Git's
+/// lockfile cleanup and can leave `.git/index.lock` behind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KillPolicy {
+    Immediate,
+    Graceful,
+}
+
+pub fn run_git(
     executable: &Path,
     repo_root: &Path,
     args: &[OsString],
@@ -48,11 +115,22 @@ pub(crate) fn run_git(
         stdout_limit,
         timeout,
         cancel_token,
+        KillPolicy::Immediate,
     )
 }
 
+/// The child's fate after the wait loop.
+enum Exit {
+    /// Git exited by itself; its streams close as their last holder exits.
+    Completed(ExitStatus),
+    /// Git was stopped on timeout; the streams get a bounded wait.
+    TimedOut,
+    /// The child could not be waited on; nothing about it is trustworthy.
+    WaitFailed,
+}
+
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn run_git_with_input(
+pub fn run_git_with_input(
     executable: &Path,
     repo_root: &Path,
     args: &[OsString],
@@ -61,6 +139,7 @@ pub(crate) fn run_git_with_input(
     stdout_limit: usize,
     timeout: Duration,
     cancel_token: Option<&BundleCancelToken>,
+    kill_policy: KillPolicy,
 ) -> Result<std::result::Result<GitCommandOutput, GitCommandFailure>> {
     let mut command = Command::new(executable);
     command
@@ -79,145 +158,120 @@ pub(crate) fn run_git_with_input(
         })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    own_process_group(&mut command);
 
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            return Ok(Err(GitCommandFailure::MissingExecutable));
+            return Ok(Err(GitCommandFailure::bare(
+                GitCommandFailureKind::MissingExecutable,
+            )));
         }
-        Err(_) => return Ok(Err(GitCommandFailure::SpawnFailed)),
+        Err(_) => {
+            return Ok(Err(GitCommandFailure::bare(
+                GitCommandFailureKind::SpawnFailed,
+            )))
+        }
     };
-    let Some(stdout) = child.stdout.take() else {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Ok(Err(GitCommandFailure::OutputReadFailed));
+    let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
+        stop_child(&mut child, KillPolicy::Immediate);
+        return Ok(Err(GitCommandFailure::bare(
+            GitCommandFailureKind::OutputReadFailed,
+        )));
     };
-    let Some(stderr) = child.stderr.take() else {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Ok(Err(GitCommandFailure::OutputReadFailed));
-    };
-
-    let stdout_reader = thread::spawn(move || read_bounded(stdout, stdout_limit));
-    let stderr_reader = thread::spawn(move || read_bounded(stderr, STDERR_LIMIT));
-    let stdin_writer = match stdin {
+    let stdout = spawn_worker(move || read_bounded(stdout, stdout_limit));
+    let stderr = spawn_worker(move || read_bounded(stderr, STDERR_LIMIT));
+    let stdin = match stdin {
         Some(input) => {
             let Some(mut child_stdin) = child.stdin.take() else {
-                let _ = child.kill();
-                let _ = child.wait();
-                join_reader(stdout_reader);
-                join_reader(stderr_reader);
-                return Ok(Err(GitCommandFailure::InputWriteFailed));
+                stop_child(&mut child, KillPolicy::Immediate);
+                return Ok(Err(GitCommandFailure::bare(
+                    GitCommandFailureKind::InputWriteFailed,
+                )));
             };
-            Some(thread::spawn(move || child_stdin.write_all(&input)))
+            Some(spawn_worker(move || child_stdin.write_all(&input)))
         }
         None => None,
     };
+    let streams = Streams {
+        stdout,
+        stderr,
+        stdin,
+    };
     let started = Instant::now();
-    let mut wait_failed = false;
 
-    let status = loop {
+    let exit = loop {
         if cancel_token.is_some_and(BundleCancelToken::is_cancelled) {
-            let _ = child.kill();
-            let _ = child.wait();
-            join_input_writer(stdin_writer);
-            join_reader(stdout_reader);
-            join_reader(stderr_reader);
+            stop_child(&mut child, kill_policy);
+            streams.collect(forced_stop_wait());
             return Err(BundleError::Cancelled);
         }
         match child.try_wait() {
-            Ok(Some(status)) => break Some(status),
+            Ok(Some(status)) => break Exit::Completed(status),
             Ok(None) if started.elapsed() < timeout => thread::sleep(POLL_INTERVAL),
             Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break None;
+                stop_child(&mut child, kill_policy);
+                break Exit::TimedOut;
             }
             Err(_) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                wait_failed = true;
-                break Some(failure_status());
+                stop_child(&mut child, KillPolicy::Immediate);
+                break Exit::WaitFailed;
             }
         }
     };
 
-    let stdin_result = join_input_writer(stdin_writer);
-    let stdout = join_reader(stdout_reader);
-    let stderr = join_reader(stderr_reader);
-    if wait_failed {
-        return Ok(Err(GitCommandFailure::OutputReadFailed));
-    }
-    let ((stdout, stdout_truncated), (stderr, _stderr_truncated)) = match (stdout, stderr) {
-        (Some(Ok(stdout)), Some(Ok(stderr))) => (stdout, stderr),
-        _ => return Ok(Err(GitCommandFailure::OutputReadFailed)),
+    let status = match exit {
+        Exit::Completed(status) => status,
+        Exit::TimedOut => {
+            let output = streams.collect(forced_stop_wait());
+            return Ok(Err(GitCommandFailure::from_streams(
+                GitCommandFailureKind::TimedOut,
+                output,
+            )));
+        }
+        Exit::WaitFailed => {
+            streams.collect(forced_stop_wait());
+            return Ok(Err(GitCommandFailure::bare(
+                GitCommandFailureKind::OutputReadFailed,
+            )));
+        }
     };
-
-    let Some(status) = status else {
-        return Ok(Err(GitCommandFailure::TimedOut));
+    let Collected {
+        stdout: Some((stdout, stdout_truncated)),
+        stderr: Some((stderr, _)),
+        stdin_failed,
+    } = streams.collect(Wait::UntilDone)
+    else {
+        return Ok(Err(GitCommandFailure::bare(
+            GitCommandFailureKind::OutputReadFailed,
+        )));
     };
-    if stdin_result.is_some_and(|result| result.is_err()) {
-        return Ok(Err(GitCommandFailure::InputWriteFailed));
+    let failed = |kind| GitCommandFailure {
+        kind,
+        exit_code: status.code(),
+        stdout: stdout.clone(),
+        stderr: stderr.clone(),
+    };
+    if stdin_failed {
+        return Ok(Err(failed(GitCommandFailureKind::InputWriteFailed)));
     }
     if !status.success() {
         if contains_not_repository(&stderr) {
-            return Ok(Err(GitCommandFailure::NotGitRepository));
+            return Ok(Err(failed(GitCommandFailureKind::NotGitRepository)));
         }
         if !accepted_exit_status(status, accepted_nonzero_codes) {
-            return Ok(Err(GitCommandFailure::NonZeroExit));
+            return Ok(Err(failed(GitCommandFailureKind::NonZeroExit)));
         }
     }
 
     Ok(Ok(GitCommandOutput {
         stdout,
         stdout_truncated,
+        stderr,
+        exit_code: status.code().unwrap_or(0),
     }))
 }
 
-fn accepted_exit_status(status: ExitStatus, accepted_nonzero_codes: &[i32]) -> bool {
-    status
-        .code()
-        .is_some_and(|code| accepted_nonzero_codes.contains(&code))
-}
-
-fn contains_not_repository(stderr: &[u8]) -> bool {
-    let lowered = String::from_utf8_lossy(stderr).to_ascii_lowercase();
-    lowered.contains("not a git repository") || lowered.contains("not a git work tree")
-}
-
-fn read_bounded<R: Read>(mut reader: R, limit: usize) -> io::Result<(Vec<u8>, bool)> {
-    let mut captured = Vec::with_capacity(limit.min(64 * 1024));
-    let mut truncated = false;
-    let mut buffer = [0u8; 16 * 1024];
-    loop {
-        let read = reader.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        let remaining = limit.saturating_sub(captured.len());
-        let keep = remaining.min(read);
-        captured.extend_from_slice(&buffer[..keep]);
-        truncated |= keep < read;
-    }
-    Ok((captured, truncated))
-}
-
-fn join_reader<T>(handle: thread::JoinHandle<T>) -> Option<T> {
-    handle.join().ok()
-}
-
-fn join_input_writer(handle: Option<thread::JoinHandle<io::Result<()>>>) -> Option<io::Result<()>> {
-    handle.and_then(|handle| handle.join().ok())
-}
-
-#[cfg(unix)]
-fn failure_status() -> std::process::ExitStatus {
-    use std::os::unix::process::ExitStatusExt;
-    std::process::ExitStatus::from_raw(1 << 8)
-}
-
-#[cfg(windows)]
-fn failure_status() -> std::process::ExitStatus {
-    use std::os::windows::process::ExitStatusExt;
-    std::process::ExitStatus::from_raw(1)
+fn forced_stop_wait() -> Wait {
+    Wait::Until(Instant::now() + FORCED_STOP_STREAM_WAIT)
 }

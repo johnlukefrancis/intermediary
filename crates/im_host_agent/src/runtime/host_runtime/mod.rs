@@ -2,6 +2,7 @@
 // Description: Host runtime command routing and clientHello orchestration for host and WSL backends
 
 mod bundle_forwarding;
+mod host_dispatch;
 mod wsl_routing;
 mod wsl_transport_epoch_state;
 
@@ -15,9 +16,9 @@ use im_agent::protocol::{
 use im_agent::server::EventBus;
 
 use crate::runtime::host_runtime_helpers::{
-    build_repo_backend_map, build_wsl_client_hello, parse_app_config, repo_id_from_command,
-    should_forward_wsl_hello,
+    build_repo_backend_map, build_wsl_client_hello, parse_app_config, should_forward_wsl_hello,
 };
+use crate::runtime::local_host_source_control_backend::HostSourceControlContext;
 use crate::runtime::local_host_backend::LocalHostBackend;
 use crate::runtime::router::resolve_repo_backend;
 use crate::runtime::tr_fleet_service::TrFleetService;
@@ -88,9 +89,23 @@ impl HostRuntime {
             | UiCommand::CancelBundleBuild(_)
             | UiCommand::GetRepoTopLevel(_)
             | UiCommand::ListRepoDirectory(_)
-            | UiCommand::ListBundles(_) => self.dispatch_repo_command(command, event_bus).await,
+            | UiCommand::ListBundles(_)
+            | UiCommand::SourceControlStatus(_)
+            | UiCommand::SourceControlDiff(_)
+            | UiCommand::SourceControlAction(_) => {
+                self.dispatch_repo_command(command, event_bus).await
+            }
             UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
+    }
+
+    /// Cloned host context for a source-control command so Git can run after
+    /// the runtime lock is released (see server dispatch).
+    pub fn host_source_control_context(
+        &self,
+        repo_id: &str,
+    ) -> Result<HostSourceControlContext, AgentError> {
+        self.local_backend.source_control_context(repo_id)
     }
 
     async fn handle_client_hello(
@@ -191,7 +206,7 @@ impl HostRuntime {
         command: UiCommand,
         event_bus: &EventBus,
     ) -> Result<UiResponse, AgentError> {
-        let repo_id = repo_id_from_command(&command).map(str::to_string);
+        let repo_id = command.repo_id().map(str::to_string);
         let backend = resolve_repo_backend(&command, &self.repo_backends)?
             .ok_or_else(|| AgentError::new("UNKNOWN_COMMAND", "Unsupported command"))?;
 
@@ -203,64 +218,6 @@ impl HostRuntime {
                 self.forward_wsl_command(command, event_bus).await
             }
             RepoBackend::Wsl => Err(Self::unsupported_wsl_root_error(repo_id)),
-        }
-    }
-
-    async fn dispatch_host_command(
-        &mut self,
-        command: UiCommand,
-        event_bus: &EventBus,
-    ) -> Result<UiResponse, AgentError> {
-        match command {
-            UiCommand::WatchRepo(command) => {
-                let result = self
-                    .local_backend
-                    .watch_repo(command, event_bus, &self.logger)
-                    .await?;
-                Ok(UiResponse::WatchRepoResult(result))
-            }
-            UiCommand::Refresh(command) => {
-                let result = self.local_backend.refresh_repo(command).await?;
-                Ok(UiResponse::RefreshResult(result))
-            }
-            UiCommand::StageFile(command) => {
-                let result = self.local_backend.stage_file(command).await?;
-                Ok(UiResponse::StageFileResult(result))
-            }
-            UiCommand::ReadTextFile(command) => {
-                let result = self.local_backend.read_text_file(command).await?;
-                Ok(UiResponse::ReadTextFileResult(result))
-            }
-            UiCommand::ReadImageFile(command) => {
-                let result = self.local_backend.read_image_file(command).await?;
-                Ok(UiResponse::ReadImageFileResult(result))
-            }
-            UiCommand::BuildBundle(command) => {
-                self.local_backend
-                    .build_bundle(command, event_bus, &self.logger)
-                    .await
-            }
-            UiCommand::CancelBundleBuild(command) => {
-                let result = self.local_backend.cancel_bundle_build(command);
-                Ok(UiResponse::CancelBundleBuildResult(result))
-            }
-            UiCommand::GetRepoTopLevel(command) => {
-                let result = self.local_backend.get_repo_top_level(command).await?;
-                Ok(UiResponse::GetRepoTopLevelResult(result))
-            }
-            UiCommand::ListRepoDirectory(command) => {
-                let result = self.local_backend.list_repo_directory(command).await?;
-                Ok(UiResponse::ListRepoDirectoryResult(result))
-            }
-            UiCommand::ListBundles(command) => {
-                let result = self.local_backend.list_bundles(command).await?;
-                Ok(UiResponse::ListBundlesResult(result))
-            }
-            UiCommand::ClientHello(_)
-            | UiCommand::SetOptions(_)
-            | UiCommand::GetTrFleetStatus(_)
-            | UiCommand::TrFleetAction(_)
-            | UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
     }
 

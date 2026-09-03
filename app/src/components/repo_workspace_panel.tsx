@@ -1,10 +1,11 @@
 // Path: app/src/components/repo_workspace_panel.tsx
-// Description: Repo workspace renderer for notes, text scratch buffers, and image previews
+// Description: Repo workspace renderer for notes, text scratch buffers, image previews, and diffs
 
 import type React from "react";
 import { useCallback, useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "./context_menu.js";
 import { buildSingleFileContextMenuItems } from "./file_context_menu_items.js";
+import { DiffWorkspaceViewer } from "./diff_workspace.js";
 import { ImageWorkspaceViewer } from "./image_workspace.js";
 import { TextWorkspaceEditor } from "./text_workspace.js";
 import { WorkspaceLayout } from "./layout/workspace_layout.js";
@@ -22,7 +23,7 @@ type ActiveRepoWorkspace = Exclude<RepoWorkspace, { kind: "none" }>;
 interface RepoWorkspacePanelProps {
   workspace: ActiveRepoWorkspace;
   noteState: NoteState;
-  zipsContent: React.ReactNode;
+  railContent: React.ReactNode;
   isHandset: boolean;
   onClose: () => void;
   onTextChange: (content: string) => void;
@@ -39,11 +40,22 @@ interface ContextMenuState {
 const MARKDOWN_LIKE_EXTENSIONS = new Set(["adoc", "asciidoc", "md", "mdx", "rst", "txt", "wiki"]);
 
 function workspaceTitle(workspace: ActiveRepoWorkspace): string {
-  return workspace.kind === "note" ? "Note" : getFileName(workspace.path);
+  if (workspace.kind === "note") return "Note";
+  if (workspace.kind === "diff") return workspace.path;
+  return getFileName(workspace.path);
 }
 
 function workspaceSubtitle(workspace: ActiveRepoWorkspace): string {
-  return workspace.kind === "note" ? "Repository notes" : workspace.path;
+  if (workspace.kind === "note") return "Repository notes";
+  if (workspace.kind === "diff") return workspace.area === "index" ? "STAGED DIFF" : "WORKTREE DIFF";
+  return workspace.path;
+}
+
+/** Path whose title offers drag-out and file actions: text buffers, and diffs of files still on disk */
+function titleFilePath(workspace: ActiveRepoWorkspace): string | null {
+  if (workspace.kind === "textFile") return workspace.path;
+  if (workspace.kind === "diff" && workspace.fileExists) return workspace.path;
+  return null;
 }
 
 function getExtension(path: string): string | null {
@@ -63,7 +75,7 @@ function semanticMode(workspace: ActiveRepoWorkspace): TextWorkspaceSemanticMode
 export function RepoWorkspacePanel({
   workspace,
   noteState,
-  zipsContent,
+  railContent,
   isHandset,
   onClose,
   onTextChange,
@@ -74,6 +86,7 @@ export function RepoWorkspacePanel({
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const repoRoot = config.repos.find((repo) => repo.repoId === workspace.repoId)?.root;
+  const filePath = titleFilePath(workspace);
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -81,10 +94,10 @@ export function RepoWorkspacePanel({
 
   const handleTitleContextMenu = useCallback(
     (event: React.MouseEvent) => {
-      if (workspace.kind !== "textFile" || !repoRoot) return;
-      setContextMenu({ x: event.clientX, y: event.clientY, path: workspace.path });
+      if (filePath === null || !repoRoot) return;
+      setContextMenu({ x: event.clientX, y: event.clientY, path: filePath });
     },
-    [repoRoot, workspace]
+    [filePath, repoRoot]
   );
 
   const contextMenuItems: ContextMenuItem[] = contextMenu && repoRoot
@@ -117,6 +130,15 @@ export function RepoWorkspacePanel({
         placeholder="Empty file"
         ariaLabel={`Scratch text buffer for ${workspace.path}`}
       />
+    ) : workspace.kind === "diff" ? (
+      <DiffWorkspaceViewer
+        path={workspace.path}
+        isLoading={workspace.status === "loading"}
+        error={workspace.status === "error" ? workspace.error : null}
+        patch={workspace.status === "ready" ? workspace.patch : undefined}
+        truncated={workspace.status === "ready" ? workspace.truncated : undefined}
+        binary={workspace.status === "ready" ? workspace.binary : undefined}
+      />
     ) : (
       <ImageWorkspaceViewer
         path={workspace.path}
@@ -136,18 +158,16 @@ export function RepoWorkspacePanel({
         title={workspaceTitle(workspace)}
         subtitle={workspaceSubtitle(workspace)}
         onClose={onClose}
-        onTitleContextMenu={
-          workspace.kind === "textFile" && repoRoot ? handleTitleContextMenu : undefined
-        }
+        onTitleContextMenu={filePath !== null && repoRoot ? handleTitleContextMenu : undefined}
         onTitleDragStart={
-          workspace.kind === "textFile"
+          filePath !== null
             ? () => {
-              void onTextFileDragStart(workspace.path);
+              void onTextFileDragStart(filePath);
             }
             : undefined
         }
         content={content}
-        zipsContent={zipsContent}
+        railContent={railContent}
         isHandset={isHandset}
       />
       {contextMenu && repoRoot && (

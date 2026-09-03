@@ -16,6 +16,7 @@ mod repo_top_level;
 mod repo_topology_change;
 mod repo_watcher;
 mod repo_watcher_events;
+mod source_control_watch;
 mod text_file_reader;
 mod watcher_error;
 

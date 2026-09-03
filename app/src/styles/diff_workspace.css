@@ -1,0 +1,101 @@
+/*
+ * Path: app/src/styles/diff_workspace.css
+ * Description: Read-only diff viewer styling mirroring the workspace editor shell
+ */
+
+.diff-workspace {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background:
+    linear-gradient(90deg, var(--color-editor-bg-rail), transparent 2px),
+    var(--color-editor-bg);
+}
+
+.diff-workspace > .empty-state {
+  margin: auto;
+}
+
+/* Grows to the longest line so every row's tint runs edge to edge under horizontal scroll */
+.diff-workspace__lines {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: var(--space-3) 0 calc(var(--space-8) + var(--space-4));
+  color: var(--color-editor-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  tab-size: 4;
+}
+
+/* One block row per diff line: old number, new number, preserved text */
+.diff-line {
+  display: grid;
+  grid-template-columns: 5ch 5ch minmax(0, 1fr);
+  column-gap: var(--space-3);
+  min-height: 1.65em;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  white-space: pre;
+}
+
+.diff-line__no {
+  color: var(--color-editor-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.diff-line__text {
+  white-space: pre;
+}
+
+.diff-line[data-kind="hunk"] .diff-line__text,
+.diff-line[data-kind="meta"] .diff-line__text {
+  grid-column: 1 / -1;
+}
+
+.diff-line[data-kind="hunk"] .diff-line__no,
+.diff-line[data-kind="meta"] .diff-line__no {
+  display: none;
+}
+
+.diff-line[data-kind="hunk"] {
+  color: var(--color-editor-muted);
+  background: var(--color-editor-code-bg);
+}
+
+.diff-line[data-kind="meta"] {
+  color: var(--color-editor-muted);
+}
+
+.diff-line[data-kind="add"] {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.diff-line[data-kind="del"] {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.diff-workspace__footer {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-warning-muted);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-transform: uppercase;
+}

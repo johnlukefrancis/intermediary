@@ -5,10 +5,14 @@ mod host_runtime;
 mod host_runtime_helpers;
 mod local_host_backend;
 mod local_host_repo_backend;
+mod local_host_source_control_backend;
 mod repo_backend;
 mod router;
 mod tr_fleet_service;
 mod wsl_client_hello_cache;
 
 pub use host_runtime::HostRuntime;
+pub use local_host_source_control_backend::{
+    execute_host_source_control, HostSourceControlContext,
+};
 pub use repo_backend::RepoBackend;

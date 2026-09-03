@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use im_agent::error::AgentError;
-use im_agent::protocol::{ClientHelloCommand, UiCommand};
+use im_agent::protocol::ClientHelloCommand;
 use im_agent::runtime::{AppConfig, RepoRootKind};
 
 use super::repo_backend::RepoBackend;
@@ -44,26 +44,6 @@ pub(super) fn client_hello_fingerprint(command: &ClientHelloCommand) -> Result<S
 pub(super) fn parse_app_config(config: &serde_json::Value) -> Result<AppConfig, AgentError> {
     serde_json::from_value(config.clone())
         .map_err(|err| AgentError::new("INVALID_CONFIG", err.to_string()))
-}
-
-pub(super) fn repo_id_from_command(command: &UiCommand) -> Option<&str> {
-    match command {
-        UiCommand::WatchRepo(command) => Some(&command.repo_id),
-        UiCommand::Refresh(command) => Some(&command.repo_id),
-        UiCommand::StageFile(command) => Some(&command.repo_id),
-        UiCommand::ReadTextFile(command) => Some(&command.repo_id),
-        UiCommand::ReadImageFile(command) => Some(&command.repo_id),
-        UiCommand::BuildBundle(command) => Some(&command.repo_id),
-        UiCommand::CancelBundleBuild(command) => Some(&command.repo_id),
-        UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),
-        UiCommand::ListRepoDirectory(command) => Some(&command.repo_id),
-        UiCommand::ListBundles(command) => Some(&command.repo_id),
-        UiCommand::ClientHello(_)
-        | UiCommand::SetOptions(_)
-        | UiCommand::GetTrFleetStatus(_)
-        | UiCommand::TrFleetAction(_)
-        | UiCommand::Unknown => None,
-    }
 }
 
 pub(super) fn should_forward_wsl_hello(had_wsl_before: bool, has_wsl_now: bool) -> bool {

@@ -1,0 +1,36 @@
+/*
+ * Path: app/src/styles/repo_rail.css
+ * Description: Right-rail panel with a slim section-switch header above the zips or source body
+ */
+
+.repo-rail {
+  min-width: 0;
+}
+
+/* Slim header (~36px): shorter than .panel-header so the bundle explorer keeps its rows */
+.repo-rail__header {
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  background: var(--glass-vintage-header);
+  border-bottom: 1px solid var(--color-border-subtle);
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2);
+}
+
+.repo-rail__content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Bodies stretch to the panel so their own scroll regions work */
+.repo-rail__content > .bundle-column,
+.repo-rail__content > .source-control {
+  flex: 1;
+  min-height: 0;
+}

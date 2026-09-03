@@ -1,0 +1,239 @@
+/*
+ * Path: app/src/styles/source_control.css
+ * Description: Source Control column: status line, warnings, commit box, and notices
+ */
+
+.source-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* A lone empty state (waiting, error, reconciling) sits centred in the rail */
+.source-control:has(> .empty-state:only-child),
+.source-control:has(> .source-control-empty:only-child) {
+  justify-content: center;
+}
+
+/* ===== STATUS LINE ===== */
+.source-control-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.source-control-status__branch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+
+/* A plain block container so text-overflow can ellipsize the branch name at 300px */
+.source-control-status__name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+}
+
+.source-control-status__name[data-detached] {
+  color: var(--color-warning);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-control-status__glyph {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.source-control-status__ab {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.source-control-status__sha {
+  flex: none;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* New HEAD after a commit: flash, then settle in accent */
+.source-control-status__sha[data-fresh] {
+  color: var(--color-accent);
+  animation: source-control-sha-flash calc(var(--duration-slower) * 3) var(--ease-out) 1;
+}
+
+@keyframes source-control-sha-flash {
+  0% {
+    color: var(--color-text-primary);
+    text-shadow: 0 0 10px var(--color-accent-glow);
+  }
+  100% {
+    color: var(--color-accent);
+    text-shadow: none;
+  }
+}
+
+.source-control-status__actions {
+  display: flex;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.source-control-status__button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.source-control-status__button[data-busy] svg {
+  animation: source-control-spin calc(var(--duration-slower) * 2) linear infinite;
+}
+
+@keyframes source-control-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== WARNING ROWS ===== */
+.source-control-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-control-warning {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-warning-muted);
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-control-warning[data-severity="error"] {
+  border-color: var(--color-error-muted);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+}
+
+/* ===== COMMIT BOX ===== */
+.source-control-commit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.source-control-commit__message {
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-deck-sm);
+  background: var(--color-editor-bg);
+  color: var(--color-editor-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  resize: vertical;
+  caret-color: var(--color-accent);
+  box-shadow: var(--shadow-inset-subtle);
+  transition:
+    border-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.source-control-commit__message::placeholder {
+  color: var(--color-text-muted);
+}
+
+.source-control-commit__message:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.source-control-commit__message:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.source-control-commit__message:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Compact variant of the bundle build button language */
+.build-button.source-control-commit__button {
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+}
+
+.source-control-commit__hint {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ===== NOTICES / EMPTY ===== */
+.source-control-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.source-control-notice__heading {
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.source-control-notice__message {
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+}
+
+.source-control-notice .dir-action-btn {
+  align-self: flex-end;
+}
+
+.source-control-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.source-control-banner {
+  padding: var(--space-2);
+}

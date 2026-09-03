@@ -2,7 +2,6 @@
 // Description: Git capture discovery, initial status, and safety-bound setup
 
 use std::collections::HashSet;
-use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -15,7 +14,8 @@ use crate::selection::BundleSelector;
 
 use super::command::run_git;
 use super::diff::{common_git_args, FULL_DELETIONS_BUDGET, PATCH_LIMIT};
-use super::discovery::{initial_issue, trim_line_ending};
+use super::discovery::initial_issue;
+use super::prefix::capture_repo_prefix;
 use super::status::{parse_status, ParsedStatus};
 use super::{
     empty_manifest, GitCaptureConfig, GitCaptureIssue, GitCaptureSession, GitCaptureState,
@@ -23,7 +23,6 @@ use super::{
 };
 
 const STATUS_LIMIT: usize = 8 * 1024 * 1024;
-const PREFIX_LIMIT: usize = 1024 * 1024;
 const PATH_COUNT_LIMIT: usize = 16384;
 const PATH_BYTES_LIMIT: usize = 1024 * 1024;
 
@@ -175,28 +174,24 @@ impl GitCaptureSession {
         &self,
         cancel_token: Option<&BundleCancelToken>,
     ) -> Result<std::result::Result<Vec<u8>, GitCaptureIssue>> {
-        let mut args = common_git_args();
-        args.extend([OsString::from("rev-parse"), OsString::from("--show-prefix")]);
-        let output = run_git(
+        let captured = capture_repo_prefix(
             &self.config.executable,
             &self.config.repo_root,
-            &args,
-            PREFIX_LIMIT,
             self.config.command_timeout,
             cancel_token,
         )?;
-        let output = match output {
-            Ok(output) => output,
+        let captured = match captured {
+            Ok(captured) => captured,
             Err(failure) => return Ok(Err(initial_issue(failure))),
         };
-        if output.stdout_truncated {
+        if captured.truncated {
             return Ok(Err(GitCaptureIssue::new(
                 "outputTruncated",
                 Some(GIT_STATUS_NAME),
                 "The Git repository-prefix result exceeded its safety bound.",
             )));
         }
-        Ok(Ok(trim_line_ending(output.stdout)))
+        Ok(Ok(captured.prefix))
     }
 
     fn apply_status_facts(&mut self, status: &ParsedStatus) {

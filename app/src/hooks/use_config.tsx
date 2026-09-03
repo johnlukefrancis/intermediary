@@ -3,6 +3,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import {
+  type ActiveRail,
   type PersistedConfig,
   type BundleSelection,
   type RepoConfig,
@@ -41,6 +42,7 @@ import {
   useSetRecentFilesLimit,
   useToggleStarredFile,
 } from "./use_config_actions_extended.js";
+import { useSetActiveRail } from "./use_config_actions_rail.js";
 
 interface ConfigContextValue {
   /** Current config (always available, defaults if load failed) */
@@ -61,6 +63,8 @@ interface ConfigContextValue {
   setLastActiveTabId: (repoId: string | null) => void;
   /** Update last active repo per group */
   setLastActiveGroupRepoId: (groupId: string, repoId: string | null) => void;
+  /** Update the right-rail deck section (zips | source) */
+  setActiveRail: (rail: ActiveRail) => void;
   /** Update bundle selection for a repo/preset */
   setBundleSelection: (
     repoId: string,
@@ -149,6 +153,7 @@ export function ConfigProvider({
     setConfig,
     saveConfig
   );
+  const setActiveRail = useSetActiveRail(setConfig, saveConfig);
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
   const setClassificationExcludes = useSetClassificationExcludes(
@@ -194,6 +199,7 @@ export function ConfigProvider({
     setAutoStageGlobal,
     setLastActiveTabId,
     setLastActiveGroupRepoId,
+    setActiveRail,
     setBundleSelection,
     setGlobalExcludes,
     setClassificationExcludes,

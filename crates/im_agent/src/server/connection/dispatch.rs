@@ -8,7 +8,10 @@ use crate::error::AgentError;
 use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
 use crate::staging::{stage_file, StagingRootKind};
 
-use super::{repo_commands, request_cancellation::RequestCancellation, ConnectionContext};
+use super::{
+    repo_commands, request_cancellation::RequestCancellation, source_control_commands,
+    ConnectionContext,
+};
 
 pub async fn dispatch_command(
     command: UiCommand,
@@ -205,6 +208,15 @@ pub async fn dispatch_command(
                     bundles: results,
                 },
             ))
+        }
+        UiCommand::SourceControlStatus(command) => {
+            source_control_commands::source_control_status_command(command, ctx, cancellation).await
+        }
+        UiCommand::SourceControlDiff(command) => {
+            source_control_commands::source_control_diff_command(command, ctx, cancellation).await
+        }
+        UiCommand::SourceControlAction(command) => {
+            source_control_commands::source_control_action_command(command, ctx).await
         }
         UiCommand::GetTrFleetStatus(_) | UiCommand::TrFleetAction(_) => Err(AgentError::new(
             "UNSUPPORTED_COMMAND",

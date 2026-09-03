@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-05-23
+Updated on: 2026-09-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -48,6 +48,7 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 - VS Code tasks for Windows development workflow
 - UI-based repo management (add via "+" button, remove via "×" with confirmation)
 - Broad language-aware file classification with generated extension baseline + classifier excludes
+- Source Control rail: Git status with staged/unstaged/conflict sections, stage/unstage, commit, discard, per-file diff, push/pull, event-driven refresh (replaces the last VS Code dependency)
 
 ---
 

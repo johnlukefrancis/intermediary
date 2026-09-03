@@ -8,7 +8,8 @@ use crate::error_codes::WSL_BACKEND_TIMEOUT;
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
-    AgentEvent, UiCommand, UiResponse, WslBackendConnectionStatus, WslBackendStatusEvent,
+    AgentEvent, SourceControlActionKind, UiCommand, UiResponse, WslBackendConnectionStatus,
+    WslBackendStatusEvent,
 };
 use im_agent::server::EventBus;
 use tokio::sync::{mpsc, oneshot};
@@ -21,6 +22,15 @@ const RECONNECT_DELAY_MS: u64 = 750;
 const FORWARD_REQUEST_TIMEOUT_DEFAULT: Duration = Duration::from_secs(60);
 const FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO: Duration = Duration::from_secs(12);
 const FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE: Duration = Duration::from_secs(5 * 60);
+// Source-control ladder: each host->WSL budget bounds a whole request, which
+// may run several agent-side Git commands (a commit is status + commit +
+// rev-parse + status, each with its own 20-120 s bound), so every tier sits
+// above that agent-side worst case and strictly below the UI budget above it
+// (120 / 150 / 300 / 360 s).
+const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ: Duration = Duration::from_secs(90);
+const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_INDEX: Duration = Duration::from_secs(120);
+const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_COMMIT: Duration = Duration::from_secs(240);
+const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_REMOTE: Duration = Duration::from_secs(300);
 
 #[derive(Clone)]
 pub struct WslBackendClient {
@@ -122,6 +132,18 @@ fn timeout_for_command(command: &UiCommand) -> Duration {
     match command {
         UiCommand::ClientHello(_) => FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO,
         UiCommand::BuildBundle(_) => FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE,
+        UiCommand::SourceControlStatus(_) | UiCommand::SourceControlDiff(_) => {
+            FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ
+        }
+        UiCommand::SourceControlAction(command) => match command.action.kind() {
+            SourceControlActionKind::Stage
+            | SourceControlActionKind::Unstage
+            | SourceControlActionKind::Discard => FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_INDEX,
+            SourceControlActionKind::Commit => FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_COMMIT,
+            SourceControlActionKind::Push | SourceControlActionKind::Pull => {
+                FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_REMOTE
+            }
+        },
         UiCommand::SetOptions(_)
         | UiCommand::WatchRepo(_)
         | UiCommand::Refresh(_)

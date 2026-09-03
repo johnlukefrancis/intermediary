@@ -14,6 +14,7 @@ use im_agent::protocol::{
 };
 use im_agent::runtime::{AgentRuntime, RepoConfig, RepoRootKind};
 use im_agent::server::EventBus;
+use im_agent::source_control::SourceControlLocks;
 use im_agent::staging::{stage_file_for_kind, StageFileCancelToken, StagingRootKind};
 
 use crate::error_codes::REPO_ROOT_MISMATCH;
@@ -214,6 +215,10 @@ impl LocalHostBackend {
             .repo_configs
             .get(repo_id)
             .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))
+    }
+
+    pub(crate) fn source_control_locks(&self) -> SourceControlLocks {
+        self.runtime.source_control_locks.clone()
     }
 
     pub(crate) fn host_repo_root(&self, repo_id: &str) -> Result<&str, AgentError> {

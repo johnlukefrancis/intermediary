@@ -12,8 +12,7 @@ pub fn resolve_repo_backend(
     command: &UiCommand,
     repo_backends: &HashMap<String, RepoBackend>,
 ) -> Result<Option<RepoBackend>, AgentError> {
-    let repo_id = repo_id_for_command(command);
-    let Some(repo_id) = repo_id else {
+    let Some(repo_id) = command.repo_id() else {
         return Ok(None);
     };
 
@@ -23,26 +22,6 @@ pub fn resolve_repo_backend(
         .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))?;
 
     Ok(Some(backend))
-}
-
-fn repo_id_for_command(command: &UiCommand) -> Option<&str> {
-    match command {
-        UiCommand::WatchRepo(command) => Some(&command.repo_id),
-        UiCommand::Refresh(command) => Some(&command.repo_id),
-        UiCommand::StageFile(command) => Some(&command.repo_id),
-        UiCommand::ReadTextFile(command) => Some(&command.repo_id),
-        UiCommand::ReadImageFile(command) => Some(&command.repo_id),
-        UiCommand::BuildBundle(command) => Some(&command.repo_id),
-        UiCommand::CancelBundleBuild(command) => Some(&command.repo_id),
-        UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),
-        UiCommand::ListRepoDirectory(command) => Some(&command.repo_id),
-        UiCommand::ListBundles(command) => Some(&command.repo_id),
-        UiCommand::ClientHello(_)
-        | UiCommand::SetOptions(_)
-        | UiCommand::GetTrFleetStatus(_)
-        | UiCommand::TrFleetAction(_)
-        | UiCommand::Unknown => None,
-    }
 }
 
 #[cfg(test)]

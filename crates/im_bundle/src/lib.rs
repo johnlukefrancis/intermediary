@@ -4,6 +4,7 @@
 pub mod cancel;
 pub mod compression_policy;
 pub mod error;
+pub mod git;
 pub mod git_capture;
 pub mod global_excludes;
 pub mod global_excludes_summary;

@@ -1,22 +1,26 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with Auto files and zip bundles
+// Description: Generic repo tab component with Auto files, the right rail (zips | source), and the workspace
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
+import { RepoRail } from "../components/layout/repo_rail.js";
 import { AutoFilesPanel } from "../components/auto_files_panel.js";
 import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
+import { SourceControlColumn } from "../components/source_control/source_control_column.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
+import { useDeckSection } from "../hooks/use_deck_section.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
+import { useSourceControlState } from "../hooks/source_control/use_source_control_state.js";
 import {
   buildAutoFileFeed,
   type FileSortMode,
@@ -56,6 +60,9 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   });
   const noteState = useNotes(repoId);
   const repoWorkspace = useRepoWorkspace(repoId);
+  // Status is fetched for the active repo regardless of the active rail so the SOURCE count stays live.
+  const sourceControl = useSourceControlState(repoId);
+  const deckSection = useDeckSection();
   const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
   const [sortMode, setSortMode] = useState<FileSortMode>("auto");
   const activePreset = bundleState.presets.get(bundleState.activePresetId);
@@ -175,13 +182,29 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
     />
   );
+  const sourceContent = (
+    <SourceControlColumn
+      repoId={repoId}
+      state={sourceControl}
+      onOpenDiff={repoWorkspace.openDiff}
+    />
+  );
+  const railContent = (
+    <RepoRail
+      activeRail={deckSection.activeRail}
+      sourceCount={sourceControl.changeCount}
+      onChangeRail={deckSection.setActiveRail}
+      zipsContent={zipsContent}
+      sourceContent={sourceContent}
+    />
+  );
 
   const workspace = repoWorkspace.workspace;
   const workspaceLayout = workspace.kind === "none" ? null : (
     <RepoWorkspacePanel
       workspace={workspace}
       noteState={noteState}
-      zipsContent={zipsContent}
+      railContent={railContent}
       isHandset={isHandset}
       onClose={repoWorkspace.closeWorkspace}
       onTextChange={repoWorkspace.updateTextScratch}
@@ -201,13 +224,17 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       )}
       {workspaceLayout ?? (isHandset ? (
         <HandsetDeck
+          active={deckSection.handsetSection}
+          sourceCount={sourceControl.changeCount}
+          onChange={deckSection.setHandsetSection}
           filePanel={renderFilePanel}
           zipsContent={zipsContent}
+          sourceContent={sourceContent}
         />
       ) : (
         <ThreeColumn
           fileContent={renderFilePanel()}
-          zipsContent={zipsContent}
+          railContent={railContent}
         />
       ))}
     </div>
