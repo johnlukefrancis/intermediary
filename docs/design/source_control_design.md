@@ -15,7 +15,9 @@ working tree can be managed without leaving the app.
 
 ## Goals
 
-- Show the active repo's changed files with counts, split into STAGED CHANGES, CHANGES, and MERGE CHANGES.
+- Show the active repo's changed files with counts, split into MERGE CONFLICTS, STAGED CHANGES, and CHANGES.
+- Make a conflicted worktree impossible to miss: conflicts outrank ordinary changes in the rail cell, the
+  column, and the diff view.
 - Stage and unstage per file and per section; commit with a message; discard a file's changes behind a
   confirm; open a per-file diff in the shared workspace; push and pull with ahead/behind counts.
 - Work for WSL-rooted and host-rooted repos through the agent that already owns each root, with no new
@@ -53,6 +55,8 @@ never used for Git state.
 | Situation / input | Expected visible behavior |
 | --- | --- |
 | Repo tab opens (any mode) | Status is fetched for the active repo; the SOURCE tab shows the total change count in accent (hidden at zero). |
+| Worktree has unmerged paths (`status.conflicts` non-empty) | The SOURCE cell becomes an alert: error tone, a pulsing error halo, `!` plus the conflict count instead of the ordinary count, tooltip and accessible name "SOURCE · N merge conflicts". The column shows a first-row conflict banner ("N MERGE CONFLICTS — RESOLVE AND STAGE BEFORE COMMITTING"), the MERGE CONFLICTS section renders first in the error tone, and COMMIT is disabled with the hint "Resolve N merge conflicts to commit" even though `committable` is true (Git refuses commits with unmerged paths; the agent answers `GIT_UNMERGED_PATHS`). N counts listed conflicts plus `omitted.unmergedOutsideRoot` (conflicts above a subdirectory root, named in the banner as "N ABOVE THIS FOLDER" and not listed). Accessible name of the cell is "SOURCE N merge conflicts"; the tooltip adds the separator. Staging a conflict row marks it resolved, as before. |
+| Double-click a MERGE CONFLICTS row | The diff opens with subtitle `MERGE CONFLICT` in the error tone, a pinned notice counting unresolved `<<<<<<<` blocks ("markers resolved · stage the file" when none remain, "diff truncated · at least N" on a cut patch, "binary file · keep one version" for binaries), and every conflict marker line (`<<<<<<<`, `|||||||`, `=======`, `>>>>>>>`) highlighted in the warning tone inside Git's combined diff. |
 | SOURCE rail selected in the standard deck or workspace mode | The right column shows the Source Control column; ZIPS is one click away; the choice persists across restarts and across the 980/860 resize band. |
 | Handset deck | The icon rocker shows FILES / ZIPS / SOURCE cells (stacked-documents / archive-box / git-branch glyphs); picking ZIPS/SOURCE also sets the persisted rail. With a file or diff open, handset shows the workspace only (close returns to the deck section). |
 | ZIPS rail with a changed working tree | File rows whose path is in the status carry a tinted name and a `[letter]` badge (the same `CHANGE_BADGES` palette as SOURCE rows); directory rows carry a tinted name and a count of distinct changed paths beneath them, colored by the worst change beneath; deleted files count toward their directory without a row of their own; expanded directories re-list in place on `sourceControlChanged` so a newly created file appears with its badge. |
@@ -98,3 +102,6 @@ summed worst case of one request): status/diff 20/90/120 s; stage/unstage/discar
 6. ZIPS tree decorations (file badges, directory counts/colors) match `git status` for a WSL repo and a
    host repo; a file created inside an already-expanded directory appears with its badge without a manual
    refresh.
+7. With unmerged paths, the SOURCE cell reads as an alert without opening the column, MERGE CONFLICTS is
+   the first section, COMMIT is disabled with the resolve hint, and a conflict diff shows the MERGE
+   CONFLICT subtitle, notice, and highlighted markers; all of it clears once every conflict is staged.

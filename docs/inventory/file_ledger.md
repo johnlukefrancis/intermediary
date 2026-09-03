@@ -25,7 +25,7 @@ app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that 
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
-app/src/components/diff_workspace.tsx - Read-only unified diff viewer inside the shared workspace shell
+app/src/components/diff_workspace.tsx - Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
@@ -60,9 +60,9 @@ app/src/components/source_control/source_control_context_menu.ts - Right-click m
 app/src/components/source_control/source_control_copy.ts - Badge letters, branch labels, and empty-state/error copy for the Source Control column
 app/src/components/source_control/source_control_icons.tsx - Inline 24x24 stroke glyphs for source-control controls (stroke supplied by CSS)
 app/src/components/source_control/source_control_row.tsx - One changed-path row: icon, name over dir, change badge, and a hover stage/unstage action
-app/src/components/source_control/source_control_section.tsx - Collapsible STAGED CHANGES / CHANGES / MERGE CHANGES section with capped rows and a bulk action
+app/src/components/source_control/source_control_section.tsx - Collapsible MERGE CONFLICTS / STAGED CHANGES / CHANGES section with capped rows and a bulk action
 app/src/components/source_control/source_control_status_line.tsx - Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column
-app/src/components/source_control/source_control_warnings.tsx - Warning rows for omitted paths and truncated status in the Source Control column
+app/src/components/source_control/source_control_warnings.tsx - Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
@@ -129,6 +129,7 @@ app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-ty
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
 app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
+app/src/lib/source_control/conflict_count.ts - Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root
 app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection

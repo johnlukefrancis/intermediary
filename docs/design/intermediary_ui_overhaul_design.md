@@ -241,6 +241,10 @@ zero.
 - Diffs open in the shared workspace as a read-only line grid in the editor shell styling: old/new
   line-number gutters, hunk headers muted, additions success-tinted, deletions error-tinted; `BINARY FILE`
   and `DIFF TRUNCATED AT 2 MiB` notices.
+- Merge conflicts are the one alert state: the SOURCE rocker cell turns error-toned with a pulsing halo
+  (pseudo-element, so the active inset ring survives) and `!N` (conflict count); the column leads with a
+  conflict banner row and the MERGE CONFLICTS section in the error tone; conflict diffs carry the `MERGE
+  CONFLICT` subtitle, a pinned notice, and warning-toned marker lines.
 - Empty states follow the console prompt style: `> READING WORKING TREE`, `NO CHANGES`,
   `NOT A GIT REPOSITORY`, `GIT NOT FOUND`, `AGENT UPDATE REQUIRED`, `COMMIT RESULT UNKNOWN — REFRESHING`.
 

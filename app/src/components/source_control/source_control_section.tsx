@@ -1,5 +1,5 @@
 // Path: app/src/components/source_control/source_control_section.tsx
-// Description: Collapsible STAGED CHANGES / CHANGES / MERGE CHANGES section with capped rows and a bulk action
+// Description: Collapsible MERGE CONFLICTS / STAGED CHANGES / CHANGES section with capped rows and a bulk action
 
 import type React from "react";
 import { useId, useState } from "react";
@@ -19,6 +19,8 @@ export interface SectionBulkAction {
 
 interface SourceControlSectionProps {
   title: string;
+  /** `alert` renders the section in the error tone (MERGE CONFLICTS outranks the other sections) */
+  tone?: "alert";
   entries: SourceControlEntry[];
   rowAction: RowActionKind;
   bulk?: SectionBulkAction;
@@ -31,6 +33,7 @@ interface SourceControlSectionProps {
 
 export function SourceControlSection({
   title,
+  tone,
   entries,
   rowAction,
   bulk,
@@ -45,7 +48,11 @@ export function SourceControlSection({
   const hidden = entries.length - visible.length;
 
   return (
-    <section className="source-control-section" data-collapsed={collapsed || undefined}>
+    <section
+      className="source-control-section"
+      data-tone={tone}
+      data-collapsed={collapsed || undefined}
+    >
       <div className="source-control-section__header">
         <button
           type="button"
@@ -57,6 +64,9 @@ export function SourceControlSection({
           <span className="source-control-section__chevron" aria-hidden="true">
             <ChevronIcon />
           </span>
+          {tone === "alert" && (
+            <span className="source-control-section__alert" aria-hidden="true">!</span>
+          )}
           <span className="source-control-section__title">{title}</span>
           <span className="source-control-section__count">[{entries.length}]</span>
         </button>

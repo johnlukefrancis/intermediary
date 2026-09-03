@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { ContextMenu, type ContextMenuItem } from "./context_menu.js";
 import { buildSingleFileContextMenuItems } from "./file_context_menu_items.js";
 import { DiffWorkspaceViewer } from "./diff_workspace.js";
+import { MERGE_CONFLICT_SUBTITLE } from "./source_control/source_control_copy.js";
 import { ImageWorkspaceViewer } from "./image_workspace.js";
 import { TextWorkspaceEditor } from "./text_workspace.js";
 import { WorkspaceLayout } from "./layout/workspace_layout.js";
@@ -47,7 +48,10 @@ function workspaceTitle(workspace: ActiveRepoWorkspace): string {
 
 function workspaceSubtitle(workspace: ActiveRepoWorkspace): string {
   if (workspace.kind === "note") return "Repository notes";
-  if (workspace.kind === "diff") return workspace.area === "index" ? "STAGED DIFF" : "WORKTREE DIFF";
+  if (workspace.kind === "diff") {
+    if (workspace.conflict) return MERGE_CONFLICT_SUBTITLE;
+    return workspace.area === "index" ? "STAGED DIFF" : "WORKTREE DIFF";
+  }
   return workspace.path;
 }
 
@@ -138,6 +142,7 @@ export function RepoWorkspacePanel({
         patch={workspace.status === "ready" ? workspace.patch : undefined}
         truncated={workspace.status === "ready" ? workspace.truncated : undefined}
         binary={workspace.status === "ready" ? workspace.binary : undefined}
+        conflict={workspace.conflict}
       />
     ) : (
       <ImageWorkspaceViewer
@@ -157,6 +162,7 @@ export function RepoWorkspacePanel({
       <WorkspaceLayout
         title={workspaceTitle(workspace)}
         subtitle={workspaceSubtitle(workspace)}
+        subtitleTone={workspace.kind === "diff" && workspace.conflict ? "alert" : undefined}
         onClose={onClose}
         onTitleContextMenu={filePath !== null && repoRoot ? handleTitleContextMenu : undefined}
         onTitleDragStart={

@@ -15,6 +15,8 @@ interface DiffWorkspaceBase {
   originalPath: string | null;
   /** False for deleted entries: the title then offers no drag-out or file actions */
   fileExists: boolean;
+  /** Unmerged path: the patch is Git's combined diff and carries conflict markers */
+  conflict: boolean;
 }
 
 export type RepoWorkspace =

@@ -20,6 +20,7 @@ import { useAgent } from "../use_agent.js";
 import { createRefreshScheduler, type RefreshScheduler } from "./source_control_refresh.js";
 import { agentErrorMessage, classifyActionFailure } from "./source_control_failures.js";
 import { useSourceControlCommands } from "./source_control_commands.js";
+import { totalConflictCount } from "../../lib/source_control/conflict_count.js";
 import type {
   SourceControlActionError,
   SourceControlCommit,
@@ -238,11 +239,13 @@ export function useSourceControlState(repoId: string): SourceControlState {
   const status = snapshot !== null && snapshot.repoId === repoId ? snapshot.status : null;
   const changeCount =
     status === null ? 0 : status.index.length + status.worktree.length + status.conflicts.length;
+  const conflictCount = status === null ? 0 : totalConflictCount(status);
 
   return {
     phase,
     status,
     changeCount,
+    conflictCount,
     pendingAction,
     actionError,
     lastCommit,

@@ -5,6 +5,7 @@ import type React from "react";
 import type { SourceControlEntry, SourceControlStatus } from "../../shared/protocol.js";
 import type { SourceControlPhase } from "../../hooks/source_control/source_control_types.js";
 import {
+  MERGE_CONFLICTS_TITLE,
   NO_CHANGES,
   READING_WORKING_TREE,
   reconcilingCopy,
@@ -74,6 +75,16 @@ export function SourceControlBody({
         <p className="empty-state">{NO_CHANGES}</p>
       ) : (
         <div className="source-control-sections">
+          {status.conflicts.length > 0 && (
+            <SourceControlSection
+              title={MERGE_CONFLICTS_TITLE}
+              tone="alert"
+              entries={status.conflicts}
+              rowAction="stage"
+              onRowAction={onStageEntry}
+              {...rowProps}
+            />
+          )}
           <SourceControlSection
             title="STAGED CHANGES"
             entries={status.index}
@@ -102,15 +113,6 @@ export function SourceControlBody({
             onRowAction={onStageEntry}
             {...rowProps}
           />
-          {status.conflicts.length > 0 && (
-            <SourceControlSection
-              title="MERGE CHANGES"
-              entries={status.conflicts}
-              rowAction="stage"
-              onRowAction={onStageEntry}
-              {...rowProps}
-            />
-          )}
         </div>
       )}
     </>

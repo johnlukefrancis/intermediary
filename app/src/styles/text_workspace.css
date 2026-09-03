@@ -68,6 +68,11 @@
   white-space: nowrap;
 }
 
+.text-workspace-subtitle[data-tone="alert"] {
+  color: var(--color-error);
+  font-weight: var(--weight-semibold);
+}
+
 .text-workspace-close {
   flex: 0 0 auto;
   font-size: 20px;

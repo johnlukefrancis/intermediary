@@ -70,6 +70,15 @@ async fn merge_resolved_to_head_is_committable_and_commits_with_two_parents() {
     write(&root, "base.txt", b"main\n");
     git(&root, &["commit", "-qam", "main"]);
     assert!(!git_succeeds(&root, &["merge", "-q", "feature"]));
+    let refused = try_act(
+        &root,
+        Action::Commit {
+            message: "too early".to_string(),
+        },
+    )
+    .await
+    .expect_err("unmerged paths block the commit");
+    assert_eq!(refused.code(), "GIT_UNMERGED_PATHS");
     // Resolve by keeping HEAD's content: the index now equals HEAD, yet the
     // merge must still be concluded by a commit.
     write(&root, "base.txt", b"main\n");
@@ -142,3 +151,36 @@ async fn landed_commit_with_a_failing_follow_up_read_is_not_a_git_error() {
         "Break HEAD"
     );
 }
+
+#[tokio::test]
+async fn subdirectory_root_counts_unmerged_paths_above_it_and_refuses_the_commit() {
+    let (_temp, root) = init_repo_with_commit();
+    write(&root, "sub/inner.txt", b"inner\n");
+    git(&root, &["add", "sub/inner.txt"]);
+    git(&root, &["commit", "-qm", "sub"]);
+    git(&root, &["checkout", "-q", "-b", "feature"]);
+    write(&root, "base.txt", b"feature\n");
+    git(&root, &["commit", "-qam", "feature"]);
+    git(&root, &["checkout", "-q", "main"]);
+    write(&root, "base.txt", b"main\n");
+    git(&root, &["commit", "-qam", "main"]);
+    assert!(!git_succeeds(&root, &["merge", "-q", "feature"]));
+
+    let sub = root.join("sub");
+    let status = status(&sub).await;
+    assert!(status.conflicts.is_empty(), "the conflict sits above this root");
+    assert_eq!(status.omitted.unmerged_outside_root, 1);
+    assert_eq!(status.omitted.staged_outside_root, 0);
+    assert!(status.committable, "MERGE_HEAD exists");
+
+    let error = try_act(
+        &sub,
+        Action::Commit {
+            message: "merge".to_string(),
+        },
+    )
+    .await
+    .expect_err("an out-of-root conflict still blocks the whole-index commit");
+    assert_eq!(error.code(), "GIT_UNMERGED_PATHS");
+}
+

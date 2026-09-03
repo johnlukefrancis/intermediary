@@ -78,7 +78,7 @@ Intermediary uses a **host-routed architecture**:
     Control via a segmented icon rocker (archive-box / git-branch glyphs, SOURCE count beside its glyph),
     persisted globally as `uiState.activeRail`; handset mode exposes the same rocker with a stacked-
     documents FILES cell added
-  - Source Control column: branch/upstream status line with refresh, pull, and push; commit box (Ctrl+Enter); STAGED CHANGES / CHANGES / MERGE CHANGES sections with per-row and per-section stage/unstage, per-file discard behind a confirm, and a read-only diff kind in the shared workspace. Git runs in the agent that owns the repo root; the UI never mutates a repo directly
+  - Source Control column: branch/upstream status line with refresh, pull, and push; commit box (Ctrl+Enter); MERGE CONFLICTS (first, error tone, with a rail alert, a banner row, and a COMMIT gate while unmerged paths exist) / STAGED CHANGES / CHANGES sections with per-row and per-section stage/unstage, per-file discard behind a confirm, and a read-only diff kind in the shared workspace. Git runs in the agent that owns the repo root; the UI never mutates a repo directly
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
   - Independent global substrate texture-intensity control (0-100, default 100)
@@ -187,7 +187,7 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 - `cancelBundleBuild { repoId, presetId, buildId } → cancelBundleBuildResult`; cancellation targets only the matching active build and leaves prior successful bundles intact.
 - `getRepoTopLevel { repoId } → getRepoTopLevelResult`
 - `listBundles { repoId, presetId } → listBundlesResult`
-- `sourceControlStatus { repoId } → sourceControlStatusResult { repoId, status }`; whole-repository porcelain-v2 status projected onto the configured root (staged paths above the root and non-UTF-8 paths are counted in `status.omitted`, `status.committable` is Git's own answer, output over 8 MiB sets `status.truncated`)
+- `sourceControlStatus { repoId } → sourceControlStatusResult { repoId, status }`; whole-repository porcelain-v2 status projected onto the configured root (staged and unmerged paths above the root and non-UTF-8 paths are counted in `status.omitted`, `status.committable` is Git's own answer, output over 8 MiB sets `status.truncated`)
 - `sourceControlDiff { repoId, path, originalPath?, area: "index" | "worktree" } → sourceControlDiffResult` (2 MiB bound, `binary` and `truncated` flags)
 - `sourceControlAction { repoId, action } → sourceControlActionResult { repoId, kind, status, commitSha? }`; `action.kind` is `stage` / `unstage` (scope `all` or `paths`), `discard` (paths), `commit` (message), `push`, `pull`. Mutations are serialized per repo, return the fresh status, and are never cancelled mid-command; timeouts are strictly nested per Git command < host→WSL request < UI request (status/diff 20/90/120 s, index actions 60/120/150 s, commit 120/240/300 s, push/pull 180/300/360 s)
 - `getTrFleetStatus {} → getTrFleetStatusResult` (host-agent only; polls TR build ports 5601–5605 `__trdev/status` + `__trdev/doctor`)

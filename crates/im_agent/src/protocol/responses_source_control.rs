@@ -44,9 +44,12 @@ pub struct SourceControlEntry {
 #[serde(rename_all = "camelCase")]
 pub struct SourceControlOmitted {
     /// Staged paths outside the configured root (a subdirectory of the Git top
-    /// level); a commit of the whole index carries them too. Worktree-only,
-    /// untracked, and unmerged paths outside the root are not counted.
+    /// level); a commit of the whole index carries them too. Worktree-only and
+    /// untracked paths outside the root are not counted.
     pub staged_outside_root: u64,
+    /// Unmerged paths outside the configured root; Git refuses a whole-index
+    /// commit while any exist, so the UI must alert even though none is listed.
+    pub unmerged_outside_root: u64,
     /// Paths whose bytes are not valid UTF-8 and cannot cross the wire losslessly.
     pub unrepresentable_path: u64,
 }

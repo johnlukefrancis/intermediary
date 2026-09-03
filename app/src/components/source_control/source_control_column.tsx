@@ -17,7 +17,9 @@ import {
   TRUNCATED_HINT,
   actionErrorHeading,
   branchLabel,
+  resolveConflictsHint,
 } from "./source_control_copy.js";
+import { totalConflictCount } from "../../lib/source_control/conflict_count.js";
 import { SourceControlStatusLine } from "./source_control_status_line.js";
 import { SourceControlWarnings } from "./source_control_warnings.js";
 
@@ -79,11 +81,14 @@ export function SourceControlColumn({
 
   // Git's own committability (index differs from HEAD, or a merge is in progress) decides,
   // not the root-projected list: a merge resolved to HEAD's tree still needs its commit.
+  // Unmerged paths make Git refuse the commit outright, so they outrank every other hint.
+  const conflictCount = status === null ? 0 : totalConflictCount(status);
   const hint =
     status === null ? null
-      : !status.committable ? STAGE_TO_COMMIT_HINT
-        : status.truncated ? TRUNCATED_HINT
-          : null;
+      : conflictCount > 0 ? resolveConflictsHint(conflictCount)
+        : !status.committable ? STAGE_TO_COMMIT_HINT
+          : status.truncated ? TRUNCATED_HINT
+            : null;
   const canCommit =
     status !== null && !actionsDisabled && hint === null && commitMessage.trim().length > 0;
 

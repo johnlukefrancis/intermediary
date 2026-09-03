@@ -90,3 +90,43 @@
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* Alert cell: an exceptional state (merge conflicts) outranks the ordinary count and reads in
+   the error tone; the pulse lives on a pseudo-element so the active inset ring stays intact. */
+.deck-switcher__tab--alert {
+  position: relative;
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.deck-switcher__tab--alert:hover:not(.deck-switcher__tab--active) {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.deck-switcher__tab--alert::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 10px 1px var(--color-error-muted);
+  pointer-events: none;
+  animation: deck-switcher-alert 2.4s var(--ease-in-out) infinite;
+}
+
+.deck-switcher__tab--alert .deck-switcher__count,
+.deck-switcher__alert {
+  color: var(--color-error);
+}
+
+.deck-switcher__alert {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+@keyframes deck-switcher-alert {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}

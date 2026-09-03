@@ -1,8 +1,10 @@
 // Path: app/src/components/source_control/source_control_warnings.tsx
-// Description: Warning rows for omitted paths and truncated status in the Source Control column
+// Description: Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column
 
 import type React from "react";
 import type { SourceControlStatus } from "../../shared/protocol.js";
+import { conflictBannerText } from "./source_control_copy.js";
+import { totalConflictCount } from "../../lib/source_control/conflict_count.js";
 
 interface SourceControlWarningsProps {
   status: SourceControlStatus;
@@ -10,13 +12,23 @@ interface SourceControlWarningsProps {
 
 interface WarningRow {
   key: string;
-  severity: "warning" | "error";
+  severity: "conflict" | "warning" | "error";
   text: string;
   title: string;
 }
 
 function buildWarningRows(status: SourceControlStatus): WarningRow[] {
   const rows: WarningRow[] = [];
+  // A conflicted worktree is the exceptional state: it is always the first row
+  const conflictCount = totalConflictCount(status);
+  if (conflictCount > 0) {
+    rows.push({
+      key: "conflicts",
+      severity: "conflict",
+      text: conflictBannerText(conflictCount, status.omitted.unmergedOutsideRoot),
+      title: "Unmerged paths block the merge commit; resolve each file, then stage it to mark it resolved. Paths above this folder are counted but not listed",
+    });
+  }
   const { stagedOutsideRoot, unrepresentablePath } = status.omitted;
   if (stagedOutsideRoot > 0) {
     rows.push({
@@ -60,7 +72,7 @@ export function SourceControlWarnings({
           data-severity={row.severity}
           title={row.title}
         >
-          {row.text}
+          {row.severity === "conflict" ? <span role="alert">{row.text}</span> : row.text}
         </li>
       ))}
     </ul>

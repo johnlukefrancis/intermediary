@@ -11,6 +11,8 @@ const DRAG_START_DISTANCE_PX = 6;
 interface WorkspaceLayoutProps {
   title: string;
   subtitle: string | undefined;
+  /** `alert` renders the subtitle in the error tone (a merge-conflict diff) */
+  subtitleTone?: "alert" | undefined;
   onClose: () => void;
   onTitleContextMenu?: ((event: React.MouseEvent) => void) | undefined;
   onTitleDragStart?: (() => void | Promise<void>) | undefined;
@@ -22,6 +24,7 @@ interface WorkspaceLayoutProps {
 interface WorkspacePanelProps {
   title: string;
   subtitle: string | undefined;
+  subtitleTone?: "alert" | undefined;
   onClose: () => void;
   onTitleContextMenu?: ((event: React.MouseEvent) => void) | undefined;
   onTitleDragStart?: (() => void | Promise<void>) | undefined;
@@ -31,6 +34,7 @@ interface WorkspacePanelProps {
 function WorkspacePanel({
   title,
   subtitle,
+  subtitleTone,
   onClose,
   onTitleContextMenu,
   onTitleDragStart,
@@ -106,7 +110,9 @@ function WorkspacePanel({
           >
             {title}
           </h2>
-          {subtitle && <span className="text-workspace-subtitle">{subtitle}</span>}
+          {subtitle && (
+            <span className="text-workspace-subtitle" data-tone={subtitleTone}>{subtitle}</span>
+          )}
         </div>
         <button
           type="button"
@@ -126,6 +132,7 @@ function WorkspacePanel({
 export function WorkspaceLayout({
   title,
   subtitle,
+  subtitleTone,
   onClose,
   onTitleContextMenu,
   onTitleDragStart,
@@ -137,6 +144,7 @@ export function WorkspaceLayout({
     <WorkspacePanel
       title={title}
       subtitle={subtitle}
+      subtitleTone={subtitleTone}
       onClose={onClose}
       onTitleContextMenu={onTitleContextMenu}
       onTitleDragStart={onTitleDragStart}

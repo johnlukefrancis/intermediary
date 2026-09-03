@@ -19,6 +19,7 @@ const HANDSET_ID_PREFIX = "handset";
 interface HandsetDeckProps {
   active: DeckSection;
   sourceCount: number;
+  sourceConflictCount: number;
   onChange: (section: DeckSection) => void;
   filePanel: (sectionSwitcher: React.ReactNode) => React.ReactNode;
   zipsContent: React.ReactNode;
@@ -28,6 +29,7 @@ interface HandsetDeckProps {
 export function HandsetDeck({
   active,
   sourceCount,
+  sourceConflictCount,
   onChange,
   filePanel,
   zipsContent,
@@ -35,7 +37,7 @@ export function HandsetDeck({
 }: HandsetDeckProps): React.JSX.Element {
   const sections: DeckSectionOption<DeckSection>[] = [
     { value: "files", label: "FILES", icon: <FilesIcon /> },
-    ...buildRailSections(sourceCount),
+    ...buildRailSections(sourceCount, sourceConflictCount),
   ];
   const sectionSwitcher = (
     <DeckSectionSwitcher

@@ -5,6 +5,13 @@ import type React from "react";
 import { flushSync } from "react-dom";
 import "../../styles/deck_section_switcher.css";
 
+/** Exceptional state that outranks the ordinary count: error tone, alert mark, its own number */
+export interface DeckSectionAlert {
+  count: number;
+  /** Appended to the tooltip and the accessible name, e.g. "46 merge conflicts" */
+  title: string;
+}
+
 export interface DeckSectionOption<T extends string> {
   value: T;
   /** Accessible name and tooltip; not rendered visually */
@@ -12,6 +19,7 @@ export interface DeckSectionOption<T extends string> {
   icon: React.JSX.Element;
   /** Rendered in accent after the icon; omitted at zero */
   count?: number;
+  alert?: DeckSectionAlert;
 }
 
 interface DeckSectionSwitcherProps<T extends string> {
@@ -57,8 +65,13 @@ export function DeckSectionSwitcher<T extends string>({
 }: DeckSectionSwitcherProps<T>): React.JSX.Element {
   return (
     <div role="tablist" className="deck-switcher" aria-label={ariaLabel}>
-      {sections.map(({ value, label, icon, count }, index) => {
+      {sections.map(({ value, label, icon, count, alert }, index) => {
         const isActive = active === value;
+        const className = [
+          "deck-switcher__tab",
+          isActive ? "deck-switcher__tab--active" : "",
+          alert !== undefined ? "deck-switcher__tab--alert" : "",
+        ].filter(Boolean).join(" ");
         return (
           <button
             key={value}
@@ -69,8 +82,8 @@ export function DeckSectionSwitcher<T extends string>({
             aria-controls={panelId}
             tabIndex={isActive ? 0 : -1}
             data-section={value}
-            title={label}
-            className={`deck-switcher__tab${isActive ? " deck-switcher__tab--active" : ""}`}
+            title={alert === undefined ? label : `${label} · ${alert.title}`}
+            className={className}
             onClick={() => { onChange(value); }}
             onKeyDown={(event) => {
               const next = nextSection(sections, index, event.key);
@@ -84,8 +97,16 @@ export function DeckSectionSwitcher<T extends string>({
           >
             <span className="deck-switcher__icon" aria-hidden="true">{icon}</span>
             <span className="sr-only">{label}</span>
-            {count !== undefined && count > 0 && (
-              <span className="deck-switcher__count">{count}</span>
+            {alert !== undefined ? (
+              <>
+                <span className="deck-switcher__alert" aria-hidden="true">!</span>
+                <span className="deck-switcher__count" aria-hidden="true">{alert.count}</span>
+                <span className="sr-only"> {alert.title}</span>
+              </>
+            ) : (
+              count !== undefined && count > 0 && (
+                <span className="deck-switcher__count">{count}</span>
+              )
             )}
           </button>
         );

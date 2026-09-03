@@ -35,6 +35,8 @@ export type SourceControlEntry = z.infer<typeof SourceControlEntrySchema>;
 export const SourceControlOmittedSchema = z.object({
   /** Staged paths above the configured root (the root is a subdirectory of the Git top level) */
   stagedOutsideRoot: z.number().int().nonnegative(),
+  /** Unmerged paths above the configured root: unlisted, but they block the commit and drive the alert */
+  unmergedOutsideRoot: z.number().int().nonnegative(),
   unrepresentablePath: z.number().int().nonnegative(),
 });
 export type SourceControlOmitted = z.infer<typeof SourceControlOmittedSchema>;

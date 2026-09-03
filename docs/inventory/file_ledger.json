@@ -91,7 +91,7 @@
     },
     {
       "path": "app/src/components/diff_workspace.tsx",
-      "summary": "Read-only unified diff viewer inside the shared workspace shell"
+      "summary": "Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts"
     },
     {
       "path": "app/src/components/drag_error_notice.tsx",
@@ -231,7 +231,7 @@
     },
     {
       "path": "app/src/components/source_control/source_control_section.tsx",
-      "summary": "Collapsible STAGED CHANGES / CHANGES / MERGE CHANGES section with capped rows and a bulk action"
+      "summary": "Collapsible MERGE CONFLICTS / STAGED CHANGES / CHANGES section with capped rows and a bulk action"
     },
     {
       "path": "app/src/components/source_control/source_control_status_line.tsx",
@@ -239,7 +239,7 @@
     },
     {
       "path": "app/src/components/source_control/source_control_warnings.tsx",
-      "summary": "Warning rows for omitted paths and truncated status in the Source Control column"
+      "summary": "Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column"
     },
     {
       "path": "app/src/components/status_bar.tsx",
@@ -504,6 +504,10 @@
     {
       "path": "app/src/lib/source_control/change_badges.ts",
       "summary": "Single badge map (letter, variant, label) for every source-control change kind"
+    },
+    {
+      "path": "app/src/lib/source_control/conflict_count.ts",
+      "summary": "Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root"
     },
     {
       "path": "app/src/lib/source_control/tree_decorations.ts",

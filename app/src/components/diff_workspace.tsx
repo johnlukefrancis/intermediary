@@ -1,5 +1,5 @@
 // Path: app/src/components/diff_workspace.tsx
-// Description: Read-only unified diff viewer inside the shared workspace shell
+// Description: Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts
 
 import type React from "react";
 import { useMemo } from "react";
@@ -11,9 +11,11 @@ interface DiffWorkspaceViewerProps {
   patch?: string | undefined;
   truncated?: boolean | undefined;
   binary?: boolean | undefined;
+  /** Unmerged path: the patch is a combined diff and its conflict markers are flagged */
+  conflict?: boolean | undefined;
 }
 
-type DiffLineKind = "hunk" | "add" | "del" | "meta" | "context";
+type DiffLineKind = "hunk" | "add" | "del" | "meta" | "context" | "marker";
 
 interface DiffLine {
   kind: DiffLineKind;
@@ -33,6 +35,42 @@ function hunkStart(hunkHeader: string): { oldNo: number; newNo: number } {
   };
 }
 
+interface ParsedPatch {
+  lines: DiffLine[];
+  /** `<<<<<<<` markers still in the file; zero means the markers are gone but the path is unstaged */
+  conflictBlocks: number;
+}
+
+/**
+ * Only consulted for conflicted files, and only inside an open `<<<<<<<` block for the inner
+ * markers: elsewhere a bare `=======` is ordinary text.
+ */
+function conflictMarker(body: string, blockOpen: boolean): "open" | "inner" | "close" | null {
+  if (body.startsWith("<<<<<<< ")) return "open";
+  if (!blockOpen) return null;
+  if (body.startsWith(">>>>>>> ")) return "close";
+  if (body === "=======" || body.startsWith("||||||| ")) return "inner";
+  return null;
+}
+
+interface ConflictNoticeInput {
+  conflictBlocks: number;
+  truncated: boolean;
+  binary: boolean;
+}
+
+/** A cut patch may hide markers, so it never claims "resolved"; a binary conflict has no markers at all */
+export function conflictNotice({ conflictBlocks, truncated, binary }: ConflictNoticeInput): string {
+  if (binary) return "Merge conflict · binary file · keep one version, then stage it to mark it resolved";
+  const blocks = `${conflictBlocks} unresolved block${conflictBlocks === 1 ? "" : "s"}`;
+  if (truncated) {
+    const seen = conflictBlocks === 0 ? "no markers in the first 2 MiB" : `at least ${blocks}`;
+    return `Merge conflict · diff truncated · ${seen} · resolve the markers in the file, then stage it`;
+  }
+  if (conflictBlocks === 0) return "Merge conflict · markers resolved · stage the file to mark it resolved";
+  return `Merge conflict · ${blocks} · resolve the markers in the file, then stage it`;
+}
+
 /** Number of leading `@` in a hunk header minus one: 1 for unified diffs, 2+ for combined (conflict) diffs */
 function prefixWidth(hunkHeader: string): number {
   let count = 0;
@@ -41,7 +79,7 @@ function prefixWidth(hunkHeader: string): number {
 }
 
 /** Header lines (before the first hunk, or after a new `diff` header) are meta; hunk bodies are +/-/context */
-function parsePatch(patch: string): DiffLine[] {
+function parsePatch(patch: string, conflict: boolean): ParsedPatch {
   const normalized = patch.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   const raw = normalized.split("\n");
   if (raw.length > 0 && raw[raw.length - 1] === "") raw.pop();
@@ -50,8 +88,10 @@ function parsePatch(patch: string): DiffLine[] {
   let width = 1;
   let oldNo = 0;
   let newNo = 0;
+  let conflictBlocks = 0;
+  let blockOpen = false;
   const bare = { oldNo: null, newNo: null };
-  return raw.map((text): DiffLine => {
+  const lines = raw.map((text): DiffLine => {
     if (text.startsWith("diff ")) {
       inHunk = false;
       return { kind: "meta", text, ...bare };
@@ -71,9 +111,16 @@ function parsePatch(patch: string): DiffLine[] {
     const inOld = prefix[0] === "-" || (prefix[0] === " " && inResult);
     const oldSide = inOld ? oldNo++ : null;
     const newSide = inResult ? newNo++ : null;
+    const marker = conflict ? conflictMarker(text.slice(width), blockOpen) : null;
+    if (marker !== null) {
+      if (marker === "open") conflictBlocks += 1;
+      blockOpen = marker !== "close";
+      return { kind: "marker", text, oldNo: oldSide, newNo: newSide };
+    }
     const kind: DiffLineKind = prefix.includes("+") ? "add" : inResult ? "context" : "del";
     return { kind, text, oldNo: oldSide, newNo: newSide };
   });
+  return { lines, conflictBlocks };
 }
 
 export function DiffWorkspaceViewer({
@@ -83,8 +130,13 @@ export function DiffWorkspaceViewer({
   patch,
   truncated = false,
   binary = false,
+  conflict = false,
 }: DiffWorkspaceViewerProps): React.JSX.Element {
-  const lines = useMemo(() => (patch === undefined ? [] : parsePatch(patch)), [patch]);
+  const { lines, conflictBlocks } = useMemo(
+    (): ParsedPatch =>
+      patch === undefined ? { lines: [], conflictBlocks: 0 } : parsePatch(patch, conflict),
+    [conflict, patch]
+  );
 
   if (isLoading) {
     return <p className="empty-state empty-state--waiting">Loading diff</p>;
@@ -94,9 +146,17 @@ export function DiffWorkspaceViewer({
     return <p className="text-workspace-error text-workspace-error--inline">{error}</p>;
   }
 
+  // The conflict affordance belongs to the conflicted path, whatever shape its patch takes
+  const notice = conflict ? (
+    <p className="diff-workspace__notice" role="alert">
+      {conflictNotice({ conflictBlocks, truncated, binary })}
+    </p>
+  ) : null;
+
   if (binary) {
     return (
       <div className="diff-workspace">
+        {notice}
         <p className="empty-state">Binary file</p>
       </div>
     );
@@ -105,6 +165,7 @@ export function DiffWorkspaceViewer({
   if (lines.length === 0) {
     return (
       <div className="diff-workspace">
+        {notice}
         <p className="empty-state">No diff</p>
       </div>
     );
@@ -112,6 +173,7 @@ export function DiffWorkspaceViewer({
 
   return (
     <div className="diff-workspace" role="region" aria-label={`Diff for ${path}`}>
+      {notice}
       <div className="diff-workspace__lines">
         {lines.map((line, index) => (
           <div key={index} className="diff-line" data-kind={line.kind}>

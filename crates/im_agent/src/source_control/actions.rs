@@ -141,6 +141,15 @@ async fn commit(repo_root: &Path, message: &str) -> Result<(), AgentError> {
             "Nothing is staged to commit",
         ));
     }
+    // Git refuses to commit unmerged paths; say so with a typed code instead of its stdout,
+    // counting conflicts above the configured root that the projection cannot list.
+    let unmerged = status.conflicts.len() as u64 + status.omitted.unmerged_outside_root;
+    if unmerged > 0 {
+        return Err(AgentError::new(
+            "GIT_UNMERGED_PATHS",
+            format!("Resolve {unmerged} merge conflict(s) before committing"),
+        ));
+    }
     let call = GitCall::new(["commit", "-q", "--cleanup=whitespace", "-F", "-"])
         .stdin(message.as_bytes().to_vec())
         .timeout(COMMIT_TIMEOUT);

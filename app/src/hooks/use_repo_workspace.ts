@@ -151,6 +151,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
         area,
         originalPath: entry.originalPath ?? null,
         fileExists: entry.change !== "deleted",
+        conflict: entry.area === "conflict",
       };
       const isStale = (): boolean => requestTokenRef.current !== requestToken;
 

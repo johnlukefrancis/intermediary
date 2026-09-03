@@ -72,10 +72,13 @@ struct Lists {
 impl Lists {
     fn push(&mut self, record: &StatusRecord, prefix: &[u8]) {
         let Some(relative) = strip_repo_prefix(record.current.as_bytes(), prefix) else {
-            // Only staged content outside the root travels with a commit of
-            // the whole index; worktree-only, untracked, and unmerged records
-            // out there are not this root's concern and are dropped silently.
-            if is_staged(record) {
+            // Staged content outside the root travels with a commit of the
+            // whole index and unmerged paths out there block that commit, so
+            // both are counted; worktree-only and untracked records are not
+            // this root's concern and are dropped silently.
+            if record.is_unmerged() {
+                self.omitted.unmerged_outside_root += 1;
+            } else if is_staged(record) {
                 self.omitted.staged_outside_root += 1;
             }
             return;

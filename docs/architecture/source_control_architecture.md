@@ -15,8 +15,8 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 | WSL-agent dispatch | `crates/im_agent/src/server/connection/source_control_commands.rs` | Reads get a `SourceControlRead` cancel token; actions are `Passive`. |
 | Host-agent dispatch | `crates/im_host_agent/src/server/dispatch.rs` (`dispatch_source_control`) + `runtime/local_host_source_control_backend.rs` | Backend resolved under a short read lock; host repos run Git with no runtime lock held; WSL repos are forwarded. |
 | Refresh signal | `crates/im_agent/src/repos/source_control_watch/` (detector, coalescer, git dirs) wired into `repo_watcher*.rs` | Emits `AgentEvent::SourceControlChanged { repoId }`, coalesced to one event per 250 ms with a trailing emit. |
-| UI state | `app/src/hooks/source_control/use_source_control_state.ts`, `app/src/hooks/use_deck_section.ts` | One hook instance per active repo feeds the rail count and the column. |
-| UI surface | `app/src/components/layout/{deck_section_switcher,deck_section_icons,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx` | Rail switch (segmented icon rocker), column, rows, commit box, diff kind of the shared workspace. |
+| UI state | `app/src/hooks/source_control/use_source_control_state.ts`, `app/src/hooks/use_deck_section.ts`, `app/src/lib/source_control/conflict_count.ts` | One hook instance per active repo feeds the rail count, the conflict alert, and the column. |
+| UI surface | `app/src/components/layout/{deck_section_switcher,deck_section_icons,repo_rail}.tsx`, `app/src/components/source_control/*`, `app/src/components/diff_workspace.tsx` | Rail switch (segmented icon rocker with a `DeckSectionAlert` form for conflicts), column, rows, commit box, diff kind of the shared workspace (`conflict` flag flags marker lines). |
 | Tree decorations | `app/src/lib/source_control/{change_badges,tree_decorations}.ts`, `app/src/hooks/source_control/use_tree_decorations.tsx`, `app/src/hooks/bundles/use_directory_listings.ts` | Pure projection of the status onto the ZIPS explorer tree via a React context; the listing hook re-lists expanded directories on `sourceControlChanged`. |
 | Persisted choice | `uiState.activeRail` in `app/src/shared/config/persisted_config.ts` | Global; defaulted, no migration. |
 
@@ -32,7 +32,7 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 3. In either agent, `im_agent::source_control` resolves the repo prefix (`git rev-parse --show-prefix`),
    runs the Git command on `spawn_blocking` from `common_git_args()` (always `--literal-pathspecs`), and
    maps failures to `AgentError` codes: `GIT_UNAVAILABLE`, `GIT_NOT_REPOSITORY`, `GIT_TIMEOUT`,
-   `GIT_ABORTED`, `GIT_NOTHING_TO_COMMIT`, `GIT_COMMAND_FAILED` (Git's own text), `GIT_UNSUPPORTED_VERSION`,
+   `GIT_ABORTED`, `GIT_NOTHING_TO_COMMIT`, `GIT_UNMERGED_PATHS`, `GIT_COMMAND_FAILED` (Git's own text), `GIT_UNSUPPORTED_VERSION`,
    `INVALID_PATH`, `INVALID_COMMIT_MESSAGE`, `INVALID_REPO`.
 4. Every action re-reads status after the Git command and returns it, so the view is never stale after
    its own mutation.
@@ -59,6 +59,12 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 - Section-wide actions use pathspec `.` (inside the configured root); an empty explicit path list is
   rejected before any process spawns; `git commit` always commits the whole index and the UI surfaces
   `omitted.stagedOutsideRoot` with a confirm.
+- Unmerged paths outrank every other state in the UI: `conflictCount` (listed conflicts plus
+  `omitted.unmergedOutsideRoot`, unmerged paths above a subdirectory root that cannot be listed) from the
+  one status hook drives the rail alert, the first-row banner, and the COMMIT gate; the MERGE CONFLICTS
+  section lists only in-root conflicts. The agent refuses `commit` with `GIT_UNMERGED_PATHS` on the same
+  total, because Git refuses a whole-index commit with unmerged paths even though `committable` is true
+  while `MERGE_HEAD` exists.
 - Committability is Git's answer, not the projected list: `status.committable` is true when
   `git diff --cached --quiet` reports a difference from HEAD or `MERGE_HEAD` exists, so a merge resolved
   to HEAD's tree and a commit whose staged paths sit above the configured root both stay committable.
@@ -86,6 +92,7 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 | Not a Git repository | `GIT_NOT_REPOSITORY` → `NOT A GIT REPOSITORY`. |
 | Older installed agent | `UNKNOWN_COMMAND` → `AGENT UPDATE REQUIRED`. |
 | Nothing committable (index equals HEAD and no merge in progress) | Button disabled; agent refuses with `GIT_NOTHING_TO_COMMIT`. |
+| Unmerged paths (in root or above a subdirectory root) | Button disabled with "Resolve N merge conflicts to commit"; agent refuses with `GIT_UNMERGED_PATHS`. |
 | Hook or identity failure on commit | `GIT_COMMAND_FAILED` with Git's stderr/stdout text inline. |
 | Push without upstream and ≠1 remote | `GIT_COMMAND_FAILED` "No upstream; configure one remote or set an upstream". |
 | Socket closes or transport times out during an action | UI enters `reconciling` ("COMMIT RESULT UNKNOWN — REFRESHING"), never auto-retries, reports the outcome from the refetched status. |

@@ -37,6 +37,8 @@ export interface SourceControlState {
   status: SourceControlStatus | null;
   /** index + worktree + conflicts; the SOURCE tab count */
   changeCount: number;
+  /** Unmerged paths; non-zero is the exceptional merge state that outranks ordinary changes */
+  conflictCount: number;
   /** One action at a time per repo; every action button is disabled while set */
   pendingAction: SourceControlActionKind | null;
   actionError: SourceControlActionError | null;

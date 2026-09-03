@@ -141,6 +141,15 @@
   color: var(--color-error);
 }
 
+/* Merge conflicts outrank every other state: first row, error tone, emphasised */
+.source-control-warning[data-severity="conflict"] {
+  border-color: var(--color-error);
+  background: var(--color-error-soft);
+  color: var(--color-error);
+  font-weight: var(--weight-semibold);
+  box-shadow: inset 3px 0 0 0 var(--color-error), 0 0 8px 0 var(--color-error-muted);
+}
+
 /* ===== COMMIT BOX ===== */
 .source-control-commit {
   display: flex;

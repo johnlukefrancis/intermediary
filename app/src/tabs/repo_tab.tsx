@@ -196,6 +196,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     <RepoRail
       activeRail={deckSection.activeRail}
       sourceCount={sourceControl.changeCount}
+      sourceConflictCount={sourceControl.conflictCount}
       onChangeRail={deckSection.setActiveRail}
       zipsContent={zipsContent}
       sourceContent={sourceContent}
@@ -229,6 +230,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
         <HandsetDeck
           active={deckSection.handsetSection}
           sourceCount={sourceControl.changeCount}
+          sourceConflictCount={sourceControl.conflictCount}
           onChange={deckSection.setHandsetSection}
           filePanel={renderFilePanel}
           zipsContent={zipsContent}

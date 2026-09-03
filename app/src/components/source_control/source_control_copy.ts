@@ -19,6 +19,22 @@ export const READING_WORKING_TREE = "READING WORKING TREE";
 export const NO_CHANGES = "NO CHANGES";
 export const STAGE_TO_COMMIT_HINT = "Stage changes to commit";
 export const TRUNCATED_HINT = "Status truncated; refresh before committing";
+export const MERGE_CONFLICTS_TITLE = "MERGE CONFLICTS";
+export const MERGE_CONFLICT_SUBTITLE = "MERGE CONFLICT";
+
+/** "46 merge conflicts": rail tooltip, accessible name, and commit hint */
+export function conflictAlertTitle(count: number): string {
+  return `${count} merge conflict${count === 1 ? "" : "s"}`;
+}
+
+export function conflictBannerText(count: number, outsideRoot: number): string {
+  const above = outsideRoot > 0 ? ` (${outsideRoot} ABOVE THIS FOLDER)` : "";
+  return `${count} MERGE CONFLICT${count === 1 ? "" : "S"}${above} — RESOLVE AND STAGE BEFORE COMMITTING`;
+}
+
+export function resolveConflictsHint(count: number): string {
+  return `Resolve ${conflictAlertTitle(count)} to commit`;
+}
 
 export function reconcilingCopy(action: SourceControlActionKind): string {
   return `${ACTION_LABELS[action]} RESULT UNKNOWN — REFRESHING`;
