@@ -4,18 +4,16 @@
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::OnceLock;
-use std::time::Duration;
 
 use im_bundle::git::run_git;
 
 use crate::error::AgentError;
 
-use super::runner::{git_executable, map_probe_failure};
+use super::runner::{git_executable, PROBE_LIMIT, PROBE_TIMEOUT};
+use super::runner_failure::map_probe_failure;
 
 /// `--pathspec-from-file` / `--pathspec-file-nul` arrived in Git 2.25.
 const MINIMUM: (u32, u32) = (2, 25);
-const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
-const PROBE_LIMIT: usize = 4096;
 
 /// Cached only once the binary answered: a missing or broken Git is reported
 /// every time so installing it later needs no agent restart.

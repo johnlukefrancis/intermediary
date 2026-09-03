@@ -161,6 +161,9 @@ impl AgentSupervisor {
             if !requires_wsl {
                 self.stop_process(ProcessKind::Wsl).await?;
             }
+            // Adopting a healthy runtime still makes it ours to stop, so its
+            // socket identity is recorded for the graceful stop.
+            self.record_owned_host_backend(config.port, &websocket_auth.host_ws_token)?;
             self.set_last_error(None)?;
             return Ok(build_result(
                 AgentSupervisorStatus::AlreadyRunning,

@@ -1,5 +1,5 @@
 // Path: app/src/hooks/source_control/source_control_refresh.ts
-// Description: Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup
+// Description: Status refresh timing owner: trailing debounce, delayed retries, in-flight dirty flag, post-mutation de-dup
 
 interface RefreshSchedulerOptions {
   debounceMs: number;
@@ -12,6 +12,11 @@ export interface RefreshScheduler {
   notifyChanged(at: number): void;
   /** Hello / repo / epoch / focus / manual refresh: runs now or queues behind in-flight work */
   requestRefresh(): void;
+  /**
+   * Forced refresh after `delayMs` — transient-read retry and reconciliation backoff — replacing
+   * any pending delayed refresh. `reset` and `dispose` cancel it.
+   */
+  requestRefreshIn(delayMs: number): void;
   /** Status fetches queue until the action finishes (its result replaces the status) */
   actionStarted(): void;
   /**
@@ -29,6 +34,7 @@ export function createRefreshScheduler({
   run,
 }: RefreshSchedulerOptions): RefreshScheduler {
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let delayedTimer: ReturnType<typeof setTimeout> | null = null;
   let latestEventAt = 0;
   let forced = false;
   let fetchInFlight = false;
@@ -41,6 +47,12 @@ export function createRefreshScheduler({
     if (timer === null) return;
     clearTimeout(timer);
     timer = null;
+  }
+
+  function clearDelayedTimer(): void {
+    if (delayedTimer === null) return;
+    clearTimeout(delayedTimer);
+    delayedTimer = null;
   }
 
   function hasWork(): boolean {
@@ -82,6 +94,15 @@ export function createRefreshScheduler({
       clearTimer();
       drain();
     },
+    requestRefreshIn(delayMs) {
+      clearDelayedTimer();
+      delayedTimer = setTimeout(() => {
+        delayedTimer = null;
+        forced = true;
+        clearTimer();
+        drain();
+      }, delayMs);
+    },
     actionStarted() {
       actionPending = true;
     },
@@ -93,6 +114,7 @@ export function createRefreshScheduler({
     reset() {
       disposed = false;
       clearTimer();
+      clearDelayedTimer();
       latestEventAt = 0;
       forced = false;
       fetchInFlight = false;
@@ -103,6 +125,7 @@ export function createRefreshScheduler({
     dispose() {
       disposed = true;
       clearTimer();
+      clearDelayedTimer();
     },
   };
 }

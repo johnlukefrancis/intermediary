@@ -27,5 +27,19 @@ zip = { version = "2.1", default-features = false, features = ["deflate"] }
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+# Job Object ownership of the Git process tree (git_capture/command_job.rs):
+# CreateJobObjectW (no limits set), AssignProcessToJobObject,
+# TerminateJobObject, CloseHandle. Version is the copy the workspace lock
+# already resolved. Win32_Security and Win32_System_Threading are not called
+# into: the JobObjects module's own signatures name SECURITY_ATTRIBUTES and
+# IO_COUNTERS, so it does not compile without them.
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
 [dev-dependencies]
 tempfile = "3.10"

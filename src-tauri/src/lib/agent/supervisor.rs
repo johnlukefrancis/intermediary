@@ -40,6 +40,7 @@ fn build_result(
     }
 }
 
+mod graceful_stop;
 mod host;
 mod lifecycle;
 mod managed_processes;
@@ -47,7 +48,9 @@ mod probes;
 mod process_kill;
 mod runtime;
 mod shutdown;
+mod shutdown_ws_client;
 mod state;
+mod websocket_frame;
 mod websocket_probe;
 mod wsl;
 mod wsl_control;

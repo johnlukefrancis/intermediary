@@ -12,18 +12,15 @@ use crate::cancel::BundleCancelToken;
 use crate::error::{BundleError, Result};
 
 use super::command_child::{
-    accepted_exit_status, contains_not_repository, read_bounded, spawn_worker, Collected, Streams,
-    Wait,
+    accepted_exit_status, contains_not_repository, read_bounded, spawn_worker, Collected,
+    StreamOutcome, Streams,
 };
-use super::command_stop::{own_process_group, stop_child};
+use super::command_drain::{drain_after_exit, drain_after_forced_stop};
+use super::command_stop::stop_child;
+use super::command_tree::GitProcessTree;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(10);
 const STDERR_LIMIT: usize = 64 * 1024;
-/// How long a forced stop waits for the stream workers after the child and
-/// its process group were signalled. A grandchild that escaped the group can
-/// still hold a pipe; after this the workers are detached and the stop result
-/// carries no output.
-const FORCED_STOP_STREAM_WAIT: Duration = Duration::from_secs(2);
 
 /// Captured output of a completed Git command. `stderr` is bounded and kept so
 /// callers can surface Git's own explanation of a failure; `exit_code` is zero
@@ -71,8 +68,8 @@ impl GitCommandFailure {
         Self {
             kind,
             exit_code: None,
-            stdout: output.stdout.map(|(bytes, _)| bytes).unwrap_or_default(),
-            stderr: output.stderr.map(|(bytes, _)| bytes).unwrap_or_default(),
+            stdout: output.stdout.bytes(),
+            stderr: output.stderr.bytes(),
         }
     }
 
@@ -121,7 +118,7 @@ pub fn run_git(
 
 /// The child's fate after the wait loop.
 enum Exit {
-    /// Git exited by itself; its streams close as their last holder exits.
+    /// Git exited by itself; its streams get the bounded post-exit drain.
     Completed(ExitStatus),
     /// Git was stopped on timeout; the streams get a bounded wait.
     TimedOut,
@@ -158,7 +155,14 @@ pub fn run_git_with_input(
         })
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
-    own_process_group(&mut command);
+    // The tree that owns every descendant this command starts. It is created
+    // before the spawn (the Windows job object has to exist first), joined to
+    // the child immediately after it, and dropped once the drain below is
+    // finished. Dropping it terminates nothing on either platform: the tree
+    // dies only where this file asks for it — a forced stop below, an expired
+    // post-exit drain, or the agent's shutdown finalization.
+    let mut tree = GitProcessTree::create();
+    tree.prepare(&mut command);
 
     let mut child = match command.spawn() {
         Ok(child) => child,
@@ -173,8 +177,9 @@ pub fn run_git_with_input(
             )))
         }
     };
+    tree.attach(&child);
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
-        stop_child(&mut child, KillPolicy::Immediate);
+        stop_child(&mut child, KillPolicy::Immediate, &tree);
         return Ok(Err(GitCommandFailure::bare(
             GitCommandFailureKind::OutputReadFailed,
         )));
@@ -184,7 +189,7 @@ pub fn run_git_with_input(
     let stdin = match stdin {
         Some(input) => {
             let Some(mut child_stdin) = child.stdin.take() else {
-                stop_child(&mut child, KillPolicy::Immediate);
+                stop_child(&mut child, KillPolicy::Immediate, &tree);
                 return Ok(Err(GitCommandFailure::bare(
                     GitCommandFailureKind::InputWriteFailed,
                 )));
@@ -198,23 +203,27 @@ pub fn run_git_with_input(
         stderr,
         stdin,
     };
+    // Kept before the wait loop reaps the child, purely so a stuck-pipe log
+    // line can name the process the descendants came from; the tree above is
+    // what actually still holds them.
+    let child_pid = child.id();
     let started = Instant::now();
 
     let exit = loop {
         if cancel_token.is_some_and(BundleCancelToken::is_cancelled) {
-            stop_child(&mut child, kill_policy);
-            streams.collect(forced_stop_wait());
+            stop_child(&mut child, kill_policy, &tree);
+            drain_after_forced_stop(streams);
             return Err(BundleError::Cancelled);
         }
         match child.try_wait() {
             Ok(Some(status)) => break Exit::Completed(status),
             Ok(None) if started.elapsed() < timeout => thread::sleep(POLL_INTERVAL),
             Ok(None) => {
-                stop_child(&mut child, kill_policy);
+                stop_child(&mut child, kill_policy, &tree);
                 break Exit::TimedOut;
             }
             Err(_) => {
-                stop_child(&mut child, KillPolicy::Immediate);
+                stop_child(&mut child, KillPolicy::Immediate, &tree);
                 break Exit::WaitFailed;
             }
         }
@@ -223,28 +232,40 @@ pub fn run_git_with_input(
     let status = match exit {
         Exit::Completed(status) => status,
         Exit::TimedOut => {
-            let output = streams.collect(forced_stop_wait());
+            let output = drain_after_forced_stop(streams);
             return Ok(Err(GitCommandFailure::from_streams(
                 GitCommandFailureKind::TimedOut,
                 output,
             )));
         }
         Exit::WaitFailed => {
-            streams.collect(forced_stop_wait());
+            drain_after_forced_stop(streams);
             return Ok(Err(GitCommandFailure::bare(
                 GitCommandFailureKind::OutputReadFailed,
             )));
         }
     };
     let Collected {
-        stdout: Some((stdout, stdout_truncated)),
-        stderr: Some((stderr, _)),
+        stdout,
+        stderr,
         stdin_failed,
-    } = streams.collect(Wait::UntilDone)
-    else {
-        return Ok(Err(GitCommandFailure::bare(
+    } = drain_after_exit(streams, &tree, child_pid);
+    let read_failed = || {
+        Ok(Err(GitCommandFailure::bare(
             GitCommandFailureKind::OutputReadFailed,
-        )));
+        )))
+    };
+    // A detached reader keeps nothing it had read, so its stream is reported
+    // as empty and truncated: incomplete output, never silently complete.
+    let (stdout, stdout_truncated) = match stdout {
+        StreamOutcome::Read(bytes, truncated) => (bytes, truncated),
+        StreamOutcome::Detached => (Vec::new(), true),
+        StreamOutcome::Failed => return read_failed(),
+    };
+    let stderr = match stderr {
+        StreamOutcome::Read(bytes, _) => bytes,
+        StreamOutcome::Detached => Vec::new(),
+        StreamOutcome::Failed => return read_failed(),
     };
     let failed = |kind| GitCommandFailure {
         kind,
@@ -270,8 +291,4 @@ pub fn run_git_with_input(
         stderr,
         exit_code: status.code().unwrap_or(0),
     }))
-}
-
-fn forced_stop_wait() -> Wait {
-    Wait::Until(Instant::now() + FORCED_STOP_STREAM_WAIT)
 }

@@ -16,6 +16,10 @@ mod responses_tr_fleet;
 
 #[cfg(test)]
 mod cancel_bundle_tests;
+#[cfg(test)]
+mod tests_shutdown;
+#[cfg(test)]
+mod tests_source_control;
 
 pub use commands::{
     BuildBundleCommand, BundleSelection, CancelBundleBuildCommand, ClientHelloCommand,
@@ -28,8 +32,9 @@ pub use commands_tr_fleet::{
 };
 pub use commands_source_control::{
     SourceControlActionCommand, SourceControlActionKind, SourceControlActionPayload,
-    SourceControlArea, SourceControlDiffCommand, SourceControlImageDiffCommand,
-    SourceControlScope, SourceControlStatusCommand,
+    SourceControlArea, SourceControlDiffCommand, SourceControlDiscardTarget,
+    SourceControlImageDiffCommand, SourceControlScope, SourceControlStatusCommand,
+    SourceControlWorktreeStamp,
 };
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, InboundRequestEnvelope, RequestEnvelope, ResponseEnvelope,
@@ -46,8 +51,8 @@ pub use events_runtime::{
 };
 pub use responses::{
     BuildBundleResult, BundleInfo, CancelBundleBuildResult, ClientHelloResult, ListBundlesResult,
-    ReadImageFileResult, ReadTextFileResult, RefreshResult, SetOptionsResult, StageFileResult,
-    UiResponse, WatchRepoResult,
+    ReadImageFileResult, ReadTextFileResult, RefreshResult, SetOptionsResult, ShutdownResult,
+    StageFileResult, UiResponse, WatchRepoResult,
 };
 pub use responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 pub use responses_source_control::{

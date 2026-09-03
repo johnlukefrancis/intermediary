@@ -119,6 +119,16 @@ pub struct ListBundlesResult {
     pub bundles: Vec<BundleInfo>,
 }
 
+/// The answer to `shutdown`: whether every mutation this agent owned finished
+/// inside the drain budget, and how many were still holding their worktree
+/// lock when the budget expired.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShutdownResult {
+    pub drained: bool,
+    pub active_mutations: u32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum UiResponse {
@@ -158,4 +168,6 @@ pub enum UiResponse {
     SourceControlImageDiffResult(SourceControlImageDiffResult),
     #[serde(rename = "sourceControlActionResult")]
     SourceControlActionResult(SourceControlActionResult),
+    #[serde(rename = "shutdownResult")]
+    ShutdownResult(ShutdownResult),
 }

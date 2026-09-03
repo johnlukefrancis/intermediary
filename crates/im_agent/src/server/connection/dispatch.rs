@@ -9,8 +9,8 @@ use crate::protocol::{BundleBuiltEvent, BundleInfo, UiCommand, UiResponse};
 use crate::staging::{stage_file, StagingRootKind};
 
 use super::{
-    repo_commands, request_cancellation::RequestCancellation, source_control_commands,
-    ConnectionContext,
+    repo_commands, request_cancellation::RequestCancellation, shutdown_command,
+    source_control_commands, ConnectionContext,
 };
 
 pub async fn dispatch_command(
@@ -222,6 +222,7 @@ pub async fn dispatch_command(
         UiCommand::SourceControlAction(command) => {
             source_control_commands::source_control_action_command(command, ctx).await
         }
+        UiCommand::Shutdown => shutdown_command::shutdown_command(ctx).await,
         UiCommand::GetTrFleetStatus(_) | UiCommand::TrFleetAction(_) => Err(AgentError::new(
             "UNSUPPORTED_COMMAND",
             "TR fleet commands are supported only by the host agent",

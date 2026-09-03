@@ -41,6 +41,9 @@ impl AgentSupervisor {
             };
 
             if should_adopt_running_host(force, auth_ok, origin_compat_ok, runtime_matches) {
+                // Adopted agents are stopped by us too, so their socket identity
+                // is recorded for the config-less graceful stop.
+                self.record_owned_host_backend(host_port, &auth.host_ws_token)?;
                 return Ok(EnsureProcessResult::AlreadyRunning);
             }
 
@@ -97,6 +100,7 @@ impl AgentSupervisor {
             &format!("kind=host port={host_port}"),
         );
         let bundle_for_spawn = bundle.clone();
+        let host_ws_token = auth.host_ws_token.clone();
         let auth = auth.clone();
         let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
             let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
@@ -125,6 +129,7 @@ impl AgentSupervisor {
             Ok(child) => {
                 let pid = child.id();
                 self.replace_child(ProcessKind::Host, child).await?;
+                self.record_owned_host_backend(host_port, &host_ws_token)?;
                 self.update_last_spawn(ProcessKind::Host)?;
                 logging::log(
                     "info",

@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/agent/supervisor/managed_processes.rs
 // Description: Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers
 
+use super::graceful_stop::GracefulStopPath;
 use super::{AgentSupervisor, SPAWN_BACKOFF};
 use crate::agent::supervisor::process_kill::{kill_and_wait, KillAndWaitOutcome};
 use crate::agent::supervisor::state::{process_state, process_state_mut, ProcessKind};
@@ -11,6 +12,30 @@ use std::time::Instant;
 impl AgentSupervisor {
     pub(super) async fn stop_process(&self, kind: ProcessKind) -> Result<(), String> {
         let mut errors: Vec<String> = Vec::new();
+
+        // The host agent is asked to drain before anything kills it: a killed
+        // `git commit` leaves `.git/index.lock` behind, and the host agent is
+        // also the only route that can drain the WSL agent behind it. The kill
+        // path below stays exactly as it was — it is the emergency bound — and
+        // the reason it records names the route that actually ran.
+        let mut reason = "stop";
+        if matches!(kind, ProcessKind::Host) {
+            let path = self.stop_host_gracefully("stop").await;
+            if let Err(err) = self.record_host_stop_finality(path) {
+                logging::log(
+                    "warn",
+                    "agent",
+                    "stop_cleanup",
+                    &format!("kind=host phase=record_finality outcome=failed error={err}"),
+                );
+            }
+            reason = match path {
+                GracefulStopPath::Drained => "stop_after_drain",
+                GracefulStopPath::Unknown => "stop_after_unknown_finality",
+                GracefulStopPath::Incomplete => "stop_after_incomplete_drain",
+                GracefulStopPath::NotAttempted => "stop",
+            };
+        }
 
         if matches!(kind, ProcessKind::Wsl) {
             if let Err(err) = self.terminate_wsl_backend_for_reason("stop").await {
@@ -24,7 +49,7 @@ impl AgentSupervisor {
             }
         }
 
-        if let Err(err) = self.reconcile_recorded_child(kind, "stop").await {
+        if let Err(err) = self.reconcile_recorded_child(kind, reason).await {
             errors.push(err);
         }
 

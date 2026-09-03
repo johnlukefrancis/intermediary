@@ -125,7 +125,9 @@ fn probe_websocket_auth_once(port: u16, token: &str, origin: Option<&str>) -> We
     }
 }
 
-fn read_handshake_response(stream: &mut TcpStream) -> Option<String> {
+/// Shared with the graceful-shutdown client: both open a raw websocket
+/// handshake on the same port and need the same two answers from it.
+pub(super) fn read_handshake_response(stream: &mut TcpStream) -> Option<String> {
     let mut bytes: Vec<u8> = Vec::with_capacity(512);
     let mut buffer = [0_u8; 512];
     while bytes.len() < HANDSHAKE_RESPONSE_LIMIT {
@@ -143,7 +145,7 @@ fn read_handshake_response(stream: &mut TcpStream) -> Option<String> {
     (!bytes.is_empty()).then(|| String::from_utf8_lossy(&bytes).into_owned())
 }
 
-fn response_status_code(response: &str) -> Option<u16> {
+pub(super) fn response_status_code(response: &str) -> Option<u16> {
     let status_line = response.lines().next()?;
     status_line.split_whitespace().nth(1)?.parse::<u16>().ok()
 }

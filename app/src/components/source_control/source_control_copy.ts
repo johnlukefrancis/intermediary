@@ -1,9 +1,12 @@
 // Path: app/src/components/source_control/source_control_copy.ts
-// Description: Badge letters, branch labels, and empty-state/error copy for the Source Control column
+// Description: Action labels, branch labels, and empty-state/error/confirm copy for the Source Control column
 
-import type {
-  SourceControlActionKind,
-  SourceControlStatus,
+import {
+  AGENT_DRAINING_CODE,
+  SOURCE_CONTROL_STATE_CHANGED_CODE,
+  type SourceControlActionKind,
+  type SourceControlEntry,
+  type SourceControlStatus,
 } from "../../shared/protocol.js";
 
 export const ACTION_LABELS: Record<SourceControlActionKind, string> = {
@@ -17,6 +20,8 @@ export const ACTION_LABELS: Record<SourceControlActionKind, string> = {
 
 export const READING_WORKING_TREE = "READING WORKING TREE";
 export const NO_CHANGES = "NO CHANGES";
+/** Nothing is listed, but staged paths above the configured root still travel with a commit */
+export const NO_CHANGES_IN_FOLDER = "NO CHANGES IN THIS FOLDER";
 export const STAGE_TO_COMMIT_HINT = "Stage changes to commit";
 export const TRUNCATED_HINT = "Status truncated; refresh before committing";
 export const MERGE_CONFLICTS_TITLE = "MERGE CONFLICTS";
@@ -40,8 +45,32 @@ export function reconcilingCopy(action: SourceControlActionKind): string {
   return `${ACTION_LABELS[action]} RESULT UNKNOWN — REFRESHING`;
 }
 
-export function actionErrorHeading(action: SourceControlActionKind): string {
+export function actionErrorHeading(action: SourceControlActionKind, code: string): string {
+  if (code === SOURCE_CONTROL_STATE_CHANGED_CODE) return "STATE CHANGED — REVIEW AGAIN";
+  if (code === AGENT_DRAINING_CODE) return "AGENT SHUTTING DOWN";
   return `${ACTION_LABELS[action]} FAILED`;
+}
+
+/** A commit hook (e.g. lint-staged) re-staged reviewed-root paths; not an error, just informational */
+export function hookChangedHeading(count: number): string {
+  return `COMMIT HOOK CHANGED ${count} FILE(S)`;
+}
+
+export function hookChangedMessage(paths: string[]): string {
+  return paths.join("\n");
+}
+
+/** What a discard does to one of the row's targets */
+function discardEffectLabel(entry: SourceControlEntry, path: string): string {
+  return entry.change === "untracked" && path === entry.path
+    ? "deleted"
+    : "restored from the index";
+}
+
+/** Every path the discard touches is named, because a row can own more than the file it shows */
+export function discardConfirmMessage(entry: SourceControlEntry, targets: string[]): string {
+  const lines = targets.map((path) => `${path} — ${discardEffectLabel(entry, path)}`);
+  return `This cannot be undone:\n\n${lines.join("\n")}`;
 }
 
 interface StatusErrorCopy {

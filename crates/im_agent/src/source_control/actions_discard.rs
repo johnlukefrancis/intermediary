@@ -1,124 +1,117 @@
 // Path: crates/im_agent/src/source_control/actions_discard.rs
-// Description: Discard worktree changes: restore tracked paths through Git, remove untracked regular files in Rust
+// Description: Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
 
 use std::collections::HashMap;
-use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use crate::error::AgentError;
-use crate::protocol::{SourceControlChange, SourceControlStatus};
+use crate::error::{AgentError, MutationEffect};
+use crate::protocol::{SourceControlChange, SourceControlDiscardTarget, SourceControlEntry, SourceControlStatus};
 
-use super::paths::{normalize_paths, nul_joined, resolve_untracked_file, PATHSPEC_FROM_STDIN};
-use super::runner::{self, GitCall, INDEX_TIMEOUT};
+use super::actions_discard_target::{process_target, TargetError};
+use super::discard_quarantine::{generate_op_id, quarantine_root};
+use super::locks::SourceControlLocks;
+use super::paths::normalize_path;
+use super::runner;
 use super::status;
 
-/// Each requested path is classified by a fresh status read: an untracked
-/// file is removed in Rust; an intent-to-add file (`git add -N`) leaves the
-/// index first, then is removed; every other worktree or conflict entry goes
-/// to `restore --worktree`; a path the worktree lists do not mention is a
-/// validated no-op. Every removal target is resolved (regular file, inside the
-/// root) before any mutation, so one refused path aborts the discard untouched.
-pub(super) async fn discard(repo_root: &Path, paths: &[String]) -> Result<(), AgentError> {
-    if paths.is_empty() {
-        return Ok(());
-    }
-    let paths = normalize_paths(paths)?;
-    let status = status::capture_status(repo_root, None).await?;
-    let plan = DiscardPlan::classify(&status, paths);
-    let targets = resolve_targets(repo_root, plan.remove).await?;
-    if !plan.restore.is_empty() {
-        let call = GitCall::new(["restore", "--worktree"])
-            .args(PATHSPEC_FROM_STDIN)
-            .stdin(nul_joined(&plan.restore))
-            .timeout(INDEX_TIMEOUT);
-        runner::run_mutation(repo_root, call).await?;
-    }
-    if !plan.unstage.is_empty() {
-        let call = GitCall::new(["reset", "-q"])
-            .args(PATHSPEC_FROM_STDIN)
-            .stdin(nul_joined(&plan.unstage))
-            .timeout(INDEX_TIMEOUT);
-        runner::run_mutation(repo_root, call).await?;
-    }
-    remove_targets(targets).await
-}
-
-#[derive(Default)]
-struct DiscardPlan {
-    restore: Vec<String>,
-    unstage: Vec<String>,
-    remove: Vec<String>,
-}
-
-impl DiscardPlan {
-    fn classify(status: &SourceControlStatus, paths: Vec<String>) -> Self {
-        let listed: HashMap<&str, SourceControlChange> = status
-            .worktree
-            .iter()
-            .chain(&status.conflicts)
-            .map(|entry| (entry.path.as_str(), entry.change))
-            .collect();
-        let mut plan = Self::default();
-        for path in paths {
-            match listed.get(path.as_str()) {
-                Some(SourceControlChange::Untracked) => plan.remove.push(path),
-                Some(SourceControlChange::Added) => {
-                    plan.unstage.push(path.clone());
-                    plan.remove.push(path);
-                }
-                Some(_) => plan.restore.push(path),
-                None => {}
-            }
-        }
-        plan
-    }
-}
-
-async fn resolve_targets(
+/// Only the confirmed targets are touched, one at a time: each is claimed into
+/// an operation-owned quarantine directory before anything about it changes,
+/// verified there against the stamp (or absence) the user reviewed, and only
+/// then acted on — so a discard can never destroy a file that changed after
+/// the review, and a crash mid-target leaves every earlier target's effect
+/// exactly as it landed. A copy row names its destination alone, and nothing
+/// here expands a record's provenance into a second target, so discarding a
+/// copy can never reach the source file the user was not shown.
+pub(super) async fn discard(
     repo_root: &Path,
-    untracked: Vec<String>,
-) -> Result<Vec<PathBuf>, AgentError> {
-    if untracked.is_empty() {
-        return Ok(Vec::new());
-    }
-    let repo_root = repo_root.to_path_buf();
-    blocking(move || {
-        untracked
-            .iter()
-            .filter_map(|path| resolve_untracked_file(&repo_root, path).transpose())
-            .collect()
-    })
-    .await
-}
-
-async fn remove_targets(targets: Vec<PathBuf>) -> Result<(), AgentError> {
+    targets: &[SourceControlDiscardTarget],
+    locks: &SourceControlLocks,
+) -> Result<(), AgentError> {
     if targets.is_empty() {
-        return Ok(());
+        return Err(
+            AgentError::new("INVALID_PATH", "No paths given").with_effect(MutationEffect::NotApplied)
+        );
     }
-    blocking(move || {
-        for target in &targets {
-            match std::fs::remove_file(target) {
-                Ok(()) => {}
-                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-                Err(error) => {
-                    return Err(AgentError::internal(format!(
-                        "Failed to discard {}: {error}",
-                        target.display()
-                    )))
-                }
+    let targets = normalize(targets)?;
+    let status = status::capture_status(repo_root, None, locks)
+        .await
+        .map_err(|error| error.with_effect(MutationEffect::NotApplied))?
+        .status;
+    let classification = classify(&status);
+    let git_dir = runner::capture_location(repo_root, None).await?.git_dir;
+    let root = quarantine_root(&git_dir, &generate_op_id());
+
+    let mut applied: Vec<String> = Vec::new();
+    for target in &targets {
+        match process_target(repo_root, &root, &classification, target).await {
+            Ok(()) => applied.push(target.path.clone()),
+            Err(error) => {
+                cleanup_best_effort(&root).await;
+                return Err(finish(error, &applied));
             }
         }
-        Ok(())
-    })
-    .await
+    }
+    cleanup_best_effort(&root).await;
+    Ok(())
 }
 
-async fn blocking<T, F>(work: F) -> Result<T, AgentError>
-where
-    T: Send + 'static,
-    F: FnOnce() -> Result<T, AgentError> + Send + 'static,
-{
-    tokio::task::spawn_blocking(work)
-        .await
-        .unwrap_or_else(|error| Err(AgentError::internal(format!("Discard task failed: {error}"))))
+fn normalize(
+    targets: &[SourceControlDiscardTarget],
+) -> Result<Vec<SourceControlDiscardTarget>, AgentError> {
+    targets
+        .iter()
+        .map(|target| {
+            Ok(SourceControlDiscardTarget {
+                path: normalize_path(&target.path)
+                    .map_err(|error| error.with_effect(MutationEffect::NotApplied))?,
+                expected_stamp: target.expected_stamp,
+                expected_missing: target.expected_missing,
+            })
+        })
+        .collect()
+}
+
+fn classify(status: &SourceControlStatus) -> HashMap<&str, SourceControlChange> {
+    status
+        .worktree
+        .iter()
+        .chain(&status.conflicts)
+        .map(|entry: &SourceControlEntry| (entry.path.as_str(), entry.change))
+        .collect()
+}
+
+/// A failure with no earlier success in this action is exactly what it says:
+/// nothing about the repository changed. Once an earlier target has landed,
+/// the same failure is no longer a clean refusal — the action is now
+/// half-applied — so the outcome is unknown, and the message names what
+/// already happened so the user is not left guessing which targets survived.
+fn finish(error: TargetError, applied: &[String]) -> AgentError {
+    let has_prior_success = !applied.is_empty();
+    let (code, message, unknown) = match error {
+        TargetError::Refused(inner) => (
+            inner.code().to_string(),
+            inner.message().to_string(),
+            has_prior_success,
+        ),
+        TargetError::EffectUnknown(inner) => (inner.code().to_string(), inner.message().to_string(), true),
+    };
+    let message = if has_prior_success {
+        format!("{message}; already discarded: {}", applied.join(", "))
+    } else {
+        message
+    };
+    let effect = if unknown {
+        MutationEffect::Unknown
+    } else {
+        MutationEffect::NotApplied
+    };
+    AgentError::new(code, message).with_effect(effect)
+}
+
+/// The operation directory should be empty by now (every claim was released
+/// or rolled back); removing it is tidiness, not correctness — a directory
+/// left behind by a failed removal is still swept at the next process start.
+async fn cleanup_best_effort(root: &Path) {
+    let root = root.to_path_buf();
+    let _ = tokio::task::spawn_blocking(move || std::fs::remove_dir(&root)).await;
 }

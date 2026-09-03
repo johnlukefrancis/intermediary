@@ -14,6 +14,7 @@ import {
 } from "./connection_state.js";
 import { normalizeLegacyEnvelope } from "./agent_client_legacy.js";
 import { getRequestTimeoutMs } from "./agent_request_timeouts.js";
+import { AgentResponseError } from "./error_codes.js";
 
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
@@ -146,7 +147,13 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
         if (envelope.status === "ok") {
           pending.resolve(envelope.payload);
         } else {
-          pending.reject(new Error(`${envelope.error.code}: ${envelope.error.message}`));
+          pending.reject(
+            new AgentResponseError(
+              envelope.error.code,
+              envelope.error.message,
+              envelope.error.details
+            )
+          );
         }
       }
     } else if (envelope.kind === "event") {

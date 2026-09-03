@@ -1,6 +1,7 @@
 // Path: src-tauri/src/lib/agent/supervisor/state.rs
 // Description: Shared supervisor process state and process-kind labels
 
+use super::graceful_stop::GracefulStopPath;
 use crate::agent::wsl_process_control::WslLaunchTarget;
 use std::process::Child;
 use std::time::Instant;
@@ -43,13 +44,29 @@ pub(super) struct WslBackendHandle {
     pub port: u16,
 }
 
+/// Durable identity of the host agent this session owns: the port it serves and
+/// the token that authenticates us to it. `stop`, `restart`, and app exit carry
+/// no config, and a graceful shutdown has to reach the same socket the
+/// supervisor started or adopted.
+#[derive(Debug, Clone)]
+pub(super) struct HostBackendHandle {
+    pub port: u16,
+    pub ws_token: String,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct AgentSupervisorState {
     pub host: ManagedProcessState,
     pub wsl: ManagedProcessState,
     pub wsl_launch_target: Option<WslLaunchTarget>,
+    pub last_host_backend: Option<HostBackendHandle>,
     pub last_wsl_backend: Option<WslBackendHandle>,
     pub last_error: Option<String>,
+    /// How the host agent's most recent stop actually ended
+    /// (`graceful_stop::stop_host_gracefully`). App-exit teardown reads this
+    /// to decide whether the WSL distro is safe to terminate: never while
+    /// finality came back `Unknown`.
+    pub last_host_stop_finality: Option<GracefulStopPath>,
 }
 
 pub(super) fn process_state(

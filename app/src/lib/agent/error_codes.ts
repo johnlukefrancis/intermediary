@@ -1,21 +1,33 @@
 // Path: app/src/lib/agent/error_codes.ts
-// Description: Parse backend response error codes from agent_client error messages
+// Description: Typed agent response error plus accessors for its code, message, and details
 
 /**
- * Extracts protocol error code from `agent_client` error messages like:
- * "NOT_CONFIGURED: Staging not configured".
+ * A protocol error response from the agent. `agent_client` rejects with this so callers read the
+ * code and the structured `details` payload instead of re-parsing the message text.
  */
+export class AgentResponseError extends Error {
+  readonly code: string;
+  readonly serverMessage: string;
+  // TODO(ts-precision): protocol `details` is an open per-code payload; each reader validates it.
+  readonly details: unknown;
+
+  constructor(code: string, serverMessage: string, details: unknown) {
+    super(`${code}: ${serverMessage}`);
+    this.name = "AgentResponseError";
+    this.code = code;
+    this.serverMessage = serverMessage;
+    this.details = details;
+  }
+}
+
+/** The agent's error code, or null for a transport failure (no response was ever parsed). */
 export function parseAgentErrorCode(error: unknown): string | null {
-  const message = error instanceof Error ? error.message : String(error);
-  const sep = message.indexOf(":");
-  if (sep <= 0) {
-    return null;
-  }
-  const code = message.slice(0, sep).trim();
-  if (!/^[A-Z0-9_]+$/.test(code)) {
-    return null;
-  }
-  return code;
+  return error instanceof AgentResponseError ? error.code : null;
+}
+
+/** The structured payload the agent attached to this error, or null for a transport failure. */
+export function agentErrorDetails(error: unknown): unknown {
+  return error instanceof AgentResponseError ? error.details : null;
 }
 
 export function isStagingNotConfiguredError(error: unknown): boolean {

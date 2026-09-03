@@ -4,22 +4,15 @@
 #![cfg(unix)]
 
 use std::ffi::OsString;
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use tempfile::tempdir;
 
-use super::command::{run_git, GitCommandFailure, GitCommandFailureKind};
+use super::command::{run_git, GitCommandFailure, GitCommandFailureKind, GitCommandOutput};
+use super::fake_git::write_fake_git;
 
 const TIMEOUT: Duration = Duration::from_millis(100);
-
-fn fake_git(dir: &Path, name: &str, body: &str) -> PathBuf {
-    let path = dir.join(name);
-    std::fs::write(&path, body).expect("fake git");
-    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("permissions");
-    path
-}
 
 fn run_until_timeout(fake_git: &Path, repo: &Path) -> (GitCommandFailure, Duration) {
     let started = Instant::now();
@@ -35,6 +28,21 @@ fn run_until_timeout(fake_git: &Path, repo: &Path) -> (GitCommandFailure, Durati
     let failure = result.expect_err("the fake git never exits by itself");
     assert_eq!(failure.kind, GitCommandFailureKind::TimedOut);
     (failure, started.elapsed())
+}
+
+fn run_to_completion(fake_git: &Path, repo: &Path) -> (GitCommandOutput, Duration) {
+    let started = Instant::now();
+    let output = run_git(
+        fake_git,
+        repo,
+        &[OsString::from("status")],
+        4096,
+        Duration::from_secs(30),
+        None,
+    )
+    .expect("runner result")
+    .expect("the fake git exits by itself");
+    (output, started.elapsed())
 }
 
 fn read_pid(pid_file: &Path) -> libc::pid_t {
@@ -64,10 +72,10 @@ fn timed_out_child_with_a_grandchild_on_stdout_returns_promptly_and_leaves_no_gr
     let root = tempdir().expect("tempdir");
     let pid_file = root.path().join("pid");
     let script = format!(
-        "#!/bin/sh\necho $$ > \"{}\"\nsleep 30 & sleep 30\n",
+        "echo $$ > \"{}\"\nsleep 30 & sleep 30\n",
         pid_file.display()
     );
-    let fake_git = fake_git(root.path(), "holding-git", &script);
+    let fake_git = write_fake_git(root.path(), "holding-git", &script);
 
     let (_, elapsed) = run_until_timeout(&fake_git, root.path());
     assert!(elapsed < Duration::from_secs(2), "took {elapsed:?}");
@@ -92,10 +100,10 @@ fn escaped_grandchild_detaches_the_readers_after_the_bounded_wait() {
         return;
     }
     let root = tempdir().expect("tempdir");
-    let fake_git = fake_git(
+    let fake_git = write_fake_git(
         root.path(),
         "escaping-git",
-        "#!/bin/sh\necho partial\n/usr/bin/setsid sleep 5 &\nsleep 30\n",
+        "echo partial\n/usr/bin/setsid sleep 5 &\nsleep 30\n",
     );
 
     let (failure, elapsed) = run_until_timeout(&fake_git, root.path());
@@ -107,4 +115,34 @@ fn escaped_grandchild_detaches_the_readers_after_the_bounded_wait() {
         failure.stdout.is_empty(),
         "detached reader delivers nothing"
     );
+}
+
+/// The direct Git child exits, but a descendant it backgrounded still holds
+/// stdout. The drain is bounded: the group is killed, the reader joins, and
+/// the caller gets Git's exit status and everything Git printed.
+#[test]
+fn exited_child_with_a_backgrounded_pipe_holder_returns_within_the_grace() {
+    let root = tempdir().expect("tempdir");
+    let fake_git = write_fake_git(
+        root.path(),
+        "hook-holding-git",
+        "echo committed\nsleep 5 &\nexit 0\n",
+    );
+
+    let (output, elapsed) = run_to_completion(&fake_git, root.path());
+    assert!(elapsed < Duration::from_secs(4), "took {elapsed:?}");
+    assert_eq!(output.exit_code, 0);
+    assert_eq!(output.stdout, b"committed\n");
+    assert!(!output.stdout_truncated);
+}
+
+/// Nothing holds the pipes: the drain adds no wait at all.
+#[test]
+fn exited_child_without_a_pipe_holder_returns_immediately() {
+    let root = tempdir().expect("tempdir");
+    let fake_git = write_fake_git(root.path(), "quick-git", "echo quick\n");
+
+    let (output, elapsed) = run_to_completion(&fake_git, root.path());
+    assert!(elapsed < Duration::from_millis(500), "took {elapsed:?}");
+    assert_eq!(output.stdout, b"quick\n");
 }

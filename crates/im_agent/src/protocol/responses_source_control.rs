@@ -3,7 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::commands_source_control::{SourceControlActionKind, SourceControlArea};
+use super::commands_source_control::{
+    SourceControlActionKind, SourceControlArea, SourceControlWorktreeStamp,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +39,20 @@ pub struct SourceControlEntry {
     pub original_path: Option<String>,
     pub area: SourceControlEntryArea,
     pub change: SourceControlChange,
+    /// Size and mtime of the file on disk, for worktree and conflict entries
+    /// whose path exists. The UI returns it with a discard so the agent can
+    /// refuse a file that changed after it was reviewed. Index entries never
+    /// carry one: their content lives in the index, not on disk.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worktree_stamp: Option<SourceControlWorktreeStamp>,
+    /// True for a worktree or conflict entry whose path Git reports changed
+    /// but which is not currently on disk (a tracked deletion, or a file
+    /// removed between the porcelain read and the stamp pass). The UI sends
+    /// `expectedMissing: true` back with a discard target built from such an
+    /// entry instead of a stamp, so the agent can refuse when a newer file has
+    /// since appeared rather than silently restore over it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub worktree_missing: bool,
 }
 
 /// Changed paths that are counted but not listed.
@@ -66,10 +82,19 @@ pub struct SourceControlStatus {
     pub index: Vec<SourceControlEntry>,
     pub worktree: Vec<SourceControlEntry>,
     pub conflicts: Vec<SourceControlEntry>,
-    /// Whether `git commit` would accept the index as it stands: it differs
-    /// from HEAD, or a merge is being concluded (even one whose resolved tree
-    /// equals HEAD). Decided by Git, not by the projected `index` list.
+    /// Whether `git commit` would accept the index as it stands: no unmerged
+    /// record anywhere in the repository, and either the index differs from
+    /// HEAD or a merge is being concluded (even one whose resolved tree equals
+    /// HEAD). Decided by Git's own output, not by the projected `index` list.
     pub committable: bool,
+    /// The tree id `git write-tree` would produce for the whole-repository
+    /// index, computed read-only. Empty exactly when no candidate tree exists
+    /// (the index holds unmerged entries). The UI returns it with a commit as
+    /// the precondition that the index is still the one it reviewed.
+    pub index_tree_sha: String,
+    /// True when this repository's physical mutation lock was held while the
+    /// status was read, so the lists may be mid-transaction.
+    pub mutation_in_progress: bool,
     pub omitted: SourceControlOmitted,
     /// True when Git's status output exceeded the bounded budget; the lists are incomplete.
     pub truncated: bool,
@@ -138,4 +163,11 @@ pub struct SourceControlActionResult {
     pub status: SourceControlStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit_sha: Option<String>,
+    /// Paths a commit hook changed beyond the reviewed index, accepted because
+    /// every one of them was already part of the paths the user reviewed (an
+    /// in-root reviewed path, or an outside-root path staged at precondition
+    /// time when the UI had shown its outside-root confirmation). Present only
+    /// for a commit whose hook changed something; empty otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub hook_changed_paths: Vec<String>,
 }

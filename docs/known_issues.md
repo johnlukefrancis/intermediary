@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-07-15
+Updated on: 2026-09-03
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -61,8 +61,36 @@ Depends on: ADR-000, ADR-007
 
 ---
 
+## Source Control — deliberately deferred
+
+Recorded from `docs/reports/source_control_adversarial_review_20260903.md`'s P2-10 findings. These are
+accepted end states, not open defects; kept here so they are not mistaken for oversights.
+
+- 2026-09-03: `app/src/components/source_control/` (10 sibling modules) and `crates/im_agent/src/source_control/`
+  (15 sibling modules) both sit at or over ADR-000's 10-sibling split threshold. Splitting now would land
+  mid-merge with the tree-decorations/icon-rocker/conflict-prominence/image-diff follow-up commits on
+  `master`, so the folder split is deferred to land together with that merge rather than fixed twice.
+- 2026-09-03: Host in-process source-control reads (status/diff for host-rooted repos) are bounded by
+  their Git timeout only and are not cancellable — the host agent has no cancellation path to serve one,
+  so no UI cancel control is offered for a host read. WSL-routed reads remain cancellable.
+- 2026-09-03: MERGE CONFLICTS has no section-wide stage/unstage. This is intentional, not a gap: conflicts
+  are resolved per row so a bulk action can never mark a conflict-marker file resolved by accident.
+- 2026-09-03: Paths Git reports that are not valid UTF-8 cannot cross the protocol, so they are counted in
+  `omitted.unrepresentablePath` and never listed. Because a section action enumerates only the paths its
+  section listed, STAGE ALL does not reach them either; they can only be staged from a terminal.
+
+---
+
 ## Resolved (recent)
 
+- 2026-09-03: On Windows the Git process tree had no owner, so a descendant (hook, `ssh`, credential
+  helper) that outlived Git and kept its handle open was detached rather than terminated when the
+  runner's post-exit drain expired. Closed by `crates/im_bundle/src/git_capture/{command_tree,command_job}.rs`:
+  every Git child now runs inside a Job Object assigned immediately after the spawn, and that tree is
+  terminated on forced stop (timeout or cancellation), drain expiry, and shutdown finalization; the job
+  carries no kill-on-close limit, so helpers that close their pipes outlive Git as on Unix. Unverified on
+  Windows: the arm type-checks for `x86_64-pc-windows-msvc` but has not been exercised against a real
+  `git.exe` (see the round-2 report).
 - 2026-08-17: Windows installer tasks could sync current WSL source to the default D: mirror but
   build a separately configured C: mirror, producing a successful installer from stale source.
   Fixed by exporting the configured Windows mirror through `WSLENV` with path translation before

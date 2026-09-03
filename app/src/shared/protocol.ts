@@ -78,20 +78,25 @@ export {
   type RefreshResult, type SetOptionsResult, type StageFileResult, type WatchRepoResult,
 } from "./protocol_repo_commands.js";
 export {
-  ImageDiffSideSchema, ImageDiffSourceSchema,
+  AGENT_DRAINING_CODE, ImageDiffSideSchema, ImageDiffSourceSchema,
+  SOURCE_CONTROL_STATE_CHANGED_CODE,
   SourceControlActionCommandSchema, SourceControlActionKindSchema, SourceControlActionResultSchema,
   SourceControlActionSchema, SourceControlAreaSchema, SourceControlChangeSchema,
-  SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlEntryAreaSchema,
-  SourceControlEntrySchema, SourceControlImageDiffCommandSchema,
+  SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlDiscardTargetSchema,
+  SourceControlEffectSchema, SourceControlEntryAreaSchema, SourceControlEntrySchema,
+  SourceControlErrorDetailsSchema, SourceControlImageDiffCommandSchema,
   SourceControlImageDiffResultSchema, SourceControlOmittedSchema, SourceControlScopeSchema,
-  SourceControlStatusCommandSchema, SourceControlStatusResultSchema, SourceControlStatusSchema,
+  SourceControlStampSchema, SourceControlStatusCommandSchema, SourceControlStatusResultSchema,
+  SourceControlStatusSchema,
   type ImageDiffSide, type ImageDiffSource,
   type SourceControlAction, type SourceControlActionCommand, type SourceControlActionKind,
   type SourceControlActionResult, type SourceControlArea, type SourceControlChange,
-  type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlEntry,
-  type SourceControlEntryArea, type SourceControlImageDiffCommand,
+  type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlDiscardTarget,
+  type SourceControlEffect, type SourceControlEntry, type SourceControlEntryArea,
+  type SourceControlErrorDetails, type SourceControlImageDiffCommand,
   type SourceControlImageDiffResult, type SourceControlOmitted, type SourceControlScope,
-  type SourceControlStatus, type SourceControlStatusCommand, type SourceControlStatusResult,
+  type SourceControlStamp, type SourceControlStatus, type SourceControlStatusCommand,
+  type SourceControlStatusResult,
 } from "./protocol_source_control.js";
 
 // -----------------------------------------------------------------------------

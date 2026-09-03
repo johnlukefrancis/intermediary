@@ -13,16 +13,15 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use im_bundle::error::BundleError;
 use im_bundle::git::{
-    bytes_to_path, capture_repo_prefix, common_git_args, run_git, run_git_with_input,
-    trim_line_ending, BundleCancelToken, GitCommandFailure, GitCommandFailureKind,
-    GitCommandOutput, KillPolicy,
+    capture_repo_prefix, common_git_args, run_git_with_input, BundleCancelToken, GitCommandOutput,
+    KillPolicy,
 };
 
 use crate::error::AgentError;
 
 use super::git_version;
+use super::runner_failure::{map_failure, map_runner_error};
 
 pub(super) const READ_TIMEOUT: Duration = Duration::from_secs(20);
 pub(super) const INDEX_TIMEOUT: Duration = Duration::from_secs(60);
@@ -34,8 +33,11 @@ pub(super) const ACTION_LIMIT: usize = 1024 * 1024;
 /// Raw bytes accepted per image-diff side. Two sides at the bound are about
 /// 32 MiB of base64 on the wire, which the WebSocket frame limits allow.
 pub(super) const IMAGE_DIFF_SIDE_LIMIT: usize = 12 * 1024 * 1024;
-const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
-const PROBE_LIMIT: usize = 4096;
+
+/// Bounds for the small probes that support a command rather than serving a
+/// request: the version check and the leftover-lock lookup.
+pub(super) const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+pub(super) const PROBE_LIMIT: usize = 4096;
 
 pub(super) fn git_executable() -> PathBuf {
     PathBuf::from("git")
@@ -103,7 +105,7 @@ impl GitCall {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Mode {
+pub(super) enum Mode {
     Read,
     Mutation,
 }
@@ -128,12 +130,22 @@ pub(super) async fn run_mutation(
     spawn(move || run_blocking(&repo_root, call, None, Mode::Mutation)).await
 }
 
-/// `git rev-parse --show-prefix` as raw bytes with a trailing slash (empty at
-/// the top level), through the same pre-checks and failure mapping as reads.
-pub(super) async fn capture_prefix(
+/// Where a configured root sits in its repository: the `--show-prefix` bytes
+/// with a trailing slash (empty at the top level) and the physical Git
+/// directory its index lives in.
+pub(super) struct RepoLocation {
+    pub prefix: Vec<u8>,
+    pub git_dir: PathBuf,
+}
+
+/// One `git rev-parse --show-prefix --absolute-git-dir`, through the same
+/// pre-checks and failure mapping as reads. Both answers come from this single
+/// process, so a status read never spawns Git again to learn which index it is
+/// looking at.
+pub(super) async fn capture_location(
     repo_root: &Path,
     cancel_token: Option<BundleCancelToken>,
-) -> Result<Vec<u8>, AgentError> {
+) -> Result<RepoLocation, AgentError> {
     let repo_root = repo_root.to_path_buf();
     spawn(move || {
         prepare(&repo_root)?;
@@ -147,7 +159,16 @@ pub(super) async fn capture_prefix(
                 "Git repository prefix exceeded its output bound",
             ));
         }
-        Ok(captured.prefix)
+        let git_dir = captured.git_dir.ok_or_else(|| {
+            AgentError::new(
+                "GIT_NOT_REPOSITORY",
+                format!("Git reported no git directory for {}", repo_root.display()),
+            )
+        })?;
+        Ok(RepoLocation {
+            prefix: captured.prefix,
+            git_dir,
+        })
     })
     .await
 }
@@ -198,88 +219,4 @@ fn run_blocking(
     )
     .map_err(map_runner_error)?
     .map_err(|failure| map_failure(mode, repo_root, call.timeout, failure))
-}
-
-fn map_runner_error(error: BundleError) -> AgentError {
-    match error {
-        BundleError::Cancelled => AgentError::new("CANCELLED", "Source control request cancelled"),
-        other => AgentError::internal(format!("Git runner failed: {other}")),
-    }
-}
-
-/// Maps a read-side probe failure (used by the version probe before any
-/// command-specific context exists).
-pub(super) fn map_probe_failure(repo_root: &Path, failure: GitCommandFailure) -> AgentError {
-    map_failure(Mode::Read, repo_root, PROBE_TIMEOUT, failure)
-}
-
-fn map_failure(
-    mode: Mode,
-    repo_root: &Path,
-    timeout: Duration,
-    failure: GitCommandFailure,
-) -> AgentError {
-    let seconds = timeout.as_secs();
-    match failure.kind {
-        GitCommandFailureKind::MissingExecutable => {
-            AgentError::new("GIT_UNAVAILABLE", "Git executable not found on PATH")
-        }
-        GitCommandFailureKind::NotGitRepository => AgentError::new(
-            "GIT_NOT_REPOSITORY",
-            non_empty(failure.message(), "Not a Git repository"),
-        ),
-        GitCommandFailureKind::TimedOut => match (mode, leftover_index_lock(repo_root)) {
-            (Mode::Mutation, Some(lock)) => AgentError::new(
-                "GIT_ABORTED",
-                format!(
-                    "Git was stopped after {seconds}s and left {} behind; remove it once no Git process is running",
-                    lock.display()
-                ),
-            ),
-            _ => AgentError::new("GIT_TIMEOUT", format!("Git timed out after {seconds}s")),
-        },
-        GitCommandFailureKind::NonZeroExit => AgentError::new(
-            "GIT_COMMAND_FAILED",
-            non_empty(
-                failure.message(),
-                &format!(
-                    "Git exited with status {}",
-                    failure.exit_code.map_or("unknown".to_string(), |c| c.to_string())
-                ),
-            ),
-        ),
-        GitCommandFailureKind::SpawnFailed => AgentError::new(
-            "GIT_COMMAND_FAILED",
-            non_empty(failure.message(), "Git could not be started"),
-        ),
-        GitCommandFailureKind::InputWriteFailed => AgentError::new(
-            "GIT_COMMAND_FAILED",
-            non_empty(failure.message(), "Git closed its input before reading it"),
-        ),
-        GitCommandFailureKind::OutputReadFailed => AgentError::new(
-            "GIT_COMMAND_FAILED",
-            non_empty(failure.message(), "Git output could not be read"),
-        ),
-    }
-}
-
-fn non_empty(message: String, fallback: &str) -> String {
-    if message.is_empty() {
-        fallback.to_string()
-    } else {
-        message
-    }
-}
-
-/// Where a stopped mutation would have left its index lock, when it did.
-fn leftover_index_lock(repo_root: &Path) -> Option<PathBuf> {
-    let mut args = common_git_args();
-    args.extend(["rev-parse", "--git-path", "index.lock"].map(OsString::from));
-    let derived = run_git(&git_executable(), repo_root, &args, PROBE_LIMIT, PROBE_TIMEOUT, None)
-        .ok()
-        .and_then(Result::ok)
-        .and_then(|output| bytes_to_path(&trim_line_ending(output.stdout)))
-        .map(|path| if path.is_absolute() { path } else { repo_root.join(path) })
-        .unwrap_or_else(|| repo_root.join(".git").join("index.lock"));
-    derived.exists().then_some(derived)
 }

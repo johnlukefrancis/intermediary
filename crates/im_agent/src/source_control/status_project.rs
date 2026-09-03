@@ -12,14 +12,21 @@ use crate::protocol::{
     SourceControlStatus,
 };
 
+use super::status::StatusCapture;
+
 /// Whole-repository status projected onto the configured root: paths lose the
 /// repo prefix, staged paths outside the root and paths not representable as
 /// UTF-8 are counted instead of listed, and each list is sorted by path.
+///
+/// `index_ready` is Git's answer about the index alone; a repository with any
+/// unmerged record is not committable however ready the index looks.
 pub(super) fn project_status(
     prefix: &[u8],
     output: GitCommandOutput,
-    committable: bool,
-) -> Result<SourceControlStatus, AgentError> {
+    index_ready: bool,
+    index_tree_sha: String,
+    mutation_in_progress: bool,
+) -> Result<StatusCapture, AgentError> {
     let truncated = output.stdout_truncated;
     let parsed = parse_best_effort(output.stdout, truncated)?;
     let mut lists = Lists::default();
@@ -27,7 +34,8 @@ pub(super) fn project_status(
         lists.push(record, prefix);
     }
     lists.sort();
-    Ok(SourceControlStatus {
+    let unmerged = lists.unmerged;
+    let status = SourceControlStatus {
         detached: parsed.branch.is_none() && parsed.head_sha.is_some(),
         branch: parsed.branch,
         head_sha: parsed.head_sha,
@@ -37,11 +45,14 @@ pub(super) fn project_status(
         index: lists.index,
         worktree: lists.worktree,
         conflicts: lists.conflicts,
-        committable,
+        committable: index_ready && !unmerged,
+        index_tree_sha,
+        mutation_in_progress,
         omitted: lists.omitted,
         truncated,
         captured_at_iso: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
-    })
+    };
+    Ok(StatusCapture { status, unmerged })
 }
 
 /// A truncated capture is cut back to its last NUL so only complete fields
@@ -67,20 +78,17 @@ struct Lists {
     worktree: Vec<SourceControlEntry>,
     conflicts: Vec<SourceControlEntry>,
     omitted: SourceControlOmitted,
+    /// Any unmerged record in the whole repository, inside the root or not.
+    unmerged: bool,
 }
 
 impl Lists {
     fn push(&mut self, record: &StatusRecord, prefix: &[u8]) {
+        if record.is_unmerged() {
+            self.unmerged = true;
+        }
         let Some(relative) = strip_repo_prefix(record.current.as_bytes(), prefix) else {
-            // Staged content outside the root travels with a commit of the
-            // whole index and unmerged paths out there block that commit, so
-            // both are counted; worktree-only and untracked records are not
-            // this root's concern and are dropped silently.
-            if record.is_unmerged() {
-                self.omitted.unmerged_outside_root += 1;
-            } else if is_staged(record) {
-                self.omitted.staged_outside_root += 1;
-            }
+            self.push_outside(record, prefix);
             return;
         };
         let Ok(path) = String::from_utf8(relative.to_vec()) else {
@@ -107,15 +115,20 @@ impl Lists {
         }
         // A rename source that cannot be stripped or represented drops only
         // `original_path`; the entry itself is still listed.
-        let original = record
-            .original
-            .as_ref()
-            .and_then(|original| strip_repo_prefix(original.as_bytes(), prefix))
-            .filter(|bytes| !bytes.is_empty())
-            .and_then(|bytes| String::from_utf8(bytes.to_vec()).ok());
-        let xy = record.xy.as_bytes();
-        let index_letter = xy.first().copied().unwrap_or(b'.');
-        let worktree_letter = xy.get(1).copied().unwrap_or(b'.');
+        let original_bytes = record.original.as_ref().map(|original| original.as_bytes());
+        let original_inside = original_bytes
+            .and_then(|bytes| strip_repo_prefix(bytes, prefix))
+            .filter(|bytes| !bytes.is_empty());
+        let original = original_inside.and_then(|bytes| String::from_utf8(bytes.to_vec()).ok());
+        let index_letter = index_letter(record);
+        let worktree_letter = record.xy.as_bytes().get(1).copied().unwrap_or(b'.');
+        // A rename into the root from outside it: the entry belongs here, but
+        // the deletion of the outside source travels with the same commit and
+        // has to be counted. A copy leaves its source alone, so it counts
+        // nothing.
+        if index_letter == b'R' && original_bytes.is_some() && original_inside.is_none() {
+            self.omitted.staged_outside_root += 1;
+        }
         if index_letter != b'.' {
             let change = change_from(index_letter);
             self.index.push(entry(
@@ -136,6 +149,43 @@ impl Lists {
         }
     }
 
+    /// A record whose current path is outside the root. Staged content travels
+    /// with a commit of the whole index and an unmerged path out there blocks
+    /// that commit, so both are counted; worktree-only and untracked records
+    /// are not this root's concern and are dropped silently. A staged rename
+    /// out of the root still deletes its inside endpoint, and that deletion is
+    /// listed so the user sees the inside file leave.
+    fn push_outside(&mut self, record: &StatusRecord, prefix: &[u8]) {
+        if record.is_unmerged() {
+            self.omitted.unmerged_outside_root += 1;
+            return;
+        }
+        if !is_staged(record) {
+            return;
+        }
+        self.omitted.staged_outside_root += 1;
+        if index_letter(record) != b'R' {
+            return;
+        }
+        let Some(original) = record
+            .original
+            .as_ref()
+            .and_then(|original| strip_repo_prefix(original.as_bytes(), prefix))
+            .filter(|bytes| !bytes.is_empty())
+        else {
+            return;
+        };
+        match String::from_utf8(original.to_vec()) {
+            Ok(path) => self.index.push(entry(
+                path,
+                None,
+                SourceControlEntryArea::Index,
+                SourceControlChange::Deleted,
+            )),
+            Err(_) => self.omitted.unrepresentable_path += 1,
+        }
+    }
+
     fn sort(&mut self) {
         for list in [&mut self.index, &mut self.worktree, &mut self.conflicts] {
             list.sort_by(|a, b| a.path.cmp(&b.path));
@@ -144,8 +194,11 @@ impl Lists {
 }
 
 fn is_staged(record: &StatusRecord) -> bool {
-    let index_letter = record.xy.as_bytes().first().copied().unwrap_or(b'.');
-    !record.is_untracked() && !record.is_unmerged() && index_letter != b'.'
+    !record.is_untracked() && !record.is_unmerged() && index_letter(record) != b'.'
+}
+
+fn index_letter(record: &StatusRecord) -> u8 {
+    record.xy.as_bytes().first().copied().unwrap_or(b'.')
 }
 
 /// Porcelain-v2 change letter for either column. Any letter Git may add
@@ -179,5 +232,7 @@ fn entry(
         original_path,
         area,
         change,
+        worktree_stamp: None,
+        worktree_missing: false,
     }
 }

@@ -14,6 +14,7 @@ use crate::runtime::AgentRuntime;
 
 use super::connection::{handle_connection, ConnectionContext};
 use super::event_bus::EventBus;
+use super::shutdown::{drain_source_control, finalize_shutdown, wait_for_shutdown_signal};
 use super::handshake_auth::ConnectionHandshakeAuth;
 use super::runtime_identity::runtime_binary_sha256;
 
@@ -44,8 +45,11 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
         .logger
         .info("WebSocket server started", Some(json!({"port": port})));
 
-    let shutdown = tokio::signal::ctrl_c();
+    // SIGTERM and ctrl-c take the same route as the `shutdown` command: stop
+    // accepting, drain the mutations already running, then let `main` return.
+    let shutdown = wait_for_shutdown_signal(&config.logger);
     tokio::pin!(shutdown);
+    let signal_reason;
 
     loop {
         tokio::select! {
@@ -70,18 +74,27 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                     }
                 }
             }
-            signal_result = &mut shutdown => {
-                if let Err(err) = signal_result {
-                    config.logger.warn(
-                        "Failed to listen for shutdown signal",
-                        Some(json!({"error": err.to_string()})),
-                    );
-                }
+            reason = &mut shutdown => {
+                signal_reason = reason;
                 break;
             }
         }
     }
 
-    config.logger.info("WebSocket server stopped", None);
+    let locks = {
+        let state = config.runtime.read().await;
+        state.source_control_locks.clone()
+    };
+    let outcome = drain_source_control(&locks, &config.logger, signal_reason).await;
+    finalize_shutdown(&config.logger, signal_reason, outcome).await;
+
+    config.logger.info(
+        "WebSocket server stopped",
+        Some(json!({
+            "signal": signal_reason,
+            "drained": outcome.drained,
+            "activeMutations": outcome.active_mutations,
+        })),
+    );
     Ok(())
 }

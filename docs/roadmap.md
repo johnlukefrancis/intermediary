@@ -48,7 +48,7 @@ Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with
 - VS Code tasks for Windows development workflow
 - UI-based repo management (add via "+" button, remove via "×" with confirmation)
 - Broad language-aware file classification with generated extension baseline + classifier excludes
-- Source Control rail: Git status with staged/unstaged/conflict sections, stage/unstage, commit, discard, per-file diff, push/pull, event-driven refresh (replaces the last VS Code dependency)
+- Source Control rail: Git status with staged/unstaged/conflict sections, stage/unstage, commit, discard, per-file diff, push/pull, event-driven refresh (replaces the last VS Code dependency). Two hardening reviews landed 2026-09-03: the adversarial review (snapshot-bound mutations, shutdown drain, corrected timeout ladder, physical-git-dir locking — `docs/reports/source_control_adversarial_review_20260903.md`) and the fix-layer closure review that binds commit/discard to the reviewed snapshot at the effect boundary (hook-aware commit retraction, quarantined discard with nanosecond stamps, `expectedMissing`) and makes shutdown drain-governed rather than time-boxed, with Windows Job Object ownership of the Git process tree (`docs/reports/source_control_fix_layer_review_20260903.md`).
 
 ---
 

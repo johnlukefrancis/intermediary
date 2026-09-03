@@ -5,6 +5,7 @@ use im_agent::error::AgentError;
 use im_agent::protocol::{UiCommand, UiResponse};
 
 use super::connection::ConnectionContext;
+use super::shutdown_dispatch;
 use crate::runtime::{execute_host_source_control, RepoBackend};
 
 pub async fn dispatch_command(
@@ -23,6 +24,11 @@ pub async fn dispatch_command(
         | UiCommand::SourceControlImageDiff(_)
         | UiCommand::SourceControlAction(_) => {
             return dispatch_source_control(command, ctx).await;
+        }
+        // Shutdown drains the WSL backend and then this process; both waits are
+        // minutes long, so it never touches the runtime write lock.
+        UiCommand::Shutdown => {
+            return shutdown_dispatch::dispatch_shutdown(ctx).await;
         }
         command => {
             let mut runtime = ctx.runtime.write().await;

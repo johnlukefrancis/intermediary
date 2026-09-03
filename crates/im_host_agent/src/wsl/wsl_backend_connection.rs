@@ -13,7 +13,9 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use super::wsl_backend_client::{ForwardedWslResponse, RequestLoopMessage};
+use super::wsl_backend_client::{
+    untrack_outstanding, ForwardedWslResponse, OutstandingMutations, RequestLoopMessage,
+};
 use super::wsl_backend_messages::{
     fail_pending_requests, handle_backend_message, wsl_unavailable_error,
 };
@@ -24,6 +26,7 @@ pub(super) async fn run_connected(
     event_bus: &EventBus,
     logger: &Logger,
     generation: u64,
+    outstanding_mutations: &OutstandingMutations,
 ) {
     let (mut sink, mut read_stream) = stream.split();
     let mut pending: HashMap<String, oneshot::Sender<Result<ForwardedWslResponse, AgentError>>> =
@@ -45,6 +48,9 @@ pub(super) async fn run_connected(
                         let payload = match serde_json::to_string(&envelope) {
                             Ok(payload) => payload,
                             Err(err) => {
+                                // Answered without ever being sent, so nothing
+                                // of ours is running in WSL for it either.
+                                untrack_outstanding(outstanding_mutations, &request.request_id);
                                 let _ = request.response_tx.send(Err(AgentError::internal(format!(
                                     "Failed to serialize WSL request: {err}"
                                 ))));

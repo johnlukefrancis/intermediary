@@ -212,6 +212,10 @@ pub enum UiCommand {
     SourceControlImageDiff(SourceControlImageDiffCommand),
     #[serde(rename = "sourceControlAction")]
     SourceControlAction(SourceControlActionCommand),
+    /// Drain and stop this agent. Carries no fields and targets no repository:
+    /// it is the process-wide shutdown gate, not a repo operation.
+    #[serde(rename = "shutdown")]
+    Shutdown,
     #[serde(other)]
     Unknown,
 }
@@ -237,6 +241,7 @@ impl UiCommand {
             UiCommand::SourceControlDiff(_) => "sourceControlDiff",
             UiCommand::SourceControlImageDiff(_) => "sourceControlImageDiff",
             UiCommand::SourceControlAction(_) => "sourceControlAction",
+            UiCommand::Shutdown => "shutdown",
             UiCommand::Unknown => "unknown",
         }
     }
@@ -264,6 +269,7 @@ impl UiCommand {
             | UiCommand::SetOptions(_)
             | UiCommand::GetTrFleetStatus(_)
             | UiCommand::TrFleetAction(_)
+            | UiCommand::Shutdown
             | UiCommand::Unknown => None,
         }
     }

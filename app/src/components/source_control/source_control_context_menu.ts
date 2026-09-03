@@ -6,6 +6,7 @@ import type { RepoRoot } from "../../shared/config.js";
 import type { useFileActions } from "../../hooks/use_file_actions.js";
 import type { ContextMenuItem } from "../context_menu.js";
 import { buildSingleFileContextMenuItems } from "../file_context_menu_items.js";
+import { isPreviewImagePath } from "../../hooks/repo_workspace_types.js";
 import { isDeletedEntry } from "./source_control_row.js";
 
 const DELETED_DISABLED_LABELS = new Set(["Open File", "Open Containing Folder"]);
@@ -47,9 +48,12 @@ export function buildSourceControlContextMenuItems({
     deleted && DELETED_DISABLED_LABELS.has(item.label) ? { ...item, disabled: true } : item
   );
 
+  // A deleted text row has no side left to show; a deleted image still has its
+  // previous version, and the image diff renders that one-sided.
+  const opensDiff = !deleted || isPreviewImagePath(entry.path);
   const items: ContextMenuItem[] = [
     stageItem,
-    { label: "Open Diff", onClick: () => { onOpenDiff(entry); } },
+    { label: "Open Diff", disabled: !opensDiff, onClick: () => { onOpenDiff(entry); } },
     ...fileItems,
   ];
 

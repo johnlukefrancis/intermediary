@@ -4,9 +4,11 @@
 import type React from "react";
 import type { SourceControlEntry, SourceControlStatus } from "../../shared/protocol.js";
 import type { SourceControlPhase } from "../../hooks/source_control/source_control_types.js";
+import { countVisibleRows } from "../../hooks/source_control/source_control_counts.js";
 import {
   MERGE_CONFLICTS_TITLE,
   NO_CHANGES,
+  NO_CHANGES_IN_FOLDER,
   READING_WORKING_TREE,
   reconcilingCopy,
   statusErrorCopy,
@@ -61,7 +63,7 @@ export function SourceControlBody({
     );
   }
 
-  const changeCount = status.index.length + status.worktree.length + status.conflicts.length;
+  const visibleRows = countVisibleRows(status);
   const rowProps = { disabled: actionsDisabled, onOpenDiff, onContextMenu };
 
   return (
@@ -71,8 +73,10 @@ export function SourceControlBody({
           {reconcilingCopy(phase.action)}
         </p>
       )}
-      {changeCount === 0 ? (
-        <p className="empty-state">{NO_CHANGES}</p>
+      {visibleRows === 0 ? (
+        <p className="empty-state">
+          {status.omitted.stagedOutsideRoot > 0 ? NO_CHANGES_IN_FOLDER : NO_CHANGES}
+        </p>
       ) : (
         <div className="source-control-sections">
           {status.conflicts.length > 0 && (

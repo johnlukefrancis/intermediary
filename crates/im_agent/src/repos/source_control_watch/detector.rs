@@ -7,14 +7,17 @@ use std::path::{Path, PathBuf};
 
 use crate::error::AgentError;
 
-/// Directories that never hold tracked files. Deliberately minimal: the
-/// watcher's `IgnoreMatcher` defaults (`**/.git/**`, `**/dist/**`, `**/*.log`,
-/// `**/logs/**`, `**/build/**`) would hide files Git tracks, so this detector
-/// owns its own matcher instead of reusing that one.
+use super::tracked_set::TrackedPathSet;
+
+/// Directories the detector treats as noise by default. Not a claim that
+/// Git can never track a file under them (it can: `docs/known_issues.md`
+/// records a real `target/` source directory) — `tracked` overrides this for
+/// any path Git actually tracks, so this list only has to be a reasonable
+/// default for the untracked case.
 const STRUCTURAL_IGNORE_PATTERNS: &[&str] = &["**/node_modules/**", "**/target/**"];
 
 /// Git dir entries whose content decides what `git status` prints. Everything
-/// else under a git dir (objects, logs, hooks, info) is noise.
+/// else under a git dir (objects, logs, hooks) is noise.
 const GIT_METADATA_ENTRIES: &[&str] = &[
     "index",
     "HEAD",
@@ -22,27 +25,54 @@ const GIT_METADATA_ENTRIES: &[&str] = &[
     "MERGE_HEAD",
     "FETCH_HEAD",
     "packed-refs",
+    "config",
+    "info/exclude",
 ];
 
 const GIT_DIR_ENTRY: &str = ".git";
 const GIT_DIR_PREFIX: &str = ".git/";
 const REFS_PREFIX: &str = "refs/";
+const WORKTREES_PREFIX: &str = "worktrees/";
+const CONFIG_SUFFIX: &str = "/config";
 const LOCK_SUFFIX: &str = ".lock";
+const INDEX_ENTRY: &str = "index";
 
 pub(crate) struct SourceControlChangeDetector {
     root_path: PathBuf,
     external_git_dirs: Vec<PathBuf>,
     ignore_set: GlobSet,
+    tracked: TrackedPathSet,
+}
+
+/// Where a path lands relative to the repo this detector watches.
+enum Location {
+    /// Inside a git dir living outside `root_path` (a linked worktree's own
+    /// git dir, or the common dir it shares with the main worktree): judged
+    /// by the metadata rule only. Carries the dir-relative entry.
+    ExternalGitDir(String),
+    /// Under `root_path`'s own `.git/`. Carries the dir-relative entry.
+    GitDir(String),
+    /// `root_path/.git` itself: `git init`, or a linked worktree's pointer
+    /// file.
+    GitDirRoot,
+    /// An ordinary worktree path. Carries the repo-relative, slash-separated
+    /// path.
+    Worktree(String),
+    Outside,
 }
 
 impl SourceControlChangeDetector {
     /// `external_git_dirs` are absolute git dirs living outside `root_path`
     /// (a linked worktree's git dir and its common dir); paths inside them are
-    /// judged by the git-metadata rule only.
+    /// judged by the git-metadata rule only. `tracked` is the repo's
+    /// `git ls-files` authority, shared with the watch's reloader — a
+    /// worktree event for a path it holds always emits, even under
+    /// `ignore_globs`.
     pub(crate) fn new(
         root_path: &Path,
         external_git_dirs: Vec<PathBuf>,
         ignore_globs: &[String],
+        tracked: TrackedPathSet,
     ) -> Result<Self, AgentError> {
         let mut builder = GlobSetBuilder::new();
         for pattern in STRUCTURAL_IGNORE_PATTERNS {
@@ -58,42 +88,69 @@ impl SourceControlChangeDetector {
             root_path: root_path.to_path_buf(),
             external_git_dirs,
             ignore_set,
+            tracked,
         })
     }
 
     pub(crate) fn affects(&self, event: &Event) -> bool {
-        if !matches!(
-            event.kind,
-            EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-        ) {
+        if !is_relevant_kind(event) {
             return false;
         }
         event.paths.iter().any(|path| self.affects_path(path))
     }
 
+    /// True when this event touches `.git/index` (or the lockfile Git
+    /// renames it through) — the signal that the tracked-path set is stale.
+    pub(crate) fn is_index_change(&self, event: &Event) -> bool {
+        if !is_relevant_kind(event) {
+            return false;
+        }
+        event.paths.iter().any(|path| match self.locate(path) {
+            Location::ExternalGitDir(entry) | Location::GitDir(entry) => is_index_entry(&entry),
+            Location::GitDirRoot | Location::Worktree(_) | Location::Outside => false,
+        })
+    }
+
     fn affects_path(&self, path: &Path) -> bool {
+        match self.locate(path) {
+            Location::ExternalGitDir(entry) | Location::GitDir(entry) => is_git_metadata(&entry),
+            Location::GitDirRoot => true,
+            Location::Worktree(relative) => {
+                self.tracked.contains(&relative) || !self.ignore_set.is_match(&relative)
+            }
+            Location::Outside => false,
+        }
+    }
+
+    fn locate(&self, path: &Path) -> Location {
         for git_dir in &self.external_git_dirs {
             if let Ok(relative) = path.strip_prefix(git_dir) {
-                return is_git_metadata(&normalize(relative));
+                return Location::ExternalGitDir(normalize(relative));
             }
         }
 
         let Ok(relative) = path.strip_prefix(&self.root_path) else {
-            return false;
+            return Location::Outside;
         };
         let relative = normalize(relative);
         if relative == GIT_DIR_ENTRY {
-            // `.git` itself: `git init`, or the pointer file of a linked worktree.
-            return true;
+            return Location::GitDirRoot;
         }
         if let Some(entry) = relative.strip_prefix(GIT_DIR_PREFIX) {
-            return is_git_metadata(entry);
+            return Location::GitDir(entry.to_string());
         }
         if relative.is_empty() {
-            return false;
+            return Location::Outside;
         }
-        !self.ignore_set.is_match(&relative)
+        Location::Worktree(relative)
     }
+}
+
+fn is_relevant_kind(event: &Event) -> bool {
+    matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    )
 }
 
 fn normalize(relative: &Path) -> String {
@@ -105,8 +162,28 @@ fn normalize(relative: &Path) -> String {
 /// Git writes `index`, `HEAD` and refs through a lockfile rename, so the
 /// `.lock` sibling is the same signal.
 fn is_git_metadata(relative: &str) -> bool {
-    let entry = relative.strip_suffix(LOCK_SUFFIX).unwrap_or(relative);
-    GIT_METADATA_ENTRIES.contains(&entry) || entry.starts_with(REFS_PREFIX)
+    let entry = strip_lock(relative);
+    GIT_METADATA_ENTRIES.contains(&entry) || entry.starts_with(REFS_PREFIX) || is_worktree_config(entry)
+}
+
+fn is_index_entry(relative: &str) -> bool {
+    strip_lock(relative) == INDEX_ENTRY
+}
+
+fn strip_lock(relative: &str) -> &str {
+    relative.strip_suffix(LOCK_SUFFIX).unwrap_or(relative)
+}
+
+/// `.git/worktrees/<name>/config` — a linked worktree's config extension
+/// (`extensions.worktreeConfig`), one segment deep under `worktrees/`.
+fn is_worktree_config(entry: &str) -> bool {
+    let Some(rest) = entry.strip_prefix(WORKTREES_PREFIX) else {
+        return false;
+    };
+    let Some(name) = rest.strip_suffix(CONFIG_SUFFIX) else {
+        return false;
+    };
+    !name.is_empty() && !name.contains('/')
 }
 
 fn build_glob(pattern: &str) -> Result<Glob, AgentError> {
@@ -118,113 +195,3 @@ fn build_glob(pattern: &str) -> Result<Glob, AgentError> {
         .map_err(|err| AgentError::new("INVALID_GLOB", err.to_string()))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::SourceControlChangeDetector;
-    use notify::event::{AccessKind, CreateKind, ModifyKind, RenameMode};
-    use notify::{Event, EventKind};
-    use std::path::{Path, PathBuf};
-
-    const ROOT: &str = "/repo";
-    const EXTERNAL_GIT_DIR: &str = "/main/.git/worktrees/feature";
-
-    fn detector(ignore_globs: &[&str]) -> SourceControlChangeDetector {
-        let globs: Vec<String> = ignore_globs.iter().map(|glob| glob.to_string()).collect();
-        SourceControlChangeDetector::new(
-            Path::new(ROOT),
-            vec![PathBuf::from(EXTERNAL_GIT_DIR)],
-            &globs,
-        )
-        .expect("detector builds")
-    }
-
-    fn modified(path: &str) -> Event {
-        Event::new(EventKind::Modify(ModifyKind::Any)).add_path(PathBuf::from(path))
-    }
-
-    #[test]
-    fn working_tree_changes_fire() {
-        let detector = detector(&[]);
-        for path in [
-            "/repo/logs/app.log",
-            "/repo/dist/index.js",
-            "/repo/Cargo.lock",
-            "/repo/build/out.bin",
-            "/repo/src/main.rs",
-        ] {
-            assert!(detector.affects(&modified(path)), "expected fire: {path}");
-        }
-    }
-
-    #[test]
-    fn git_metadata_changes_fire() {
-        let detector = detector(&[]);
-        for path in [
-            "/repo/.git/index",
-            "/repo/.git/index.lock",
-            "/repo/.git/HEAD",
-            "/repo/.git/MERGE_HEAD",
-            "/repo/.git/packed-refs",
-            "/repo/.git/refs/heads/main",
-            "/repo/.git/refs/heads/main.lock",
-            "/repo/.git",
-        ] {
-            assert!(detector.affects(&modified(path)), "expected fire: {path}");
-        }
-    }
-
-    #[test]
-    fn git_dir_creation_fires() {
-        let detector = detector(&[]);
-        let event = Event::new(EventKind::Create(CreateKind::Folder)).add_path("/repo/.git".into());
-        assert!(detector.affects(&event));
-    }
-
-    #[test]
-    fn structural_and_git_noise_do_not_fire() {
-        let detector = detector(&[]);
-        for path in [
-            "/repo/target/x.o",
-            "/repo/node_modules/a/b.js",
-            "/repo/.git/objects/ab/cd",
-            "/repo/.git/logs/HEAD",
-            "/repo/.git/hooks/pre-commit",
-            "/elsewhere/file.rs",
-        ] {
-            assert!(!detector.affects(&modified(path)), "expected quiet: {path}");
-        }
-    }
-
-    #[test]
-    fn access_events_do_not_fire() {
-        let detector = detector(&[]);
-        let event =
-            Event::new(EventKind::Access(AccessKind::Any)).add_path("/repo/src/main.rs".into());
-        assert!(!detector.affects(&event));
-    }
-
-    #[test]
-    fn rename_events_fire() {
-        let detector = detector(&[]);
-        let event = Event::new(EventKind::Modify(ModifyKind::Name(RenameMode::Both)))
-            .add_path("/repo/.git/index.lock".into())
-            .add_path("/repo/.git/index".into());
-        assert!(detector.affects(&event));
-    }
-
-    #[test]
-    fn external_git_dir_applies_metadata_rule_only() {
-        let detector = detector(&[]);
-        assert!(detector.affects(&modified("/main/.git/worktrees/feature/HEAD")));
-        assert!(detector.affects(&modified("/main/.git/worktrees/feature/refs/bisect/bad")));
-        assert!(!detector.affects(&modified("/main/.git/worktrees/feature/objects/x")));
-        assert!(!detector.affects(&modified("/main/.git/worktrees/feature/logs/HEAD")));
-    }
-
-    #[test]
-    fn configured_ignore_globs_suppress() {
-        let detector = detector(&["**/generated/**"]);
-        assert!(!detector.affects(&modified("/repo/src/generated/api.rs")));
-        assert!(detector.affects(&modified("/repo/src/api.rs")));
-    }
-}

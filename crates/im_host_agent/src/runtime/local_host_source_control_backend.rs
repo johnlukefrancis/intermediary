@@ -45,7 +45,7 @@ pub async fn execute_host_source_control(
     let repo_root = Path::new(&context.repo_root);
     match command {
         UiCommand::SourceControlStatus(command) => {
-            let status = source_control_status(repo_root, None).await?;
+            let status = source_control_status(repo_root, None, &context.locks).await?;
             Ok(UiResponse::SourceControlStatusResult(
                 SourceControlStatusResult {
                     repo_id: command.repo_id,
@@ -91,19 +91,15 @@ pub async fn execute_host_source_control(
         }
         UiCommand::SourceControlAction(command) => {
             let kind = command.action.kind();
-            let outcome = run_source_control_action(
-                &context.locks,
-                &command.repo_id,
-                repo_root,
-                command.action,
-            )
-            .await?;
+            let outcome =
+                run_source_control_action(&context.locks, repo_root, command.action).await?;
             Ok(UiResponse::SourceControlActionResult(
                 SourceControlActionResult {
                     repo_id: command.repo_id,
                     kind,
                     status: outcome.status,
                     commit_sha: outcome.commit_sha,
+                    hook_changed_paths: outcome.hook_changed_paths,
                 },
             ))
         }
