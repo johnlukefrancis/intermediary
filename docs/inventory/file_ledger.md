@@ -83,8 +83,10 @@ app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle bui
 app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
 app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff) and path helpers shared by the workspace hook
 app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
-app/src/hooks/source_control/source_control_failures.ts - Classify agent rejections for source-control reads and actions
-app/src/hooks/source_control/source_control_refresh.ts - Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup
+app/src/hooks/source_control/source_control_counts.ts - SOURCE tab change count: distinct changed files, not area rows
+app/src/hooks/source_control/source_control_failures.ts - Route an agent rejection by the effect certainty it carries, never by its error code namespace
+app/src/hooks/source_control/source_control_reconcile.ts - Bounded backoff loop that resolves an action whose outcome the UI could not observe
+app/src/hooks/source_control/source_control_refresh.ts - Status refresh timing owner: trailing debounce, delayed retries, in-flight dirty flag, post-mutation de-dup
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
 app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
@@ -115,7 +117,7 @@ app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope 
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
 app/src/lib/agent/connection_state.ts - Agent connection status types
-app/src/lib/agent/error_codes.ts - Parse backend response error codes from agent_client error messages
+app/src/lib/agent/error_codes.ts - Typed agent response error plus accessors for its code, message, and details
 app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-control status, diff, and action commands
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
@@ -214,6 +216,7 @@ crates/im_agent/src/bundles/ignore_rules.rs - Centralized ignore patterns for bu
 crates/im_agent/src/bundles/mod.rs - Bundle helpers for the agent
 crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protocol error responses
 crates/im_agent/src/error/mod.rs - Error module exports for the agent runtime
+crates/im_agent/src/error/mutation_effect.rs - Outcome certainty (`details.effect`) carried by every source-control mutation error
 crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
 crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
@@ -232,6 +235,8 @@ crates/im_agent/src/protocol/responses_repo.rs - Repository topology and directo
 crates/im_agent/src/protocol/responses_source_control.rs - Agent-to-UI source-control payloads: working-tree status, per-file diff, action outcome
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
+crates/im_agent/src/protocol/tests_shutdown.rs - Wire-shape tests for the shutdown command and its result
+crates/im_agent/src/protocol/tests_source_control.rs - Wire-shape tests for the source-control command and status payloads
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization and backward-compat tests
 crates/im_agent/src/protocol/tr_fleet_tests.rs - TR fleet protocol command/response serialization tests
 crates/im_agent/src/repos/categorizer.rs - File kind classification based on globs and fallback heuristics
@@ -248,11 +253,15 @@ crates/im_agent/src/repos/repo_directory_listing.rs - Lazy repo-relative directo
 crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded nested bundle-selector directory paths
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
+crates/im_agent/src/repos/repo_watcher_tests.rs - Unit tests for the repo watcher's initial-entries ignore filtering
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
 crates/im_agent/src/repos/source_control_watch/coalescer.rs - Rate-limit sourceControlChanged emission with a guaranteed trailing event
+crates/im_agent/src/repos/source_control_watch/detector_tests.rs - Unit tests for the source-control change detector (tracked-set override, git metadata allowlist)
 crates/im_agent/src/repos/source_control_watch/detector.rs - Decide whether a raw watcher event can move `git status` for a repo
 crates/im_agent/src/repos/source_control_watch/git_dirs.rs - Resolve a repo's git dir and common dir so linked worktrees stay watched
-crates/im_agent/src/repos/source_control_watch/mod.rs - Watcher-side source control signal: detection, coalescing, git dir resolution
+crates/im_agent/src/repos/source_control_watch/mod.rs - Watcher-side source control signal: detection, coalescing, git dir resolution, tracked-set reload
+crates/im_agent/src/repos/source_control_watch/source_control_watch_tests.rs - SourceControlWatch integration tests - burst coalescing and index-triggered tracked-set reload
+crates/im_agent/src/repos/source_control_watch/tracked_set.rs - Tracked-path authority loaded from `git ls-files`, shared between the detector and its reloader
 crates/im_agent/src/repos/text_file_reader.rs - Repo-relative UTF-8 text file reader for in-app scratch viewing
 crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
@@ -266,25 +275,43 @@ crates/im_agent/src/server/connection.rs - Per-connection WebSocket handling and
 crates/im_agent/src/server/connection/dispatch.rs - Command dispatch for WebSocket request handling
 crates/im_agent/src/server/connection/repo_commands.rs - Repo file-read and topology command handlers for WebSocket dispatch
 crates/im_agent/src/server/connection/request_cancellation.rs - Cooperative cancellation handles for active backend requests
+crates/im_agent/src/server/connection/shutdown_command.rs - The `shutdown` command handler for the WSL agent: drain, answer, then exit
 crates/im_agent/src/server/connection/source_control_commands.rs - Source-control command handlers for WebSocket dispatch (status, diff, actions)
 crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected WebSocket clients
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running agent executable identity during WebSocket handshake
+crates/im_agent/src/server/shutdown.rs - The one drain-then-exit owner shared by the shutdown command and the process signals
+crates/im_agent/src/server/shutdown/tests.rs - Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
-crates/im_agent/src/source_control/actions_discard.rs - Discard worktree changes: restore tracked paths through Git, remove untracked regular files in Rust
-crates/im_agent/src/source_control/actions.rs - Stage, unstage, commit, push, and pull for one repo root; every mutation returns a fresh status
+crates/im_agent/src/source_control/actions_commit_retract.rs - Post-commit tree comparison against the reviewed state, and the CAS retraction of a hook overreach
+crates/im_agent/src/source_control/actions_commit.rs - Commit under the reviewed index+HEAD precondition, with timeout recovery and hook finalization
+crates/im_agent/src/source_control/actions_discard_claim.rs - Atomic per-target quarantine claim, verification, release, and rollback for discard
+crates/im_agent/src/source_control/actions_discard_target.rs - Executes one discard target: claim, classify, mutate, and release/rollback the claim
+crates/im_agent/src/source_control/actions_discard.rs - Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
+crates/im_agent/src/source_control/actions_remote.rs - Push and pull for one repo root, including upstream selection
+crates/im_agent/src/source_control/actions_stage.rs - Stage and unstage one section or an explicit path list, never a pathspec wildcard
+crates/im_agent/src/source_control/actions.rs - Dispatches one source-control mutation and reads the status that follows it
 crates/im_agent/src/source_control/diff.rs - Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)
+crates/im_agent/src/source_control/discard_quarantine.rs - Quarantine directory naming for a discard operation and the bounded startup sweep of stale ones
 crates/im_agent/src/source_control/git_version.rs - Once-per-process Git version probe guarding --pathspec-from-file support (Git 2.25+)
-crates/im_agent/src/source_control/locks.rs - Per-repo mutation serialization for source-control actions
+crates/im_agent/src/source_control/locks.rs - Mutation serialization keyed by the physical Git directory, plus the drain gate
 crates/im_agent/src/source_control/mod.rs - Git working-tree status, per-file diff, and index/commit/remote actions for one repo root
-crates/im_agent/src/source_control/paths.rs - UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution
+crates/im_agent/src/source_control/paths.rs - UI path validation and normalization, NUL-joined pathspec input, and the in-root containment guard
+crates/im_agent/src/source_control/runner_failure.rs - Maps a Git command failure onto an AgentError and, for mutations, its proven effect
 crates/im_agent/src/source_control/runner.rs - spawn_blocking bridge and Git failure to AgentError mapping for source control
+crates/im_agent/src/source_control/status_index_tree.rs - Read-only identity of the whole-repository index (`git write-tree` without writing)
 crates/im_agent/src/source_control/status_project.rs - Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root
+crates/im_agent/src/source_control/status_stamp.rs - Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader
 crates/im_agent/src/source_control/status.rs - Capture `git status --porcelain=v2` for one repo root and project it onto the wire shape
 crates/im_agent/src/source_control/tests_actions.rs - Real-git tempdir tests for stage, unstage, discard, push, and pull actions
-crates/im_agent/src/source_control/tests_commit.rs - Real-git tempdir tests for the commit oracle, commit outcomes, and the landed-but-unread error
+crates/im_agent/src/source_control/tests_commit_hooks.rs - Real-git tests for what a commit hook may change: the reviewed set is accepted, anything beyond it is retracted
+crates/im_agent/src/source_control/tests_commit.rs - Real-git tests for the commit oracle, its index/HEAD preconditions, and the landed-but-unread error
 crates/im_agent/src/source_control/tests_diff.rs - Real-git tempdir tests for bounded per-file diff capture
+crates/im_agent/src/source_control/tests_discard_quarantine.rs - Real-git tests for the discard quarantine directory's cleanup and startup sweep
+crates/im_agent/src/source_control/tests_discard_stamps.rs - Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)
+crates/im_agent/src/source_control/tests_locks.rs - Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress
+crates/im_agent/src/source_control/tests_preconditions.rs - Real-git tests binding a commit to the reviewed index identity, and row/section ownership
 crates/im_agent/src/source_control/tests_support.rs - Real-git tempdir fixtures shared by the source-control tests
 crates/im_agent/src/source_control/tests.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
@@ -295,12 +322,16 @@ crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan 
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
 crates/im_bundle/src/git_capture/command_child.rs - Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner
-crates/im_bundle/src/git_capture/command_stop.rs - Forced stop of a running Git child: process-group signalling on unix, kill-and-reap everywhere
+crates/im_bundle/src/git_capture/command_drain.rs - Bounded pipe drain for the Git runner: grace after exit, then termination of the whole process tree
+crates/im_bundle/src/git_capture/command_job.rs - Windows Job Object primitives: create the job, assign a spawned child, terminate the tree on demand
+crates/im_bundle/src/git_capture/command_stop.rs - Forced stop of a running Git child: ask the process tree to end, then kill it and reap the child
 crates/im_bundle/src/git_capture/command_tests.rs - Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers
+crates/im_bundle/src/git_capture/command_tree.rs - The process tree one Git child owns (unix process group, Windows job object) and the live-tree registry
 crates/im_bundle/src/git_capture/command.rs - Bounded, cancellable Git subprocess execution shared by bundle evidence and source control
 crates/im_bundle/src/git_capture/diff_issue.rs - Artifact-specific issue classification for selected Git diff capture
 crates/im_bundle/src/git_capture/diff.rs - Bounded selected-path Git diff, stat, and name-status capture
 crates/im_bundle/src/git_capture/discovery.rs - Git discovery failure classification and raw prefix normalization
+crates/im_bundle/src/git_capture/fake_git.rs - Test-only fake Git scripts handed to a test only once the kernel will exec them
 crates/im_bundle/src/git_capture/finalize.rs - Git artifact finalization and working-tree coherence verdicts
 crates/im_bundle/src/git_capture/ignored.rs - Reconcile selected archived files that Git status hides behind ignore rules
 crates/im_bundle/src/git_capture/index_tree.rs - Read-only Git tree SHA of an index listing, matching `git write-tree`
@@ -310,7 +341,7 @@ crates/im_bundle/src/git_capture/mod.rs - Versioned selection-bounded Git eviden
 crates/im_bundle/src/git_capture/path.rs - Lossless Git path transport and model-readable quoting helpers
 crates/im_bundle/src/git_capture/pathspec_batches.rs - Host-safe Git pathspec argument batching with atomic rename pairs
 crates/im_bundle/src/git_capture/porcelain.rs - Strict parser for NUL-delimited Git porcelain-v2 records
-crates/im_bundle/src/git_capture/prefix.rs - Shared bounded capture of the Git repository prefix for a configured root
+crates/im_bundle/src/git_capture/prefix.rs - Shared bounded capture of the Git repository prefix and absolute git dir for a configured root
 crates/im_bundle/src/git_capture/render_omitted.rs - Model-readable listing of changed paths the bundle selection omitted
 crates/im_bundle/src/git_capture/render.rs - Selection-safe human-readable Git status and bundle handoff artifacts
 crates/im_bundle/src/git_capture/session.rs - Git capture discovery, initial status, and safety-bound setup
@@ -343,6 +374,7 @@ crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper f
 crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Build-bundle host dispatch and WSL forwarding helpers for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/host_dispatch.rs - Host-rooted repo command dispatch onto the local backend for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
+crates/im_host_agent/src/runtime/host_runtime/shutdown_targets.rs - The two things a host-agent shutdown must reach: the WSL backend client and the host locks
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs - WSL transport transition tests for host runtime routing
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
@@ -358,10 +390,15 @@ crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSoc
 crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
 crates/im_host_agent/src/server/handshake_auth.rs - Host-agent websocket handshake token and origin validation utilities
 crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
+crates/im_host_agent/src/server/shutdown_dispatch.rs - Host-agent shutdown: drain the WSL backend first, then this process, then exit
+crates/im_host_agent/src/server/shutdown_dispatch/tests.rs - Unit tests for the WSL-unavailable/outstanding-mutation shutdown decision
 crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
 crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
-crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarded command timeout routing
+crates/im_host_agent/src/wsl/wsl_backend_client/client_loop.rs - The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable
+crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs - Unit tests for the per-command forward timeout ladder
+crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarding, cancellation, and outstanding-mutation tracking
+crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs - The host->WSL request-timeout ladder and the agent-side worst case each tier covers
 crates/im_host_agent/src/wsl/wsl_backend_connection.rs - Connected WSL backend request loop and pending response handling
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 scripts/classification/code_extensions_source.mjs - Pinned baseline + local overrides for code-classification file extensions.
@@ -386,14 +423,18 @@ src-tauri/src/lib/agent/mod.rs - Host-agent supervisor module exports (with opti
 src-tauri/src/lib/agent/process_control.rs - Spawn helpers for host/WSL agents and readiness probing
 src-tauri/src/lib/agent/runtime_identity.rs - Bounded SHA-256 identity for packaged and installed agent executables
 src-tauri/src/lib/agent/supervisor.rs - Public host-agent supervisor types and wiring
+src-tauri/src/lib/agent/supervisor/graceful_stop.rs - Ask the managed host agent to drain and exit before any kill path runs
+src-tauri/src/lib/agent/supervisor/graceful_stop/tests.rs - Ack-parsing/route tests for the graceful host stop against a fake agent socket
 src-tauri/src/lib/agent/supervisor/host.rs - Host-agent startup and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
 src-tauri/src/lib/agent/supervisor/managed_processes.rs - Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers
 src-tauri/src/lib/agent/supervisor/probes.rs - Async supervisor probe helpers for port, websocket auth, and origin compatibility
 src-tauri/src/lib/agent/supervisor/process_kill.rs - Blocking child-process termination helpers for supervisor-owned processes
 src-tauri/src/lib/agent/supervisor/runtime.rs - Supervisor runtime path, port, and installed-bundle preference helpers
+src-tauri/src/lib/agent/supervisor/shutdown_ws_client.rs - One authenticated shutdown request/response exchange with a managed agent
 src-tauri/src/lib/agent/supervisor/shutdown.rs - App-exit teardown: stop agents, then free WSL VM RAM when the distro is idle
 src-tauri/src/lib/agent/supervisor/state.rs - Shared supervisor process state and process-kind labels
+src-tauri/src/lib/agent/supervisor/websocket_frame.rs - Minimal RFC 6455 client framing used by the supervisor's graceful-shutdown request
 src-tauri/src/lib/agent/supervisor/websocket_probe.rs - Blocking websocket auth and origin probes used by the supervisor
 src-tauri/src/lib/agent/supervisor/wsl_control.rs - WSL backend termination, stale-port remediation, and launch-target bookkeeping
 src-tauri/src/lib/agent/supervisor/wsl_logging.rs - Structured WSL backend ownership and authentication lifecycle logging

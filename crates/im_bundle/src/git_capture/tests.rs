@@ -46,18 +46,10 @@ fn missing_git_executable_yields_unavailable_evidence() {
 #[cfg(unix)]
 #[test]
 fn timed_out_git_command_yields_unavailable_evidence() {
-    use std::os::unix::fs::PermissionsExt;
-
     let root = tempdir().expect("tempdir");
     let repo = root.path().join("repo");
     std::fs::create_dir_all(repo.join("src")).expect("repo");
-    let fake_git = root.path().join("slow-git");
-    std::fs::write(&fake_git, "#!/bin/sh\nexec sleep 2\n").expect("fake git");
-    let mut permissions = std::fs::metadata(&fake_git)
-        .expect("metadata")
-        .permissions();
-    permissions.set_mode(0o755);
-    std::fs::set_permissions(&fake_git, permissions).expect("permissions");
+    let fake_git = super::fake_git::write_fake_git(root.path(), "slow-git", "exec sleep 2\n");
 
     let plan = plan(&repo, &root.path().join("out.zip"));
     let session = GitCaptureSession::begin_with_config(

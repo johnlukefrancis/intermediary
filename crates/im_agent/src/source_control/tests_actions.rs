@@ -29,16 +29,20 @@ async fn stage_paths_with_glob_and_magic_characters_literally() {
             entry("star*.txt", Index, Added),
         ]
     );
-    assert_eq!(outcome.status.worktree, vec![entry("plain.txt", Worktree, Untracked)]);
+    assert_eq!(
+        stripped(&outcome.status.worktree),
+        vec![entry("plain.txt", Worktree, Untracked)]
+    );
     assert_eq!(outcome.commit_sha, None);
 }
 
+/// An empty list is a mistake the UI must not be able to make silently: to Git,
+/// zero pathspecs mean the whole repository.
 #[tokio::test]
-async fn empty_path_lists_are_no_ops_that_keep_the_index() {
+async fn empty_path_lists_are_refused_before_git_runs() {
     let (_temp, root) = init_repo_with_commit();
     write(&root, "base.txt", b"changed\n");
     git(&root, &["add", "base.txt"]);
-    let expected = vec![entry("base.txt", Index, Modified)];
     for action in [
         Action::Unstage {
             scope: paths_scope(&[]),
@@ -46,19 +50,29 @@ async fn empty_path_lists_are_no_ops_that_keep_the_index() {
         Action::Stage {
             scope: paths_scope(&[]),
         },
-        Action::Discard { paths: Vec::new() },
+        Action::Discard {
+            targets: Vec::new(),
+        },
     ] {
-        let outcome = act(&root, action).await;
-        assert_eq!(outcome.status.index, expected);
-        assert!(outcome.status.worktree.is_empty());
+        let error = try_act(&root, action).await.expect_err("empty list");
+        assert_eq!(error.code(), "INVALID_PATH");
+        assert_eq!(error.message(), "No paths given");
+        assert_eq!(error.effect(), Some("notApplied"));
     }
+    assert_eq!(
+        status(&root).await.index,
+        vec![entry("base.txt", Index, Modified)]
+    );
 }
 
 #[tokio::test]
 async fn stage_all_records_a_deletion() {
     let (_temp, root) = init_repo_with_commit();
     std::fs::remove_file(root.join("base.txt")).expect("delete tracked file");
-    assert_eq!(status(&root).await.worktree, vec![entry("base.txt", Worktree, Deleted)]);
+    assert_eq!(
+        stripped(&status(&root).await.worktree),
+        vec![entry("base.txt", Worktree, Deleted)]
+    );
     let outcome = act(
         &root,
         Action::Stage {
@@ -84,7 +98,10 @@ async fn unstage_works_on_an_unborn_branch() {
     )
     .await;
     assert_eq!(outcome.status.index, vec![entry("b.txt", Index, Added)]);
-    assert_eq!(outcome.status.worktree, vec![entry("a.txt", Worktree, Untracked)]);
+    assert_eq!(
+        stripped(&outcome.status.worktree),
+        vec![entry("a.txt", Worktree, Untracked)]
+    );
     let outcome = act(
         &root,
         Action::Unstage {
@@ -102,27 +119,21 @@ async fn discard_restores_tracked_removes_untracked_files_and_skips_unlisted_pat
     write(&root, "base.txt", b"edited\n");
     write(&root, "junk.txt", b"junk\n");
     write(&root, "dir/inner.txt", b"inner\n");
-    let outcome = act(
-        &root,
-        Action::Discard {
-            paths: strings(&["base.txt", "junk.txt"]),
-        },
-    )
-    .await;
+    let outcome = act(&root, discard_now(&root, &["base.txt", "junk.txt"])).await;
     assert_eq!(read(&root, "base.txt"), b"base\n");
     assert!(!root.join("junk.txt").exists());
-    assert_eq!(outcome.status.worktree, vec![entry("dir/inner.txt", Worktree, Untracked)]);
+    assert_eq!(
+        stripped(&outcome.status.worktree),
+        vec![entry("dir/inner.txt", Worktree, Untracked)]
+    );
 
     // A directory is never a status entry, so discarding it is a validated no-op.
-    let outcome = act(
-        &root,
-        Action::Discard {
-            paths: strings(&["dir"]),
-        },
-    )
-    .await;
+    let outcome = act(&root, discard_now(&root, &["dir"])).await;
     assert!(root.join("dir/inner.txt").exists());
-    assert_eq!(outcome.status.worktree, vec![entry("dir/inner.txt", Worktree, Untracked)]);
+    assert_eq!(
+        stripped(&outcome.status.worktree),
+        vec![entry("dir/inner.txt", Worktree, Untracked)]
+    );
 }
 
 #[tokio::test]
@@ -130,14 +141,11 @@ async fn discard_of_an_intent_to_add_file_removes_it_and_its_index_entry() {
     let (_temp, root) = init_repo_with_commit();
     write(&root, "new.txt", b"new\n");
     git(&root, &["add", "-N", "new.txt"]);
-    assert_eq!(status(&root).await.worktree, vec![entry("new.txt", Worktree, Added)]);
-    let outcome = act(
-        &root,
-        Action::Discard {
-            paths: strings(&["new.txt"]),
-        },
-    )
-    .await;
+    assert_eq!(
+        stripped(&status(&root).await.worktree),
+        vec![entry("new.txt", Worktree, Added)]
+    );
+    let outcome = act(&root, discard_now(&root, &["new.txt"])).await;
     assert!(!root.join("new.txt").exists());
     assert!(outcome.status.index.is_empty());
     assert!(outcome.status.worktree.is_empty());
@@ -199,13 +207,8 @@ async fn invalid_paths_are_rejected_before_git_runs() {
     .await
     .expect_err("traversal");
     assert_eq!(error.code(), "INVALID_PATH");
-    let error = try_act(
-        &root,
-        Action::Discard {
-            paths: strings(&["/etc/hosts"]),
-        },
-    )
-    .await
-    .expect_err("absolute");
+    let error = try_act(&root, discard_now(&root, &["/etc/hosts"]))
+        .await
+        .expect_err("absolute");
     assert_eq!(error.code(), "INVALID_PATH");
 }

@@ -3,7 +3,7 @@
 
 import { useCallback } from "react";
 import type { SourceControlAction } from "../../shared/protocol.js";
-import type { SourceControlState } from "./source_control_types.js";
+import type { SourceControlCommitRequest, SourceControlState } from "./source_control_types.js";
 
 type SourceControlCommands = Pick<
   SourceControlState,
@@ -16,13 +16,19 @@ export function useSourceControlCommands(
   return {
     stage: useCallback((scope) => { void runAction({ kind: "stage", scope }); }, [runAction]),
     unstage: useCallback((scope) => { void runAction({ kind: "unstage", scope }); }, [runAction]),
-    discard: useCallback((paths) => {
-      if (paths.length === 0) return;
-      void runAction({ kind: "discard", paths });
+    discard: useCallback((targets) => {
+      if (targets.length === 0) return;
+      void runAction({ kind: "discard", targets });
     }, [runAction]),
-    commit: useCallback((message) => {
-      if (message.trim().length === 0) return;
-      void runAction({ kind: "commit", message });
+    // The caller freezes every field from the status it reviewed; nothing here re-reads live state.
+    commit: useCallback((request: SourceControlCommitRequest) => {
+      if (request.message.trim().length === 0) return;
+      void runAction({
+        kind: "commit",
+        message: request.message,
+        expectedIndexTreeSha: request.expectedIndexTreeSha,
+        expectedHeadSha: request.expectedHeadSha,
+      });
     }, [runAction]),
     push: useCallback(() => { void runAction({ kind: "push" }); }, [runAction]),
     pull: useCallback(() => { void runAction({ kind: "pull" }); }, [runAction]),

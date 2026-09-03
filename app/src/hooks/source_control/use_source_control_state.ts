@@ -18,7 +18,9 @@ import {
 } from "../../lib/agent/transient_wsl_error.js";
 import { useAgent } from "../use_agent.js";
 import { createRefreshScheduler, type RefreshScheduler } from "./source_control_refresh.js";
-import { agentErrorMessage, classifyActionFailure } from "./source_control_failures.js";
+import { actionOutcome, agentErrorMessage } from "./source_control_failures.js";
+import { countChangedPaths } from "./source_control_counts.js";
+import { useReconciliation } from "./source_control_reconcile.js";
 import { useSourceControlCommands } from "./source_control_commands.js";
 import type {
   SourceControlActionError,
@@ -34,28 +36,21 @@ interface Snapshot {
   status: SourceControlStatus;
 }
 
-/** Set when an action's outcome is unknown; resolved by the next successful status read */
-interface Reconcile {
-  action: SourceControlActionKind;
-  previousHeadSha: string | null;
-}
-
 export function useSourceControlState(repoId: string): SourceControlState {
   const { client, connectionState, helloState, rehydrateEpoch, subscribe } = useAgent();
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [phase, setPhase] = useState<SourceControlPhase>({ kind: "waiting" });
   const [pendingAction, setPendingAction] = useState<SourceControlActionKind | null>(null);
   const [actionError, setActionError] = useState<SourceControlActionError | null>(null);
+  const [hookNotice, setHookNotice] = useState<string[] | null>(null);
   const [lastCommit, setLastCommit] = useState<SourceControlCommit | null>(null);
   const [commitMessage, setCommitMessage] = useState("");
 
   const repoIdRef = useRef(repoId);
   const generationRef = useRef(0);
   const pendingActionRef = useRef<SourceControlActionKind | null>(null);
-  const reconcileRef = useRef<Reconcile | null>(null);
   const headShaRef = useRef<string | null>(null);
   const retryAttemptRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const schedulerRef = useRef<RefreshScheduler | null>(null);
   schedulerRef.current ??= createRefreshScheduler({
@@ -72,26 +67,22 @@ export function useSourceControlState(repoId: string): SourceControlState {
   const isReady =
     client !== null && connectionState.status === "connected" && helloState.status === "ok";
 
-  const clearRetryTimer = useCallback((): void => {
-    if (retryTimerRef.current === null) return;
-    clearTimeout(retryTimerRef.current);
-    retryTimerRef.current = null;
+  const reportCommit = useCallback((commit: SourceControlCommit): void => {
+    setLastCommit(commit);
+    setCommitMessage("");
   }, []);
+  const reconciliation = useReconciliation(scheduler, reportCommit);
 
-  const applyStatus = useCallback((forRepoId: string, status: SourceControlStatus): void => {
-    headShaRef.current = status.headSha;
-    setSnapshot({ repoId: forRepoId, status });
-    setPhase({ kind: "ready" });
-    const reconcile = reconcileRef.current;
-    if (reconcile === null) return;
-    reconcileRef.current = null;
-    // HEAD moved and nothing is committable any more after an unknown-outcome commit: it landed.
-    if (reconcile.action !== "commit" || status.headSha === null) return;
-    if (status.headSha !== reconcile.previousHeadSha && !status.committable) {
-      setLastCommit({ sha: status.headSha, at: Date.now() });
-      setCommitMessage("");
-    }
-  }, []);
+  const applyStatus = useCallback(
+    (forRepoId: string, status: SourceControlStatus): void => {
+      headShaRef.current = status.headSha;
+      // Every fresh status is worth showing, including one read while a mutation still runs;
+      // that one just cannot end a reconciliation, which is the phase's own decision.
+      setSnapshot({ repoId: forRepoId, status });
+      setPhase(reconciliation.acceptStatus(status));
+    },
+    [reconciliation]
+  );
 
   const fetchStatus = useCallback(async (): Promise<void> => {
     if (client === null || !isReady) return;
@@ -109,22 +100,17 @@ export function useSourceControlState(repoId: string): SourceControlState {
       applyStatus(requestRepoId, result.status);
     } catch (err: unknown) {
       if (isStale()) return;
+      if (reconciliation.acceptFailure()) return;
       if (isTransientWslTransportError(err)) {
-        const delay = computeTransientRetryDelayMs(retryAttemptRef.current);
+        scheduler.requestRefreshIn(computeTransientRetryDelayMs(retryAttemptRef.current));
         retryAttemptRef.current += 1;
-        clearRetryTimer();
-        retryTimerRef.current = setTimeout(() => {
-          retryTimerRef.current = null;
-          if (isStale()) return;
-          scheduler.requestRefresh();
-        }, delay);
         return;
       }
       retryAttemptRef.current = 0;
       setSnapshot(null);
       setPhase({ kind: "error", code: parseAgentErrorCode(err), message: agentErrorMessage(err) });
     }
-  }, [applyStatus, clearRetryTimer, client, isReady, scheduler]);
+  }, [applyStatus, client, isReady, reconciliation, scheduler]);
 
   useEffect(() => {
     fetchRef.current = fetchStatus;
@@ -138,8 +124,10 @@ export function useSourceControlState(repoId: string): SourceControlState {
       pendingActionRef.current = action.kind;
       setPendingAction(action.kind);
       setActionError(null);
+      setHookNotice(null);
       scheduler.actionStarted();
       let appliedAt: number | null = null;
+      let refreshAfterReject = false;
       try {
         const result = await sendSourceControlAction(client, requestRepoId, action);
         if (repoIdRef.current !== requestRepoId) return;
@@ -147,19 +135,22 @@ export function useSourceControlState(repoId: string): SourceControlState {
         applyStatus(requestRepoId, result.status);
         appliedAt = Date.now();
         if (result.kind === "commit" && result.commitSha !== undefined) {
-          setLastCommit({ sha: result.commitSha, at: Date.now() });
-          setCommitMessage("");
+          reportCommit({ sha: result.commitSha, at: Date.now() });
+        }
+        if (result.hookChangedPaths !== undefined && result.hookChangedPaths.length > 0) {
+          setHookNotice(result.hookChangedPaths);
         }
       } catch (err: unknown) {
         if (repoIdRef.current !== requestRepoId) return;
-        const failure = classifyActionFailure(err);
-        if (failure.type === "agentUpdateRequired") {
+        const outcome = actionOutcome(action.kind, err);
+        if (outcome.kind === "agentUpdateRequired") {
           setSnapshot(null);
-          setPhase({ kind: "error", code: "UNKNOWN_COMMAND", message: failure.message });
-        } else if (failure.type === "rejected") {
-          setActionError({ action: action.kind, code: failure.code, message: failure.message });
+          setPhase({ kind: "error", code: "UNKNOWN_COMMAND", message: outcome.message });
+        } else if (outcome.kind === "rejected") {
+          setActionError(outcome.error);
+          refreshAfterReject = outcome.refreshNow;
         } else {
-          reconcileRef.current = { action: action.kind, previousHeadSha };
+          reconciliation.begin(action.kind, previousHeadSha);
           setPhase({ kind: "reconciling", action: action.kind });
         }
       } finally {
@@ -168,27 +159,27 @@ export function useSourceControlState(repoId: string): SourceControlState {
           setPendingAction(null);
           // A rejected action applied no status, so queued change events must still refetch.
           scheduler.actionFinished(appliedAt);
-          if (reconcileRef.current !== null) scheduler.requestRefresh();
+          if (reconciliation.isActive() || refreshAfterReject) scheduler.requestRefresh();
         }
       }
     },
-    [applyStatus, client, isReady, scheduler]
+    [applyStatus, client, isReady, reconciliation, reportCommit, scheduler]
   );
 
   useEffect(() => {
     pendingActionRef.current = null;
-    reconcileRef.current = null;
     headShaRef.current = null;
     retryAttemptRef.current = 0;
-    clearRetryTimer();
+    reconciliation.clear();
     scheduler.reset();
     setSnapshot(null);
     setPhase({ kind: "waiting" });
     setPendingAction(null);
     setActionError(null);
+    setHookNotice(null);
     setLastCommit(null);
     setCommitMessage("");
-  }, [clearRetryTimer, repoId, scheduler]);
+  }, [reconciliation, repoId, scheduler]);
 
   useEffect(
     () =>
@@ -201,13 +192,12 @@ export function useSourceControlState(repoId: string): SourceControlState {
 
   useEffect(() => {
     if (!isReady) {
-      clearRetryTimer();
       setPhase((current) => (current.kind === "reconciling" ? current : { kind: "waiting" }));
       return;
     }
     generationRef.current += 1;
     scheduler.requestRefresh();
-  }, [clearRetryTimer, helloState.lastHelloAt, isReady, rehydrateEpoch, repoId, scheduler]);
+  }, [helloState.lastHelloAt, isReady, rehydrateEpoch, repoId, scheduler]);
 
   useEffect(() => {
     const handleFocus = (): void => {
@@ -223,32 +213,32 @@ export function useSourceControlState(repoId: string): SourceControlState {
   useEffect(
     () => () => {
       scheduler.dispose();
-      clearRetryTimer();
     },
-    [clearRetryTimer, scheduler]
+    [scheduler]
   );
 
   const commands = useSourceControlCommands(runAction);
   const dismissActionError = useCallback(() => { setActionError(null); }, []);
+  const dismissHookNotice = useCallback(() => { setHookNotice(null); }, []);
   const refresh = useCallback(() => {
     retryAttemptRef.current = 0;
     scheduler.requestRefresh();
   }, [scheduler]);
 
   const status = snapshot !== null && snapshot.repoId === repoId ? snapshot.status : null;
-  const changeCount =
-    status === null ? 0 : status.index.length + status.worktree.length + status.conflicts.length;
 
   return {
     phase,
     status,
-    changeCount,
+    changeCount: status === null ? 0 : countChangedPaths(status),
     pendingAction,
     actionError,
+    hookNotice,
     lastCommit,
     commitMessage,
     setCommitMessage,
     dismissActionError,
+    dismissHookNotice,
     refresh,
     ...commands,
   };

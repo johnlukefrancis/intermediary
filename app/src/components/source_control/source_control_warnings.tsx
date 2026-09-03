@@ -31,7 +31,8 @@ function buildWarningRows(status: SourceControlStatus): WarningRow[] {
       key: "unrepresentable",
       severity: "warning",
       text: `${unrepresentablePath} PATHS NOT REPRESENTABLE`,
-      title: "Paths that are not valid UTF-8 are hidden; STAGE ALL still includes them",
+      title:
+        "Paths that are not valid UTF-8 cannot cross the wire; they are not listed and STAGE ALL does not include them — stage them from a terminal",
     });
   }
   if (status.truncated) {

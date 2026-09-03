@@ -322,12 +322,20 @@
       "summary": "Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner"
     },
     {
+      "path": "app/src/hooks/source_control/source_control_counts.ts",
+      "summary": "SOURCE tab change count: distinct changed files, not area rows"
+    },
+    {
       "path": "app/src/hooks/source_control/source_control_failures.ts",
-      "summary": "Classify agent rejections for source-control reads and actions"
+      "summary": "Route an agent rejection by the effect certainty it carries, never by its error code namespace"
+    },
+    {
+      "path": "app/src/hooks/source_control/source_control_reconcile.ts",
+      "summary": "Bounded backoff loop that resolves an action whose outcome the UI could not observe"
     },
     {
       "path": "app/src/hooks/source_control/source_control_refresh.ts",
-      "summary": "Trailing-debounced status refresh scheduler with in-flight dirty flag and post-mutation de-dup"
+      "summary": "Status refresh timing owner: trailing debounce, delayed retries, in-flight dirty flag, post-mutation de-dup"
     },
     {
       "path": "app/src/hooks/source_control/source_control_types.ts",
@@ -451,7 +459,7 @@
     },
     {
       "path": "app/src/lib/agent/error_codes.ts",
-      "summary": "Parse backend response error codes from agent_client error messages"
+      "summary": "Typed agent response error plus accessors for its code, message, and details"
     },
     {
       "path": "app/src/lib/agent/messages_source_control.ts",
@@ -846,6 +854,10 @@
       "summary": "Error module exports for the agent runtime"
     },
     {
+      "path": "crates/im_agent/src/error/mutation_effect.rs",
+      "summary": "Outcome certainty (`details.effect`) carried by every source-control mutation error"
+    },
+    {
       "path": "crates/im_agent/src/lib.rs",
       "summary": "Library root for the Intermediary WSL agent daemon"
     },
@@ -918,6 +930,14 @@
       "summary": "Agent-to-UI response payloads for the WebSocket protocol"
     },
     {
+      "path": "crates/im_agent/src/protocol/tests_shutdown.rs",
+      "summary": "Wire-shape tests for the shutdown command and its result"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_source_control.rs",
+      "summary": "Wire-shape tests for the source-control command and status payloads"
+    },
+    {
       "path": "crates/im_agent/src/protocol/tests.rs",
       "summary": "Protocol envelope serialization and backward-compat tests"
     },
@@ -982,12 +1002,20 @@
       "summary": "Event handling for repo watcher changes and rename mapping"
     },
     {
+      "path": "crates/im_agent/src/repos/repo_watcher_tests.rs",
+      "summary": "Unit tests for the repo watcher's initial-entries ignore filtering"
+    },
+    {
       "path": "crates/im_agent/src/repos/repo_watcher.rs",
       "summary": "Notify-based repo watcher with MRU and event emission"
     },
     {
       "path": "crates/im_agent/src/repos/source_control_watch/coalescer.rs",
       "summary": "Rate-limit sourceControlChanged emission with a guaranteed trailing event"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/detector_tests.rs",
+      "summary": "Unit tests for the source-control change detector (tracked-set override, git metadata allowlist)"
     },
     {
       "path": "crates/im_agent/src/repos/source_control_watch/detector.rs",
@@ -999,7 +1027,15 @@
     },
     {
       "path": "crates/im_agent/src/repos/source_control_watch/mod.rs",
-      "summary": "Watcher-side source control signal: detection, coalescing, git dir resolution"
+      "summary": "Watcher-side source control signal: detection, coalescing, git dir resolution, tracked-set reload"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/source_control_watch_tests.rs",
+      "summary": "SourceControlWatch integration tests - burst coalescing and index-triggered tracked-set reload"
+    },
+    {
+      "path": "crates/im_agent/src/repos/source_control_watch/tracked_set.rs",
+      "summary": "Tracked-path authority loaded from `git ls-files`, shared between the detector and its reloader"
     },
     {
       "path": "crates/im_agent/src/repos/text_file_reader.rs",
@@ -1054,6 +1090,10 @@
       "summary": "Cooperative cancellation handles for active backend requests"
     },
     {
+      "path": "crates/im_agent/src/server/connection/shutdown_command.rs",
+      "summary": "The `shutdown` command handler for the WSL agent: drain, answer, then exit"
+    },
+    {
       "path": "crates/im_agent/src/server/connection/source_control_commands.rs",
       "summary": "Source-control command handlers for WebSocket dispatch (status, diff, actions)"
     },
@@ -1074,20 +1114,56 @@
       "summary": "Compute and expose the running agent executable identity during WebSocket handshake"
     },
     {
+      "path": "crates/im_agent/src/server/shutdown.rs",
+      "summary": "The one drain-then-exit owner shared by the shutdown command and the process signals"
+    },
+    {
+      "path": "crates/im_agent/src/server/shutdown/tests.rs",
+      "summary": "Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained"
+    },
+    {
       "path": "crates/im_agent/src/server/ws_server.rs",
       "summary": "WebSocket accept loop and connection dispatch"
     },
     {
+      "path": "crates/im_agent/src/source_control/actions_commit_retract.rs",
+      "summary": "Post-commit tree comparison against the reviewed state, and the CAS retraction of a hook overreach"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_commit.rs",
+      "summary": "Commit under the reviewed index+HEAD precondition, with timeout recovery and hook finalization"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_discard_claim.rs",
+      "summary": "Atomic per-target quarantine claim, verification, release, and rollback for discard"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_discard_target.rs",
+      "summary": "Executes one discard target: claim, classify, mutate, and release/rollback the claim"
+    },
+    {
       "path": "crates/im_agent/src/source_control/actions_discard.rs",
-      "summary": "Discard worktree changes: restore tracked paths through Git, remove untracked regular files in Rust"
+      "summary": "Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_remote.rs",
+      "summary": "Push and pull for one repo root, including upstream selection"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/actions_stage.rs",
+      "summary": "Stage and unstage one section or an explicit path list, never a pathspec wildcard"
     },
     {
       "path": "crates/im_agent/src/source_control/actions.rs",
-      "summary": "Stage, unstage, commit, push, and pull for one repo root; every mutation returns a fresh status"
+      "summary": "Dispatches one source-control mutation and reads the status that follows it"
     },
     {
       "path": "crates/im_agent/src/source_control/diff.rs",
       "summary": "Bounded per-file unified diff capture for one repo root (index, worktree, or untracked)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard_quarantine.rs",
+      "summary": "Quarantine directory naming for a discard operation and the bounded startup sweep of stale ones"
     },
     {
       "path": "crates/im_agent/src/source_control/git_version.rs",
@@ -1095,7 +1171,7 @@
     },
     {
       "path": "crates/im_agent/src/source_control/locks.rs",
-      "summary": "Per-repo mutation serialization for source-control actions"
+      "summary": "Mutation serialization keyed by the physical Git directory, plus the drain gate"
     },
     {
       "path": "crates/im_agent/src/source_control/mod.rs",
@@ -1103,15 +1179,27 @@
     },
     {
       "path": "crates/im_agent/src/source_control/paths.rs",
-      "summary": "UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution"
+      "summary": "UI path validation and normalization, NUL-joined pathspec input, and the in-root containment guard"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/runner_failure.rs",
+      "summary": "Maps a Git command failure onto an AgentError and, for mutations, its proven effect"
     },
     {
       "path": "crates/im_agent/src/source_control/runner.rs",
       "summary": "spawn_blocking bridge and Git failure to AgentError mapping for source control"
     },
     {
+      "path": "crates/im_agent/src/source_control/status_index_tree.rs",
+      "summary": "Read-only identity of the whole-repository index (`git write-tree` without writing)"
+    },
+    {
       "path": "crates/im_agent/src/source_control/status_project.rs",
       "summary": "Projects parsed porcelain-v2 status onto the SourceControlStatus wire shape for one root"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/status_stamp.rs",
+      "summary": "Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader"
     },
     {
       "path": "crates/im_agent/src/source_control/status.rs",
@@ -1122,12 +1210,32 @@
       "summary": "Real-git tempdir tests for stage, unstage, discard, push, and pull actions"
     },
     {
+      "path": "crates/im_agent/src/source_control/tests_commit_hooks.rs",
+      "summary": "Real-git tests for what a commit hook may change: the reviewed set is accepted, anything beyond it is retracted"
+    },
+    {
       "path": "crates/im_agent/src/source_control/tests_commit.rs",
-      "summary": "Real-git tempdir tests for the commit oracle, commit outcomes, and the landed-but-unread error"
+      "summary": "Real-git tests for the commit oracle, its index/HEAD preconditions, and the landed-but-unread error"
     },
     {
       "path": "crates/im_agent/src/source_control/tests_diff.rs",
       "summary": "Real-git tempdir tests for bounded per-file diff capture"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_discard_quarantine.rs",
+      "summary": "Real-git tests for the discard quarantine directory's cleanup and startup sweep"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_discard_stamps.rs",
+      "summary": "Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_locks.rs",
+      "summary": "Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/tests_preconditions.rs",
+      "summary": "Real-git tests binding a commit to the reviewed index identity, and row/section ownership"
     },
     {
       "path": "crates/im_agent/src/source_control/tests_support.rs",
@@ -1170,12 +1278,24 @@
       "summary": "Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner"
     },
     {
+      "path": "crates/im_bundle/src/git_capture/command_drain.rs",
+      "summary": "Bounded pipe drain for the Git runner: grace after exit, then termination of the whole process tree"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command_job.rs",
+      "summary": "Windows Job Object primitives: create the job, assign a spawned child, terminate the tree on demand"
+    },
+    {
       "path": "crates/im_bundle/src/git_capture/command_stop.rs",
-      "summary": "Forced stop of a running Git child: process-group signalling on unix, kill-and-reap everywhere"
+      "summary": "Forced stop of a running Git child: ask the process tree to end, then kill it and reap the child"
     },
     {
       "path": "crates/im_bundle/src/git_capture/command_tests.rs",
       "summary": "Forced-stop tests for the bounded Git runner: process-group kill and detached stream readers"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/command_tree.rs",
+      "summary": "The process tree one Git child owns (unix process group, Windows job object) and the live-tree registry"
     },
     {
       "path": "crates/im_bundle/src/git_capture/command.rs",
@@ -1192,6 +1312,10 @@
     {
       "path": "crates/im_bundle/src/git_capture/discovery.rs",
       "summary": "Git discovery failure classification and raw prefix normalization"
+    },
+    {
+      "path": "crates/im_bundle/src/git_capture/fake_git.rs",
+      "summary": "Test-only fake Git scripts handed to a test only once the kernel will exec them"
     },
     {
       "path": "crates/im_bundle/src/git_capture/finalize.rs",
@@ -1231,7 +1355,7 @@
     },
     {
       "path": "crates/im_bundle/src/git_capture/prefix.rs",
-      "summary": "Shared bounded capture of the Git repository prefix for a configured root"
+      "summary": "Shared bounded capture of the Git repository prefix and absolute git dir for a configured root"
     },
     {
       "path": "crates/im_bundle/src/git_capture/render_omitted.rs",
@@ -1362,6 +1486,10 @@
       "summary": "Host runtime command routing and clientHello orchestration for host and WSL backends"
     },
     {
+      "path": "crates/im_host_agent/src/runtime/host_runtime/shutdown_targets.rs",
+      "summary": "The two things a host-agent shutdown must reach: the WSL backend client and the host locks"
+    },
+    {
       "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs",
       "summary": "WSL transport transition tests for host runtime routing"
     },
@@ -1422,6 +1550,14 @@
       "summary": "Host-agent WebSocket server module exports"
     },
     {
+      "path": "crates/im_host_agent/src/server/shutdown_dispatch.rs",
+      "summary": "Host-agent shutdown: drain the WSL backend first, then this process, then exit"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/shutdown_dispatch/tests.rs",
+      "summary": "Unit tests for the WSL-unavailable/outstanding-mutation shutdown decision"
+    },
+    {
       "path": "crates/im_host_agent/src/server/ws_server.rs",
       "summary": "Host-agent WebSocket accept loop and connection dispatch"
     },
@@ -1434,8 +1570,20 @@
       "summary": "Persistent WebSocket client for forwarding commands/events to the WSL backend agent"
     },
     {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/client_loop.rs",
+      "summary": "The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs",
+      "summary": "Unit tests for the per-command forward timeout ladder"
+    },
+    {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs",
-      "summary": "Unit tests for WSL backend forwarded command timeout routing"
+      "summary": "Unit tests for WSL backend forwarding, cancellation, and outstanding-mutation tracking"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs",
+      "summary": "The host->WSL request-timeout ladder and the agent-side worst case each tier covers"
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_connection.rs",
@@ -1534,6 +1682,14 @@
       "summary": "Public host-agent supervisor types and wiring"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/graceful_stop.rs",
+      "summary": "Ask the managed host agent to drain and exit before any kill path runs"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/graceful_stop/tests.rs",
+      "summary": "Ack-parsing/route tests for the graceful host stop against a fake agent socket"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/host.rs",
       "summary": "Host-agent startup and stale-port remediation for the supervisor"
     },
@@ -1558,12 +1714,20 @@
       "summary": "Supervisor runtime path, port, and installed-bundle preference helpers"
     },
     {
+      "path": "src-tauri/src/lib/agent/supervisor/shutdown_ws_client.rs",
+      "summary": "One authenticated shutdown request/response exchange with a managed agent"
+    },
+    {
       "path": "src-tauri/src/lib/agent/supervisor/shutdown.rs",
       "summary": "App-exit teardown: stop agents, then free WSL VM RAM when the distro is idle"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/state.rs",
       "summary": "Shared supervisor process state and process-kind labels"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/websocket_frame.rs",
+      "summary": "Minimal RFC 6455 client framing used by the supervisor's graceful-shutdown request"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/websocket_probe.rs",

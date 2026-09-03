@@ -58,6 +58,8 @@
 
 .confirm-message {
   margin: 0 0 var(--space-4) 0;
+  /* Confirmations that enumerate targets (discard) put one target per line */
+  white-space: pre-line;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   line-height: 1.5;

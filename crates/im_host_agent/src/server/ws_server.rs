@@ -7,7 +7,7 @@ use std::sync::Arc;
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::server::runtime_binary_sha256;
-use im_agent::server::EventBus;
+use im_agent::server::{finalize_shutdown, wait_for_shutdown_signal, EventBus};
 use serde_json::json;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
@@ -16,6 +16,7 @@ use crate::runtime::HostRuntime;
 
 use super::connection::{handle_connection, ConnectionContext};
 use super::handshake_auth::ConnectionHandshakeAuth;
+use super::shutdown_dispatch::drain_for_shutdown;
 
 const DEFAULT_PORT: u16 = 3141;
 
@@ -47,8 +48,11 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
         Some(json!({"port": port})),
     );
 
-    let shutdown = tokio::signal::ctrl_c();
+    // SIGTERM and ctrl-c take the same route as the `shutdown` command: stop
+    // accepting, drain the WSL backend and then this process, then return.
+    let shutdown = wait_for_shutdown_signal(&config.logger);
     tokio::pin!(shutdown);
+    let signal_reason;
 
     loop {
         tokio::select! {
@@ -73,20 +77,27 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
                     }
                 }
             }
-            signal_result = &mut shutdown => {
-                if let Err(err) = signal_result {
-                    config.logger.warn(
-                        "Failed to listen for shutdown signal",
-                        Some(json!({"error": err.to_string()})),
-                    );
-                }
+            reason = &mut shutdown => {
+                signal_reason = reason;
                 break;
             }
         }
     }
 
-    config
-        .logger
-        .info("Host agent WebSocket server stopped", None);
+    let targets = {
+        let runtime = config.runtime.read().await;
+        runtime.shutdown_targets()
+    };
+    let outcome = drain_for_shutdown(targets, signal_reason).await;
+    finalize_shutdown(&config.logger, signal_reason, outcome).await;
+
+    config.logger.info(
+        "Host agent WebSocket server stopped",
+        Some(json!({
+            "signal": signal_reason,
+            "drained": outcome.drained,
+            "activeMutations": outcome.active_mutations,
+        })),
+    );
     Ok(())
 }

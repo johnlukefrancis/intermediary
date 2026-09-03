@@ -77,16 +77,21 @@ export {
   type RefreshResult, type SetOptionsResult, type StageFileResult, type WatchRepoResult,
 } from "./protocol_repo_commands.js";
 export {
+  AGENT_DRAINING_CODE, SOURCE_CONTROL_STATE_CHANGED_CODE,
   SourceControlActionCommandSchema, SourceControlActionKindSchema, SourceControlActionResultSchema,
   SourceControlActionSchema, SourceControlAreaSchema, SourceControlChangeSchema,
-  SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlEntryAreaSchema,
-  SourceControlEntrySchema, SourceControlOmittedSchema, SourceControlScopeSchema,
-  SourceControlStatusCommandSchema, SourceControlStatusResultSchema, SourceControlStatusSchema,
+  SourceControlDiffCommandSchema, SourceControlDiffResultSchema, SourceControlDiscardTargetSchema,
+  SourceControlEffectSchema, SourceControlEntryAreaSchema, SourceControlEntrySchema,
+  SourceControlErrorDetailsSchema, SourceControlOmittedSchema, SourceControlScopeSchema,
+  SourceControlStampSchema, SourceControlStatusCommandSchema, SourceControlStatusResultSchema,
+  SourceControlStatusSchema,
   type SourceControlAction, type SourceControlActionCommand, type SourceControlActionKind,
   type SourceControlActionResult, type SourceControlArea, type SourceControlChange,
-  type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlEntry,
-  type SourceControlEntryArea, type SourceControlOmitted, type SourceControlScope,
-  type SourceControlStatus, type SourceControlStatusCommand, type SourceControlStatusResult,
+  type SourceControlDiffCommand, type SourceControlDiffResult, type SourceControlDiscardTarget,
+  type SourceControlEffect, type SourceControlEntry, type SourceControlEntryArea,
+  type SourceControlErrorDetails, type SourceControlOmitted, type SourceControlScope,
+  type SourceControlStamp, type SourceControlStatus, type SourceControlStatusCommand,
+  type SourceControlStatusResult,
 } from "./protocol_source_control.js";
 
 // -----------------------------------------------------------------------------

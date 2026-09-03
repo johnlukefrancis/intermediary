@@ -3,14 +3,18 @@
 
 pub(crate) mod command;
 mod command_child;
+mod command_drain;
+#[cfg(windows)]
+mod command_job;
 mod command_stop;
+pub(crate) mod command_tree;
 pub(crate) mod diff;
 mod diff_issue;
 pub(crate) mod discovery;
 mod finalize;
 mod ignored;
 mod index;
-mod index_tree;
+pub(crate) mod index_tree;
 mod initial_state;
 pub(crate) mod path;
 mod pathspec_batches;
@@ -190,5 +194,7 @@ fn empty_manifest() -> BundleGitCapture {
 
 #[cfg(test)]
 mod command_tests;
+#[cfg(all(test, unix))]
+mod fake_git;
 #[cfg(test)]
 mod tests;

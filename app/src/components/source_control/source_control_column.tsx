@@ -3,8 +3,11 @@
 
 import type React from "react";
 import { useCallback, useState } from "react";
-import type { SourceControlEntry } from "../../shared/protocol.js";
-import type { SourceControlState } from "../../hooks/source_control/source_control_types.js";
+import type { SourceControlDiscardTarget, SourceControlEntry } from "../../shared/protocol.js";
+import type {
+  SourceControlCommitRequest,
+  SourceControlState,
+} from "../../hooks/source_control/source_control_types.js";
 import { useConfig } from "../../hooks/use_config.js";
 import { useFileActions } from "../../hooks/use_file_actions.js";
 import { ConfirmModal } from "../confirm_modal.js";
@@ -17,6 +20,9 @@ import {
   TRUNCATED_HINT,
   actionErrorHeading,
   branchLabel,
+  discardConfirmMessage,
+  hookChangedHeading,
+  hookChangedMessage,
 } from "./source_control_copy.js";
 import { SourceControlStatusLine } from "./source_control_status_line.js";
 import { SourceControlWarnings } from "./source_control_warnings.js";
@@ -33,15 +39,33 @@ interface ContextMenuState {
   entry: SourceControlEntry;
 }
 
-/** Renamed/copied entries carry both sides so stage/unstage moves the whole rename */
-function entryPaths(entry: SourceControlEntry): string[] {
-  return entry.originalPath !== undefined ? [entry.originalPath, entry.path] : [entry.path];
+/**
+ * The files a row owns. A rename is one change with two endpoints, so both travel together; a
+ * copy's `originalPath` is only provenance — acting on it would touch an unrelated file.
+ */
+function rowTargets(entry: SourceControlEntry): string[] {
+  return entry.change === "renamed" && entry.originalPath !== undefined
+    ? [entry.originalPath, entry.path]
+    : [entry.path];
 }
 
-function discardMessage(entry: SourceControlEntry): string {
-  return entry.change === "untracked"
-    ? `Delete untracked file "${entry.path}"? This cannot be undone.`
-    : `Discard changes to "${entry.path}"? The working tree copy is replaced from the index and cannot be recovered.`;
+/** The stamp the UI reviewed travels with the target it belongs to, so a stale file is refused */
+function discardTargets(entry: SourceControlEntry): SourceControlDiscardTarget[] {
+  return rowTargets(entry).map((path) => {
+    if (path !== entry.path) return { path };
+    if (entry.worktreeMissing === true) return { path, expectedMissing: true as const };
+    if (entry.worktreeStamp !== undefined) return { path, expectedStamp: entry.worktreeStamp };
+    return { path };
+  });
+}
+
+/**
+ * The exact status the COMMIT click reviewed, frozen at that moment. When outside-root paths
+ * require confirmation this is what the modal is built from and what it re-renders from on every
+ * background status refresh while it stays open — never the live status.
+ */
+interface PendingCommitRequest extends SourceControlCommitRequest {
+  stagedOutsideRootCount: number;
 }
 
 export function SourceControlColumn({
@@ -53,11 +77,12 @@ export function SourceControlColumn({
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [discardTarget, setDiscardTarget] = useState<SourceControlEntry | null>(null);
-  const [commitConfirmOpen, setCommitConfirmOpen] = useState(false);
+  const [pendingCommit, setPendingCommit] = useState<PendingCommitRequest | null>(null);
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
   const {
-    status, phase, pendingAction, actionError, lastCommit, commitMessage,
-    setCommitMessage, dismissActionError, refresh, stage, unstage, discard, commit, push, pull,
+    status, phase, pendingAction, actionError, hookNotice, lastCommit, commitMessage,
+    setCommitMessage, dismissActionError, dismissHookNotice, refresh,
+    stage, unstage, discard, commit, push, pull,
   } = state;
   // A background refetch (loading with a status in hand) never disables the controls;
   // the action result supersedes any in-flight read.
@@ -65,10 +90,10 @@ export function SourceControlColumn({
   const actionsDisabled = pendingAction !== null || !isReady;
 
   const stageEntry = useCallback((entry: SourceControlEntry) => {
-    stage({ mode: "paths", paths: entryPaths(entry) });
+    stage({ mode: "paths", paths: rowTargets(entry) });
   }, [stage]);
   const unstageEntry = useCallback((entry: SourceControlEntry) => {
-    unstage({ mode: "paths", paths: entryPaths(entry) });
+    unstage({ mode: "paths", paths: rowTargets(entry) });
   }, [unstage]);
   const stageAll = useCallback(() => { stage({ mode: "all" }); }, [stage]);
   const unstageAll = useCallback(() => { unstage({ mode: "all" }); }, [unstage]);
@@ -87,13 +112,21 @@ export function SourceControlColumn({
   const canCommit =
     status !== null && !actionsDisabled && hint === null && commitMessage.trim().length > 0;
 
+  // Freezes the reviewed snapshot once, at the click, and never rebinds it to a later refresh:
+  // both the wire request and the outside-root modal's own re-renders read only this object.
   const requestCommit = useCallback(() => {
     if (!canCommit) return;
-    if (status.omitted.stagedOutsideRoot > 0) {
-      setCommitConfirmOpen(true);
+    const request: PendingCommitRequest = {
+      message: commitMessage,
+      expectedIndexTreeSha: status.indexTreeSha,
+      expectedHeadSha: status.headSha,
+      stagedOutsideRootCount: status.omitted.stagedOutsideRoot,
+    };
+    if (request.stagedOutsideRootCount > 0) {
+      setPendingCommit(request);
       return;
     }
-    commit(commitMessage);
+    commit(request);
   }, [canCommit, commit, commitMessage, status]);
 
   const contextMenuItems = contextMenu && repoRoot
@@ -139,10 +172,21 @@ export function SourceControlColumn({
       {actionError && (
         <div className="build-error source-control-notice" role="alert">
           <span className="source-control-notice__heading">
-            {actionErrorHeading(actionError.action)}
+            {actionErrorHeading(actionError.action, actionError.code)}
           </span>
           <span className="source-control-notice__message">{actionError.message}</span>
           <button type="button" className="dir-action-btn" onClick={dismissActionError}>
+            Dismiss
+          </button>
+        </div>
+      )}
+      {hookNotice && (
+        <div className="source-control-notice source-control-notice--info" role="status">
+          <span className="source-control-notice__heading">
+            {hookChangedHeading(hookNotice.length)}
+          </span>
+          <span className="source-control-notice__message">{hookChangedMessage(hookNotice)}</span>
+          <button type="button" className="dir-action-btn" onClick={dismissHookNotice}>
             Dismiss
           </button>
         </div>
@@ -170,26 +214,26 @@ export function SourceControlColumn({
       {discardTarget && (
         <ConfirmModal
           title="Discard changes"
-          message={discardMessage(discardTarget)}
+          message={discardConfirmMessage(discardTarget, rowTargets(discardTarget))}
           confirmLabel="Discard"
           isDestructive
           onConfirm={() => {
-            discard(entryPaths(discardTarget));
+            discard(discardTargets(discardTarget));
             setDiscardTarget(null);
           }}
           onCancel={() => { setDiscardTarget(null); }}
         />
       )}
-      {commitConfirmOpen && status !== null && (
+      {pendingCommit && (
         <ConfirmModal
           title="Commit staged changes"
-          message={`${status.omitted.stagedOutsideRoot} staged path(s) outside this folder will also be committed. Continue?`}
+          message={`${pendingCommit.stagedOutsideRootCount} staged path(s) outside this folder will also be committed. Continue?`}
           confirmLabel="Commit"
           onConfirm={() => {
-            setCommitConfirmOpen(false);
-            commit(commitMessage);
+            commit(pendingCommit);
+            setPendingCommit(null);
           }}
-          onCancel={() => { setCommitConfirmOpen(false); }}
+          onCancel={() => { setPendingCommit(null); }}
         />
       )}
     </div>

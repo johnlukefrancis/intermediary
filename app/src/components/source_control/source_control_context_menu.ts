@@ -49,7 +49,8 @@ export function buildSourceControlContextMenuItems({
 
   const items: ContextMenuItem[] = [
     stageItem,
-    { label: "Open Diff", onClick: () => { onOpenDiff(entry); } },
+    // A deleted row has no working-tree side to open.
+    { label: "Open Diff", disabled: deleted, onClick: () => { onOpenDiff(entry); } },
     ...fileItems,
   ];
 

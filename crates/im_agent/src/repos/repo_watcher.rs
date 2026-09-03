@@ -16,7 +16,8 @@ use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
 use crate::repos::repo_watcher_events::{handle_event, raw_os_code, EventContext};
 use crate::repos::source_control_watch::{
-    resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
+    load_tracked_paths, resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
+    TrackedPathSet,
 };
 use crate::repos::watcher_error::build_watcher_error_event;
 use crate::server::EventBus;
@@ -73,10 +74,29 @@ impl RepoWatcher {
         // can move without a single event under the watched tree.
         let root_path = PathBuf::from(&config.root_path);
         let external_watches = resolve_external_watches(&root_path, &config.logger).await;
+
+        // Loaded once here so the detector's tracked-path override is live
+        // from the watcher's first event; a `.git/index` change later
+        // refreshes it in place (`SourceControlWatch::note_event`).
+        let tracked = TrackedPathSet::empty();
+        match load_tracked_paths(&root_path).await {
+            Ok(paths) => tracked.store(paths),
+            Err(reason) => {
+                config.logger.warn(
+                    "Source control watch has no tracked-path signal",
+                    Some(serde_json::json!({
+                        "rootPath": root_path.to_string_lossy(),
+                        "reason": reason,
+                    })),
+                );
+            }
+        }
+
         let detector = SourceControlChangeDetector::new(
             &root_path,
             external_watches.detector_dirs,
             &config.ignore_globs,
+            tracked.clone(),
         )?;
         let extra_watch_paths: Vec<PathBuf> = external_watches
             .watch_paths
@@ -123,8 +143,14 @@ impl RepoWatcher {
         let mru_lock = Arc::new(RwLock::new(mru));
         let mru_clone = Arc::clone(&mru_lock);
         let task = tokio::spawn(async move {
-            let source_control =
-                SourceControlWatch::new(repo_id.clone(), event_bus.clone(), detector);
+            let source_control = SourceControlWatch::new(
+                repo_id.clone(),
+                event_bus.clone(),
+                detector,
+                tracked,
+                root_path.clone(),
+                logger.clone(),
+            );
             let context = EventContext {
                 repo_id: &repo_id,
                 root_path: &root_path,
@@ -242,7 +268,7 @@ impl RepoWatcher {
     }
 }
 
-fn filter_initial_entries(
+pub(super) fn filter_initial_entries(
     entries: Vec<FileEntry>,
     ignore_matcher: &IgnoreMatcher,
 ) -> Vec<FileEntry> {
@@ -253,38 +279,4 @@ fn filter_initial_entries(
             !ignore_matcher.should_ignore(&normalized_path)
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::filter_initial_entries;
-    use crate::protocol::{FileChangeType, FileEntry, FileKind};
-    use crate::repos::ignore_matcher::IgnoreMatcher;
-
-    #[test]
-    fn test_filter_initial_entries_applies_ignore_globs() {
-        let matcher = IgnoreMatcher::new(&["**/*.cpp".to_string()]).expect("valid ignore glob");
-        let entries = vec![
-            FileEntry {
-                path: "src\\engine\\render.cpp".to_string(),
-                kind: FileKind::Code,
-                change_type: FileChangeType::Add,
-                mtime: "2026-02-06T00:00:00Z".to_string(),
-                size_bytes: Some(8),
-                activity: None,
-            },
-            FileEntry {
-                path: "docs/readme.md".to_string(),
-                kind: FileKind::Docs,
-                change_type: FileChangeType::Add,
-                mtime: "2026-02-06T00:00:00Z".to_string(),
-                size_bytes: Some(12),
-                activity: None,
-            },
-        ];
-
-        let filtered = filter_initial_entries(entries, &matcher);
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].path, "docs/readme.md");
-    }
 }

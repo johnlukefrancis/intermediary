@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use sha1::{Digest, Sha1};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum IndexTreeError {
+pub enum IndexTreeError {
     Unmerged,
     Malformed,
 }
@@ -19,7 +19,7 @@ enum Node {
 /// Computes the tree object id that `git write-tree` would produce for the
 /// given NUL-delimited `git ls-files --stage -z` output, without writing
 /// objects into the repository.
-pub(crate) fn index_tree_sha(ls_files_stage: &[u8]) -> Result<String, IndexTreeError> {
+pub fn index_tree_sha(ls_files_stage: &[u8]) -> Result<String, IndexTreeError> {
     let mut root = BTreeMap::new();
     for entry in ls_files_stage.split(|byte| *byte == 0) {
         if entry.is_empty() {

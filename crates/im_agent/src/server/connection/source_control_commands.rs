@@ -17,10 +17,13 @@ pub async fn source_control_status_command(
     ctx: &ConnectionContext,
     cancellation: &RequestCancellation,
 ) -> Result<UiResponse, AgentError> {
-    let repo_root = command_repo_root(&command.repo_id, ctx).await?;
-    let status =
-        source_control_status(Path::new(&repo_root), Some(cancellation.source_control_read_token()?))
-            .await?;
+    let (repo_root, locks) = command_repo(&command.repo_id, ctx).await?;
+    let status = source_control_status(
+        Path::new(&repo_root),
+        Some(cancellation.source_control_read_token()?),
+        &locks,
+    )
+    .await?;
     Ok(UiResponse::SourceControlStatusResult(
         protocol::SourceControlStatusResult {
             repo_id: command.repo_id,
@@ -34,7 +37,7 @@ pub async fn source_control_diff_command(
     ctx: &ConnectionContext,
     cancellation: &RequestCancellation,
 ) -> Result<UiResponse, AgentError> {
-    let repo_root = command_repo_root(&command.repo_id, ctx).await?;
+    let (repo_root, _locks) = command_repo(&command.repo_id, ctx).await?;
     let diff = source_control_diff(
         Path::new(&repo_root),
         &command.path,
@@ -59,41 +62,32 @@ pub async fn source_control_action_command(
     command: protocol::SourceControlActionCommand,
     ctx: &ConnectionContext,
 ) -> Result<UiResponse, AgentError> {
-    let (repo_root, locks) = {
-        let state = ctx.runtime.read().await;
-        let repo_config = state
-            .repo_configs
-            .get(&command.repo_id)
-            .ok_or_else(|| {
-                AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {}", command.repo_id))
-            })?;
-        let repo_root = repo_commands::resolve_wsl_repo_root(&command.repo_id, repo_config)?;
-        let locks: SourceControlLocks = state.source_control_locks.clone();
-        (repo_root, locks)
-    };
+    let (repo_root, locks) = command_repo(&command.repo_id, ctx).await?;
     let kind = command.action.kind();
-    let outcome = run_source_control_action(
-        &locks,
-        &command.repo_id,
-        Path::new(&repo_root),
-        command.action,
-    )
-    .await?;
+    let outcome =
+        run_source_control_action(&locks, Path::new(&repo_root), command.action).await?;
     Ok(UiResponse::SourceControlActionResult(
         protocol::SourceControlActionResult {
             repo_id: command.repo_id,
             kind,
             status: outcome.status,
             commit_sha: outcome.commit_sha,
+            hook_changed_paths: outcome.hook_changed_paths,
         },
     ))
 }
 
-async fn command_repo_root(repo_id: &str, ctx: &ConnectionContext) -> Result<String, AgentError> {
+/// The configured root and the mutation-lock registry, cloned out under one
+/// short read lock so no runtime lock is held across Git.
+async fn command_repo(
+    repo_id: &str,
+    ctx: &ConnectionContext,
+) -> Result<(String, SourceControlLocks), AgentError> {
     let state = ctx.runtime.read().await;
     let repo_config = state
         .repo_configs
         .get(repo_id)
         .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))?;
-    repo_commands::resolve_wsl_repo_root(repo_id, repo_config)
+    let repo_root = repo_commands::resolve_wsl_repo_root(repo_id, repo_config)?;
+    Ok((repo_root, state.source_control_locks.clone()))
 }

@@ -11,8 +11,10 @@ pub use crate::git_capture::command::{
     run_git, run_git_with_input, GitCommandFailure, GitCommandFailureKind, GitCommandOutput,
     KillPolicy,
 };
+pub use crate::git_capture::command_tree::terminate_git_process_trees;
 pub use crate::git_capture::diff::{common_git_args, common_git_config_args};
 pub use crate::git_capture::discovery::trim_line_ending;
+pub use crate::git_capture::index_tree::{index_tree_sha, IndexTreeError};
 pub use crate::git_capture::path::{
     bytes_to_path, display_ref, path_to_bytes, strip_repo_prefix, GitPath,
 };

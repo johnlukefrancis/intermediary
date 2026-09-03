@@ -1,8 +1,8 @@
 // Path: crates/im_agent/src/source_control/paths.rs
-// Description: UI path validation and normalization, NUL-joined pathspec input, and in-root untracked file resolution
+// Description: UI path validation and normalization, NUL-joined pathspec input, and the in-root containment guard
 
 use std::io;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
 use crate::error::AgentError;
 use crate::staging::validate_relative_path;
@@ -45,14 +45,12 @@ pub(super) fn nul_joined(paths: &[String]) -> Vec<u8> {
     bytes
 }
 
-/// Resolves an untracked path for removal: the joined path must be a regular
-/// file (never a directory or symlink) whose parent resolves inside the repo
-/// root, so a symlinked directory can never lead the removal outside. Returns
-/// `None` when the path is already gone.
-pub(super) fn resolve_untracked_file(
-    repo_root: &Path,
-    path: &str,
-) -> Result<Option<PathBuf>, AgentError> {
+/// Confirms `path`'s parent directory resolves inside the repo root before a
+/// discard claim renames it directly (bypassing Git): a symlinked directory
+/// component must never let a relative, traversal-free path still reach
+/// outside the worktree. A path whose parent does not exist yet is not this
+/// guard's concern (the caller's own claim will fail on the missing file).
+pub(super) fn ensure_within_root(repo_root: &Path, path: &str) -> Result<(), AgentError> {
     let canonical_root = repo_root.canonicalize().map_err(|error| {
         AgentError::new(
             "INVALID_REPO",
@@ -63,7 +61,7 @@ pub(super) fn resolve_untracked_file(
     let parent = target.parent().unwrap_or(repo_root);
     let canonical_parent = match parent.canonicalize() {
         Ok(resolved) => resolved,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(error) => {
             return Err(AgentError::internal(format!(
                 "Failed to resolve {}: {error}",
@@ -77,29 +75,7 @@ pub(super) fn resolve_untracked_file(
             format!("Refusing to discard {path}: it resolves outside the repo root"),
         ));
     }
-    let metadata = match std::fs::symlink_metadata(&target) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(AgentError::internal(format!(
-                "Failed to inspect {}: {error}",
-                target.display()
-            )))
-        }
-    };
-    if metadata.file_type().is_dir() {
-        return Err(AgentError::new(
-            "INVALID_PATH",
-            format!("Refusing to discard {path}: it is a directory"),
-        ));
-    }
-    if !metadata.file_type().is_file() {
-        return Err(AgentError::new(
-            "INVALID_PATH",
-            format!("Refusing to discard {path}: it is not a regular file"),
-        ));
-    }
-    Ok(Some(target))
+    Ok(())
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@
 
 mod bundle_forwarding;
 mod host_dispatch;
+mod shutdown_targets;
 mod wsl_routing;
 mod wsl_transport_epoch_state;
 
@@ -27,6 +28,8 @@ use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
 
 use self::wsl_transport_epoch_state::WslTransportEpochState;
+
+pub use self::shutdown_targets::HostShutdownTargets;
 
 pub struct HostRuntime {
     local_backend: LocalHostBackend,
@@ -95,6 +98,11 @@ impl HostRuntime {
             | UiCommand::SourceControlAction(_) => {
                 self.dispatch_repo_command(command, event_bus).await
             }
+            // Shutdown is dispatched by the server without the runtime lock, so
+            // the drain never freezes the agent it is draining.
+            UiCommand::Shutdown => Err(AgentError::internal(
+                "Shutdown must be dispatched without the runtime lock",
+            )),
             UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
     }
