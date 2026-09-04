@@ -25,7 +25,6 @@ type ActiveRepoWorkspace = Exclude<RepoWorkspace, { kind: "none" }>;
 interface RepoWorkspacePanelProps {
   workspace: ActiveRepoWorkspace;
   noteState: NoteState;
-  railContent: React.ReactNode;
   isHandset: boolean;
   onClose: () => void;
   onTextChange: (content: string) => void;
@@ -85,7 +84,6 @@ function semanticMode(workspace: ActiveRepoWorkspace): TextWorkspaceSemanticMode
 export function RepoWorkspacePanel({
   workspace,
   noteState,
-  railContent,
   isHandset,
   onClose,
   onTextChange,
@@ -192,7 +190,6 @@ export function RepoWorkspacePanel({
             : undefined
         }
         content={content}
-        railContent={railContent}
         isHandset={isHandset}
       />
       {contextMenu && repoRoot && (

@@ -22,6 +22,16 @@ export function isSelfOrDescendant(path: string, ancestor: string): boolean {
   return path === ancestor || path.startsWith(`${ancestor}/`);
 }
 
+/**
+ * The paths with no selected ancestor. A worktree action on a folder already covers everything
+ * beneath it, so a selection of `app` plus `app/a.txt` is sent as `app` alone; sending both would
+ * make the second entry fail after the first had moved it.
+ */
+export function topmostPaths(paths: Iterable<string>): string[] {
+  const all = [...new Set(paths)];
+  return all.filter((path) => !all.some((other) => other !== path && isSelfOrDescendant(path, other)));
+}
+
 function hasExcludedAncestor(path: string, excludedSubdirs: readonly string[]): boolean {
   const parts = path.split("/").filter(Boolean);
   for (let index = 1; index < parts.length; index += 1) {

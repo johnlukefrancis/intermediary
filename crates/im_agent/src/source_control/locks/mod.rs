@@ -53,24 +53,7 @@ struct RegistryState {
     git_dir_by_root: HashMap<PathBuf, PathBuf>,
     lock_by_git_dir: HashMap<PathBuf, Arc<tokio::sync::Mutex<()>>>,
     quarantine_swept: HashSet<PathBuf>,
-    live_discard_ops: HashSet<String>,
-}
-
-/// One discard operation, live for exactly as long as it may still create or
-/// write quarantine directories. The startup sweep skips every directory named
-/// after a live operation, so a discard running under one configured root can
-/// never have its in-flight directory removed by the first status read of a
-/// sibling root over the same git dir. Released on every exit path, including
-/// a panic, because the registration is a `Drop`.
-pub(super) struct DiscardOpGuard {
-    locks: SourceControlLocks,
-    op_id: String,
-}
-
-impl Drop for DiscardOpGuard {
-    fn drop(&mut self) {
-        self.locks.state().live_discard_ops.remove(&self.op_id);
-    }
+    discard_ops_this_process: HashSet<String>,
 }
 
 impl SourceControlLocks {
@@ -125,24 +108,23 @@ impl SourceControlLocks {
         self.state().quarantine_swept.insert(git_dir.to_path_buf())
     }
 
-    /// Registers a discard operation before it creates its first quarantine
-    /// directory. The sweep asks about the id again at the moment it is about
-    /// to remove a directory, so a registration that lands before the
-    /// directory exists is enough: any directory the sweep can see was created
-    /// after its operation was registered.
-    pub(super) fn register_discard_op(&self, op_id: &str) -> DiscardOpGuard {
-        self.state().live_discard_ops.insert(op_id.to_string());
-        DiscardOpGuard {
-            locks: self.clone(),
-            op_id: op_id.to_string(),
-        }
+    /// Records a discard operation before it creates its first quarantine
+    /// directory. The registration is never removed: quarantined bytes are
+    /// retained until the *next* agent start, so the process that created a
+    /// directory is never the process that may release it, whatever order its
+    /// own reads and mutations happen to run in. A discard that ends and is
+    /// then followed by this process's first status read of a sibling
+    /// configured root must still find its bytes there.
+    pub(super) fn register_discard_op(&self, op_id: &str) {
+        self.state().discard_ops_this_process.insert(op_id.to_string());
     }
 
-    /// Whether a quarantine directory belongs to a discard that is still
-    /// running. Directories are named `<opId>-<targetIndex>`, so the operation
-    /// owning one is read off the front of its name.
-    pub(super) fn owns_live_discard(&self, directory_name: &str) -> bool {
-        self.state().live_discard_ops.iter().any(|op_id| {
+    /// Whether a quarantine directory was created by this process, and
+    /// therefore one this process's sweep must never remove. Directories are
+    /// named `<opId>-<targetIndex>`, so the operation owning one is read off
+    /// the front of its name.
+    pub(super) fn created_by_this_process(&self, directory_name: &str) -> bool {
+        self.state().discard_ops_this_process.iter().any(|op_id| {
             directory_name
                 .strip_prefix(op_id.as_str())
                 .is_some_and(|target_index| target_index.starts_with('-'))

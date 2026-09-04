@@ -34,3 +34,32 @@ export function isStagingNotConfiguredError(error: unknown): boolean {
   const code = parseAgentErrorCode(error);
   return code === "NOT_CONFIGURED" || code === "MISSING_WSL_ROOT";
 }
+
+export function isEntryConflictError(error: unknown): boolean {
+  return parseAgentErrorCode(error) === "ENTRY_CONFLICT";
+}
+
+function stringArrayField(value: unknown, key: string): string[] | null {
+  if (typeof value !== "object" || value === null) return null;
+  const field = (value as Record<string, unknown>)[key];
+  if (!Array.isArray(field) || !field.every((item) => typeof item === "string")) return null;
+  return field;
+}
+
+/** Repo-relative conflicting paths from an ENTRY_CONFLICT error's `details.conflicts`. */
+export function entryConflictPaths(error: unknown): string[] {
+  return stringArrayField(agentErrorDetails(error), "conflicts") ?? [];
+}
+
+/** Applied repo-relative paths from a partial-failure INTERNAL_ERROR's `details.applied`. */
+export function appliedPathsFromError(error: unknown): string[] | null {
+  return stringArrayField(agentErrorDetails(error), "applied");
+}
+
+/** Count of files already copied when a partial INTERNAL_ERROR carries `details.imported`. */
+export function importedCountFromError(error: unknown): number | null {
+  const details = agentErrorDetails(error);
+  if (typeof details !== "object" || details === null) return null;
+  const imported = (details as { imported?: unknown }).imported;
+  return Array.isArray(imported) ? imported.length : null;
+}

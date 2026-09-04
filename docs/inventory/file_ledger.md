@@ -14,15 +14,20 @@ app/src/components/auto_files_panel.tsx - Unified Auto files panel with ranked t
 app/src/components/auto_files_row.tsx - Single Auto files table row with activity telemetry
 app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel button with inline progress details
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
-app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer
-app/src/components/bundles/bundle_explorer_file_row.tsx - File row for the bundle explorer with icon-driven include/exclude toggle
-app/src/components/bundles/bundle_file_context_menu.tsx - Context menu actions for bundle explorer file rows
-app/src/components/bundles/bundle_file_explorer.tsx - Lazy file explorer for bundle directory and file inclusion
+app/src/components/bundles/bundle_drag_ghost.tsx - Floating label that follows the pointer during an in-tree row drag
+app/src/components/bundles/bundle_entries_feedback.tsx - Replace-conflict confirmation and inline error notice, shared by import and entry-action transactions
+app/src/components/bundles/bundle_entry_rename_input.tsx - In-place rename input mounted in a ZIPS tree row's name slot
+app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer, with selection, drag, and rename
+app/src/components/bundles/bundle_explorer_file_row.tsx - File row for the bundle explorer with icon-driven include/exclude toggle, selection, and rename
+app/src/components/bundles/bundle_explorer_row_menu.tsx - Right-click menu for a ZIPS tree row - file/folder actions plus cut/copy/paste/rename/delete
+app/src/components/bundles/bundle_explorer_tree.tsx - Top-level directory/file list for the bundle explorer, carrying drop-target attributes and tree keyboard focus
+app/src/components/bundles/bundle_file_explorer.tsx - Lazy file explorer for bundle directory/file inclusion, selection, clipboard, drag-move, and rename
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Bundle build controls and file explorer selection panel
 app/src/components/bundles/indeterminate_checkbox.tsx - Checkbox component that supports the DOM indeterminate state
 app/src/components/bundles/preset_selector.tsx - Preset tabs/buttons for bundle building
+app/src/components/bundles/tree_interaction_context.tsx - Owns the ZIPS-tree click model (select/toggle/range/expand) and hands each row its interaction props
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/diff_workspace.tsx - Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts
@@ -37,8 +42,8 @@ app/src/components/layout/deck_section_icons.tsx - Inline 24x24 stroke glyphs fo
 app/src/components/layout/deck_section_switcher.tsx - Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel
 app/src/components/layout/handset_deck.tsx - Handset deck layout switching between Auto files, zip bundles, and source control
 app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim icon-rocker header over the active rail body
-app/src/components/layout/three_column.tsx - Standard layout component with Auto files and the right rail
-app/src/components/layout/workspace_layout.tsx - Layout that replaces Auto files with a shared workspace
+app/src/components/layout/three_column.tsx - The one desktop shell: Auto Files or the shared workspace on the left, the rail on the right
+app/src/components/layout/workspace_layout.tsx - The shared workspace panel (title bar + content); handset wraps it as the whole deck
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
@@ -81,10 +86,19 @@ app/src/hooks/agent/use_agent_supervisor.ts - Manage auto-start and restart of h
 app/src/hooks/agent/wsl_transport_errors.ts - Classifies WSL transport errors and clears stale errors on explicit backend recovery events
 app/src/hooks/bundles/bundle_selection_defaults.ts - Bundle preset selection initialization and default-exclusion helpers
 app/src/hooks/bundles/bundle_state_types.ts - Bundle state contracts shared by bundle hooks and UI
+app/src/hooks/bundles/tree_drop_targeting.ts - Shared drop-target hit-testing, dwell-to-expand, and edge auto-scroll for the ZIPS tree Contract: every function here...
 app/src/hooks/bundles/use_bundle_build_actions.ts - Build and cancel actions for bundle presets
 app/src/hooks/bundles/use_bundle_events.ts - Agent event handling for bundle build state
+app/src/hooks/bundles/use_bundle_inclusion.ts - Bundle-selection inclusion callbacks (root/select-all/select-none/directory/file toggles) for the ZIPS explorer
 app/src/hooks/bundles/use_bundle_refresh.ts - Bundle list refresh flow with transient WSL retry handling
 app/src/hooks/bundles/use_directory_listings.ts - Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change
+app/src/hooks/bundles/use_entry_action_request.ts - Owns the ZIPS-tree entry-action transaction: refuse-first with conflict confirmation, inline error reporting
+app/src/hooks/bundles/use_import_request.ts - Owns the import transaction: refuse-first with conflict confirmation, inline error reporting
+app/src/hooks/bundles/use_tree_clipboard.ts - Cut/copy clipboard state for the ZIPS tree - cut moves and clears itself after paste, copy persists
+app/src/hooks/bundles/use_tree_drop_import.ts - Owns the OS drag gesture over the ZIPS tree: hit-testing, dwell-expand, edge auto-scroll, self-drag latch
+app/src/hooks/bundles/use_tree_keyboard.ts - Keyboard command map for the focused ZIPS tree list (navigation, expand/collapse, clipboard, rename, delete)
+app/src/hooks/bundles/use_tree_row_drag.ts - In-tree pointer-drag of a row (or the whole selection) onto a folder row or the root
+app/src/hooks/bundles/use_tree_selection.ts - Row selection state for the ZIPS tree - click/ctrl/shift semantics, pruned as rows disappear
 app/src/hooks/repo_workspace_diff_loaders.ts - Diff loaders for the repo workspace hook: text patches and two-sided image snapshots
 app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff, image diff) and path helpers for the workspace hook
 app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
@@ -125,10 +139,13 @@ app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and messa
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Typed agent response error plus accessors for its code, message, and details
+app/src/lib/agent/messages_import.ts - Typed helper for sending the drag-and-drop import command
 app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-control status, diff, and action commands
+app/src/lib/agent/messages_worktree.ts - Typed helper for sending the ZIPS-tree worktree action command
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
+app/src/lib/bundles/flatten_visible_tree.ts - Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders
 app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
 app/src/lib/format_bytes.ts - Byte-count formatting shared by bundle rows and image-diff pane footers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
@@ -160,10 +177,12 @@ app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
+app/src/shared/protocol_import.ts - Drag-and-drop file import command/result schemas shared with the agent
 app/src/shared/protocol_repo_commands.ts - Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas
 app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
 app/src/shared/protocol_source_control.ts - Source-control status, diff, and action command/result schemas shared with the agents
 app/src/shared/protocol_tr_fleet.ts - TR fleet command/response schemas for build-server status and recovery controls
+app/src/shared/protocol_worktree.ts - ZIPS-tree worktree action (delete/move/copy/rename) command/result schemas shared with the agent
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol unions and envelopes with Zod validation
 app/src/shared/repo_utils.ts - Utility functions for repo ID generation and path handling
 app/src/styles/a11y.css - Accessibility utilities - focus rings, disabled states, screen reader helpers
@@ -177,6 +196,8 @@ app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main win
 app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
 app/src/styles/bundle_column_layout.css - Bundle column layout and preset selector styles
 app/src/styles/bundle_column.css - Bundle column style entrypoint
+app/src/styles/bundle_file_explorer_drop.css - Drag-and-drop import hover states for the ZIPS explorer tree and directory rows
+app/src/styles/bundle_file_explorer_selection.css - Row selection, cut-dim, drag ghost, and list focus states for the ZIPS tree
 app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and file include glow states
 app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
 app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and shared file explorer controls
@@ -234,18 +255,22 @@ crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_l
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
 crates/im_agent/src/protocol/cancel_bundle_tests.rs - Protocol tests for cancellable bundle build messages
+crates/im_agent/src/protocol/commands_import.rs - UI-to-agent command payload for importing external OS files into a repo directory
 crates/im_agent/src/protocol/commands_source_control.rs - UI-to-agent source-control command payloads (status, diff, tagged actions)
 crates/im_agent/src/protocol/commands_tr_fleet.rs - TR fleet command payloads for host-agent build-server status and recovery controls
+crates/im_agent/src/protocol/commands_worktree.rs - UI-to-agent command payload for deleting, moving, copying, and renaming worktree entries
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
 crates/im_agent/src/protocol/events_legacy_wire.rs - Legacy hostPath/windowsPath wire shapes and conversions for staged-info and bundle-built events
 crates/im_agent/src/protocol/events_runtime.rs - Runtime status and error event payloads
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
 crates/im_agent/src/protocol/mod.rs - WebSocket protocol types for the agent
+crates/im_agent/src/protocol/responses_import.rs - Agent-to-UI response payload listing the files one import landed in the worktree
 crates/im_agent/src/protocol/responses_legacy_wire.rs - Legacy hostPath/windowsPath wire shapes and conversions for staged and bundle responses
 crates/im_agent/src/protocol/responses_repo.rs - Repository topology and directory listing response payloads
 crates/im_agent/src/protocol/responses_source_control.rs - Agent-to-UI source-control payloads: working-tree status, per-file diff, action outcome
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
+crates/im_agent/src/protocol/responses_worktree.rs - Agent-to-UI response payload naming the entries one worktree action produced
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
 crates/im_agent/src/protocol/tests_shutdown.rs - Wire-shape tests for the shutdown command and its result
 crates/im_agent/src/protocol/tests_source_control.rs - Wire-shape tests for the source-control command and status payloads
@@ -256,6 +281,13 @@ crates/im_agent/src/repos/file_activity.rs - Activity metadata updates for recen
 crates/im_agent/src/repos/generated_code_extensions.rs - Generated extension list for fallback code classification in the Rust agent. Generated by: scripts/classification/gen...
 crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watcher
 crates/im_agent/src/repos/image_file_reader.rs - Repo-relative image file reader for in-app preview workspaces
+crates/im_agent/src/repos/import/copy.rs - The import conflict pre-pass and the policy-specific copy that writes into the worktree
+crates/im_agent/src/repos/import/mod.rs - Copying external OS files and folders into one directory of a repo worktree
+crates/im_agent/src/repos/import/sources.rs - Source translation, per-source validation, and the bounded walk that plans an import
+crates/im_agent/src/repos/import/tests_refusals.rs - Import refusal tests: every error the wire contract names, and the proof nothing was written
+crates/im_agent/src/repos/import/tests_support.rs - Shared fixtures for the import tests: a worktree, an external source, and one call
+crates/im_agent/src/repos/import/tests.rs - Import behaviour tests: what lands in the worktree under each conflict policy
+crates/im_agent/src/repos/import/translate.rs - Turning the OS paths a drop delivered into paths this agent's own namespace can reach
 crates/im_agent/src/repos/mod.rs - Repository scanning module exports
 crates/im_agent/src/repos/mru_index.rs - MRU index for recent file changes
 crates/im_agent/src/repos/recent_files_normalizer.rs - Normalize persisted recent-file entries against current filters
@@ -276,6 +308,17 @@ crates/im_agent/src/repos/source_control_watch/source_control_watch_tests.rs - S
 crates/im_agent/src/repos/source_control_watch/tracked_set.rs - Tracked-path authority loaded from `git ls-files`, shared between the detector and its reloader
 crates/im_agent/src/repos/text_file_reader.rs - Repo-relative UTF-8 text file reader for in-app scratch viewing
 crates/im_agent/src/repos/watcher_error.rs - Watcher error classification and event shaping
+crates/im_agent/src/repos/worktree/copy_entries.rs - Copying selected worktree entries into one destination folder through the import writer
+crates/im_agent/src/repos/worktree/destination.rs - Resolving the destination folder of a worktree write, bounding its replace authorization, and proving the paths it cl...
+crates/im_agent/src/repos/worktree/entries.rs - The repo-relative entry path law every worktree action shares, and the refusals it raises
+crates/im_agent/src/repos/worktree/mod.rs - The four worktree entry actions (delete, move, copy, rename) behind one caller-locked owner
+crates/im_agent/src/repos/worktree/move_entries.rs - Moving selected worktree entries into one destination folder, refused whole before the first rename
+crates/im_agent/src/repos/worktree/rename.rs - Renaming one worktree entry in place, never over anything that already exists
+crates/im_agent/src/repos/worktree/tests_copy.rs - In-repo copy tests: the import writer's behaviour, reached with repo-relative entries
+crates/im_agent/src/repos/worktree/tests_move.rs - Move behaviour tests: what lands, what is refused whole, and what a folder may never do
+crates/im_agent/src/repos/worktree/tests_no_replace.rs - Tests for the no-replace write a move performs at every destination the user did not authorize
+crates/im_agent/src/repos/worktree/tests_rename.rs - Rename behaviour tests: what commits, which names are refused, and what is never replaced
+crates/im_agent/src/repos/worktree/tests_support.rs - Shared fixtures for the worktree action tests: a worktree, its files, and one call
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
 crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
@@ -312,9 +355,11 @@ crates/im_agent/src/source_control/diff/mod.rs - Bounded per-file unified diff c
 crates/im_agent/src/source_control/diff/tests_image.rs - Real-git tempdir tests for before/after image-diff side selection
 crates/im_agent/src/source_control/diff/tests.rs - Real-git tempdir tests for bounded per-file diff capture
 crates/im_agent/src/source_control/discard/claim.rs - Per-target quarantine claim, verification, release, and rollback for discard
+crates/im_agent/src/source_control/discard/entries.rs - Removing chosen worktree entries by claiming each into this repository's discard quarantine
 crates/im_agent/src/source_control/discard/mod.rs - Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
 crates/im_agent/src/source_control/discard/quarantine.rs - Quarantine directory naming and phase files for a discard operation, and the bounded startup sweep
 crates/im_agent/src/source_control/discard/target.rs - Executes one discard target: claim, classify, mutate, and release/rollback the claim
+crates/im_agent/src/source_control/discard/tests_entries.rs - Delete tests: what the quarantine holds afterwards, what is refused, and what a half-applied delete reports
 crates/im_agent/src/source_control/discard/tests_quarantine.rs - Real-git tests for the discard quarantine's phase files, its per-target directories, and retention
 crates/im_agent/src/source_control/discard/tests_stamps.rs - Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)
 crates/im_agent/src/source_control/discard/tests_sweep.rs - Tests for the once-per-process discard quarantine sweep: what it finishes, what it spares, and what it survives
@@ -332,6 +377,7 @@ crates/im_agent/src/source_control/status/snapshot.rs - One reviewed-snapshot id
 crates/im_agent/src/source_control/status/stamp.rs - Size/mtime/presence reads for worktree and conflict entries, and the shared stamp reader
 crates/im_agent/src/source_control/status/tests_projection.rs - Real-git tempdir tests for source-control status projection, the commit oracle, and error mapping
 crates/im_agent/src/source_control/tests_support.rs - Real-git tempdir fixtures shared by the source-control tests
+crates/im_agent/src/staging/layout_unc.rs - Translation of Windows WSL UNC paths into this distro's own POSIX paths
 crates/im_agent/src/staging/layout.rs - Central staging layout derivation for file and bundle outputs
 crates/im_agent/src/staging/mod.rs - Staging module exports
 crates/im_agent/src/staging/stager.rs - Atomic staging of files into the host-accessible directory
@@ -400,8 +446,10 @@ crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs - WSL transpo
 crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
+crates/im_host_agent/src/runtime/local_host_import_backend.rs - Host-native file import execution that never holds the runtime lock across the copy
 crates/im_host_agent/src/runtime/local_host_repo_backend.rs - Host-native repo read and topology operations
 crates/im_host_agent/src/runtime/local_host_source_control_backend.rs - Host-native source-control execution that never holds the runtime lock across Git
+crates/im_host_agent/src/runtime/local_host_worktree_backend.rs - Host-native worktree entry actions that never hold the runtime lock across the write
 crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routing and local host handling
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
 crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection

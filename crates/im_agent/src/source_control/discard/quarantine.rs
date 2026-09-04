@@ -101,9 +101,10 @@ pub(super) fn hold_unrestored(quarantined: &Path) -> PathBuf {
 /// first time this process reads this git dir's status. Each directory says
 /// for itself what may be done with it:
 ///
-/// - it belongs to a discard running right now (a sibling configured root over
-///   the same git dir can start one at any moment): its owner is still writing
-///   it, so it is left alone entirely.
+/// - this process created it: it is left alone entirely. Quarantined bytes are
+///   retained until the *next* agent start, so the process that made a
+///   directory is never the process that releases it — whether its discard is
+///   still writing, has just finished, or finished long before this sweep ran.
 /// - an `unrestored` file: a rollback or put-back could not return those bytes
 ///   to the worktree. They were never authorized for destruction, so the
 ///   directory stands and is logged.
@@ -187,10 +188,10 @@ fn sweep_blocking(root: &Path, locks: &SourceControlLocks) -> std::io::Result<Ve
 }
 
 fn sweep_one(operation: PathBuf, locks: &SourceControlLocks) -> SweptOp {
-    if owned_by_a_live_discard(&operation, locks) {
+    if locks_created_it(&operation, locks) {
         return SweptOp::Held {
             operation,
-            reason: "a discard running right now owns it",
+            reason: "this process created it, and retention lasts until the next start",
         };
     }
     if operation.join(UNRESTORED_FILE_NAME).exists() {
@@ -219,15 +220,15 @@ fn sweep_one(operation: PathBuf, locks: &SourceControlLocks) -> SweptOp {
 }
 
 /// Asked at the moment of the decision, not at the start of the sweep: a
-/// discard registers its operation before creating any directory, so a
-/// directory this listing can see was created after its operation was
-/// registered and the answer here is never stale in the direction that
-/// deletes.
-fn owned_by_a_live_discard(operation: &Path, locks: &SourceControlLocks) -> bool {
+/// discard records its operation before creating any directory, and the record
+/// is never withdrawn, so a directory this listing can see was either created
+/// by an already-recorded operation of this process or by an earlier one. The
+/// answer here can therefore never be stale in the direction that deletes.
+fn locks_created_it(operation: &Path, locks: &SourceControlLocks) -> bool {
     operation
         .file_name()
         .and_then(|name| name.to_str())
-        .is_some_and(|name| locks.owns_live_discard(name))
+        .is_some_and(|name| locks.created_by_this_process(name))
 }
 
 /// The `verified` marker's two lines: the worktree path the claim came from

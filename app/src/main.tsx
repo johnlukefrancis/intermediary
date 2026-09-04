@@ -26,6 +26,8 @@ import "./styles/auto_files_responsive.css";
 import "./styles/scrollbars.css";
 import "./styles/chrome.css";
 import "./styles/bundle_column.css";
+import "./styles/bundle_file_explorer_drop.css";
+import "./styles/bundle_file_explorer_selection.css";
 import "./styles/text_workspace.css";
 import "./styles/text_workspace_semantics.css";
 import "./styles/source_control.css";

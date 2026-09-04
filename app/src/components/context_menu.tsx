@@ -10,6 +10,10 @@ export interface ContextMenuItem {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Error-toned label, for a destructive action (e.g. Delete). */
+  destructive?: boolean;
+  /** Renders a divider above this item, grouping it apart from the ones before it. */
+  separatorBefore?: boolean;
 }
 
 interface ContextMenuProps {
@@ -72,7 +76,12 @@ export function ContextMenu({
           <button
             key={item.label}
             type="button"
-            className={`context-menu-item${item.disabled ? " context-menu-item--disabled" : ""}`}
+            className={[
+              "context-menu-item",
+              item.disabled && "context-menu-item--disabled",
+              item.destructive && "context-menu-item--destructive",
+              item.separatorBefore && "context-menu-item--separator-before",
+            ].filter(Boolean).join(" ")}
             role="menuitem"
             disabled={item.disabled}
             onClick={() => { handleItemClick(item.onClick); }}

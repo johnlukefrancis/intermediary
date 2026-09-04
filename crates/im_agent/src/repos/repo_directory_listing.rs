@@ -8,6 +8,7 @@ use tokio::fs;
 
 use crate::bundles::ignore_rules::should_ignore_entry;
 use crate::error::AgentError;
+use crate::source_control::ensure_no_git_component;
 
 #[derive(Debug, Clone)]
 pub struct RepoDirectoryListing {
@@ -21,6 +22,11 @@ pub async fn list_repo_directory(
     relative_path: &str,
 ) -> Result<RepoDirectoryListing, AgentError> {
     let normalized = normalize_directory_path(relative_path)?;
+    // The repository's own Git directory is not part of the worktree this
+    // listing describes, at any depth and whichever case the filesystem
+    // spells it in. Refusing the request here is what keeps the explorer from
+    // ever showing a path a drop, move, or rename would then be refused for.
+    ensure_no_git_component(&normalized)?;
     let root_path = Path::new(repo_root);
     let target_path = if normalized.is_empty() {
         root_path.to_path_buf()
@@ -77,6 +83,9 @@ pub async fn list_repo_directory(
         let name = entry.file_name().to_string_lossy().to_string();
         let child_path = join_relative_path(&normalized, &name);
         if file_type.is_dir() {
+            if name.eq_ignore_ascii_case(".git") {
+                continue;
+            }
             dirs.push(child_path);
         } else if file_type.is_file() && !should_ignore_entry(&name, false) {
             files.push(child_path);
@@ -101,7 +110,10 @@ fn join_relative_path(parent: &str, name: &str) -> String {
     }
 }
 
-fn normalize_directory_path(relative_path: &str) -> Result<String, AgentError> {
+/// Normalizes one UI-supplied repo-relative directory path to the
+/// slash-joined form every repo path uses on the wire. `""` and `"."` both
+/// mean the worktree root and normalize to `""`.
+pub fn normalize_directory_path(relative_path: &str) -> Result<String, AgentError> {
     let trimmed = relative_path.trim();
     if trimmed.is_empty() || trimmed == "." {
         return Ok(String::new());
@@ -164,13 +176,18 @@ mod tests {
         fs::create_dir_all(root.join("app/src")).expect("create app");
         fs::write(root.join("README.md"), "docs").expect("write readme");
         fs::write(root.join(".env"), "secret").expect("write ignored file");
+        fs::create_dir_all(root.join(".git/hooks")).expect("create git dir");
 
         let result = list_repo_directory(root.to_str().expect("root"), "")
             .await
             .expect("list root");
 
         assert_eq!(result.path, "");
-        assert_eq!(result.dirs, vec!["app".to_string()]);
+        assert_eq!(
+            result.dirs,
+            vec!["app".to_string()],
+            "the repository's own Git directory is never listed"
+        );
         assert_eq!(result.files, vec!["README.md".to_string()]);
     }
 
@@ -188,6 +205,23 @@ mod tests {
         assert_eq!(result.path, "app/src");
         assert_eq!(result.dirs, vec!["app/src/components".to_string()]);
         assert_eq!(result.files, vec!["app/src/main.ts".to_string()]);
+    }
+
+    /// The Git directory is not a directory of this worktree: asking for it,
+    /// for anything under it, or for its case alias is refused rather than
+    /// answered with a listing the rest of the product would refuse to act on.
+    #[tokio::test]
+    async fn rejects_the_git_directory_at_any_depth() {
+        let dir = tempdir().expect("temp repo");
+        fs::create_dir_all(dir.path().join(".git/hooks")).expect("git dir");
+        fs::create_dir_all(dir.path().join("app/.GIT")).expect("nested git dir");
+
+        for path in [".git", ".git/hooks", "app/.GIT"] {
+            let err = list_repo_directory(dir.path().to_str().expect("root"), path)
+                .await
+                .expect_err("git directory");
+            assert_eq!(err.code(), "INVALID_PATH", "{path}");
+        }
     }
 
     #[tokio::test]

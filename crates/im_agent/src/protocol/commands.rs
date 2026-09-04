@@ -5,6 +5,8 @@ use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::commands_import::ImportFilesCommand;
+use super::commands_worktree::WorktreeActionCommand;
 use super::commands_tr_fleet::{GetTrFleetStatusCommand, TrFleetActionCommand};
 use super::commands_source_control::{
     SourceControlActionCommand, SourceControlDiffCommand, SourceControlImageDiffCommand,
@@ -212,6 +214,10 @@ pub enum UiCommand {
     SourceControlImageDiff(SourceControlImageDiffCommand),
     #[serde(rename = "sourceControlAction")]
     SourceControlAction(SourceControlActionCommand),
+    #[serde(rename = "importFiles")]
+    ImportFiles(ImportFilesCommand),
+    #[serde(rename = "worktreeAction")]
+    WorktreeAction(WorktreeActionCommand),
     /// Drain and stop this agent. Carries no fields and targets no repository:
     /// it is the process-wide shutdown gate, not a repo operation.
     #[serde(rename = "shutdown")]
@@ -241,6 +247,8 @@ impl UiCommand {
             UiCommand::SourceControlDiff(_) => "sourceControlDiff",
             UiCommand::SourceControlImageDiff(_) => "sourceControlImageDiff",
             UiCommand::SourceControlAction(_) => "sourceControlAction",
+            UiCommand::ImportFiles(_) => "importFiles",
+            UiCommand::WorktreeAction(_) => "worktreeAction",
             UiCommand::Shutdown => "shutdown",
             UiCommand::Unknown => "unknown",
         }
@@ -265,6 +273,8 @@ impl UiCommand {
             UiCommand::SourceControlDiff(command) => Some(&command.repo_id),
             UiCommand::SourceControlImageDiff(command) => Some(&command.repo_id),
             UiCommand::SourceControlAction(command) => Some(&command.repo_id),
+            UiCommand::ImportFiles(command) => Some(&command.repo_id),
+            UiCommand::WorktreeAction(command) => Some(&command.repo_id),
             UiCommand::ClientHello(_)
             | UiCommand::SetOptions(_)
             | UiCommand::GetTrFleetStatus(_)

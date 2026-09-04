@@ -2,8 +2,11 @@
 // Description: Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine
 
 mod claim;
+mod entries;
 pub(in crate::source_control) mod quarantine;
 mod target;
+#[cfg(test)]
+mod tests_entries;
 #[cfg(test)]
 mod tests_quarantine;
 #[cfg(test)]
@@ -16,6 +19,8 @@ use std::path::Path;
 
 use crate::error::{AgentError, MutationEffect};
 use crate::protocol::{SourceControlChange, SourceControlDiscardTarget, SourceControlEntry, SourceControlStatus};
+
+pub(crate) use self::entries::quarantine_entries;
 
 use self::quarantine::{generate_op_id, quarantine_root};
 use self::target::{process_target, TargetError};
@@ -56,11 +61,12 @@ pub(super) async fn discard(
         .map_err(|error| error.with_effect(MutationEffect::NotApplied))?
         .git_dir;
     let op_id = generate_op_id();
-    // Registered before this action's first quarantine directory exists and
-    // released when this future ends, however it ends. The startup sweep a
-    // sibling configured root over the same git dir can fire at any moment
-    // then leaves every directory this operation owns alone.
-    let _live = locks.register_discard_op(&op_id);
+    // Recorded before this action's first quarantine directory exists, and
+    // never withdrawn: no sweep this process runs — whenever it runs, and
+    // whichever configured root over this git dir triggers it — may remove a
+    // directory this process created. The bytes are released by the next
+    // agent start, which is what retention means.
+    locks.register_discard_op(&op_id);
 
     let mut applied: Vec<String> = Vec::new();
     for (index, target) in targets.iter().enumerate() {

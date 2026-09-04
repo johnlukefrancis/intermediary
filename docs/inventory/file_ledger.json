@@ -46,20 +46,36 @@
       "summary": "Main bundles column component"
     },
     {
+      "path": "app/src/components/bundles/bundle_drag_ghost.tsx",
+      "summary": "Floating label that follows the pointer during an in-tree row drag"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_entries_feedback.tsx",
+      "summary": "Replace-conflict confirmation and inline error notice, shared by import and entry-action transactions"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_entry_rename_input.tsx",
+      "summary": "In-place rename input mounted in a ZIPS tree row's name slot"
+    },
+    {
       "path": "app/src/components/bundles/bundle_explorer_directory.tsx",
-      "summary": "Recursive directory node for the lazy bundle file explorer"
+      "summary": "Recursive directory node for the lazy bundle file explorer, with selection, drag, and rename"
     },
     {
       "path": "app/src/components/bundles/bundle_explorer_file_row.tsx",
-      "summary": "File row for the bundle explorer with icon-driven include/exclude toggle"
+      "summary": "File row for the bundle explorer with icon-driven include/exclude toggle, selection, and rename"
     },
     {
-      "path": "app/src/components/bundles/bundle_file_context_menu.tsx",
-      "summary": "Context menu actions for bundle explorer file rows"
+      "path": "app/src/components/bundles/bundle_explorer_row_menu.tsx",
+      "summary": "Right-click menu for a ZIPS tree row - file/folder actions plus cut/copy/paste/rename/delete"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_explorer_tree.tsx",
+      "summary": "Top-level directory/file list for the bundle explorer, carrying drop-target attributes and tree keyboard focus"
     },
     {
       "path": "app/src/components/bundles/bundle_file_explorer.tsx",
-      "summary": "Lazy file explorer for bundle directory and file inclusion"
+      "summary": "Lazy file explorer for bundle directory/file inclusion, selection, clipboard, drag-move, and rename"
     },
     {
       "path": "app/src/components/bundles/bundle_list.tsx",
@@ -80,6 +96,10 @@
     {
       "path": "app/src/components/bundles/preset_selector.tsx",
       "summary": "Preset tabs/buttons for bundle building"
+    },
+    {
+      "path": "app/src/components/bundles/tree_interaction_context.tsx",
+      "summary": "Owns the ZIPS-tree click model (select/toggle/range/expand) and hands each row its interaction props"
     },
     {
       "path": "app/src/components/confirm_modal.tsx",
@@ -139,11 +159,11 @@
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
-      "summary": "Standard layout component with Auto files and the right rail"
+      "summary": "The one desktop shell: Auto Files or the shared workspace on the left, the rail on the right"
     },
     {
       "path": "app/src/components/layout/workspace_layout.tsx",
-      "summary": "Layout that replaces Auto files with a shared workspace"
+      "summary": "The shared workspace panel (title bar + content); handset wraps it as the whole deck"
     },
     {
       "path": "app/src/components/options_overlay.tsx",
@@ -314,6 +334,10 @@
       "summary": "Bundle state contracts shared by bundle hooks and UI"
     },
     {
+      "path": "app/src/hooks/bundles/tree_drop_targeting.ts",
+      "summary": "Shared drop-target hit-testing, dwell-to-expand, and edge auto-scroll for the ZIPS tree Contract: every function here..."
+    },
+    {
       "path": "app/src/hooks/bundles/use_bundle_build_actions.ts",
       "summary": "Build and cancel actions for bundle presets"
     },
@@ -322,12 +346,44 @@
       "summary": "Agent event handling for bundle build state"
     },
     {
+      "path": "app/src/hooks/bundles/use_bundle_inclusion.ts",
+      "summary": "Bundle-selection inclusion callbacks (root/select-all/select-none/directory/file toggles) for the ZIPS explorer"
+    },
+    {
       "path": "app/src/hooks/bundles/use_bundle_refresh.ts",
       "summary": "Bundle list refresh flow with transient WSL retry handling"
     },
     {
       "path": "app/src/hooks/bundles/use_directory_listings.ts",
       "summary": "Lazy directory listing state for the bundle explorer, re-listed in place when Git reports a change"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_entry_action_request.ts",
+      "summary": "Owns the ZIPS-tree entry-action transaction: refuse-first with conflict confirmation, inline error reporting"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_import_request.ts",
+      "summary": "Owns the import transaction: refuse-first with conflict confirmation, inline error reporting"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_tree_clipboard.ts",
+      "summary": "Cut/copy clipboard state for the ZIPS tree - cut moves and clears itself after paste, copy persists"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_tree_drop_import.ts",
+      "summary": "Owns the OS drag gesture over the ZIPS tree: hit-testing, dwell-expand, edge auto-scroll, self-drag latch"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_tree_keyboard.ts",
+      "summary": "Keyboard command map for the focused ZIPS tree list (navigation, expand/collapse, clipboard, rename, delete)"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_tree_row_drag.ts",
+      "summary": "In-tree pointer-drag of a row (or the whole selection) onto a folder row or the root"
+    },
+    {
+      "path": "app/src/hooks/bundles/use_tree_selection.ts",
+      "summary": "Row selection state for the ZIPS tree - click/ctrl/shift semantics, pruned as rows disappear"
     },
     {
       "path": "app/src/hooks/repo_workspace_diff_loaders.ts",
@@ -490,8 +546,16 @@
       "summary": "Typed agent response error plus accessors for its code, message, and details"
     },
     {
+      "path": "app/src/lib/agent/messages_import.ts",
+      "summary": "Typed helper for sending the drag-and-drop import command"
+    },
+    {
       "path": "app/src/lib/agent/messages_source_control.ts",
       "summary": "Typed helpers for sending source-control status, diff, and action commands"
+    },
+    {
+      "path": "app/src/lib/agent/messages_worktree.ts",
+      "summary": "Typed helper for sending the ZIPS-tree worktree action command"
     },
     {
       "path": "app/src/lib/agent/messages.ts",
@@ -504,6 +568,10 @@
     {
       "path": "app/src/lib/bundles/bundle_selection_visibility.ts",
       "summary": "Shared path visibility helpers for bundle selection state"
+    },
+    {
+      "path": "app/src/lib/bundles/flatten_visible_tree.ts",
+      "summary": "Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders"
     },
     {
       "path": "app/src/lib/files/file_feed.ts",
@@ -630,6 +698,10 @@
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
     },
     {
+      "path": "app/src/shared/protocol_import.ts",
+      "summary": "Drag-and-drop file import command/result schemas shared with the agent"
+    },
+    {
       "path": "app/src/shared/protocol_repo_commands.ts",
       "summary": "Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas"
     },
@@ -644,6 +716,10 @@
     {
       "path": "app/src/shared/protocol_tr_fleet.ts",
       "summary": "TR fleet command/response schemas for build-server status and recovery controls"
+    },
+    {
+      "path": "app/src/shared/protocol_worktree.ts",
+      "summary": "ZIPS-tree worktree action (delete/move/copy/rename) command/result schemas shared with the agent"
     },
     {
       "path": "app/src/shared/protocol.ts",
@@ -696,6 +772,14 @@
     {
       "path": "app/src/styles/bundle_column.css",
       "summary": "Bundle column style entrypoint"
+    },
+    {
+      "path": "app/src/styles/bundle_file_explorer_drop.css",
+      "summary": "Drag-and-drop import hover states for the ZIPS explorer tree and directory rows"
+    },
+    {
+      "path": "app/src/styles/bundle_file_explorer_selection.css",
+      "summary": "Row selection, cut-dim, drag ghost, and list focus states for the ZIPS tree"
     },
     {
       "path": "app/src/styles/bundle_file_explorer.css",
@@ -926,12 +1010,20 @@
       "summary": "Protocol tests for cancellable bundle build messages"
     },
     {
+      "path": "crates/im_agent/src/protocol/commands_import.rs",
+      "summary": "UI-to-agent command payload for importing external OS files into a repo directory"
+    },
+    {
       "path": "crates/im_agent/src/protocol/commands_source_control.rs",
       "summary": "UI-to-agent source-control command payloads (status, diff, tagged actions)"
     },
     {
       "path": "crates/im_agent/src/protocol/commands_tr_fleet.rs",
       "summary": "TR fleet command payloads for host-agent build-server status and recovery controls"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/commands_worktree.rs",
+      "summary": "UI-to-agent command payload for deleting, moving, copying, and renaming worktree entries"
     },
     {
       "path": "crates/im_agent/src/protocol/commands.rs",
@@ -958,6 +1050,10 @@
       "summary": "WebSocket protocol types for the agent"
     },
     {
+      "path": "crates/im_agent/src/protocol/responses_import.rs",
+      "summary": "Agent-to-UI response payload listing the files one import landed in the worktree"
+    },
+    {
       "path": "crates/im_agent/src/protocol/responses_legacy_wire.rs",
       "summary": "Legacy hostPath/windowsPath wire shapes and conversions for staged and bundle responses"
     },
@@ -972,6 +1068,10 @@
     {
       "path": "crates/im_agent/src/protocol/responses_tr_fleet.rs",
       "summary": "TR fleet response payload types for host-agent build-server control"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/responses_worktree.rs",
+      "summary": "Agent-to-UI response payload naming the entries one worktree action produced"
     },
     {
       "path": "crates/im_agent/src/protocol/responses.rs",
@@ -1012,6 +1112,34 @@
     {
       "path": "crates/im_agent/src/repos/image_file_reader.rs",
       "summary": "Repo-relative image file reader for in-app preview workspaces"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/copy.rs",
+      "summary": "The import conflict pre-pass and the policy-specific copy that writes into the worktree"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/mod.rs",
+      "summary": "Copying external OS files and folders into one directory of a repo worktree"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/sources.rs",
+      "summary": "Source translation, per-source validation, and the bounded walk that plans an import"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/tests_refusals.rs",
+      "summary": "Import refusal tests: every error the wire contract names, and the proof nothing was written"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/tests_support.rs",
+      "summary": "Shared fixtures for the import tests: a worktree, an external source, and one call"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/tests.rs",
+      "summary": "Import behaviour tests: what lands in the worktree under each conflict policy"
+    },
+    {
+      "path": "crates/im_agent/src/repos/import/translate.rs",
+      "summary": "Turning the OS paths a drop delivered into paths this agent's own namespace can reach"
     },
     {
       "path": "crates/im_agent/src/repos/mod.rs",
@@ -1092,6 +1220,50 @@
     {
       "path": "crates/im_agent/src/repos/watcher_error.rs",
       "summary": "Watcher error classification and event shaping"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/copy_entries.rs",
+      "summary": "Copying selected worktree entries into one destination folder through the import writer"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/destination.rs",
+      "summary": "Resolving the destination folder of a worktree write, bounding its replace authorization, and proving the paths it cl..."
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/entries.rs",
+      "summary": "The repo-relative entry path law every worktree action shares, and the refusals it raises"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/mod.rs",
+      "summary": "The four worktree entry actions (delete, move, copy, rename) behind one caller-locked owner"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/move_entries.rs",
+      "summary": "Moving selected worktree entries into one destination folder, refused whole before the first rename"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/rename.rs",
+      "summary": "Renaming one worktree entry in place, never over anything that already exists"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/tests_copy.rs",
+      "summary": "In-repo copy tests: the import writer's behaviour, reached with repo-relative entries"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/tests_move.rs",
+      "summary": "Move behaviour tests: what lands, what is refused whole, and what a folder may never do"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/tests_no_replace.rs",
+      "summary": "Tests for the no-replace write a move performs at every destination the user did not authorize"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/tests_rename.rs",
+      "summary": "Rename behaviour tests: what commits, which names are refused, and what is never replaced"
+    },
+    {
+      "path": "crates/im_agent/src/repos/worktree/tests_support.rs",
+      "summary": "Shared fixtures for the worktree action tests: a worktree, its files, and one call"
     },
     {
       "path": "crates/im_agent/src/runtime/config_fingerprint.rs",
@@ -1238,6 +1410,10 @@
       "summary": "Per-target quarantine claim, verification, release, and rollback for discard"
     },
     {
+      "path": "crates/im_agent/src/source_control/discard/entries.rs",
+      "summary": "Removing chosen worktree entries by claiming each into this repository's discard quarantine"
+    },
+    {
       "path": "crates/im_agent/src/source_control/discard/mod.rs",
       "summary": "Discard exactly the confirmed targets, one at a time, under an operation-owned quarantine"
     },
@@ -1248,6 +1424,10 @@
     {
       "path": "crates/im_agent/src/source_control/discard/target.rs",
       "summary": "Executes one discard target: claim, classify, mutate, and release/rollback the claim"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/discard/tests_entries.rs",
+      "summary": "Delete tests: what the quarantine holds afterwards, what is refused, and what a half-applied delete reports"
     },
     {
       "path": "crates/im_agent/src/source_control/discard/tests_quarantine.rs",
@@ -1316,6 +1496,10 @@
     {
       "path": "crates/im_agent/src/source_control/tests_support.rs",
       "summary": "Real-git tempdir fixtures shared by the source-control tests"
+    },
+    {
+      "path": "crates/im_agent/src/staging/layout_unc.rs",
+      "summary": "Translation of Windows WSL UNC paths into this distro's own POSIX paths"
     },
     {
       "path": "crates/im_agent/src/staging/layout.rs",
@@ -1590,12 +1774,20 @@
       "summary": "Host-native local backend for repo watch, staging, and bundle operations"
     },
     {
+      "path": "crates/im_host_agent/src/runtime/local_host_import_backend.rs",
+      "summary": "Host-native file import execution that never holds the runtime lock across the copy"
+    },
+    {
       "path": "crates/im_host_agent/src/runtime/local_host_repo_backend.rs",
       "summary": "Host-native repo read and topology operations"
     },
     {
       "path": "crates/im_host_agent/src/runtime/local_host_source_control_backend.rs",
       "summary": "Host-native source-control execution that never holds the runtime lock across Git"
+    },
+    {
+      "path": "crates/im_host_agent/src/runtime/local_host_worktree_backend.rs",
+      "summary": "Host-native worktree entry actions that never hold the runtime lock across the write"
     },
     {
       "path": "crates/im_host_agent/src/runtime/mod.rs",

@@ -35,6 +35,12 @@ import {
   SourceControlImageDiffCommandSchema, SourceControlImageDiffResultSchema,
   SourceControlStatusCommandSchema, SourceControlStatusResultSchema,
 } from "./protocol_source_control.js";
+import {
+  ImportFilesCommandSchema, ImportFilesResultSchema,
+} from "./protocol_import.js";
+import {
+  WorktreeActionCommandSchema, WorktreeActionResultSchema,
+} from "./protocol_worktree.js";
 export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
   BundleBuiltEventSchema, ErrorEventSchema, FileActivityBucketSchema, FileActivitySchema,
@@ -98,6 +104,14 @@ export {
   type SourceControlStamp, type SourceControlStatus, type SourceControlStatusCommand,
   type SourceControlStatusResult,
 } from "./protocol_source_control.js";
+export {
+  ConflictPolicySchema, ImportFilesCommandSchema, ImportFilesResultSchema, ImportedFileSchema,
+  type ConflictPolicy, type ImportFilesCommand, type ImportFilesResult, type ImportedFile,
+} from "./protocol_import.js";
+export {
+  WorktreeActionCommandSchema, WorktreeActionResultSchema, WorktreeActionSchema,
+  type WorktreeAction, type WorktreeActionCommand, type WorktreeActionResult,
+} from "./protocol_worktree.js";
 
 // -----------------------------------------------------------------------------
 // Unions
@@ -122,6 +136,8 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   SourceControlDiffCommandSchema,
   SourceControlImageDiffCommandSchema,
   SourceControlActionCommandSchema,
+  ImportFilesCommandSchema,
+  WorktreeActionCommandSchema,
 ]);
 export type UiCommand = z.infer<typeof UiCommandSchema>;
 
@@ -144,6 +160,8 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   SourceControlDiffResultSchema,
   SourceControlImageDiffResultSchema,
   SourceControlActionResultSchema,
+  ImportFilesResultSchema,
+  WorktreeActionResultSchema,
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 

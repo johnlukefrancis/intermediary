@@ -185,7 +185,7 @@ pub(super) fn missing_target(path: &str) -> SourceControlDiscardTarget {
 
 /// The discard quarantine directories under one git dir. Absent directory =
 /// no operation ever ran here, which is a legitimate answer, not a failure.
-pub(super) fn quarantine_entries(git_dir: &Path) -> Vec<PathBuf> {
+pub(super) fn quarantine_dirs(git_dir: &Path) -> Vec<PathBuf> {
     let dir = git_dir.join("intermediary-discard");
     match std::fs::read_dir(&dir) {
         Ok(read) => read.map(|entry| entry.expect("read dir").path()).collect(),
@@ -196,7 +196,7 @@ pub(super) fn quarantine_entries(git_dir: &Path) -> Vec<PathBuf> {
 
 /// The one quarantine directory a single-claiming-target action left behind.
 pub(super) fn only_operation(git_dir: &Path) -> PathBuf {
-    let mut found = quarantine_entries(git_dir);
+    let mut found = quarantine_dirs(git_dir);
     assert_eq!(
         found.len(),
         1,

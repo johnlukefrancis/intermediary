@@ -15,8 +15,10 @@ use im_agent::source_control::{
 
 use crate::runtime::local_host_backend::LocalHostBackend;
 
-/// Everything a host-rooted source-control command needs, cloned out of the
-/// runtime under a short read lock so Git runs with no runtime lock held.
+/// Everything a host-rooted worktree mutation needs, cloned out of the runtime
+/// under a short read lock so the work runs with no runtime lock held. Shared
+/// with the file-import path (`local_host_import_backend`): it takes the same
+/// per-worktree lock, so it needs the same two values.
 #[derive(Clone)]
 pub struct HostSourceControlContext {
     pub repo_root: String,

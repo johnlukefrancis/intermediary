@@ -139,7 +139,10 @@ async fn finalize_temp_copy(
     Ok(())
 }
 
-fn temp_path_for(dest_path: &Path) -> PathBuf {
+/// A unique sibling of `dest_path` to write into before a rename publishes it.
+/// Shared with the import path so both write-then-rename sites name their
+/// temporaries the same way.
+pub(crate) fn temp_path_for(dest_path: &Path) -> PathBuf {
     let suffix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()

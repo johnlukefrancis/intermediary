@@ -34,6 +34,11 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - Internal backend sockets (for example host→WSL) must use a separate secret not exposed to the frontend.
 - Tokens must not be written to logs or persisted in app config.
 
+6) **OS drag-in paths are data, not access** (2026-09-03)
+- The main window enables Tauri's native drag-drop (`dragDropEnabled`), so the webview receives the absolute OS paths of dropped items as strings.
+- The webview never reads, writes, or navigates to those paths; it forwards them to the agent that owns the target repository root, which validates, translates, and copies them.
+- Tauri widens a runtime filesystem scope for each dropped path; no `fs` plugin or asset protocol is registered, so that scope is inert. Registering an `fs` plugin or asset protocol later must revisit this decision.
+
 ---
 
 ## Invariants
@@ -42,6 +47,7 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - I10.3: Local file access is limited to asset protocol scope; `file://` is disallowed.
 - I10.4: Asset protocol scope is minimal and documented.
 - I10.5: Local WebSocket IPC handshakes are gated by app-scoped auth and do not accept unauthenticated drive-by connections.
+- I10.6: Dropped OS paths cross into the webview as strings only; no webview-side file access follows from a drop, and no filesystem plugin consumes the drop scope.
 
 ---
 

@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-09-03 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher)
+Updated on: 2026-09-04 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher; ZIPS tree drag-in import, selection, and worktree actions)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -181,7 +181,7 @@ Based on 4px unit:
 
 The shared workspace is the clean, full-pane surface used for per-repo notes, opened file scratch buffers, and image previews.
 
-- Standard layout: one workspace panel replaces Auto Files while the Zips panel remains visible.
+- Standard layout: one workspace panel replaces Auto Files while the Zips panel remains visible. Both states share one `ThreeColumn` shell whose grid class flips, so the rail is never remounted and the ZIPS tree keeps its expansion, selection, and scroll across opening and closing a file.
 - Handset layout: the workspace replaces the active deck content until closed.
 - Editor text uses `--font-mono`, theme-owned grey editor tokens, and active accent variables for caret, selection, focus rail, and title brackets.
 - Notes and Markdown-like text files render a live semantic Markdown layer over the textarea; the textarea remains the editing authority and no rendered HTML is injected.
@@ -209,11 +209,47 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
   the same source-control status that feeds the SOURCE count; the tree never runs Git, and double-click
   still opens the file — diffs stay in SOURCE.
 - Expanded directories re-list in place (keeping expansion state) on `sourceControlChanged` for the repo, so
-  a file created inside an already-expanded directory appears with its decoration. The existing topology
-  reset still wins where it applies: `repoTopologyChanged` (any directory create/remove or rename at
-  ≤ depth 4, root-level file create/remove; `repo_topology_change.rs`) yields fresh top-level arrays, which
-  collapse expansion and drop a pending re-list. Save-by-rename editors therefore collapse the tree for
-  files at ≤ depth 4; in-place writes re-list in place.
+  a file created inside an already-expanded directory appears with its decoration. A topology refresh
+  (`repoTopologyChanged`: any directory create/remove or rename at ≤ depth 4, root-level file
+  create/remove; `repo_topology_change.rs`) hands over fresh top-level arrays, and expansion survives it:
+  `use_directory_listings.ts` compares their content rather than identity, drops only the expanded
+  directories whose top-level ancestor disappeared, and re-lists every surviving expanded directory so a
+  subdirectory created inside one appears. Only switching repos collapses the tree.
+- The tree is also the inbound drop surface. Tauri's native drag-drop (`dragDropEnabled`) reports OS
+  paths and a physical position; `use_tree_drop_import.ts` converts it with `devicePixelRatio` and
+  hit-tests `closest('[data-drop-dir]')`. The attribute sits on each directory *wrapper* (row, gaps, and
+  children all resolve to the enclosing directory) and on the list (`""` = root), so a file row means its
+  containing folder and blank space means the root; file rows carry no attribute of their own.
+- While a drag is over the tree the list shows a soft inset accent ring, and the target directory row (or
+  the list, for the root) an accent-soft fill with the accent left rail. Hovering a collapsed directory
+  for 700 ms expands it — never collapses — and the list auto-scrolls within 28 px of its edges.
+- A drop sends `importFiles` with `refuse`; `IMPORT_CONFLICT` opens the shared `ConfirmModal` ("Replace
+  N existing files?", up to 8 paths listed, destructive tone) and confirm resends with `replace`. Any
+  other failure is an inline `> IMPORT FAILED` notice in the `.build-error` idiom. There is no success
+  toast: the file appears with its untracked badge through the ordinary re-list.
+- The app's own drag-out re-entering the window (paths under the staging root) is latched at `enter` and
+  ignored for the whole gesture, because on Windows those events arrive as a stale burst after the native
+  drag ends.
+- Rows are selectable: `[data-selected]` draws an accent-soft fill with a 1 px accent inset ring (the
+  "selection box"), `[data-cut]` dims a row to 50 % until it is pasted. Click selects, Ctrl toggles, Shift
+  ranges in visible order (root: directories then files; inside a directory: files then directories —
+  `flatten_visible_tree.ts` encodes that asymmetry). A plain click on a directory also toggles its
+  expansion, so the directory name is a span and the checkbox is the only inclusion control. Buttons,
+  inputs, and labels inside a row never start a selection. The list is focusable and owns the keyboard map
+  (Up/Down, Shift-extend, Left/Right, Enter, Delete, F2, Ctrl+X/C/V, Escape); it stays silent while a modal
+  (`[data-intermediary-modal-root]`) is open.
+- Row context menus (files and directories) append Cut · Copy · Paste · Rename · Delete after the OS file
+  actions, separated by a rule; Delete is error-toned (`destructive`). Blank list space offers Paste into
+  the root. Delete opens the shared `ConfirmModal` (destructive) naming the count and the quarantine.
+- Moving within the tree is a pointer drag (6 px threshold, pointer capture) with a floating glass ghost
+  (`pointer-events: none`) showing the name or "N items"; it shares the OS drop's hit-test, 700 ms
+  hover-to-expand, and edge auto-scroll (`tree_drop_targeting.ts`, CSS px in — only the OS hook divides
+  physical px). A dragged directory, its descendants, and the entries' current parent are never highlighted.
+- Rename swaps the name for an input (focused, text selected); Enter or blur commits, Escape cancels, and
+  the input is disabled while the agent answers. Conflicts (`ENTRY_CONFLICT`) are notices for rename and a
+  Replace modal for move/copy; folder-over-folder moves, cross-kind collisions, and same-folder copies are
+  notices with the agent's reason. After any action the tree forgets a moved directory's stale listings and
+  re-lists the affected folders itself.
 
 ## Rail and Source Control
 

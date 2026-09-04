@@ -24,7 +24,7 @@
 
 use std::time::Duration;
 
-use im_agent::protocol::{SourceControlActionKind, UiCommand};
+use im_agent::protocol::{SourceControlActionKind, UiCommand, WorktreeActionKind};
 
 pub(super) const FORWARD_REQUEST_TIMEOUT_DEFAULT: Duration = Duration::from_secs(60);
 pub(super) const FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO: Duration = Duration::from_secs(12);
@@ -62,11 +62,30 @@ pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_REMOTE: Duration = Durat
 /// wall-clock bound with its own emergency deadline and retries.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SHUTDOWN: Duration = Duration::from_secs(470);
 
+/// Import. 20 s for the lock's `rev-parse` plus a 280 s copy budget across the
+/// `/mnt` drvfs boundary — a budget, not a proof; on expiry the host answers
+/// `WSL_BACKEND_TIMEOUT`, the effect is `unknown`, and the watcher reconciles.
+/// UI tier above: 330 s.
+pub(super) const FORWARD_REQUEST_TIMEOUT_IMPORT_FILES: Duration = Duration::from_secs(300);
+
+/// A worktree delete, move or rename. 20 s for the lock's `rev-parse` + 20 s
+/// `capture_location` + the renames themselves, microseconds in practice; 60 s
+/// covers it. UI tier above: 90 s. An in-repo copy is a copy like any other
+/// and answers to the import tier instead.
+pub(super) const FORWARD_REQUEST_TIMEOUT_WORKTREE_ENTRY: Duration = Duration::from_secs(60);
+
 pub(super) fn timeout_for_command(command: &UiCommand) -> Duration {
     match command {
         UiCommand::ClientHello(_) => FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO,
         UiCommand::BuildBundle(_) => FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE,
         UiCommand::Shutdown => FORWARD_REQUEST_TIMEOUT_SHUTDOWN,
+        UiCommand::ImportFiles(_) => FORWARD_REQUEST_TIMEOUT_IMPORT_FILES,
+        UiCommand::WorktreeAction(command) => match command.action.kind() {
+            WorktreeActionKind::Copy => FORWARD_REQUEST_TIMEOUT_IMPORT_FILES,
+            WorktreeActionKind::Delete
+            | WorktreeActionKind::Move
+            | WorktreeActionKind::Rename => FORWARD_REQUEST_TIMEOUT_WORKTREE_ENTRY,
+        },
         UiCommand::SourceControlStatus(_)
         | UiCommand::SourceControlDiff(_)
         | UiCommand::SourceControlImageDiff(_) => FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ,

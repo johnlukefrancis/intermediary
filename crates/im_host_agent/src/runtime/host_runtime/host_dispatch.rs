@@ -58,16 +58,19 @@ impl HostRuntime {
                 let result = self.local_backend.list_bundles(command).await?;
                 Ok(UiResponse::ListBundlesResult(result))
             }
-            // Source-control commands and shutdown are dispatched by the server
-            // without holding the runtime write lock (a long push or a drain
-            // must never freeze every repo); reaching them here is a routing
-            // defect, not a supported path.
+            // Source-control commands, imports, worktree actions and shutdown
+            // are dispatched by the server without holding the runtime write
+            // lock (a long push, a large copy or a drain must never freeze
+            // every repo); reaching them here is a routing defect, not a
+            // supported path.
             UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)
             | UiCommand::SourceControlImageDiff(_)
             | UiCommand::SourceControlAction(_)
+            | UiCommand::ImportFiles(_)
+            | UiCommand::WorktreeAction(_)
             | UiCommand::Shutdown => Err(AgentError::internal(
-                "Source-control and shutdown commands must be dispatched without the runtime lock",
+                "Source-control, import, worktree and shutdown commands must be dispatched without the runtime lock",
             )),
             UiCommand::ClientHello(_)
             | UiCommand::SetOptions(_)

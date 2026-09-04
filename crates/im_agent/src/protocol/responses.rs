@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::responses_import::ImportFilesResult;
 use super::responses_legacy_wire::{BuildBundleResultWire, BundleInfoWire, StageFileResultWire};
 use super::responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 use super::responses_source_control::{
@@ -10,6 +11,7 @@ use super::responses_source_control::{
     SourceControlStatusResult,
 };
 use super::responses_tr_fleet::{GetTrFleetStatusResult, TrFleetActionResult};
+use super::responses_worktree::WorktreeActionResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -168,6 +170,10 @@ pub enum UiResponse {
     SourceControlImageDiffResult(SourceControlImageDiffResult),
     #[serde(rename = "sourceControlActionResult")]
     SourceControlActionResult(SourceControlActionResult),
+    #[serde(rename = "importFilesResult")]
+    ImportFilesResult(ImportFilesResult),
+    #[serde(rename = "worktreeActionResult")]
+    WorktreeActionResult(WorktreeActionResult),
     #[serde(rename = "shutdownResult")]
     ShutdownResult(ShutdownResult),
 }

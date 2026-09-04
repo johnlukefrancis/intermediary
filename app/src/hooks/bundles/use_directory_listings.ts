@@ -33,6 +33,12 @@ export interface DirectoryListings {
   expandedDirs: ReadonlySet<string>;
   listings: ReadonlyMap<string, DirectoryListingState>;
   toggleExpanded: (path: string) => void;
+  /** No-op when already expanded; otherwise the same as the expanding half of toggleExpanded. */
+  expandDirectory: (path: string) => void;
+  /** Re-lists a directory in place; a no-op for the root sentinel or a directory not expanded. */
+  refreshDirectory: (path: string) => void;
+  /** Drops every listing/expansion entry at or under a moved/deleted/renamed prefix. */
+  forgetSubtree: (prefix: string) => void;
 }
 
 export function useDirectoryListings({
@@ -72,7 +78,7 @@ export function useDirectoryListings({
     applyExpanded(new Set());
     requestSeqRef.current = new Map();
     setListings(new Map());
-  }, [applyExpanded, clearRelistTimer, repoId, topLevelDirs, topLevelFiles]);
+  }, [applyExpanded, clearRelistTimer, repoId]);
 
   const fetchListing = useCallback(
     (path: string, mode: ListingMode): void => {
@@ -131,20 +137,72 @@ export function useDirectoryListings({
     [client, helloState.status, repoId]
   );
 
-  const toggleExpanded = useCallback(
+  const expandOne = useCallback(
     (path: string): void => {
-      const expand = !expandedDirsRef.current.has(path);
       const next = new Set(expandedDirsRef.current);
-      if (expand) {
-        next.add(path);
-      } else {
-        next.delete(path);
-      }
+      next.add(path);
       applyExpanded(next);
-      if (expand) fetchListing(path, "initial");
+      fetchListing(path, "initial");
     },
     [applyExpanded, fetchListing]
   );
+
+  const toggleExpanded = useCallback(
+    (path: string): void => {
+      if (!expandedDirsRef.current.has(path)) {
+        expandOne(path);
+        return;
+      }
+      const next = new Set(expandedDirsRef.current);
+      next.delete(path);
+      applyExpanded(next);
+    },
+    [applyExpanded, expandOne]
+  );
+
+  const expandDirectory = useCallback(
+    (path: string): void => {
+      if (expandedDirsRef.current.has(path)) return;
+      expandOne(path);
+    },
+    [expandOne]
+  );
+
+  const refreshDirectory = useCallback(
+    (path: string): void => {
+      if (path === "" || !expandedDirsRef.current.has(path)) return;
+      fetchListing(path, "refresh");
+    },
+    [fetchListing]
+  );
+
+  const forgetSubtree = useCallback(
+    (prefix: string): void => {
+      const underPrefix = (path: string): boolean => path === prefix || path.startsWith(`${prefix}/`);
+      const nextExpanded = new Set([...expandedDirsRef.current].filter((path) => !underPrefix(path)));
+      applyExpanded(nextExpanded);
+      setListings((prev) => new Map([...prev].filter(([path]) => !underPrefix(path))));
+    },
+    [applyExpanded]
+  );
+
+  // A topology refresh (`repoTopologyChanged`) hands over fresh top-level arrays. Expansion survives
+  // it: only directories whose top-level ancestor is gone are dropped, and every surviving expanded
+  // directory re-lists so a subdirectory created inside it appears. Content is compared, not identity,
+  // so a refresh that changed nothing leaves the tree alone.
+  const topLevelKey = `${topLevelDirs.join("\0")}\u0001${topLevelFiles.join("\0")}`;
+  const topLevelDirsRef = useRef(topLevelDirs);
+  topLevelDirsRef.current = topLevelDirs;
+  useEffect(() => {
+    const survivingTopLevel = new Set(topLevelDirsRef.current);
+    const survives = (path: string): boolean => survivingTopLevel.has(path.split("/")[0] ?? "");
+    const nextExpanded = new Set([...expandedDirsRef.current].filter(survives));
+    applyExpanded(nextExpanded);
+    setListings((prev) => new Map([...prev].filter(([path]) => survives(path))));
+    for (const path of nextExpanded) {
+      fetchListing(path, "refresh");
+    }
+  }, [applyExpanded, fetchListing, topLevelKey]);
 
   useEffect(
     () =>
@@ -163,5 +221,12 @@ export function useDirectoryListings({
 
   useEffect(() => clearRelistTimer, [clearRelistTimer]);
 
-  return { expandedDirs, listings, toggleExpanded };
+  return {
+    expandedDirs,
+    listings,
+    toggleExpanded,
+    expandDirectory,
+    refreshDirectory,
+    forgetSubtree,
+  };
 }

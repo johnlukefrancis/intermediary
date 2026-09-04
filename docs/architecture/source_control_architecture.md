@@ -73,6 +73,25 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
   are distinct paths, and deleted files count toward their directory without a row of their own.
 - Mutations on one repo are serialized (`SourceControlLocks`, keyed by the physical git dir); the per-repo
   lock is cloned out and awaited with no runtime guard held.
+- Drag-in imports (`importFiles`) hold the same per-git-dir lock for the whole copy and count in the
+  drain ledger (`busy_count` in the agent, the forwarded-mutation set in the host), so an import never
+  interleaves with a discard or commit and a shutdown waits for it; a root that is not a Git repository
+  refuses the import with `GIT_NOT_REPOSITORY`. The host agent runs a host-root import off the runtime
+  write lock, beside the source-control intercept.
+- Tree worktree actions (`worktreeAction`: delete / move / copy / rename) follow the same rule: one lock,
+  the drain ledger, a lock-free host intercept. Delete reuses the discard quarantine as its owner
+  (`source_control/discard/entries.rs`): the entry — file or whole directory — is claimed by the same plain
+  rename into `<git_dir>/intermediary-discard/<opId>-<i>/claimed`, marked `verified` with plan `delete`, and
+  left `retained`, so the startup sweep releases it exactly as it releases a discard's bytes; there is no
+  stamp check because the user named the entry rather than reviewing a diff of it. Move and rename are
+  filesystem renames in `repos/worktree/` and never touch the quarantine; outside an explicitly authorized
+  replace they use `im_bundle::fs_atomic::rename_no_replace`, so a destination that appeared after the
+  pre-pass is a conflict rather than an overwrite, a filesystem with no such rename (drvfs through the WSL
+  agent) is refused with `SOURCE_CONTROL_UNSUPPORTED_LAYOUT`, and so is a rename that would cross volumes.
+  The registry (`SourceControlLocks`) remembers every quarantine operation this process created for the
+  process lifetime; the sweep removes only directories from earlier sessions, so a ZIPS delete's retained
+  bytes survive whichever status read follows it. The surface's contract is
+  `docs/design/zips_tree_write_surface_design.md`.
 - Mutations are never killed mid-command by cancellation. On timeout they are stopped gracefully
   (SIGTERM then wait on Unix; TerminateProcess on Windows) and report `GIT_ABORTED`, naming any leftover
   `.git/index.lock` it can see. WSL-routed reads carry a `SourceControlRead` cancel token and are killed

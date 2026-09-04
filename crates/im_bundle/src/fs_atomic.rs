@@ -138,6 +138,52 @@ mod tests {
         assert_eq!(std::fs::read(&to).expect("destination"), b"newer\n");
     }
 
+    /// A whole tree is what a claim and a folder move both hand this function,
+    /// so the directory has to arrive with everything under it — one rename,
+    /// not a walk.
+    #[test]
+    fn a_directory_moves_onto_empty_ground_with_its_contents() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let from = temp.path().join("tree");
+        std::fs::create_dir_all(from.join("deep")).expect("source tree");
+        std::fs::write(from.join("deep/a.txt"), b"nested\n").expect("nested file");
+        let to = temp.path().join("moved");
+
+        rename_no_replace(&from, &to).expect("the destination is free");
+
+        assert!(!from.exists());
+        assert_eq!(
+            std::fs::read(to.join("deep/a.txt")).expect("nested file"),
+            b"nested\n"
+        );
+    }
+
+    /// The same refusal for a tree as for a file, and for the same reason: a
+    /// replacing rename onto an occupied directory name would take everything
+    /// under both names with it.
+    #[test]
+    fn a_directory_onto_an_occupied_name_is_refused_and_both_trees_stand() {
+        let temp = tempfile::tempdir().expect("tempdir");
+        let from = temp.path().join("tree");
+        std::fs::create_dir_all(&from).expect("source tree");
+        std::fs::write(from.join("mine.txt"), b"mine\n").expect("source file");
+        let to = temp.path().join("taken");
+        std::fs::create_dir_all(&to).expect("destination tree");
+        std::fs::write(to.join("theirs.txt"), b"theirs\n").expect("destination file");
+
+        let error = rename_no_replace(&from, &to).expect_err("the destination is taken");
+
+        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(
+            std::fs::read(from.join("mine.txt")).expect("source file"),
+            b"mine\n"
+        );
+        assert_eq!(
+            std::fs::read(to.join("theirs.txt")).expect("destination file"),
+            b"theirs\n"
+        );
+    }
+
     /// A destination whose parent does not exist is neither "already there"
     /// nor a filesystem limitation, and must keep its own kind: the discard
     /// caller distinguishes those three answers.

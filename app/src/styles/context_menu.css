@@ -62,3 +62,18 @@
   cursor: default;
   pointer-events: none;
 }
+
+.context-menu-item--separator-before {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--glass-border);
+  padding-top: calc(var(--space-2) + var(--space-1));
+}
+
+.context-menu-item--destructive {
+  color: var(--color-error);
+}
+
+.context-menu-item--destructive:hover {
+  background: var(--color-error);
+  color: var(--color-bg-base);
+}

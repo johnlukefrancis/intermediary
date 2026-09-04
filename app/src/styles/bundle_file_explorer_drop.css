@@ -1,0 +1,20 @@
+/*
+ * Path: app/src/styles/bundle_file_explorer_drop.css
+ * Description: Drag-and-drop import hover states for the ZIPS explorer tree and directory rows
+ */
+
+.bundle-explorer-list[data-drop-active] {
+  box-shadow: inset 0 0 0 1px var(--color-accent-soft);
+  transition: box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.bundle-explorer-dir[data-drop-target] > .bundle-explorer-dir-row,
+.bundle-explorer-list[data-drop-target] {
+  background: var(--color-accent-soft);
+  box-shadow:
+    inset 2px 0 0 var(--color-accent),
+    0 0 8px var(--color-accent-glow);
+  transition:
+    background var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}

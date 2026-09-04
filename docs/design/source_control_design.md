@@ -208,6 +208,10 @@ and are recorded as decisions, not as open defects. Each names what the product 
   by definition left the agent's tree and is not reached. Accepted: `setsid` in a hook is a deliberate
   detachment, and reaching it would mean killing by heuristic rather than by ownership.
 
+The ZIPS tree write surface (`importFiles`, `worktreeAction`) records its own boundaries in
+`docs/design/zips_tree_write_surface_design.md`; the quarantine it reuses for delete is governed by the table
+above, and a directory the current agent process created is never removed by that process's sweep.
+
 ## Acceptance
 
 1. Counts and sections match `git status` for a WSL repo and a host repo, including `MM`, renames,

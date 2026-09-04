@@ -139,7 +139,12 @@ impl WslBackendClient {
         let request_id = self.next_request_id();
         // Only a mutation leaves residue Git cares about; reads and the
         // shutdown command itself are never tracked here.
-        let is_mutation = matches!(command, UiCommand::SourceControlAction(_));
+        let is_mutation = matches!(
+            command,
+            UiCommand::SourceControlAction(_)
+                | UiCommand::ImportFiles(_)
+                | UiCommand::WorktreeAction(_)
+        );
         if is_mutation {
             self.track_outstanding(&request_id);
         }

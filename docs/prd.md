@@ -31,7 +31,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 
 ## 3. Non-goals
 
-* Full file manager replacement (no directory browsing UI beyond what’s needed).
+* Full file manager replacement (no directory browsing UI beyond what’s needed). Inbound drag-in import and organizing files from the Zip bundles tree (select, cut/copy/paste, delete to quarantine, drag-move, rename) are in scope (§6); editing file content is not.
 * A full Git client: branch management, merge/rebase tooling, history, blame, and hunk-level staging are out of scope. Source Control covers status, stage/unstage, commit, discard, per-file diff, push, and pull.
 * Direct ChatGPT API integration (drag-and-drop to browser is the target).
 * Cloud sync / multi-device.
@@ -106,6 +106,29 @@ Depends on: ADR-000, ADR-006, ADR-007
 * Each row has a drag surface for initiating OS-level file drag.
 * Dragging the row begins an OS-level drag containing the staged file path.
 * For WSL sources, the app ensures the file is copied to staging first.
+
+### Drag-in import
+
+External files can be dropped onto the Zip bundles explorer tree to copy them into the repository. This is the one deliberate write path into a repo; general file management stays out of scope.
+
+* Dragging one or more OS files or folders over the tree highlights the destination: a directory row (or anything inside its subtree, including its child rows and the gaps between them) targets that directory; a top-level file row or the blank space below the tree targets the repo root.
+* Holding the drag over a collapsed directory for about 700 ms expands it, so nested destinations are reachable without leaving the drag; the tree never collapses during a drag, and the list auto-scrolls near its edges.
+* Dropping copies each file to `<directory>/<name>`; a folder is copied recursively (symlinks skipped, bounded at 10,000 entries). The copy runs in the agent that owns the repo root under the same per-repo mutation lock as Source Control, so it never interleaves with a commit or discard. For WSL roots the agent translates the dropped Windows paths (`C:\…` → `/mnt/c/…`; `\\wsl$\<distro>\…` → `/…` for the running distro only).
+* Existing files are never overwritten silently: the drop is refused with nothing written, a confirm modal lists the conflicting file paths, and Replace overwrites them atomically. A dropped folder merges into an existing folder of the same name, so its conflicts are the files that collide. Two dropped items resolving to the same destination are refused the same way, and a file landing on an existing folder (or a folder on a file) is refused outright.
+* Nothing is staged in Git. Imported files appear as untracked (or modified) in SOURCE, in Auto Files, and in the tree with their badge, driven by the ordinary watcher events. Failures show an inline notice in the ZIPS column; a partial failure reports how many files landed and the watcher reconciles the tree.
+* The app's own drag-out payload re-entering the window is ignored, so dragging a staged file out across the tree can never import it.
+
+### Tree selection and worktree actions
+
+The Zip bundles explorer tree is also where files inside the repo are organized. Every action below runs in the agent that owns the repo root, under the same per-repo mutation lock as Source Control, through one `worktreeAction` command; Auto Files rows stay handoff-only.
+
+* **Selection.** Clicking a row selects it (accent selection box); Ctrl-click toggles, Shift-click ranges in visible order. A plain click on a folder selects it and toggles its expansion; the checkbox is the only bundle-inclusion toggle for folders (its name no longer toggles inclusion). File double-click still opens. Right-clicking an unselected row selects it first; actions apply to the whole selection.
+* **Keyboard** (tree focused): Up/Down move the selection (Shift extends), Right expands, Left collapses or moves to the parent, Enter opens a file or toggles a folder, Delete, F2 (rename), Ctrl+X / Ctrl+C / Ctrl+V, Escape (cancel rename, else clear selection).
+* **Cut, copy, paste.** Paste targets the selected folder, else the selected file's folder, else the root; right-click Paste targets that row's folder, and blank tree space offers Paste into the root. Cut becomes a move (rows dim until pasted); copy becomes a copy and keeps the clipboard.
+* **Delete** asks for confirmation, then moves the entries (files or whole folders) into the repository's discard quarantine, where they are kept until the next agent start, so a wrong delete is recoverable by hand like a wrong discard. A tracked file shows as `D` in SOURCE.
+* **Move** is a drag within the tree: drag a row (or the selection) onto a folder row or the root with the same highlight and hover-to-expand as the OS drop, or cut and paste. A file landing on an existing file is refused and confirmed through the Replace modal; a folder landing on an existing folder is refused outright (move never merges or destroys a folder the user did not name); a folder cannot be moved into itself. Moves are filesystem renames, so a tracked file shows as `D` plus untracked until both sides are staged, when SOURCE shows `R`.
+* **Rename** is inline (F2 or the context menu): Enter or focus loss commits, Escape cancels; an existing name is refused, never replaced; a case-only rename works on case-insensitive volumes.
+* Nothing is staged in Git by any of these actions. `.git` is never shown in the tree and can never be a source or destination at any depth (a dropped folder containing one is refused whole). Replace authorizes exactly the files the modal listed: the request carries that list, any collision that appeared since is refused again with a fresh list, and every unauthorized write uses a non-replacing filesystem primitive. Switching repos discards pending confirmations and in-flight results. The tree re-lists the affected folders itself, so ignored files disappear or move without waiting for a watcher event. Contract: `docs/design/zips_tree_write_surface_design.md`.
 
 ### Bundle interaction
 
@@ -371,6 +394,8 @@ UI → Host agent commands:
 * `cancelBundleBuild { repoId, presetId, buildId } -> cancelBundleBuildResult`
 * `getRepoTopLevel { repoId } -> getRepoTopLevelResult`
 * `listBundles { repoId, presetId } -> listBundlesResult`
+* `importFiles { repoId, directory, sources, onConflict } -> importFilesResult` (`onConflict`: `"refuse"` | `{ replace: [paths] }`; refused conflicts return `ENTRY_CONFLICT` with the conflicting paths, and a replace authorizes only those paths)
+* `worktreeAction { repoId, action } -> worktreeActionResult` (action kinds: delete, move, copy, rename; conflicts return `ENTRY_CONFLICT`, cross-kind collisions `ENTRY_KIND_MISMATCH`)
 * `sourceControlStatus { repoId } -> sourceControlStatusResult`
 * `sourceControlDiff { repoId, path, originalPath?, area } -> sourceControlDiffResult`
 * `sourceControlAction { repoId, action } -> sourceControlActionResult` (action kinds: stage, unstage, discard, commit, push, pull)

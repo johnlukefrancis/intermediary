@@ -1,5 +1,5 @@
 // Path: app/src/components/bundles/bundle_explorer_directory.tsx
-// Description: Recursive directory node for the lazy bundle file explorer
+// Description: Recursive directory node for the lazy bundle file explorer, with selection, drag, and rename
 
 import type React from "react";
 import { useCallback } from "react";
@@ -16,6 +16,8 @@ import {
 } from "../../lib/bundles/bundle_selection_visibility.js";
 import type { DirectoryListingState } from "../../hooks/bundles/use_directory_listings.js";
 import { useDirectoryDecoration } from "../../hooks/source_control/use_tree_decorations.js";
+import { useRowInteraction } from "./tree_interaction_context.js";
+import { BundleEntryRenameInput } from "./bundle_entry_rename_input.js";
 
 interface BundleExplorerDirectoryProps {
   path: string;
@@ -23,11 +25,11 @@ interface BundleExplorerDirectoryProps {
   selection: BundleSelection;
   expandedDirs: ReadonlySet<string>;
   listings: ReadonlyMap<string, DirectoryListingState>;
+  renameInFlight: boolean;
   onToggleExpanded: (path: string) => void;
   onToggleDirectory: (path: string) => void;
   onToggleFile: (path: string) => void;
   onOpenFile: (path: string) => void;
-  onFileContextMenu: (event: React.MouseEvent, path: string) => void;
 }
 
 function checkboxId(path: string): string {
@@ -40,11 +42,11 @@ export function BundleExplorerDirectory({
   selection,
   expandedDirs,
   listings,
+  renameInFlight,
   onToggleExpanded,
   onToggleDirectory,
   onToggleFile,
   onOpenFile,
-  onFileContextMenu,
 }: BundleExplorerDirectoryProps): React.JSX.Element {
   const isExpanded = expandedDirs.has(path);
   const listing = listings.get(path) ?? { status: "idle", dirs: [], files: [] };
@@ -53,17 +55,24 @@ export function BundleExplorerDirectory({
   const isIndeterminate = isIncluded && directoryHasExclusions(path, selection);
   const id = checkboxId(path);
   const decoration = useDirectoryDecoration(path);
+  const interaction = useRowInteraction(path, "dir");
 
-  const handleExpand = useCallback(() => {
+  const handleExpand = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
     onToggleExpanded(path);
   }, [onToggleExpanded, path]);
 
   return (
-    <div className="bundle-explorer-dir">
+    <div className="bundle-explorer-dir" data-drop-dir={path} data-drop-target={interaction.isDropTarget || undefined}>
       <div
         className={`bundle-explorer-dir-row bundle-explorer-row--depth-${Math.min(depth, 4)}`}
         data-disabled={!isEnabled || undefined}
         data-change={decoration?.variant}
+        data-selected={interaction.selected || undefined}
+        data-cut={interaction.cut || undefined}
+        onClick={interaction.onClick}
+        onContextMenu={interaction.onContextMenu}
+        onPointerDown={interaction.onPointerDown}
       >
         <button
           className="dir-expand-btn"
@@ -81,13 +90,21 @@ export function BundleExplorerDirectory({
           disabled={!isEnabled}
           onChange={() => { onToggleDirectory(path); }}
         />
-        <label
-          className="bundle-explorer-dir-name"
-          htmlFor={id}
-          title={decoration === null ? path : `${path} — ${decoration.label}`}
-        >
-          {baseName(path)}
-        </label>
+        {interaction.renaming ? (
+          <BundleEntryRenameInput
+            currentName={baseName(path)}
+            inFlight={renameInFlight}
+            onCommit={interaction.onRenameCommit}
+            onCancel={interaction.onRenameCancel}
+          />
+        ) : (
+          <span
+            className="bundle-explorer-dir-name"
+            title={decoration === null ? path : `${path} — ${decoration.label}`}
+          >
+            {baseName(path)}
+          </span>
+        )}
         <span className="bundle-explorer-row__meta">
           {decoration !== null && (
             <span className="bundle-explorer-row__count" title={decoration.label}>
@@ -114,9 +131,9 @@ export function BundleExplorerDirectory({
               depth={depth + 1}
               enabled={isFileEnabled(filePath, selection)}
               included={isFileIncluded(filePath, selection)}
+              renameInFlight={renameInFlight}
               onToggle={onToggleFile}
               onOpen={onOpenFile}
-              onContextMenu={onFileContextMenu}
             />
           ))}
           {listing.status === "ready" && listing.dirs.map((dirPath) => (
@@ -127,11 +144,11 @@ export function BundleExplorerDirectory({
               selection={selection}
               expandedDirs={expandedDirs}
               listings={listings}
+              renameInFlight={renameInFlight}
               onToggleExpanded={onToggleExpanded}
               onToggleDirectory={onToggleDirectory}
               onToggleFile={onToggleFile}
               onOpenFile={onOpenFile}
-              onFileContextMenu={onFileContextMenu}
             />
           ))}
         </div>

@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/workspace_layout.tsx
-// Description: Layout that replaces Auto files with a shared workspace
+// Description: The shared workspace panel (title bar + content); handset wraps it as the whole deck
 
 import type React from "react";
 import { useCallback, useRef } from "react";
@@ -17,7 +17,6 @@ interface WorkspaceLayoutProps {
   onTitleContextMenu?: ((event: React.MouseEvent) => void) | undefined;
   onTitleDragStart?: (() => void | Promise<void>) | undefined;
   content: React.ReactNode;
-  railContent: React.ReactNode;
   isHandset: boolean;
 }
 
@@ -137,7 +136,6 @@ export function WorkspaceLayout({
   onTitleContextMenu,
   onTitleDragStart,
   content,
-  railContent,
   isHandset,
 }: WorkspaceLayoutProps): React.JSX.Element {
   const panel = (
@@ -161,10 +159,6 @@ export function WorkspaceLayout({
     );
   }
 
-  return (
-    <div className="text-workspace-layout">
-      {panel}
-      {railContent}
-    </div>
-  );
+  // Desktop: the panel is the left child of the shared `ThreeColumn` shell, which owns the rail.
+  return panel;
 }

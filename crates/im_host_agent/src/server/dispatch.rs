@@ -6,7 +6,9 @@ use im_agent::protocol::{UiCommand, UiResponse};
 
 use super::connection::ConnectionContext;
 use super::shutdown_dispatch;
-use crate::runtime::{execute_host_source_control, RepoBackend};
+use crate::runtime::{
+    execute_host_import, execute_host_source_control, execute_host_worktree_action, RepoBackend,
+};
 
 pub async fn dispatch_command(
     command: UiCommand,
@@ -22,8 +24,10 @@ pub async fn dispatch_command(
         UiCommand::SourceControlStatus(_)
         | UiCommand::SourceControlDiff(_)
         | UiCommand::SourceControlImageDiff(_)
-        | UiCommand::SourceControlAction(_) => {
-            return dispatch_source_control(command, ctx).await;
+        | UiCommand::SourceControlAction(_)
+        | UiCommand::ImportFiles(_)
+        | UiCommand::WorktreeAction(_) => {
+            return dispatch_unlocked_repo_command(command, ctx).await;
         }
         // Shutdown drains the WSL backend and then this process; both waits are
         // minutes long, so it never touches the runtime write lock.
@@ -125,10 +129,12 @@ async fn dispatch_cancel_bundle_build(
     }
 }
 
-/// Source-control commands run Git for up to minutes; they resolve their
-/// backend under a short read lock and then run with no runtime lock held, so
-/// a long push never freezes other repos, clientHello, or WSL forwards.
-async fn dispatch_source_control(
+/// Source-control commands run Git for up to minutes, and an import or a
+/// worktree action copies files for as long as the selection is big; all of
+/// them resolve their backend under a short read lock and then run with no
+/// runtime lock held, so a long push or a large folder never freezes other
+/// repos, clientHello, or WSL forwards.
+async fn dispatch_unlocked_repo_command(
     command: UiCommand,
     ctx: &ConnectionContext,
 ) -> Result<UiResponse, AgentError> {
@@ -147,7 +153,13 @@ async fn dispatch_source_control(
                 let runtime = ctx.runtime.read().await;
                 runtime.host_source_control_context(&repo_id)?
             };
-            execute_host_source_control(command, context).await
+            match command {
+                UiCommand::ImportFiles(command) => execute_host_import(command, context).await,
+                UiCommand::WorktreeAction(command) => {
+                    execute_host_worktree_action(command, context).await
+                }
+                command => execute_host_source_control(command, context).await,
+            }
         }
         Some(RepoBackend::Wsl) => {
             let client = {

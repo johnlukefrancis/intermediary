@@ -222,6 +222,10 @@ pub async fn dispatch_command(
         UiCommand::SourceControlAction(command) => {
             source_control_commands::source_control_action_command(command, ctx).await
         }
+        UiCommand::ImportFiles(command) => repo_commands::import_files_command(command, ctx).await,
+        UiCommand::WorktreeAction(command) => {
+            repo_commands::worktree_action_command(command, ctx).await
+        }
         UiCommand::Shutdown => shutdown_command::shutdown_command(ctx).await,
         UiCommand::GetTrFleetStatus(_) | UiCommand::TrFleetAction(_) => Err(AgentError::new(
             "UNSUPPORTED_COMMAND",

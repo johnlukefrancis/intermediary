@@ -32,6 +32,14 @@ pub async fn get_repo_top_level(root_path: &str) -> Result<TopLevelResult, std::
         let file_type = entry.file_type().await?;
         let name = entry.file_name().to_string_lossy().to_string();
         if file_type.is_dir() {
+            // The repository's own Git directory is never a place the bundle
+            // selector or the explorer may offer: nothing in this product
+            // reads or writes it through a repo-relative path, and offering it
+            // is what makes it reachable at all. Compared without case because
+            // NTFS and drvfs reach the same directory through `.GIT`.
+            if name.eq_ignore_ascii_case(".git") {
+                continue;
+            }
             dirs.push(name);
         } else if file_type.is_file() {
             if !should_ignore_entry(&name, false) {
@@ -136,12 +144,19 @@ mod tests {
         tokio::fs::create_dir_all(repo_root.join("app/src/node_modules/pkg"))
             .await
             .expect("create ignored nested dirs");
+        tokio::fs::create_dir_all(repo_root.join(".git/hooks"))
+            .await
+            .expect("create git dir");
 
         let result = get_repo_top_level(repo_root.to_str().expect("temp path is utf8"))
             .await
             .expect("scan repo");
 
-        assert_eq!(result.dirs, vec!["app".to_string()]);
+        assert_eq!(
+            result.dirs,
+            vec!["app".to_string()],
+            "the repository's own Git directory is never offered"
+        );
         assert_eq!(
             result.subdirs.get("app").expect("app subdirs"),
             &vec![

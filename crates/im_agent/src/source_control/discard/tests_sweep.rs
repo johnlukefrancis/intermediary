@@ -22,7 +22,7 @@ async fn a_verified_quarantine_directory_is_swept_once_on_the_first_status_read(
     let locks = SourceControlLocks::new();
     status_with(&locks, &root).await;
     assert!(
-        quarantine_entries(&git_dir).is_empty(),
+        quarantine_dirs(&git_dir).is_empty(),
         "the finished directory is swept on the first status read"
     );
 
@@ -31,7 +31,7 @@ async fn a_verified_quarantine_directory_is_swept_once_on_the_first_status_read(
     std::fs::write(later.join("verified"), "base.txt\nrestore\n").expect("marker");
     status_with(&locks, &root).await;
     assert_eq!(
-        quarantine_entries(&git_dir).len(),
+        quarantine_dirs(&git_dir).len(),
         1,
         "the sweep runs at most once per git dir per process"
     );
@@ -115,13 +115,14 @@ async fn a_put_back_that_cannot_land_holds_the_reviewed_bytes_past_the_sweep() {
     );
 }
 
-/// A discard running under one configured root can be claiming and verifying
-/// while a sibling root over the same git dir takes its first status read. The
-/// sweep must leave every directory a live operation owns alone — a `verified`
-/// marker there authorizes nothing yet, because the discard that wrote it has
-/// not finished acting on it — and take it only once that discard has ended.
+/// A directory this process created is never removed by this process's sweep,
+/// whether its discard is still claiming, has just returned, or finished long
+/// ago: retention lasts until the *next* agent start, so no ordering of this
+/// process's reads and mutations can release those bytes early. The next
+/// process, which created nothing, finishes exactly the destruction the
+/// `verified` marker authorized.
 #[tokio::test]
-async fn the_sweep_leaves_a_directory_a_running_discard_owns() {
+async fn the_sweep_leaves_a_directory_this_process_created() {
     let temp = tempfile::tempdir().expect("tempdir");
     let git_dir = temp.path().join("git");
     let locks = SourceControlLocks::new();
@@ -130,18 +131,17 @@ async fn the_sweep_leaves_a_directory_a_running_discard_owns() {
     std::fs::write(operation.join("verified"), "base.txt\nrestore\n").expect("marker");
     std::fs::write(operation.join("retained"), b"in flight\n").expect("retained file");
 
-    let live = locks.register_discard_op("live-op-id");
+    locks.register_discard_op("live-op-id");
     sweep_stale_quarantine(&git_dir, &locks).await;
     assert!(
         operation.exists(),
-        "a directory its own discard is still working in is never swept"
+        "a directory this process created is never swept by this process"
     );
 
-    drop(live);
-    sweep_stale_quarantine(&git_dir, &locks).await;
+    sweep_stale_quarantine(&git_dir, &SourceControlLocks::new()).await;
     assert!(
         !operation.exists(),
-        "the same directory is finished once the discard that owned it ended"
+        "the next process is the one that finishes it"
     );
 }
 

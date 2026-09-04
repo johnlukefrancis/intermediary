@@ -57,7 +57,7 @@ async fn each_claiming_target_of_one_action_gets_its_own_quarantine_directory() 
 
     act(&root, discard_now(&root, &["base.txt", "second.txt"])).await;
 
-    let mut kept: Vec<(String, String)> = quarantine_entries(&root.join(".git"))
+    let mut kept: Vec<(String, String)> = quarantine_dirs(&root.join(".git"))
         .iter()
         .map(|operation| {
             (

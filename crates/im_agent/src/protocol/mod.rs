@@ -2,17 +2,21 @@
 // Description: WebSocket protocol types for the agent
 
 mod commands;
+mod commands_import;
 mod commands_source_control;
 mod commands_tr_fleet;
+mod commands_worktree;
 mod envelopes;
 mod events;
 mod events_legacy_wire;
 mod events_runtime;
 mod responses;
+mod responses_import;
 mod responses_legacy_wire;
 mod responses_repo;
 mod responses_source_control;
 mod responses_tr_fleet;
+mod responses_worktree;
 
 #[cfg(test)]
 mod cancel_bundle_tests;
@@ -27,6 +31,8 @@ pub use commands::{
     ReadImageFileCommand, ReadTextFileCommand, RefreshCommand, SetOptionsCommand, StageFileCommand,
     UiCommand, WatchRepoCommand,
 };
+pub use commands_import::{ImportConflictPolicy, ImportFilesCommand};
+pub use commands_worktree::{WorktreeAction, WorktreeActionCommand, WorktreeActionKind};
 pub use commands_tr_fleet::{
     GetTrFleetStatusCommand, TrFleetActionCommand, TrFleetActionPayload, TrFleetWatchBackend,
 };
@@ -54,6 +60,8 @@ pub use responses::{
     ReadImageFileResult, ReadTextFileResult, RefreshResult, SetOptionsResult, ShutdownResult,
     StageFileResult, UiResponse, WatchRepoResult,
 };
+pub use responses_import::{ImportFilesResult, ImportedFile};
+pub use responses_worktree::WorktreeActionResult;
 pub use responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 pub use responses_source_control::{
     ImageDiffSide, ImageDiffSource, SourceControlActionResult, SourceControlChange,

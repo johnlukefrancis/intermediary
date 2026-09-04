@@ -204,11 +204,10 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   );
 
   const workspace = repoWorkspace.workspace;
-  const workspaceLayout = workspace.kind === "none" ? null : (
+  const workspacePanel = workspace.kind === "none" ? null : (
     <RepoWorkspacePanel
       workspace={workspace}
       noteState={noteState}
-      railContent={railContent}
       isHandset={isHandset}
       onClose={repoWorkspace.closeWorkspace}
       onTextChange={repoWorkspace.updateTextScratch}
@@ -226,22 +225,25 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       {dragState.error && (
         <DragErrorNotice message={dragState.error} onDismiss={clearError} />
       )}
-      {workspaceLayout ?? (isHandset ? (
-        <HandsetDeck
-          active={deckSection.handsetSection}
-          sourceCount={sourceControl.changeCount}
-          sourceConflictCount={sourceControl.conflictCount}
-          onChange={deckSection.setHandsetSection}
-          filePanel={renderFilePanel}
-          zipsContent={zipsContent}
-          sourceContent={sourceContent}
-        />
+      {isHandset ? (
+        workspacePanel ?? (
+          <HandsetDeck
+            active={deckSection.handsetSection}
+            sourceCount={sourceControl.changeCount}
+            sourceConflictCount={sourceControl.conflictCount}
+            onChange={deckSection.setHandsetSection}
+            filePanel={renderFilePanel}
+            zipsContent={zipsContent}
+            sourceContent={sourceContent}
+          />
+        )
       ) : (
         <ThreeColumn
-          fileContent={renderFilePanel()}
+          variant={workspacePanel === null ? "files" : "workspace"}
+          fileContent={workspacePanel ?? renderFilePanel()}
           railContent={railContent}
         />
-      ))}
+      )}
     </div>
   );
 }

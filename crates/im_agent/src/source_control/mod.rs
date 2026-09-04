@@ -37,6 +37,14 @@ use crate::protocol::{
 };
 
 pub use locks::{MutationGuard, SourceControlLocks};
+/// The in-root containment guard, shared with the import path: both write to
+/// the worktree without Git, so both owe the same proof about where a
+/// relative path actually lands.
+pub(crate) use paths::{ensure_no_git_component, ensure_within_root, normalize_path};
+/// Removing worktree entries recoverably, shared with the worktree actions:
+/// a delete is a quarantine claim, and the quarantine — its markers, its live
+/// operation registry, its startup sweep — is owned here.
+pub(crate) use discard::quarantine_entries;
 
 /// A captured per-file patch. `truncated` means the bounded output budget was
 /// exhausted; `binary` means Git reported a binary difference and `patch`

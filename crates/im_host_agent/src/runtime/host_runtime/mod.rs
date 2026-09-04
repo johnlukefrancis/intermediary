@@ -96,7 +96,9 @@ impl HostRuntime {
             | UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)
             | UiCommand::SourceControlImageDiff(_)
-            | UiCommand::SourceControlAction(_) => {
+            | UiCommand::SourceControlAction(_)
+            | UiCommand::ImportFiles(_)
+            | UiCommand::WorktreeAction(_) => {
                 self.dispatch_repo_command(command, event_bus).await
             }
             // Shutdown is dispatched by the server without the runtime lock, so

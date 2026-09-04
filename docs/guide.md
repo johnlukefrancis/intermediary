@@ -39,6 +39,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 |----------|---------|
 | [docs/design/intermediary_ui_overhaul_design.md](design/intermediary_ui_overhaul_design.md) | UI design system, tokens, and visual guidelines |
 | [docs/design/source_control_design.md](design/source_control_design.md) | Source Control view: goals, behaviour table, cancellation/timeouts, acceptance |
+| [docs/design/zips_tree_write_surface_design.md](design/zips_tree_write_surface_design.md) | ZIPS tree write surface: drag-in import and delete / move / copy / rename behaviour, replace authorization, `.git` law, accepted boundaries |
 
 ## Architecture
 
@@ -56,6 +57,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/reports/source_control_fix_layer_review_20260903.md](reports/source_control_fix_layer_review_20260903.md) | External closure review of the hardening layer: two remaining P0 owners (effect-boundary binding, drain-governed shutdown) |
 | [docs/reports/source_control_hardening_review_20260903.md](reports/source_control_hardening_review_20260903.md) | External hardening review of the split tree: reviewed-snapshot commit identity, post-publication hook reporting, discard quarantine safety, and process-tree ownership |
 | [docs/reports/source_control_shutdown_owner_review_20260903.md](reports/source_control_shutdown_owner_review_20260903.md) | Fourth external review: one remaining P0 — the WSL emergency-stop route killed the agent after 750 ms, orphaning its Git process groups |
+| [docs/reports/zips_tree_write_surface_review_20260904.md](reports/zips_tree_write_surface_review_20260904.md) | Fifth external review, on the ZIPS write surface: `.git` reachability, cross-repo confirmation, replace authorization and replacing renames, quarantine sweep timing — closures and rejected remedies |
 
 ## Environment
 

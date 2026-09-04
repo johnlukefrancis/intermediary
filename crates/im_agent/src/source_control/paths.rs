@@ -14,7 +14,7 @@ pub(super) const PATHSPEC_FROM_STDIN: [&str; 2] = ["--pathspec-from-file=-", "--
 /// Validates one UI-supplied repo-relative path and normalizes it to the
 /// slash-joined form Git prints (`./a//b/` becomes `a/b`) so classification
 /// against `ls-files` output matches byte for byte.
-pub(super) fn normalize_path(path: &str) -> Result<String, AgentError> {
+pub(crate) fn normalize_path(path: &str) -> Result<String, AgentError> {
     validate_relative_path(path)?;
     if path.contains('\0') {
         return Err(AgentError::new(
@@ -45,12 +45,30 @@ pub(super) fn nul_joined(paths: &[String]) -> Vec<u8> {
     bytes
 }
 
+/// Refuses a `.git` component anywhere in an already-normalized repo-relative
+/// path. No write that bypasses Git may reach the repository's own directory,
+/// at any depth, on either side of the operation. Compared without case
+/// because the filesystems this agent writes (NTFS, drvfs) reach the same
+/// directory through `.GIT`, and a check a filesystem can walk around is not a
+/// check.
+pub(crate) fn ensure_no_git_component(path: &str) -> Result<(), AgentError> {
+    if path.split('/').any(|part| part.eq_ignore_ascii_case(".git")) {
+        return Err(AgentError::new(
+            "INVALID_PATH",
+            format!("Refusing {path}: it names the repository's own Git directory"),
+        ));
+    }
+    Ok(())
+}
+
 /// Confirms `path`'s parent directory resolves inside the repo root before a
-/// discard claim renames it directly (bypassing Git): a symlinked directory
-/// component must never let a relative, traversal-free path still reach
-/// outside the worktree. A path whose parent does not exist yet is not this
-/// guard's concern (the caller's own claim will fail on the missing file).
-pub(super) fn ensure_within_root(repo_root: &Path, path: &str) -> Result<(), AgentError> {
+/// caller touches it directly, bypassing Git: a discard claim renaming a file
+/// away, or an import writing one in. A symlinked directory component must
+/// never let a relative, traversal-free path still reach outside the
+/// worktree. A path whose parent does not exist yet is not this guard's
+/// concern — nothing can be reached through a directory that is not there,
+/// and the caller creates it as a real directory or fails on the missing file.
+pub(crate) fn ensure_within_root(repo_root: &Path, path: &str) -> Result<(), AgentError> {
     let canonical_root = repo_root.canonicalize().map_err(|error| {
         AgentError::new(
             "INVALID_REPO",
@@ -72,7 +90,7 @@ pub(super) fn ensure_within_root(repo_root: &Path, path: &str) -> Result<(), Age
     if !canonical_parent.starts_with(&canonical_root) {
         return Err(AgentError::new(
             "INVALID_PATH",
-            format!("Refusing to discard {path}: it resolves outside the repo root"),
+            format!("Refusing {path}: it resolves outside the repo root"),
         ));
     }
     Ok(())
@@ -80,7 +98,7 @@ pub(super) fn ensure_within_root(repo_root: &Path, path: &str) -> Result<(), Age
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_path, nul_joined};
+    use super::{ensure_no_git_component, normalize_path, nul_joined};
 
     #[test]
     fn normalizes_to_git_printed_form() {
@@ -97,6 +115,19 @@ mod tests {
             let error = normalize_path(bad).expect_err(bad);
             assert_eq!(error.code(), "INVALID_PATH", "{bad}");
         }
+    }
+
+    #[test]
+    fn the_git_directory_is_refused_at_any_depth_and_only_as_a_whole_component() {
+        for bad in [".git", "app/.git", "a/.GIT/config"] {
+            assert_eq!(
+                ensure_no_git_component(bad).expect_err(bad).code(),
+                "INVALID_PATH",
+                "{bad}"
+            );
+        }
+        ensure_no_git_component("app/.gitignore").expect("not a component");
+        ensure_no_git_component("app/notes.git.txt").expect("not a component");
     }
 
     #[test]

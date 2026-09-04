@@ -1,9 +1,16 @@
 // Path: crates/im_agent/src/server/connection/repo_commands.rs
 // Description: Repo file-read and topology command handlers for WebSocket dispatch
 
+use std::path::Path;
+
 use crate::error::AgentError;
 use crate::protocol::{self, UiResponse};
-use crate::repos::{get_repo_top_level, list_repo_directory, read_image_file, read_text_file};
+use crate::repos::worktree::worktree_action;
+use crate::repos::{
+    get_repo_top_level, import_files, list_repo_directory, read_image_file, read_text_file,
+};
+use crate::source_control::SourceControlLocks;
+use crate::staging::{StageFileCancelToken, StagingRootKind};
 
 use super::ConnectionContext;
 
@@ -80,6 +87,75 @@ pub async fn list_repo_directory_command(
     ))
 }
 
+/// Copies external OS files into one directory of a WSL-rooted repo.
+///
+/// An import writes the worktree without Git, so it takes the same
+/// per-worktree mutation lock every Git mutation takes: a drop must not
+/// interleave with a commit or a discard over the same index. The lock is also
+/// the drain gate, so a shutdown refuses new imports with `AGENT_DRAINING`.
+/// Resolving the lock spawns `rev-parse`, so a configured root that is not a
+/// repository is refused there (`GIT_NOT_REPOSITORY`) rather than being given
+/// an unlocked path of its own.
+pub async fn import_files_command(
+    command: protocol::ImportFilesCommand,
+    ctx: &ConnectionContext,
+) -> Result<UiResponse, AgentError> {
+    let (repo_root, locks) = command_repo(&command.repo_id, ctx).await?;
+    let root = Path::new(&repo_root);
+    let _guard = locks.acquire(root).await?;
+
+    let imported = import_files(
+        root,
+        &command.directory,
+        &command.sources,
+        &command.on_conflict,
+        StagingRootKind::Wsl,
+        &StageFileCancelToken::new(),
+    )
+    .await?;
+
+    Ok(UiResponse::ImportFilesResult(protocol::ImportFilesResult {
+        repo_id: command.repo_id,
+        directory: command.directory,
+        imported,
+    }))
+}
+
+/// Deletes, moves, copies, or renames entries in a WSL-rooted repo worktree.
+///
+/// Like an import, this writes the worktree without Git and therefore takes
+/// the same per-worktree mutation lock every Git mutation takes: a rename must
+/// not interleave with a commit or a discard over the same index. The lock is
+/// also the drain gate, so a shutdown refuses new actions with
+/// `AGENT_DRAINING`, and resolving it spawns `rev-parse`, so a configured root
+/// that is not a repository is refused there rather than being given an
+/// unlocked path of its own.
+pub async fn worktree_action_command(
+    command: protocol::WorktreeActionCommand,
+    ctx: &ConnectionContext,
+) -> Result<UiResponse, AgentError> {
+    let (repo_root, locks) = command_repo(&command.repo_id, ctx).await?;
+    let root = Path::new(&repo_root);
+    let _guard = locks.acquire(root).await?;
+
+    let kind = command.action.kind();
+    let entries = worktree_action(
+        root,
+        &command.action,
+        &locks,
+        &StageFileCancelToken::new(),
+    )
+    .await?;
+
+    Ok(UiResponse::WorktreeActionResult(
+        protocol::WorktreeActionResult {
+            repo_id: command.repo_id,
+            kind,
+            entries,
+        },
+    ))
+}
+
 pub(super) fn resolve_wsl_repo_root(
     repo_id: &str,
     repo_config: &crate::runtime::RepoConfig,
@@ -105,4 +181,19 @@ async fn command_repo_root(repo_id: &str, ctx: &ConnectionContext) -> Result<Str
         .get(repo_id)
         .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))?;
     resolve_wsl_repo_root(repo_id, repo_config)
+}
+
+/// The configured root and the mutation-lock registry, cloned out under one
+/// short read lock so no runtime lock is held across the copy.
+async fn command_repo(
+    repo_id: &str,
+    ctx: &ConnectionContext,
+) -> Result<(String, SourceControlLocks), AgentError> {
+    let state = ctx.runtime.read().await;
+    let repo_config = state
+        .repo_configs
+        .get(repo_id)
+        .ok_or_else(|| AgentError::new("UNKNOWN_REPO", format!("Unknown repo: {repo_id}")))?;
+    let repo_root = resolve_wsl_repo_root(repo_id, repo_config)?;
+    Ok((repo_root, state.source_control_locks.clone()))
 }
