@@ -2,7 +2,7 @@
 
 ## 0.1.19 — 2026-09-04
 
-- Added a Discard All button to the SOURCE rail: the CHANGES section header now carries a discard glyph beside stage-all (VS Code's placement). It opens a destructive confirm modal naming the count and up to 15 target paths with their effect (restored from the index, or deleted), then sends one batched discard whose targets carry the same per-file stamps the row action sends, so a file changed since review is refused rather than destroyed. Disabled while an action is pending, status is truncated, or CHANGES is empty.
+- Added a Discard All button to the SOURCE rail: the CHANGES section header now carries a discard glyph beside stage-all (VS Code's placement). It opens a destructive confirm modal naming only the counts (tracked restored from the index, untracked deleted) so the modal stays small at any change count, then sends one batched discard whose targets carry the same per-file stamps the row action sends, so a file changed since review is refused rather than destroyed. Disabled while an action is pending, status is truncated, or CHANGES is empty.
 
 ## 0.1.18 — 2026-09-04
 

@@ -95,18 +95,14 @@ export function discardConfirmMessage(entry: SourceControlEntry, targets: string
   return `This cannot be undone:\n\n${lines.join("\n")}`;
 }
 
-const DISCARD_ALL_LISTED_PATHS = 15;
-
-/** Discard-all names what it does in aggregate and lists a bounded sample of the paths */
+/** Discard-all stays compact regardless of how many rows CHANGES holds: counts, never paths */
 export function discardAllConfirmMessage(entries: SourceControlEntry[]): string {
-  const lines = entries.map((entry) => {
-    const effect = entry.change === "untracked" ? "deleted" : "restored from the index";
-    return `${entry.path} — ${effect}`;
-  });
-  const shown = lines.slice(0, DISCARD_ALL_LISTED_PATHS);
-  const hidden = lines.length - shown.length;
-  if (hidden > 0) shown.push(`…and ${hidden} more`);
-  return `This cannot be undone. All ${lines.length} unstaged change(s) will be discarded:\n\n${shown.join("\n")}`;
+  const deleted = entries.filter((entry) => entry.change === "untracked").length;
+  const restored = entries.length - deleted;
+  const parts: string[] = [];
+  if (restored > 0) parts.push(`${restored} tracked file(s) restored from the index`);
+  if (deleted > 0) parts.push(`${deleted} untracked file(s) deleted`);
+  return `This cannot be undone. All ${entries.length} unstaged change(s) will be discarded: ${parts.join(", ")}.`;
 }
 
 interface StatusErrorCopy {
