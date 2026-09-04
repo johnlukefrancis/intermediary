@@ -24,6 +24,8 @@ export interface SourceControlActionError {
   action: SourceControlActionKind;
   code: string;
   message: string;
+  /** The agent could not prove the action had no effect (a remote command): the text is Git's, the outcome is being reconciled */
+  uncertain?: boolean;
 }
 
 /** The most recent commit this hook observed; `at` gives each commit a fresh identity */

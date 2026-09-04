@@ -182,7 +182,7 @@ export function SourceControlColumn({
       {actionError && (
         <div className="build-error source-control-notice" role="alert">
           <span className="source-control-notice__heading">
-            {actionErrorHeading(actionError.action, actionError.code)}
+            {actionErrorHeading(actionError.action, actionError.code, actionError.uncertain)}
           </span>
           <span className="source-control-notice__message">{actionError.message}</span>
           <button type="button" className="dir-action-btn" onClick={dismissActionError}>

@@ -157,6 +157,7 @@ export function useSourceControlState(repoId: string): SourceControlState {
           setActionError(outcome.error);
           refreshAfterReject = outcome.refreshNow;
         } else {
+          if (outcome.error !== null) setActionError(outcome.error);
           reconciliation.begin(action.kind, previousHeadSha);
           setPhase({ kind: "reconciling", action: action.kind });
         }

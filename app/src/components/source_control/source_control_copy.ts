@@ -48,7 +48,12 @@ export function reconcilingCopy(action: SourceControlActionKind): string {
   return `${ACTION_LABELS[action]} RESULT UNKNOWN — REFRESHING`;
 }
 
-export function actionErrorHeading(action: SourceControlActionKind, code: string): string {
+export function actionErrorHeading(
+  action: SourceControlActionKind,
+  code: string,
+  uncertain = false
+): string {
+  if (uncertain) return `${ACTION_LABELS[action]} DID NOT FINISH`;
   if (code === SOURCE_CONTROL_STATE_CHANGED_CODE) return "STATE CHANGED — REVIEW AGAIN";
   if (code === AGENT_DRAINING_CODE) return "AGENT SHUTTING DOWN";
   if (code === SOURCE_CONTROL_UNSUPPORTED_LAYOUT_CODE) return "UNSUPPORTED REPOSITORY LAYOUT";
