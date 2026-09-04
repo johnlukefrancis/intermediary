@@ -75,7 +75,7 @@ the archive-box and branch glyphs: framed variants blurred into a block at rail 
 | Open fails (pwsh missing, bad directory, cap reached in the backend) | `> PWSH FAILED TO START` with the message; RETRY re-opens, CLOSE removes the tab. |
 | `×` on a running tab | The console closes first (attached clients get `CTRL_CLOSE`); if the tree is still alive after a bounded wait the Job Object is armed for kill-on-close, terminated, and observed within a second bound. pwsh, `wsl.exe`, and conhost end; a GUI app launched from the shell (a VS Code window from `wbide`) survives unless forced escalation was required. A failed Job receipt stays backend-owned for app-exit retry. The neighbour tab becomes active. |
 | Long flood (`yes`, a large `type`) | Output is credit-gated (512 KiB high / 128 KiB low unacked) against cumulative sent/consumed watermarks, so a lost or duplicate acknowledgement is recoverable, the UI stays responsive, and Ctrl+C stops it. |
-| Scrollback is longer than the viewport | xterm's native 14 px scrollbar becomes clearly visible against the deck. Its thumb has distinct normal, hover, and accent-toned active states and can be grabbed and dragged through the retained scrollback; the mouse wheel continues to work. |
+| Scrollback is longer than the viewport | xterm's native 14 px scrollbar becomes clearly visible against the deck. Its thumb uses the repo's accent at rest, adds a glow on hover and while held, and can be dragged through the retained scrollback; the mouse wheel continues to work. |
 | Window minimized or hidden during a long listing | Bytes are acked on receipt while the document is hidden, so the child never stalls on a window nobody is looking at; the listing finishes. |
 | Window loses focus | Cursor blink stops (motion governor); it resumes on refocus. |
 | Repo or group removed from the tab bar, or the same repo id is rebound to another root | Its old terminal group is closed; a retained tab can never restart against stale root authority. |
@@ -111,8 +111,8 @@ time and again when the accent or theme mode changes: `--terminal-bg`, `--termin
 file from the existing success/error/info/warning, text, and accent tokens. The background carries
 `--window-opacity-alpha` and the terminal allows transparency, so the deck substrate shows through like
 every other panel. Font `var(--font-mono)` at 14 px; cursor bar with blink; scrollback 10,000 lines.
-The native xterm scrollbar retains its full 14 px interaction target and uses opaque deck text colours for
-its thumb, an elevated track, and the active accent while it is being dragged.
+The native xterm scrollbar retains its full 14 px interaction target and uses the repo accent for its
+thumb, an elevated track, and the accent glow on hover and while dragged.
 
 ## Accepted boundaries
 

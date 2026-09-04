@@ -156,9 +156,17 @@
   border-radius: var(--radius-deck-sm);
   box-shadow: inset 0 0 0 1px var(--color-border-highlight);
   cursor: grab;
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.terminal-column__host .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover {
+  box-shadow: 0 0 8px 0 var(--color-accent-glow);
 }
 
 .terminal-column__host .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+  box-shadow: 0 0 12px 1px var(--color-accent-glow);
   cursor: grabbing;
 }
 

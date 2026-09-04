@@ -117,7 +117,7 @@ Get-ChildItem -Recurse C:\Windows\System32 | Out-String
 
 Expect the deck to stay responsive (rocker clicks land during the flood) and **Ctrl+C** to stop it within
 a second. Once enough scrollback exists, move the pointer over the terminal's right edge. Expect a clearly
-visible thumb on an elevated track, stronger hover feedback, and the accent colour while held. Drag the
+visible repo-accent thumb on an elevated track, with the accent glow appearing on hover and while held. Drag the
 thumb to the top, middle, and bottom; expect the viewport to follow throughout the drag and mouse-wheel
 scrolling to remain unchanged. Repeat the flood and immediately close its tab, then open another tab. Expect close to finish,
 the old output not to spill into the new tab or keep accumulating in the page, and the replacement open
