@@ -53,3 +53,11 @@
 .app[data-ui-mode="handset"] .tab {
   padding: var(--space-2);
 }
+
+/* TERMINAL section: the column fills the chassis edge to edge and owns its own scrolling */
+.app[data-ui-mode="handset"] .handset-deck__panel[data-rail="terminal"] > .panel-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}

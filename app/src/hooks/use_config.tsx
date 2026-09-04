@@ -42,7 +42,7 @@ import {
   useSetRecentFilesLimit,
   useToggleStarredFile,
 } from "./use_config_actions_extended.js";
-import { useSetActiveRail } from "./use_config_actions_rail.js";
+import { useSetActiveRail, useSetRailWidthPercent } from "./use_config_actions_rail.js";
 
 interface ConfigContextValue {
   /** Current config (always available, defaults if load failed) */
@@ -63,8 +63,10 @@ interface ConfigContextValue {
   setLastActiveTabId: (repoId: string | null) => void;
   /** Update last active repo per group */
   setLastActiveGroupRepoId: (groupId: string, repoId: string | null) => void;
-  /** Update the right-rail deck section (zips | source) */
+  /** Update the right-rail deck section (zips | source | terminal) */
   setActiveRail: (rail: ActiveRail) => void;
+  /** Update the rail's share of the deck width (drag divider) */
+  setRailWidthPercent: (percent: number) => void;
   /** Update bundle selection for a repo/preset */
   setBundleSelection: (
     repoId: string,
@@ -154,6 +156,7 @@ export function ConfigProvider({
     saveConfig
   );
   const setActiveRail = useSetActiveRail(setConfig, saveConfig);
+  const setRailWidthPercent = useSetRailWidthPercent(setConfig, saveConfig);
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
   const setClassificationExcludes = useSetClassificationExcludes(
@@ -200,6 +203,7 @@ export function ConfigProvider({
     setLastActiveTabId,
     setLastActiveGroupRepoId,
     setActiveRail,
+    setRailWidthPercent,
     setBundleSelection,
     setGlobalExcludes,
     setClassificationExcludes,

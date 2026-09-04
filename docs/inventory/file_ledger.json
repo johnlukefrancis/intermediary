@@ -150,16 +150,20 @@
       "summary": "Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel"
     },
     {
+      "path": "app/src/components/layout/deck_splitter.tsx",
+      "summary": "Drag divider between the deck's left panel and the rail; previews the rail width while dragging and commits it on rel..."
+    },
+    {
       "path": "app/src/components/layout/handset_deck.tsx",
-      "summary": "Handset deck layout switching between Auto files, zip bundles, and source control"
+      "summary": "Handset deck layout switching between Auto files, zip bundles, source control, and the terminal"
     },
     {
       "path": "app/src/components/layout/repo_rail.tsx",
-      "summary": "Right-rail instrument panel: slim icon-rocker header over the active rail body"
+      "summary": "Right-rail instrument panel: slim icon-rocker header over the active rail body (zips | source | terminal)"
     },
     {
       "path": "app/src/components/layout/three_column.tsx",
-      "summary": "The one desktop shell: Auto Files or the shared workspace on the left, the rail on the right"
+      "summary": "The one desktop shell: Auto Files or the shared workspace on the left, a drag divider, the rail on the right"
     },
     {
       "path": "app/src/components/layout/workspace_layout.tsx",
@@ -288,6 +292,22 @@
     {
       "path": "app/src/components/tab_remove_button.tsx",
       "summary": "\"x\" button for removing repos with confirmation"
+    },
+    {
+      "path": "app/src/components/terminal/terminal_column.tsx",
+      "summary": "TERMINAL rail body for one repo: tab strip over the imperative xterm host, plus the starting/exited/failed/empty notices"
+    },
+    {
+      "path": "app/src/components/terminal/terminal_copy.ts",
+      "summary": "Console-prompt copy, button labels, and tooltips for the terminal column"
+    },
+    {
+      "path": "app/src/components/terminal/terminal_exit_notice.tsx",
+      "summary": "Console-prompt notice floating over a tab that is starting, has exited, or failed to start"
+    },
+    {
+      "path": "app/src/components/terminal/terminal_tab_strip.tsx",
+      "summary": "Tablist of one repo's terminal tabs (PWSH n, x per tab, + at the end); arrows move focus, click or Enter activates"
     },
     {
       "path": "app/src/components/text_workspace_semantics.tsx",
@@ -426,6 +446,18 @@
       "summary": "Context delivering the built tree decorations to the recursive bundle explorer rows"
     },
     {
+      "path": "app/src/hooks/terminal/use_terminal_group.ts",
+      "summary": "Subscribes a component to one repo's terminal group snapshot from the module-level registry"
+    },
+    {
+      "path": "app/src/hooks/terminal/use_terminal_host.ts",
+      "summary": "Adopts the active terminal tab into a host element for its mount, parks on cleanup, and keeps it fitted, themed and f..."
+    },
+    {
+      "path": "app/src/hooks/terminal/use_terminal_lifecycle.ts",
+      "summary": "App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every..."
+    },
+    {
       "path": "app/src/hooks/use_agent.tsx",
       "summary": "Agent context provider and connection management hook"
     },
@@ -443,7 +475,7 @@
     },
     {
       "path": "app/src/hooks/use_config_actions_rail.ts",
-      "summary": "Config action for the persisted right-rail deck section (zips | source)"
+      "summary": "Config actions for the persisted right rail: the deck section (zips | source | terminal) and the rail width"
     },
     {
       "path": "app/src/hooks/use_config_actions.ts",
@@ -608,6 +640,54 @@
     {
       "path": "app/src/lib/source_control/tree_decorations.ts",
       "summary": "Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations"
+    },
+    {
+      "path": "app/src/lib/tabs/tab_items.ts",
+      "summary": "Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs"
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_flow.ts",
+      "summary": "Per-session monotonic output credit acknowledgements: coalesced after xterm parses bytes, or on receipt while the pag..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_ipc.ts",
+      "summary": "Typed Tauri invoke wrappers and the output-channel seam for terminal sessions (mirrors src-tauri terminal/frames.rs)"
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_keys.ts",
+      "summary": "Windows Terminal key and mouse policy for one xterm: copy/paste chords, Ctrl+C with a selection, right-click, Shift+E..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_output_scan.ts",
+      "summary": "Tells whether a pty output chunk paints anything (text or a line break) once escape sequences are skipped"
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_parking.ts",
+      "summary": "Off-screen parking host for terminal elements that are alive but not shown; sized so xterm open() and fit() still mea..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_registry.ts",
+      "summary": "Module-level owner of every terminal session grouped per repo: immutable snapshots for React, open/close/restart, ado..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_renderer.ts",
+      "summary": "WebGL renderer policy: attached once per session after its first adopt and kept while parked; DOM renderer on context..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_session_io.ts",
+      "summary": "One pty lifetime for a terminal tab: open handshake, queued and serialised input, output pump with credit acks, debou..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_session.ts",
+      "summary": "One terminal tab living outside React: the xterm instance and wrapper element, renderer adopt/park, fit, pty lifecycl..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_theme.ts",
+      "summary": "Reads the deck's --terminal-* and --font-mono tokens into xterm theme and options; an empty token leaves xterm's defa..."
+    },
+    {
+      "path": "app/src/lib/terminal/terminal_types.ts",
+      "summary": "Frontend terminal session model: tab/group snapshots and the registry API the rail consumes"
     },
     {
       "path": "app/src/lib/theme/accent_utils.ts",
@@ -799,7 +879,7 @@
     },
     {
       "path": "app/src/styles/columns.css",
-      "summary": "Standard deck grid layout with Auto files and Zips"
+      "summary": "Standard deck grid layout: Auto files, the drag divider, and the rail at its persisted width"
     },
     {
       "path": "app/src/styles/confirm_modal.css",
@@ -812,6 +892,10 @@
     {
       "path": "app/src/styles/deck_section_switcher.css",
       "summary": "Segmented icon-rocker deck section tablist shared by the handset deck and the right rail"
+    },
+    {
+      "path": "app/src/styles/deck_splitter.css",
+      "summary": "The drag divider between the left deck panel and the rail: occupies the column gap, lights up on hover and while drag..."
     },
     {
       "path": "app/src/styles/diff_workspace.css",
@@ -906,6 +990,10 @@
       "summary": "Tab bar navigation with ASCII-instrument bracketed labels"
     },
     {
+      "path": "app/src/styles/terminal_column.css",
+      "summary": "Terminal rail body: tab strip, xterm host and session element, console-prompt notices"
+    },
+    {
       "path": "app/src/styles/text_workspace_semantics.css",
       "summary": "Semantic Markdown rendering layer for workspace text editors"
     },
@@ -934,8 +1022,12 @@
       "summary": "Design system tokens - spacing, radii, blur, shadows, typography, motion"
     },
     {
+      "path": "app/src/tabs/repo_tab_rail.tsx",
+      "summary": "Composes the ZIPS, SOURCE and TERMINAL rail bodies for one repo tab; RepoTab hands them to the rail or the handset deck"
+    },
+    {
       "path": "app/src/tabs/repo_tab.tsx",
-      "summary": "Generic repo tab component with Auto files, the right rail (zips | source), and the workspace"
+      "summary": "Generic repo tab component with Auto files, the right rail (zips | source | terminal), and the workspace"
     },
     {
       "path": "app/src/types/agent_supervisor.ts",
@@ -1674,6 +1766,10 @@
       "summary": "Bundle plan schema and loader for im_bundle_cli"
     },
     {
+      "path": "crates/im_bundle/src/process_job_termination.rs",
+      "summary": "Bounded forced termination and observation for a Windows Job Object"
+    },
+    {
       "path": "crates/im_bundle/src/process_job.rs",
       "summary": "Windows Job Object ownership of a spawned process tree, shared by the Git runner and the app's agent supervisor"
     },
@@ -2090,12 +2186,8 @@
       "summary": "The supervisor's WSL emergency stop - TERM, the agent's own drain, then its process trees"
     },
     {
-      "path": "src-tauri/src/lib/agent/wsl_command_runner.rs",
-      "summary": "Bounded WSL command execution helpers for agent process control"
-    },
-    {
       "path": "src-tauri/src/lib/agent/wsl_process_control_commands.rs",
-      "summary": "Command-line builders and quoting helpers for launching and signalling the WSL agent"
+      "summary": "Login-shell command-line builders and quoting for launching and signalling the WSL agent"
     },
     {
       "path": "src-tauri/src/lib/agent/wsl_process_control.rs",
@@ -2164,6 +2256,10 @@
     {
       "path": "src-tauri/src/lib/commands/startup.rs",
       "summary": "Startup readiness command for splashscreen -> main transition"
+    },
+    {
+      "path": "src-tauri/src/lib/commands/terminal.rs",
+      "summary": "Tauri commands of the integrated terminal: open, raw-body write, resize, ack, close and the Rust-side clipboard read"
     },
     {
       "path": "src-tauri/src/lib/commands/wsl_distro.rs",
@@ -2244,6 +2340,114 @@
     {
       "path": "src-tauri/src/lib/paths/wsl_convert.rs",
       "summary": "Windows <-> WSL path conversion utilities"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/clipboard.rs",
+      "summary": "Reads CF_UNICODETEXT from the Windows clipboard for terminal paste, because WebView2 cannot read the clipboard withou..."
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/exit_cell.rs",
+      "summary": "Set-once exit record of a session's child, with bounded waits for the threads that need it"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/flow_gate.rs",
+      "summary": "Cumulative sent/consumed flow watermarks bounding terminal output publication"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/frames.rs",
+      "summary": "Wire shapes shared with the frontend terminal client: open request/result, exit frame, close reasons and outcomes"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/mod.rs",
+      "summary": "Integrated terminal backend: ConPTY-backed pwsh sessions owned by the Tauri process (module tree)"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/output_sink.rs",
+      "summary": "Non-blocking detachable owner of a terminal session's bounded webview output channel"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/reader_thread.rs",
+      "summary": "Retained terminal reader that drains to EOF and reports its final bounded-output result"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/reaper.rs",
+      "summary": "Short external terminal reaper joining process, PTY-close, reader, and waiter ownership"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/registry_shutdown.rs",
+      "summary": "Navigation and app-exit drains over atomically captured terminal transactions"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/registry_tests.rs",
+      "summary": "Atomic admission and Opening-transaction regression tests for TerminalRegistry"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/registry.rs",
+      "summary": "Atomic admission and lifecycle registry retaining every terminal transaction through its joined receipt"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session_close.rs",
+      "summary": "The one close routine of a session: console-first pty drop, bounded wait, Job Object escalation, last-resort kill"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session_open.rs",
+      "summary": "Opens a pwsh session for a repo root: validation, shell and start-dir resolution, spawn, and the open/open-failed log..."
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session_spawn_cleanup.rs",
+      "summary": "Complete process-tree and PTY cleanup for terminal opens that fail after spawn"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session_spawn_tests.rs",
+      "summary": "Lifecycle oracle of a spawned session on the Linux toolchain: bytes then exit frame, and the console-first close"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session_spawn.rs",
+      "summary": "Resource-symmetric terminal spawn into an already-admitted transaction"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/session.rs",
+      "summary": "One live terminal session: pty ends, child killer and Job Object, flow gate, exit record, phase and output channel"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/shell.rs",
+      "summary": "Profile-faithful PowerShell command and exact inherited environment for terminal spawn"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/start_dir.rs",
+      "summary": "Maps a repo root to the directory pwsh starts in and the WSL entry command it runs for a native WSL root"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/transaction.rs",
+      "summary": "One admitted terminal transaction from Opening through joined Terminal receipt"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/waiter_thread.rs",
+      "summary": "Retained child waiter that records exit and requests the single external reaper"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/windows_build.rs",
+      "summary": "Reads the host's CurrentBuildNumber so xterm can enable ConPTY-aware reflow; None wherever it cannot be known"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/windows_command_line.rs",
+      "summary": "Exact UTF-16 command-line and environment encoding for the Windows terminal child"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/windows_process.rs",
+      "summary": "CreateProcessW owner applying ConPTY and Job-list attributes in one exclusive creation call"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/windows_pty.rs",
+      "summary": "Windows ConPTY pipe and master owner feeding the exclusive at-creation process seam"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/worker_start.rs",
+      "summary": "Start barrier ensuring terminal worker handles are retained before either worker runs"
+    },
+    {
+      "path": "src-tauri/src/lib/wsl_control.rs",
+      "summary": "Shared bounded non-login WSL stdin-script boundary and native-root validation"
     }
   ]
 }

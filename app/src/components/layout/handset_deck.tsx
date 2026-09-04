@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/handset_deck.tsx
-// Description: Handset deck layout switching between Auto files, zip bundles, and source control
+// Description: Handset deck layout switching between Auto files, zip bundles, source control, and the terminal
 
 import type React from "react";
 import type { DeckSection } from "../../hooks/use_deck_section.js";
@@ -8,7 +8,7 @@ import {
   deckSectionTabId,
   type DeckSectionOption,
 } from "./deck_section_switcher.js";
-import { buildRailSections } from "./repo_rail.js";
+import { buildRailSections, railBody, type RailBodies } from "./repo_rail.js";
 import { FilesIcon } from "./deck_section_icons.js";
 import "../../styles/handset_deck.css";
 import "../../styles/handset_chassis.css";
@@ -22,8 +22,7 @@ interface HandsetDeckProps {
   sourceConflictCount: number;
   onChange: (section: DeckSection) => void;
   filePanel: (sectionSwitcher: React.ReactNode) => React.ReactNode;
-  zipsContent: React.ReactNode;
-  sourceContent: React.ReactNode;
+  bodies: RailBodies;
 }
 
 export function HandsetDeck({
@@ -32,8 +31,7 @@ export function HandsetDeck({
   sourceConflictCount,
   onChange,
   filePanel,
-  zipsContent,
-  sourceContent,
+  bodies,
 }: HandsetDeckProps): React.JSX.Element {
   const sections: DeckSectionOption<DeckSection>[] = [
     { value: "files", label: "FILES", icon: <FilesIcon /> },
@@ -83,7 +81,7 @@ export function HandsetDeck({
             id={HANDSET_PANEL_ID}
             aria-labelledby={labelledBy}
           >
-            {active === "zips" ? zipsContent : sourceContent}
+            {railBody(active, bodies)}
           </div>
         </section>
       </div>

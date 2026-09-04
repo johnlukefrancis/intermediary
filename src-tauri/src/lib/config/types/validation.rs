@@ -5,6 +5,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashSet;
 
+use super::model::{ACTIVE_RAILS, RAIL_WIDTH_PERCENT_MAX, RAIL_WIDTH_PERCENT_MIN};
 use super::{
     PersistedConfig, CONFIG_VERSION, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
@@ -79,6 +80,20 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
                 ));
             }
         }
+    }
+
+    if !ACTIVE_RAILS.contains(&config.ui_state.active_rail.as_str()) {
+        return Err(format!(
+            "ui_state.active_rail must be one of {ACTIVE_RAILS:?}, got {:?}",
+            config.ui_state.active_rail
+        ));
+    }
+
+    let rail_width = config.ui_state.rail_width_percent;
+    if !(RAIL_WIDTH_PERCENT_MIN..=RAIL_WIDTH_PERCENT_MAX).contains(&rail_width) {
+        return Err(format!(
+            "ui_state.rail_width_percent must be {RAIL_WIDTH_PERCENT_MIN}-{RAIL_WIDTH_PERCENT_MAX}, got {rail_width}"
+        ));
     }
 
     for (mode_key, bounds) in &config.ui_state.window_bounds_by_mode {

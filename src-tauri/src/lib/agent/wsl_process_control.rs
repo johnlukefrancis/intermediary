@@ -2,10 +2,9 @@
 // Description: WSL agent launch target resolution and spawning
 
 use super::install::AgentBundlePaths;
-use super::wsl_process_control_commands::{
-    build_wsl_bash_args, build_wsl_spawn_command_line, distro_label, normalize_distro,
-};
+use super::wsl_process_control_commands::{build_wsl_bash_args, build_wsl_spawn_command_line};
 use crate::paths::wsl_convert::windows_to_wsl_path;
+use crate::wsl_control::{distro_label, normalize_distro};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 

@@ -13,4 +13,5 @@ pub mod paths;
 pub mod reset;
 pub mod startup;
 mod startup_window_bounds;
+pub mod terminal;
 pub mod wsl_distro;

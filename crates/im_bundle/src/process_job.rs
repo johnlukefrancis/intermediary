@@ -3,21 +3,21 @@
 
 //! Windows has no process group a signal can reach, so the only owner of a
 //! spawned child's descendants is a Job Object. It is created *before* the
-//! spawn and the direct child is assigned to it immediately afterwards — every
-//! process that child starts from then on is created inside the same job.
+//! spawn. Generic owners assign the direct child immediately afterwards; the
+//! terminal supplies the Job in the process-creation attribute list instead,
+//! before any child code can run. Every later descendant then inherits it.
 //!
-//! The job is deliberately created **without**
-//! `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so it is a handle on the tree and not
-//! the tree's lifetime: closing it kills nothing, exactly as forgetting a unix
-//! process group id kills nothing. Every death is an explicit
-//! [`JobHandle::terminate`], at the moments a caller decides the tree must not
-//! outlive it. A helper that deliberately outlives its parent after closing
-//! its pipes (a credential-cache daemon) therefore survives here exactly as it
-//! does on unix.
+//! The job is created **without** `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, so an
+//! ordinary successful owner drop does not kill helpers that deliberately
+//! outlive their parent. The bounded forced-cleanup route arms kill-on-close
+//! immediately before explicit termination, making a later handle drop its
+//! final safety net if a Win32 termination or observation call fails.
 //!
 //! Both owners in this workspace build on this one type: the Git runner nests
 //! a per-command job inside it (nested jobs are supported from Windows 8), and
-//! the app's supervisor wraps the host agent it spawns.
+//! the app's supervisor wraps the host agent it spawns. The terminal passes
+//! the raw Job handle in `PROC_THREAD_ATTRIBUTE_JOB_LIST`, so its shell belongs
+//! to the Job from the instant `CreateProcessW` succeeds.
 //!
 //! Off Windows the type is an inert owner — `create`, `assign` and `terminate`
 //! all succeed and do nothing — so call sites stay free of `cfg` noise. That
@@ -27,9 +27,11 @@
 
 use std::io;
 use std::process::Child;
+#[cfg(not(windows))]
+use std::time::Duration;
 
 #[cfg(windows)]
-use std::os::windows::io::AsRawHandle;
+use std::os::windows::io::{AsRawHandle, RawHandle};
 #[cfg(windows)]
 use std::ptr;
 
@@ -40,9 +42,8 @@ use windows_sys::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, TerminateJobObject,
 };
 
-/// An owned, unnamed job object with no limits set: it ends nothing by itself,
-/// and [`JobHandle::terminate`] is the only thing that kills what is inside it.
-/// The handle is closed exactly once, in `Drop`.
+/// An owned, unnamed job object with no initial limits. Forced cleanup may arm
+/// kill-on-close; the handle is still closed exactly once, in `Drop`.
 #[cfg(windows)]
 #[derive(Debug)]
 pub struct JobHandle(HANDLE);
@@ -81,13 +82,26 @@ impl JobHandle {
     /// spawn — inside this job. Call it immediately after the spawn: anything
     /// the child starts before this lands outside the tree.
     pub fn assign(&self, child: &Child) -> io::Result<()> {
-        let process = child.as_raw_handle() as HANDLE;
+        self.assign_raw_handle(child.as_raw_handle())
+    }
+
+    /// The same assignment for a child we hold only a raw process handle for
+    /// (a pseudoconsole child spawned by a pty library, which is not a
+    /// `std::process::Child`). The handle must be live for the duration of the
+    /// call and stays owned by the caller.
+    pub fn assign_raw_handle(&self, process: RawHandle) -> io::Result<()> {
         // SAFETY: both handles are live: the job is owned by `self`, and the
-        // process handle is owned by `child`, which outlives this call.
-        if unsafe { AssignProcessToJobObject(self.0, process) } == 0 {
+        // caller guarantees the process handle outlives this call.
+        if unsafe { AssignProcessToJobObject(self.0, process as HANDLE) } == 0 {
             return Err(io::Error::last_os_error());
         }
         Ok(())
+    }
+
+    /// Borrows the Job handle for a `CreateProcessW` attribute list. The
+    /// returned handle remains owned by `self` and must not be closed.
+    pub fn raw_handle(&self) -> RawHandle {
+        self.0 as RawHandle
     }
 
     /// Kills every process still in the job. Safe to call more than once, and
@@ -104,10 +118,9 @@ impl JobHandle {
 #[cfg(windows)]
 impl Drop for JobHandle {
     fn drop(&mut self) {
-        // SAFETY: closed exactly once, at the end of this handle's life. With
-        // no kill-on-close limit this only releases the owner's grip on the
-        // tree: anything still inside the job keeps running unless
-        // `terminate` was called first.
+        // SAFETY: closed exactly once, at the end of this handle's life. An
+        // ordinary owner never armed kill-on-close; a forced-cleanup owner did
+        // so deliberately before attempting explicit termination.
         unsafe {
             CloseHandle(self.0);
         }
@@ -126,10 +139,24 @@ impl JobHandle {
         Ok(())
     }
 
+    /// Always succeeds and claims nothing; the raw-handle form exists so a pty
+    /// child's spawn site stays free of `cfg` noise too.
+    pub fn assign_raw_handle(&self, _process: usize) -> io::Result<()> {
+        Ok(())
+    }
+
     /// Always succeeds and kills nothing: off Windows the caller's own kill of
     /// the direct child is the whole story.
     pub fn terminate(&self) -> io::Result<()> {
         Ok(())
+    }
+
+    pub fn terminate_and_observe(&self, _timeout: Duration) -> io::Result<()> {
+        Ok(())
+    }
+
+    pub fn active_processes(&self) -> io::Result<u32> {
+        Ok(0)
     }
 }
 

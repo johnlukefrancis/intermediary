@@ -4,7 +4,7 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { TabItem, SingleTab, GroupTab } from "../app.js";
+import type { TabItem, SingleTab, GroupTab } from "../lib/tabs/tab_items.js";
 import type { RepoRoot, TabTheme } from "../shared/config.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useWorktreeAdd } from "../hooks/use_worktree_add.js";

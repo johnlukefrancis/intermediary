@@ -6,6 +6,8 @@ mod commands;
 pub mod config;
 pub mod obs;
 pub mod paths;
+mod terminal;
+mod wsl_control;
 
 use agent::{AgentSupervisor, AgentWebSocketAuthState};
 use commands::agent_control::{ensure_agent_running, restart_agent, stop_agent};
@@ -23,9 +25,16 @@ use commands::reset::reset_app_state;
 use commands::startup::{
     apply_launch_window_bounds, retire_splashscreen, startup_ready, StartupWindowState,
 };
+use commands::terminal::{
+    terminal_ack, terminal_clipboard_text, terminal_close, terminal_open, terminal_resize,
+    terminal_write,
+};
 use commands::wsl_distro::WslDistroState;
 use obs::logging;
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, RunEvent};
+use terminal::frames::CloseReason;
+use terminal::TerminalRegistry;
 
 /// Run the Tauri application
 pub fn run() {
@@ -67,11 +76,23 @@ pub fn run() {
         .manage(AgentSupervisor::new())
         .manage(WslDistroState::default())
         .manage(auth_state)
+        .manage(TerminalRegistry::default())
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|_| {
             logging::log("info", "app", "setup_entered", "Tauri setup entered");
             Ok(())
+        })
+        // A navigation or reload of the main page orphans every terminal channel:
+        // the sessions opened for the old page are closed (I1), detached from
+        // this main-thread hook.
+        .on_page_load(|webview, payload| {
+            if webview.label() != "main" || payload.event() != PageLoadEvent::Started {
+                return;
+            }
+            if let Some(registry) = webview.try_state::<TerminalRegistry>() {
+                registry.close_all_detached(CloseReason::WebviewNavigation);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             get_app_paths,
@@ -93,7 +114,13 @@ pub fn run() {
             startup_ready,
             load_note,
             save_note,
-            delete_note
+            delete_note,
+            terminal_open,
+            terminal_write,
+            terminal_resize,
+            terminal_ack,
+            terminal_close,
+            terminal_clipboard_text
         ])
         .build(context);
 
@@ -126,16 +153,46 @@ pub fn run() {
         }
 
         if !stopped && matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
-            if let Some(supervisor) = app_handle.try_state::<AgentSupervisor>() {
-                if let Err(err) = tauri::async_runtime::block_on(supervisor.shutdown_on_exit()) {
-                    logging::log("error", "agent", "stop_on_exit_failed", &err);
+            // Terminals first (I4): their wsl.exe children must be gone before the
+            // supervisor's WSL idle probe decides whether the distro can be freed.
+            let terminals_settled =
+                if let Some(registry) = app_handle.try_state::<TerminalRegistry>() {
+                    match registry.shutdown_all_blocking() {
+                        Ok(()) => true,
+                        Err(err) => {
+                            logging::log("error", "terminal", "shutdown_incomplete", &err);
+                            false
+                        }
+                    }
+                } else {
+                    logging::log(
+                        "error",
+                        "terminal",
+                        "shutdown_all",
+                        "Terminal registry was unavailable during application exit",
+                    );
+                    false
+                };
+            if terminals_settled {
+                if let Some(supervisor) = app_handle.try_state::<AgentSupervisor>() {
+                    if let Err(err) = tauri::async_runtime::block_on(supervisor.shutdown_on_exit())
+                    {
+                        logging::log("error", "agent", "stop_on_exit_failed", &err);
+                    }
+                } else {
+                    logging::log(
+                        "error",
+                        "agent",
+                        "stop_on_exit_state_missing",
+                        "Agent supervisor was unavailable during application exit",
+                    );
                 }
             } else {
                 logging::log(
                     "error",
                     "agent",
-                    "stop_on_exit_state_missing",
-                    "Agent supervisor was unavailable during application exit",
+                    "stop_on_exit_skipped",
+                    "Agent exit teardown was skipped because terminal finality was not proved",
                 );
             }
             stopped = true;

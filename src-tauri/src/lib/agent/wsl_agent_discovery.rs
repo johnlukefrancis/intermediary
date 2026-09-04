@@ -1,17 +1,16 @@
 // Path: src-tauri/src/lib/agent/wsl_agent_discovery.rs
 // Description: In-distro discovery of the Intermediary WSL agent pids a stop is responsible for
 
-use super::wsl_command_runner::{run_wsl_bash, sanitize_stream_text};
 use super::wsl_process_control::{format_wsl_target, WslLaunchTarget};
-use super::wsl_process_control_commands::distro_label;
 use super::wsl_process_probe_commands::{
     build_wsl_list_exact_pids_command_line, build_wsl_list_intermediary_agent_pids_command_line,
     build_wsl_list_port_listener_pids_command_line,
 };
+use crate::wsl_control::{distro_label, run_wsl_script, sanitize_stream_text};
 
 pub fn list_exact_wsl_agent_pids(target: &WslLaunchTarget) -> Result<Vec<u32>, String> {
     let command_line = build_wsl_list_exact_pids_command_line(&target.agent_bin_wsl);
-    let output = run_wsl_bash(target.distro.as_deref(), &command_line)?;
+    let output = run_wsl_script(target.distro.as_deref(), &command_line)?;
     if !output.status.success() {
         return Err(format!(
             "Failed to list matching WSL agent pids ({}, {}): {}",
@@ -29,7 +28,7 @@ pub fn list_intermediary_wsl_agent_pids_by_port(
     wsl_port: u16,
 ) -> Result<Vec<u32>, String> {
     let command_line = build_wsl_list_intermediary_agent_pids_command_line(wsl_port);
-    let output = run_wsl_bash(target.distro.as_deref(), &command_line)?;
+    let output = run_wsl_script(target.distro.as_deref(), &command_line)?;
     if !output.status.success() {
         return Err(format!(
             "Failed to list same-port Intermediary WSL agent pids ({}, port={wsl_port}, {}): {}",
@@ -50,7 +49,7 @@ pub fn list_wsl_agent_pids_by_port_listener(
     wsl_port: u16,
 ) -> Result<Vec<u32>, String> {
     let command_line = build_wsl_list_port_listener_pids_command_line(wsl_port);
-    let output = run_wsl_bash(distro, &command_line)?;
+    let output = run_wsl_script(distro, &command_line)?;
     if !output.status.success() {
         return Err(format!(
             "Failed to list WSL agent port listeners ({}, port={wsl_port}, distro={}): {}",

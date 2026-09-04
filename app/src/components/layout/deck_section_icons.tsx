@@ -33,3 +33,13 @@ export function FilesIcon(): React.JSX.Element {
     </svg>
   );
 }
+
+/** Prompt chevron and cursor bar: the bare `>_` reads cleanly at 15 px beside the box and branch */
+export function TerminalIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 6l7 6-7 6" />
+      <path d="M13 18h6" />
+    </svg>
+  );
+}

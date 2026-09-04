@@ -2,7 +2,7 @@
 // Description: Focused tab item renderers for single and grouped repository tabs
 
 import type React from "react";
-import type { GroupTab, SingleTab } from "../../app.js";
+import type { GroupTab, SingleTab } from "../../lib/tabs/tab_items.js";
 import type { RepoRoot } from "../../shared/config.js";
 import { GroupRemoveButton } from "../group_remove_button.js";
 import { TabRemoveButton } from "../tab_remove_button.js";

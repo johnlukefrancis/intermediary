@@ -1,22 +1,28 @@
 /*
  * Path: app/src/styles/columns.css
- * Description: Standard deck grid layout with Auto files and Zips
+ * Description: Standard deck grid layout: Auto files, the drag divider, and the rail at its persisted width
  */
 
+/* The middle column is the divider and stands in for the old column gap */
 .three-column {
   display: grid;
-  grid-template-columns: minmax(0, 1.85fr) minmax(360px, 1fr);
-  gap: var(--space-4);
+  grid-template-columns:
+    minmax(0, 1fr) var(--space-4) clamp(360px, var(--rail-width, 35%), 70%);
+  column-gap: 0;
   flex: 1;
   min-height: 0;
 }
 
-/* Responsive: stack columns vertically on narrow windows */
+/* Responsive: stack columns vertically on narrow windows; the divider has nothing to divide */
 @media (max-width: 768px) {
   .three-column {
     grid-template-columns: 1fr;
     gap: var(--space-3);
     overflow-y: auto;
+  }
+
+  .three-column > .deck-splitter {
+    display: none;
   }
 
   .three-column > .panel {

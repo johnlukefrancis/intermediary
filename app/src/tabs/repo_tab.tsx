@@ -1,5 +1,5 @@
 // Path: app/src/tabs/repo_tab.tsx
-// Description: Generic repo tab component with Auto files, the right rail (zips | source), and the workspace
+// Description: Generic repo tab component with Auto files, the right rail (zips | source | terminal), and the workspace
 
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -8,12 +8,11 @@ import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
 import { RepoRail } from "../components/layout/repo_rail.js";
 import { AutoFilesPanel } from "../components/auto_files_panel.js";
-import { BundleColumn } from "../components/bundles/bundle_column.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
-import { SourceControlColumn } from "../components/source_control/source_control_column.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
+import { useConfig } from "../hooks/use_config.js";
 import { useDeckSection } from "../hooks/use_deck_section.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
@@ -21,7 +20,7 @@ import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
 import { useSourceControlState } from "../hooks/source_control/use_source_control_state.js";
-import { TreeDecorationsProvider } from "../hooks/source_control/use_tree_decorations.js";
+import { buildRepoRailBodies } from "./repo_tab_rail.js";
 import {
   buildAutoFileFeed,
   type FileSortMode,
@@ -37,6 +36,8 @@ interface RepoTabProps {
 
 export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
+  const { config, setRailWidthPercent } = useConfig();
+  const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
   const {
     recentFiles,
     stagedByPath,
@@ -131,7 +132,10 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
+      // Escape inside the terminal belongs to the shell (vim, a TUI), not to the file selection
+      const inTerminal =
+        e.target instanceof Element && e.target.closest("[data-terminal-host]") !== null;
+      if (e.key === "Escape" && !inTerminal) {
         fileSelection.clearSelection();
       }
     };
@@ -173,33 +177,24 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
       onOpen={repoWorkspace.openFile}
     />
   );
-  const zipsContent = (
-    <TreeDecorationsProvider status={sourceControl.status}>
-      <BundleColumn
-        repoId={repoId}
-        bundleState={bundleState}
-        topLevelFiles={topLevelFiles}
-        onDragStart={handleBundleDragStart}
-        onOpenFile={repoWorkspace.openFile}
-        emptyMessage={!isConnected ? "Waiting for agent..." : "No bundles yet"}
-      />
-    </TreeDecorationsProvider>
-  );
-  const sourceContent = (
-    <SourceControlColumn
-      repoId={repoId}
-      state={sourceControl}
-      onOpenDiff={repoWorkspace.openDiff}
-    />
-  );
+  const railBodies = buildRepoRailBodies({
+    repoId,
+    repoRoot,
+    isConnected,
+    bundleState,
+    topLevelFiles,
+    sourceControl,
+    onBundleDragStart: handleBundleDragStart,
+    onOpenFile: repoWorkspace.openFile,
+    onOpenDiff: repoWorkspace.openDiff,
+  });
   const railContent = (
     <RepoRail
       activeRail={deckSection.activeRail}
       sourceCount={sourceControl.changeCount}
       sourceConflictCount={sourceControl.conflictCount}
       onChangeRail={deckSection.setActiveRail}
-      zipsContent={zipsContent}
-      sourceContent={sourceContent}
+      bodies={railBodies}
     />
   );
 
@@ -233,13 +228,14 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
             sourceConflictCount={sourceControl.conflictCount}
             onChange={deckSection.setHandsetSection}
             filePanel={renderFilePanel}
-            zipsContent={zipsContent}
-            sourceContent={sourceContent}
+            bodies={railBodies}
           />
         )
       ) : (
         <ThreeColumn
           variant={workspacePanel === null ? "files" : "workspace"}
+          railWidthPercent={config.uiState.railWidthPercent}
+          onRailWidthChange={setRailWidthPercent}
           fileContent={workspacePanel ?? renderFilePanel()}
           railContent={railContent}
         />

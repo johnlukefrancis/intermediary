@@ -107,3 +107,30 @@
   --accent: var(--color-accent);
   --border: var(--theme-border);
 }
+
+/* ===== TERMINAL SLOTS ===== */
+/* Read from `.app` by terminal_theme.ts at adopt time and on accent/theme/opacity changes, so they
+   live on the deck root where the inline accent vars resolve. Every value is an existing token. */
+.app {
+  --terminal-bg: var(--theme-editor-bg);
+  --terminal-fg: var(--theme-editor-text);
+  --terminal-cursor: var(--color-accent);
+  --terminal-cursor-accent: var(--theme-border-subtle);
+  --terminal-selection: var(--color-accent-glow);
+  --terminal-ansi-black: var(--theme-border);
+  --terminal-ansi-red: var(--theme-activity-hot);
+  --terminal-ansi-green: var(--theme-activity-low);
+  --terminal-ansi-yellow: var(--theme-editor-code);
+  --terminal-ansi-blue: var(--theme-editor-link);
+  --terminal-ansi-magenta: var(--color-accent);
+  --terminal-ansi-cyan: var(--theme-editor-quote);
+  --terminal-ansi-white: var(--theme-text-secondary);
+  --terminal-ansi-bright-black: var(--theme-text-muted);
+  --terminal-ansi-bright-red: var(--theme-error);
+  --terminal-ansi-bright-green: var(--theme-success);
+  --terminal-ansi-bright-yellow: var(--theme-warning);
+  --terminal-ansi-bright-blue: var(--theme-info);
+  --terminal-ansi-bright-magenta: var(--color-accent);
+  --terminal-ansi-bright-cyan: var(--theme-info);
+  --terminal-ansi-bright-white: var(--theme-text-primary);
+}

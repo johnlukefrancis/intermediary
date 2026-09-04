@@ -57,6 +57,14 @@ There was no compliance-grade contract for backend ownership, reclamation, or sh
    no process is attached to a `pts/*` pseudo-terminal (no interactive WSL shell/tab open). Any open
    interactive session means the distro is left running. External-mode backends are never torn down.
    A Task-Manager force-kill cannot run cleanup; the next launch reclaims the orphan by port (rule 1).
+   *Amended 2026-09-04 (integrated terminal):* terminal admission freezes at exit; every app-owned
+   Opening, Running, Closing, or Reaping transaction receives its bounded console-close/escalation and
+   then reaches a joined terminal receipt **before** the supervisor's exit routine runs the idle probe.
+   A `wsl.exe` started by an in-app TERMINAL tab therefore never counts as an interactive session — the
+   app must not leave the distro running on account of a session it owns and has not fully reaped. A
+   survivor that detached from the
+   console on purpose (`tmux`, `nohup`, `setsid`) still holds its `pts` after the terminal close and
+   correctly keeps the distro alive: the probe keys on what is attached, not on who started it.
 
 5) **Auth token survives reinstalls.**
    `ws_auth.json` MUST live outside the installer-wiped `agent/` directory (directly under app-local

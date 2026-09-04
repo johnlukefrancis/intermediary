@@ -1,5 +1,5 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-09-03
+Updated on: 2026-09-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
@@ -74,7 +74,7 @@ Depends on: ADR-000, ADR-006, ADR-007
 * **Two main columns per tab:**
 
   1. **Auto Files** (docs, code, and images ranked by auto, latest, or activity mode)
-  2. **Rail** with a segmented icon rocker (archive-box / git-branch glyphs) between **Zip bundles** (bundle presets + recently built outputs, with Git-status decorations on changed files/directories in the explorer tree) and **Source Control** (working-tree status and commit controls). The active rail persists globally; the SOURCE cell carries the change count beside its glyph.
+  2. **Rail** with a segmented icon rocker (archive-box / git-branch / console glyphs) between **Zip bundles** (bundle presets + recently built outputs, with Git-status decorations on changed files/directories in the explorer tree), **Source Control** (working-tree status and commit controls), and **Terminal** (PowerShell 7 sessions per repo). The active rail persists globally; the SOURCE cell carries the change count beside its glyph. A drag divider between the two columns sets the rail's share of the deck width (20-70 %, default 35 %, double-click resets), persisted as `uiState.railWidthPercent`; all three rail sections share it.
 
 ### Responsive mode behavior
 
@@ -169,6 +169,18 @@ The SOURCE rail shows the active repo/worktree as Git sees it and lets the worki
 * Commit and discard are bound to the snapshot the user reviewed. One snapshot identity covers the branch a commit would move, where it points, the tree it would record, and any merge, cherry-pick, or revert it would conclude, so a commit sent against a repository that has moved since the review is refused rather than silently retargeted; a discard sent against a target whose on-disk file changed, reappeared after being missing, or cannot be identified at all is refused rather than overwriting it. Either way the UI shows "STATE CHANGED — REVIEW AGAIN" and refreshes status automatically. Once Git publishes a commit it stands: if a commit hook rewrote reviewed files or added files nobody reviewed, the result says which, and the unreviewed case gets a warning notice pointing at a soft reset — the app never rewinds a published commit. A discarded file's bytes are kept in the repository's quarantine directory until the next agent start, so a discard the user regrets is still recoverable by hand.
 * Refresh is event-driven: the agent watcher emits `sourceControlChanged` for `.git` metadata writes (including linked worktrees' real git dir) and working-tree changes outside the repo's structural ignore globs — a tracked file under those globs still refreshes SOURCE — coalesced agent-side; the UI also refetches on window focus and after every action. No interval polling.
 * Git runs inside the agent that owns the repo root (Windows host agent for host roots, WSL agent for WSL roots). Mutations are serialized per repo (by the physical git dir) and are never killed mid-command; WSL-routed reads are cancellable, host in-process reads are bounded by their Git timeout but are not cancellable. Closing the app drains an in-flight mutation to completion — the agent does not exit while a mutation is still reported active, only at a 450 s emergency bound, and on Windows the whole Git process tree (hooks, credential helpers included) is owned and terminated together rather than left behind.
+
+### Terminal
+
+The TERMINAL rail hosts JL's own PowerShell 7 — profile, environment, and aliases loaded — inside the deck, so `claude`, `codex`, `wsl`, and `wb-code` run without leaving the app. Contract: `docs/design/terminal_design.md`; shipped system: `docs/architecture/terminal_architecture.md`.
+
+* One session group per repo/worktree, shown when that tab is active. The first TERMINAL visit for a repo opens one tab; `+` opens more. Twelve retained terminal tabs is the product bound, including exited and failed tabs; each live tab is a real ConPTY-backed pwsh (`-NoLogo`, never `-NoProfile`).
+* Host-rooted repos start in their folder. A native WSL root is first proved by a bounded non-login control probe in one resolved, explicit distro; pwsh then starts at the user profile directory and immediately runs `wsl.exe -d <distro> --cd '<repo>'`, like the `wb-code` alias, so the tab lands in bash inside the repo and `exit` returns to pwsh. A missing path fails before ConPTY spawn, and a later entry failure exits pwsh instead of leaving the tab in the wrong shell. A WSL root on a `/mnt/<drive>` path starts in its Windows folder instead.
+* Sessions survive rail, repo-tab, handset, and mode switches: a switch parks the session off-screen and never disposes it. Nothing persists across an app restart except which rail is active; TERMINAL re-opens one fresh tab on the next visit.
+* Keys follow Windows Terminal: Ctrl+Shift+C / Ctrl+Shift+V copy and paste, Ctrl+C copies a selection (else interrupts), Ctrl+V pastes, right-click copies the selection or pastes, Shift+Enter sends a newline for Claude Code; everything else reaches the program. Paste reads the clipboard through a Tauri command because WebView2 blocks a page-side clipboard read.
+* An exited tab keeps its scrollback and offers RESTART / CLOSE; a failed open names the reason and offers RETRY / CLOSE. Closing a tab ends the console-attached tree (pwsh, `wsl.exe`, conhost) as Windows Terminal does — console close first, a Job Object only as the bounded escalation — while GUI apps launched from the shell survive. Removing a repo or rebinding the same id to another root closes its old terminals.
+* The Rust registry owns each admitted transaction through opening, running, closing, reaping, and a joined terminal receipt. App exit freezes admission and waits every transaction before the agent supervisor runs, so an in-app `wsl` session never keeps the WSL distro alive at exit (ADR-013 rule 4). Output uses cumulative sent/consumed flow watermarks so a failed or duplicate acknowledgement remains recoverable; explicit close detaches the webview sink before privately draining ConPTY.
+* The terminal is a Tauri IPC surface owned by the Tauri process; neither agent, no shell or clipboard plugin, and no CSP or capability change is involved (ADR-010 clause 7). Colours derive from the deck tokens and the tab accent; the font is the deck's mono font.
 
 ### Workspace previews
 
@@ -399,6 +411,15 @@ UI → Host agent commands:
 * `sourceControlStatus { repoId } -> sourceControlStatusResult`
 * `sourceControlDiff { repoId, path, originalPath?, area } -> sourceControlDiffResult`
 * `sourceControlAction { repoId, action } -> sourceControlActionResult` (action kinds: stage, unstage, discard, commit, push, pull)
+
+Integrated terminal — **Tauri IPC commands in the Tauri process, not agent protocol** (no WebSocket, no agent):
+
+* `terminal_open { sessionId, repoRoot, cols, rows }` + output `Channel` -> `TerminalOpened { sessionId, pid, windowsBuildNumber, startDir, initialCommand }`; the channel carries raw pty bytes and, after the last byte, one `{ kind: "exit", sessionId, code, reason }` frame
+* `terminal_write` (raw request body = bytes; session id in the `tauri-terminal-session` header)
+* `terminal_resize { sessionId, cols, rows }`
+* `terminal_ack { sessionId, consumedTotal }` (idempotent cumulative flow-control watermark)
+* `terminal_close { sessionId }` -> `{ outcome: "exited" | "escalated" | "stillAlive", code? }`
+* `terminal_clipboard_text` -> string (clipboard read in Rust for paste)
 
 ### 9.4 Staging path translation
 

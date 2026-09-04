@@ -1,9 +1,8 @@
 // Path: src-tauri/src/lib/agent/wsl_shutdown.rs
 // Description: Conditional WSL distro teardown to free VM RAM when no interactive session remains
 
-use super::wsl_command_runner::{run_wsl_bash, sanitize_stream_text};
-use super::wsl_process_control_commands::distro_label;
 use super::wsl_process_probe_commands::build_wsl_idle_teardown_probe_command_line;
+use crate::wsl_control::{distro_label, run_wsl_script, sanitize_stream_text};
 use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -36,7 +35,7 @@ pub fn probe_wsl_distro_idle(
     }
 
     let command_line = build_wsl_idle_teardown_probe_command_line(agent_pids);
-    let output = run_wsl_bash(distro, &command_line)?;
+    let output = run_wsl_script(distro, &command_line)?;
     if !output.status.success() {
         let stderr = sanitize_stream_text(&String::from_utf8_lossy(&output.stderr));
         return Err(format!(

@@ -25,6 +25,8 @@ import "./styles/auto_files_telemetry.css";
 import "./styles/auto_files_responsive.css";
 import "./styles/scrollbars.css";
 import "./styles/chrome.css";
+// xterm's base sheet precedes the component sheets so terminal_column.css can override its insets
+import "@xterm/xterm/css/xterm.css";
 import "./styles/bundle_column.css";
 import "./styles/bundle_file_explorer_drop.css";
 import "./styles/bundle_file_explorer_selection.css";

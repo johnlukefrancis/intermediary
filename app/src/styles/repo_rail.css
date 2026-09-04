@@ -34,3 +34,14 @@
   flex: 1;
   min-height: 0;
 }
+
+.repo-rail__content > .terminal-column {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The terminal reaches the panel edge: no body padding, and the column owns its own scrolling */
+.repo-rail[data-rail="terminal"] > .repo-rail__content {
+  padding: 0;
+  overflow: hidden;
+}

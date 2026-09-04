@@ -169,3 +169,30 @@
   color: var(--theme-text-primary);
   text-shadow: 0 0 8px var(--color-accent-glow);
 }
+
+/* ===== TERMINAL SLOTS (warm) ===== */
+/* Same derivation as the dark theme from the warm-shifted tokens; the deck root's own attribute
+   selects them, so they are current in the same commit as the theme switch. */
+.app[data-theme-mode="warm"] {
+  --terminal-bg: var(--theme-editor-bg);
+  --terminal-fg: var(--theme-editor-text);
+  --terminal-cursor: var(--color-accent);
+  --terminal-cursor-accent: var(--theme-border-subtle);
+  --terminal-selection: var(--color-accent-glow);
+  --terminal-ansi-black: var(--theme-border-subtle);
+  --terminal-ansi-red: var(--theme-activity-hot);
+  --terminal-ansi-green: var(--theme-activity-low);
+  --terminal-ansi-yellow: var(--theme-editor-code);
+  --terminal-ansi-blue: var(--theme-editor-link);
+  --terminal-ansi-magenta: var(--color-accent);
+  --terminal-ansi-cyan: var(--theme-editor-quote);
+  --terminal-ansi-white: var(--theme-text-secondary);
+  --terminal-ansi-bright-black: var(--theme-text-muted);
+  --terminal-ansi-bright-red: var(--theme-error);
+  --terminal-ansi-bright-green: var(--theme-success);
+  --terminal-ansi-bright-yellow: var(--theme-warning);
+  --terminal-ansi-bright-blue: var(--theme-info);
+  --terminal-ansi-bright-magenta: var(--color-accent);
+  --terminal-ansi-bright-cyan: var(--theme-info);
+  --terminal-ansi-bright-white: var(--theme-text-primary);
+}

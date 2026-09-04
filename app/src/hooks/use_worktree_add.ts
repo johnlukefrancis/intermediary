@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-import type { SingleTab } from "../app.js";
+import type { SingleTab } from "../lib/tabs/tab_items.js";
 import { useConfig } from "./use_config.js";
 import {
   extractFolderName,

@@ -1,0 +1,49 @@
+/*
+ * Path: app/src/styles/deck_splitter.css
+ * Description: The drag divider between the left deck panel and the rail: occupies the column gap, lights up on hover and while dragging
+ */
+
+/* The splitter is the gap: the grids set column-gap to 0 and give it the old gap's width */
+.deck-splitter {
+  position: relative;
+  width: var(--space-4);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.deck-splitter__grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  border-radius: 1px;
+  background: var(--color-border);
+  transition:
+    background-color var(--duration-normal) var(--ease-out),
+    height var(--duration-normal) var(--ease-out),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.deck-splitter:hover .deck-splitter__grip,
+.deck-splitter:focus-visible .deck-splitter__grip,
+.deck-splitter[data-dragging] .deck-splitter__grip {
+  height: 72px;
+  background: var(--color-accent);
+  box-shadow: 0 0 8px 0 var(--color-accent-glow);
+}
+
+.deck-splitter:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* A drag must not let the panels beneath select text or fight the pointer */
+.three-column:has(.deck-splitter[data-dragging]),
+.text-workspace-layout:has(.deck-splitter[data-dragging]) {
+  user-select: none;
+  cursor: col-resize;
+}

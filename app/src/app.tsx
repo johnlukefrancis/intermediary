@@ -13,68 +13,14 @@ import { useModeWindowSnap } from "./hooks/use_mode_window_snap.js";
 import { useModeWindowBoundsPersistence } from "./hooks/use_mode_window_bounds_persistence.js";
 import { useMotionGovernor } from "./hooks/use_motion_governor.js";
 import { useStartupReady } from "./hooks/use_startup_ready.js";
-import type { RepoConfig, RepoRoot } from "./shared/config.js";
+import { useTerminalLifecycle } from "./hooks/terminal/use_terminal_lifecycle.js";
+import { deriveTabsFromRepos } from "./lib/tabs/tab_items.js";
 import {
   hexToAccentCssVars,
   DEFAULT_ACCENT_HEX,
 } from "./lib/theme/accent_utils.js";
 import { resolveTextureUrl } from "./lib/theme/texture_catalog.js";
-
-/** A standalone repo tab */
-export interface SingleTab {
-  type: "single";
-  repoId: string;
-  label: string;
-  root: RepoRoot;
-}
-
-/** A grouped tab containing multiple repos with a dropdown */
-export interface GroupTab {
-  type: "group";
-  groupId: string;
-  groupLabel: string;
-  repos: Array<{ repoId: string; label: string; root: RepoRoot }>;
-}
-
-export type TabItem = SingleTab | GroupTab;
-
-/** Derive tabs from repos, grouping by groupId */
-function deriveTabsFromRepos(repos: RepoConfig[]): TabItem[] {
-  const groupMap = new Map<string, GroupTab>();
-  const tabs: TabItem[] = [];
-
-  for (const repo of repos) {
-    if (repo.groupId) {
-      // Grouped repo - groupLabel is optional, fallback to groupId
-      let group = groupMap.get(repo.groupId);
-      if (!group) {
-        group = {
-          type: "group",
-          groupId: repo.groupId,
-          groupLabel: repo.groupLabel ?? repo.groupId,
-          repos: [],
-        };
-        groupMap.set(repo.groupId, group);
-        tabs.push(group);
-      }
-      // Update groupLabel if this repo has one and current label is the fallback
-      if (repo.groupLabel && group.groupLabel === group.groupId) {
-        group.groupLabel = repo.groupLabel;
-      }
-      group.repos.push({ repoId: repo.repoId, label: repo.label, root: repo.root });
-    } else {
-      // Standalone repo
-      tabs.push({
-        type: "single",
-        repoId: repo.repoId,
-        label: repo.label,
-        root: repo.root,
-      });
-    }
-  }
-
-  return tabs;
-}
+import type { RepoRoot } from "./shared/config.js";
 
 export function App(): React.JSX.Element {
   const {
@@ -128,11 +74,24 @@ export function App(): React.JSX.Element {
   // Derive tabs with grouping from config repos
   const tabs = useMemo(() => deriveTabsFromRepos(config.repos), [config.repos]);
 
-  // Get valid repoIds for validation
-  const validRepoIds = useMemo(
-    () => new Set(config.repos.map((r) => r.repoId)),
+  // Project both repo membership and root identity to the terminal lifecycle. A reused repoId with
+  // a different root must close its old terminal group before any tab can be restarted.
+  const configuredRepoRoots = useMemo(
+    (): ReadonlyMap<string, RepoRoot> =>
+      new Map(config.repos.map((repo) => [repo.repoId, repo.root] as const)),
     [config.repos]
   );
+
+  // Get valid repoIds for validation
+  const validRepoIds = useMemo(
+    () => new Set(configuredRepoRoots.keys()),
+    [configuredRepoRoots]
+  );
+
+  // Terminal groups follow the configured repos (a removed repo closes its shells) and cursor
+  // blink follows the motion governor. `isLoaded` only ever flips to true, and no session can
+  // exist before a repo tab renders, so the pre-load empty set closes nothing.
+  useTerminalLifecycle(configuredRepoRoots, !motionPaused);
 
   // Determine initial/default tab (first repo, or null if none)
   const defaultRepoId = config.repos[0]?.repoId ?? null;

@@ -3,10 +3,12 @@
  * Description: Shared workspace layout and editor/viewer styling for notes, text, and images
  */
 
+/* The middle column is the drag divider (see columns.css); the rail keeps its persisted share */
 .text-workspace-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(300px, 1.1fr);
-  gap: var(--space-4);
+  grid-template-columns:
+    minmax(0, 1fr) var(--space-4) clamp(300px, var(--rail-width, 35%), 70%);
+  column-gap: 0;
   flex: 1;
   min-height: 0;
 }
@@ -226,5 +228,9 @@
     grid-template-columns: 1fr;
     gap: var(--space-3);
     overflow-y: auto;
+  }
+
+  .text-workspace-layout > .deck-splitter {
+    display: none;
   }
 }

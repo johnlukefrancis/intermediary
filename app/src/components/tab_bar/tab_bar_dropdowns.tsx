@@ -2,7 +2,7 @@
 // Description: Dropdown panels for single-repo and grouped-repo tab-bar actions
 
 import type React from "react";
-import type { GroupTab, SingleTab } from "../../app.js";
+import type { GroupTab, SingleTab } from "../../lib/tabs/tab_items.js";
 import { GroupRemoveButton } from "../group_remove_button.js";
 import { TabRemoveButton } from "../tab_remove_button.js";
 

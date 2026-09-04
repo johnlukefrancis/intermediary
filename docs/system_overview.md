@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-09-03
+Updated on: 2026-09-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -74,10 +74,12 @@ Intermediary uses a **host-routed architecture**:
     unusable `INTERMEDIARY_LOG_DIR` emits a diagnostic and falls back to app-local storage before
     startup continues. Explicit pre-build/setup/build-complete stage markers preserve the payload,
     source location, process id, and reached lifecycle stage of pre-setup callback failures
-  - Two-column layout per repo: Auto Files and a right rail that switches between Zip Bundles and Source
-    Control via a segmented icon rocker (archive-box / git-branch glyphs, SOURCE count beside its glyph),
-    persisted globally as `uiState.activeRail`; handset mode exposes the same rocker with a stacked-
-    documents FILES cell added
+  - Two-column layout per repo: Auto Files and a right rail that switches between Zip Bundles, Source
+    Control, and the integrated Terminal via a segmented icon rocker (archive-box / git-branch / console
+    glyphs, SOURCE count beside its glyph), persisted globally as `uiState.activeRail` (mirrored in the
+    Rust config struct so the choice survives a save); a drag divider between the columns sets the
+    rail's share of the deck width (`uiState.railWidthPercent`, 20-70, default 35, mirrored in Rust);
+    handset mode exposes the same rocker with a stacked-documents FILES cell added
   - Source Control column: branch/upstream status line with refresh, pull, and push; commit box (Ctrl+Enter); MERGE CONFLICTS (first, error tone, with a rail alert, a banner row, and a COMMIT gate while unmerged paths exist) / STAGED CHANGES / CHANGES sections with per-row and per-section stage/unstage, per-file discard behind a confirm, and a read-only diff kind in the shared workspace. A changed image opens as a side-by-side image diff instead of `BINARY FILE`: two panes each labelled with the plain word plus the Git term (`PREVIOUS · HEAD` / `CURRENT · INDEX` for staged, `PREVIOUS · INDEX` / `CURRENT · WORKTREE` for unstaged, `NEW` / `DELETED` slots for one-sided changes, `OURS` / `THEIRS` for a conflict), each pane footer showing dimensions and bytes, transparency reading on a checkerboard behind each image; non-image binaries keep `BINARY FILE`. Git runs in the agent that owns the repo root; the UI never mutates a repo directly
   - Responsive runtime mode switching between standard and handset layouts based on window geometry (hysteresis: `>=980px` standard, `<=860px` handset; maximized forces standard)
   - Global window-surface opacity control (0-100, default 100) for terminal-style transparency
@@ -112,6 +114,20 @@ Intermediary uses a **host-routed architecture**:
   - “WSL agent offline” banner with port diagnostics when the agent is unreachable
   - Tabs are driven by configured repos (repoId + label), no project-specific UI
 
+### Integrated terminal (Tauri process)
+
+- **Stack:** Tauri (Rust, an owned Windows ConPTY/`CreateProcessW` seam) + xterm in the webview;
+  `portable-pty` remains only behind the Unix lifecycle-test route
+- **Purpose:** JL's own PowerShell 7 — profile, environment, aliases — as the third rail section, so `claude`, `codex`, `wsl`, and `wb-code` run inside the app
+- **Key features:**
+  - Every admitted transaction (Job Object, pseudoconsole, pwsh child, one reader and one waiter thread, detachable raw-byte IPC sink) is owned by `src-tauri/src/lib/terminal/` from Opening through Running, Closing, Reaping, and a joined Terminal receipt. The terminal is **Tauri IPC only**: six app commands (`terminal_open`, `terminal_write`, `terminal_resize`, `terminal_ack`, `terminal_close`, `terminal_clipboard_text`) and one `Channel` per session; neither the host agent nor the WSL agent is involved, and no shell plugin, clipboard plugin, CSP change, or capability change was added (ADR-010 clause 7)
+  - Host-rooted repos start pwsh in their folder. Native WSL roots are validated before ConPTY spawn through the shared bounded non-login stdin-script control boundary; the actual distro is pinned and both the exact path and explicit distro feed the later `wsl.exe -d <distro> --cd '<repo>'` entry. Missing roots fail without an interactive process or a fallback prompt
+  - Terminal groups live outside React: rail, repo-tab, handset, and mode switches park the xterm element off-screen and never dispose it; nothing persists across restarts. All retained xterm/WebGL tabs—including exited and failed tabs—count toward twelve, and every non-terminal Rust transaction holds one of the twelve backend slots until final receipt
+  - Output is credit-gated (512 KiB high / 128 KiB low unacked) against cumulative sent/consumed watermarks. The frontend confirms only successful acknowledgements and coalesces retries; explicit closure atomically detaches the webview sink before releasing the gate and privately draining ConPTY
+  - The Windows process is born inside its Job Object by applying `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` and `PROC_THREAD_ATTRIBUTE_JOB_LIST` in the same creation call. Close remains console-first like Windows Terminal (drop the pseudoconsole so attached clients get `CTRL_CLOSE`), a bounded wait, then the Job Object as escalation; GUI apps launched from the shell survive an ordinary tab close
+  - At app exit admission freezes and every opening, running, closing, or reaping transaction reaches its joined receipt **before** the agent supervisor's exit routine, so an app-owned `wsl.exe` never counts as an interactive session in the WSL idle probe (ADR-013 rule 4)
+  - Colours derive from the deck tokens (`--terminal-*` slots per theme) and the tab accent; the clipboard is read in Rust for paste because WebView2 blocks the page-side read. Contract: `docs/architecture/terminal_architecture.md`
+
 ### Agent Supervisor (Host)
 
 - **Stack:** Tauri (Rust)
@@ -130,7 +146,7 @@ Intermediary uses a **host-routed architecture**:
   - Reconciles tracked host/WSL child processes before spawn/replace/stop, and stops tracked children on app exit to enforce a no-orphan-process boundary for supervisor-owned processes
   - Reclaims the reserved WSL backend port from any confirmed Intermediary `im_agent` — the owning PID(s) are found by port listener (via `ss` inside the distro) and verified by `/proc/<pid>/comm`, executable basename, or `INTERMEDIARY_WSL_WS_TOKEN` in the process environment — so a stale agent from a prior install or a closed dev task is reclaimed even when it was launched from a different path or token; a genuinely foreign (non-Intermediary) listener is never terminated and still errors in `mode=auto`. `external` mode remains user-managed
   - **Restart Agent** forces a real teardown: it bypasses the "already running" short-circuit and always reclaims the port and respawns the backend, even when the backend is healthy (no more silent no-op)
-  - On app exit, stops the agents by port, then frees the WSL VM RAM only when the distro is otherwise idle — no interactive `pts/*` session is open (console gettys on `hvc0`/`tty1` and headless services are ignored) — by running `wsl --terminate <distro>` (targeted to the one distro, never `wsl --shutdown`); when any interactive WSL shell/tab is open the distro is left running, and in `external` mode nothing is terminated
+  - On app exit — after the integrated terminal has closed and waited its own sessions — stops the agents by port, then frees the WSL VM RAM only when the distro is otherwise idle — no interactive `pts/*` session is open (console gettys on `hvc0`/`tty1` and headless services are ignored) — by running `wsl --terminate <distro>` (targeted to the one distro, never `wsl --shutdown`); when any interactive WSL shell/tab is open the distro is left running, and in `external` mode nothing is terminated
 
 ### Host Agent
 
@@ -257,7 +273,7 @@ User preferences are persisted to `<app_local_data>/config.json`:
 Contents:
 - **App config:** Agent host/port, auto-stage global setting, repo definitions
 - **Classifier config:** Global classification excludes (parallel to bundle excludes)
-- **UI state:** Last active repo (by repoId) + last active worktree per group + persisted window opacity and texture intensity
+- **UI state:** Last active repo (by repoId) + last active worktree per group + active rail section + rail width percent + persisted window opacity and texture intensity
 - **Bundle selections:** Per-repo, per-preset root-file toggle, top-level directory selections, nested subdirectory exclusions, and explicit per-file exclusions
 
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
@@ -297,10 +313,11 @@ intermediary/
 │       └── tabs/           # Per-repo tab components
 ├── src-tauri/              # Tauri backend (Rust)
 │   └── src/lib/
-│       ├── commands/       # Tauri commands (paths, config)
+│       ├── commands/       # Tauri commands (paths, config, terminal)
 │       ├── config/         # Config persistence (types, io)
 │       ├── obs/            # Observability (logging)
-│       └── paths/          # Path resolution, WSL conversion
+│       ├── paths/          # Path resolution, WSL conversion
+│       └── terminal/       # Integrated terminal: pty sessions, registry, close routine (Tauri IPC, no agent)
 ├── crates/                 # Rust workspace crates
 │   ├── im_agent/           # WSL agent (Rust)
 │   ├── im_host_agent/      # Host routing agent (Rust)
@@ -332,3 +349,4 @@ intermediary/
 - [docs/prd.md](prd.md) — Full product requirements
 - [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) — Bundle v2 and captured Git evidence contract
 - [docs/architecture/source_control_architecture.md](architecture/source_control_architecture.md) — Source Control ownership, refresh signal, cancellation, and timeout contract
+- [docs/architecture/terminal_architecture.md](architecture/terminal_architecture.md) — Integrated terminal ownership, open/close/app-exit ordering, invariants, and failure modes

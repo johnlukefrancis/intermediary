@@ -39,6 +39,12 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - The webview never reads, writes, or navigates to those paths; it forwards them to the agent that owns the target repository root, which validates, translates, and copies them.
 - Tauri widens a runtime filesystem scope for each dropped path; no `fs` plugin or asset protocol is registered, so that scope is inert. Registering an `fs` plugin or asset protocol later must revisit this decision.
 
+7) **Integrated terminal is a Tauri IPC surface** (2026-09-04)
+- Pseudoconsole sessions (Job Object, ConPTY, the pwsh child, its reader and waiter threads) are owned by the Tauri process (`src-tauri/src/lib/terminal/`) and reachable only through app commands over Tauri IPC — `terminal_open`, `terminal_write`, `terminal_resize`, `terminal_ack`, `terminal_close`, `terminal_clipboard_text` — with output on a per-session raw-byte `Channel`. Neither agent socket carries terminal bytes.
+- No shell plugin (`tauri-plugin-shell` has no PTY) and no clipboard plugin (`tauri-plugin-clipboard-manager` would widen capabilities). No CSP change and no capability change: the raw channel's large-frame path fetches from `http://ipc.localhost`, which `connect-src` already allows.
+- The clipboard is read in Rust (`CF_UNICODETEXT`) for paste, because WebView2 blocks `navigator.clipboard.readText` without a permission prompt the app cannot grant from its window config; copy keeps using `navigator.clipboard.writeText`.
+- The terminal is user-driven access by design: it is JL's own shell with JL's profile and environment, and whatever the user runs there is the user's action, exactly as in Windows Terminal. The app injects nothing but the WSL-root entry (`wsl.exe [-d <distro>] --cd '<repo>'`) and the `TERM_PROGRAM` / `COLORTERM` identity; it never runs commands of its own through a session.
+
 ---
 
 ## Invariants
@@ -48,6 +54,7 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - I10.4: Asset protocol scope is minimal and documented.
 - I10.5: Local WebSocket IPC handshakes are gated by app-scoped auth and do not accept unauthenticated drive-by connections.
 - I10.6: Dropped OS paths cross into the webview as strings only; no webview-side file access follows from a drop, and no filesystem plugin consumes the drop scope.
+- I10.7: Terminal sessions are owned by the Tauri process and reached only through the six app commands and their raw-byte channel; no shell or clipboard plugin, CSP entry, or capability exists for them, and the app injects nothing into a session but the WSL-root entry.
 
 ---
 

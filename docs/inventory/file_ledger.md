@@ -40,9 +40,10 @@ app/src/components/image_diff_workspace.tsx - Side-by-side before/after viewer f
 app/src/components/image_workspace.tsx - Fit-to-panel image preview surface for shared repo workspaces
 app/src/components/layout/deck_section_icons.tsx - Inline 24x24 stroke glyphs for the deck section switcher (stroke supplied by CSS)
 app/src/components/layout/deck_section_switcher.tsx - Segmented icon-rocker tablist switching deck sections; the host renders the matching tabpanel
-app/src/components/layout/handset_deck.tsx - Handset deck layout switching between Auto files, zip bundles, and source control
-app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim icon-rocker header over the active rail body
-app/src/components/layout/three_column.tsx - The one desktop shell: Auto Files or the shared workspace on the left, the rail on the right
+app/src/components/layout/deck_splitter.tsx - Drag divider between the deck's left panel and the rail; previews the rail width while dragging and commits it on rel...
+app/src/components/layout/handset_deck.tsx - Handset deck layout switching between Auto files, zip bundles, source control, and the terminal
+app/src/components/layout/repo_rail.tsx - Right-rail instrument panel: slim icon-rocker header over the active rail body (zips | source | terminal)
+app/src/components/layout/three_column.tsx - The one desktop shell: Auto Files or the shared workspace on the left, a drag divider, the rail on the right
 app/src/components/layout/workspace_layout.tsx - The shared workspace panel (title bar + content); handset wraps it as the whole deck
 app/src/components/options_overlay.tsx - Full-screen transparent overlay with options panel for app settings
 app/src/components/options/agent_section.tsx - Options panel controls for host + WSL agent lifecycle
@@ -75,6 +76,10 @@ app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown suppo
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
+app/src/components/terminal/terminal_column.tsx - TERMINAL rail body for one repo: tab strip over the imperative xterm host, plus the starting/exited/failed/empty notices
+app/src/components/terminal/terminal_copy.ts - Console-prompt copy, button labels, and tooltips for the terminal column
+app/src/components/terminal/terminal_exit_notice.tsx - Console-prompt notice floating over a tab that is starting, has exited, or failed to start
+app/src/components/terminal/terminal_tab_strip.tsx - Tablist of one repo's terminal tabs (PWSH n, x per tab, + at the end); arrows move focus, click or Enter activates
 app/src/components/text_workspace_semantics.tsx - Theme-aware semantic text layer for the workspace editor
 app/src/components/text_workspace.tsx - Shared textarea surface for notes and scratch file viewing
 app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
@@ -109,11 +114,14 @@ app/src/hooks/source_control/source_control_refresh.ts - Status refresh timing o
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
 app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
 app/src/hooks/source_control/use_tree_decorations.tsx - Context delivering the built tree decorations to the recursive bundle explorer rows
+app/src/hooks/terminal/use_terminal_group.ts - Subscribes a component to one repo's terminal group snapshot from the module-level registry
+app/src/hooks/terminal/use_terminal_host.ts - Adopts the active terminal tab into a host element for its mount, parks on cleanup, and keeps it fitted, themed and f...
+app/src/hooks/terminal/use_terminal_lifecycle.ts - App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every...
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
-app/src/hooks/use_config_actions_rail.ts - Config action for the persisted right-rail deck section (zips | source)
+app/src/hooks/use_config_actions_rail.ts - Config actions for the persisted right rail: the deck section (zips | source | terminal) and the rail width
 app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
@@ -155,6 +163,18 @@ app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
 app/src/lib/source_control/conflict_count.ts - Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root
 app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
+app/src/lib/tabs/tab_items.ts - Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs
+app/src/lib/terminal/terminal_flow.ts - Per-session monotonic output credit acknowledgements: coalesced after xterm parses bytes, or on receipt while the pag...
+app/src/lib/terminal/terminal_ipc.ts - Typed Tauri invoke wrappers and the output-channel seam for terminal sessions (mirrors src-tauri terminal/frames.rs)
+app/src/lib/terminal/terminal_keys.ts - Windows Terminal key and mouse policy for one xterm: copy/paste chords, Ctrl+C with a selection, right-click, Shift+E...
+app/src/lib/terminal/terminal_output_scan.ts - Tells whether a pty output chunk paints anything (text or a line break) once escape sequences are skipped
+app/src/lib/terminal/terminal_parking.ts - Off-screen parking host for terminal elements that are alive but not shown; sized so xterm open() and fit() still mea...
+app/src/lib/terminal/terminal_registry.ts - Module-level owner of every terminal session grouped per repo: immutable snapshots for React, open/close/restart, ado...
+app/src/lib/terminal/terminal_renderer.ts - WebGL renderer policy: attached once per session after its first adopt and kept while parked; DOM renderer on context...
+app/src/lib/terminal/terminal_session_io.ts - One pty lifetime for a terminal tab: open handshake, queued and serialised input, output pump with credit acks, debou...
+app/src/lib/terminal/terminal_session.ts - One terminal tab living outside React: the xterm instance and wrapper element, renderer adopt/park, fit, pty lifecycl...
+app/src/lib/terminal/terminal_theme.ts - Reads the deck's --terminal-* and --font-mono tokens into xterm theme and options; an empty token leaves xterm's defa...
+app/src/lib/terminal/terminal_types.ts - Frontend terminal session model: tab/group snapshots and the registry API the rail consumes
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
 app/src/lib/window/effective_ui_mode_policy.ts - Resolves runtime effective UI mode from preferred mode and window state
@@ -202,10 +222,11 @@ app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and fil
 app/src/styles/bundle_list.css - Bundle list rows, ready pulse, and metadata styles
 app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and shared file explorer controls
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
-app/src/styles/columns.css - Standard deck grid layout with Auto files and Zips
+app/src/styles/columns.css - Standard deck grid layout: Auto files, the drag divider, and the rail at its persisted width
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
 app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
 app/src/styles/deck_section_switcher.css - Segmented icon-rocker deck section tablist shared by the handset deck and the right rail
+app/src/styles/deck_splitter.css - The drag divider between the left deck panel and the rail: occupies the column gap, lights up on hover and while drag...
 app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the workspace editor shell
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
@@ -229,6 +250,7 @@ app/src/styles/source_control.css - Source Control column: status line, warnings
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
+app/src/styles/terminal_column.css - Terminal rail body: tab strip, xterm host and session element, console-prompt notices
 app/src/styles/text_workspace_semantics.css - Semantic Markdown rendering layer for workspace text editors
 app/src/styles/text_workspace.css - Shared workspace layout and editor/viewer styling for notes, text, and images
 app/src/styles/theme_accents.css - Default accent color variables (runtime values applied via inline styles in app.tsx)
@@ -236,7 +258,8 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
-app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files, the right rail (zips | source), and the workspace
+app/src/tabs/repo_tab_rail.tsx - Composes the ZIPS, SOURCE and TERMINAL rail bodies for one repo tab; RepoTab hands them to the rail or the handset deck
+app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files, the right rail (zips | source | terminal), and the workspace
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
 app/src/types/app_paths.ts - TypeScript interface matching Rust AppPaths struct
 app/src/vite_env.d.ts - Vite client type declarations
@@ -421,6 +444,7 @@ crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
 crates/im_bundle/src/omission.rs - Why a changed repository path fell outside the bundle selection
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
+crates/im_bundle/src/process_job_termination.rs - Bounded forced termination and observation for a Windows Job Object
 crates/im_bundle/src/process_job.rs - Windows Job Object ownership of a spawned process tree, shared by the Git runner and the app's agent supervisor
 crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
@@ -525,8 +549,7 @@ src-tauri/src/lib/agent/wsl_agent_discovery.rs - In-distro discovery of the Inte
 src-tauri/src/lib/agent/wsl_agent_termination_channel.rs - The live in-distro channel an emergency WSL stop signals through
 src-tauri/src/lib/agent/wsl_agent_termination_tests.rs - Tests for the WSL emergency stop's drain envelope and process-tree escalation
 src-tauri/src/lib/agent/wsl_agent_termination.rs - The supervisor's WSL emergency stop - TERM, the agent's own drain, then its process trees
-src-tauri/src/lib/agent/wsl_command_runner.rs - Bounded WSL command execution helpers for agent process control
-src-tauri/src/lib/agent/wsl_process_control_commands.rs - Command-line builders and quoting helpers for launching and signalling the WSL agent
+src-tauri/src/lib/agent/wsl_process_control_commands.rs - Login-shell command-line builders and quoting for launching and signalling the WSL agent
 src-tauri/src/lib/agent/wsl_process_control.rs - WSL agent launch target resolution and spawning
 src-tauri/src/lib/agent/wsl_process_probe_commands.rs - In-distro probe scripts that report Intermediary agent pids and distro idleness
 src-tauri/src/lib/agent/wsl_process_tree_commands.rs - The in-distro script that kills a WSL agent's descendant process groups, then the agent
@@ -544,6 +567,7 @@ src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and p
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches
 src-tauri/src/lib/commands/startup_window_bounds.rs - Resolve and apply persisted launch bounds for startup windows
 src-tauri/src/lib/commands/startup.rs - Startup readiness command for splashscreen -> main transition
+src-tauri/src/lib/commands/terminal.rs - Tauri commands of the integrated terminal: open, raw-body write, resize, ack, close and the Rust-side clipboard read
 src-tauri/src/lib/commands/wsl_distro.rs - Resolve WSL distro override from persisted app config for command-time path conversion
 src-tauri/src/lib/config/generated_code_globs.rs - Generated default code globs for Rust-side persisted config migration. Generated by: scripts/classification/generate_...
 src-tauri/src/lib/config/io.rs - Config file I/O with atomic writes and error handling
@@ -564,4 +588,31 @@ src-tauri/src/lib/paths/app_paths.rs - Application path resolution logic
 src-tauri/src/lib/paths/mod.rs - Path resolution module exports
 src-tauri/src/lib/paths/repo_root_resolver.rs - Path-native repo root resolver for user-selected repo paths
 src-tauri/src/lib/paths/wsl_convert.rs - Windows <-> WSL path conversion utilities
+src-tauri/src/lib/terminal/clipboard.rs - Reads CF_UNICODETEXT from the Windows clipboard for terminal paste, because WebView2 cannot read the clipboard withou...
+src-tauri/src/lib/terminal/exit_cell.rs - Set-once exit record of a session's child, with bounded waits for the threads that need it
+src-tauri/src/lib/terminal/flow_gate.rs - Cumulative sent/consumed flow watermarks bounding terminal output publication
+src-tauri/src/lib/terminal/frames.rs - Wire shapes shared with the frontend terminal client: open request/result, exit frame, close reasons and outcomes
+src-tauri/src/lib/terminal/mod.rs - Integrated terminal backend: ConPTY-backed pwsh sessions owned by the Tauri process (module tree)
+src-tauri/src/lib/terminal/output_sink.rs - Non-blocking detachable owner of a terminal session's bounded webview output channel
+src-tauri/src/lib/terminal/reader_thread.rs - Retained terminal reader that drains to EOF and reports its final bounded-output result
+src-tauri/src/lib/terminal/reaper.rs - Short external terminal reaper joining process, PTY-close, reader, and waiter ownership
+src-tauri/src/lib/terminal/registry_shutdown.rs - Navigation and app-exit drains over atomically captured terminal transactions
+src-tauri/src/lib/terminal/registry_tests.rs - Atomic admission and Opening-transaction regression tests for TerminalRegistry
+src-tauri/src/lib/terminal/registry.rs - Atomic admission and lifecycle registry retaining every terminal transaction through its joined receipt
+src-tauri/src/lib/terminal/session_close.rs - The one close routine of a session: console-first pty drop, bounded wait, Job Object escalation, last-resort kill
+src-tauri/src/lib/terminal/session_open.rs - Opens a pwsh session for a repo root: validation, shell and start-dir resolution, spawn, and the open/open-failed log...
+src-tauri/src/lib/terminal/session_spawn_cleanup.rs - Complete process-tree and PTY cleanup for terminal opens that fail after spawn
+src-tauri/src/lib/terminal/session_spawn_tests.rs - Lifecycle oracle of a spawned session on the Linux toolchain: bytes then exit frame, and the console-first close
+src-tauri/src/lib/terminal/session_spawn.rs - Resource-symmetric terminal spawn into an already-admitted transaction
+src-tauri/src/lib/terminal/session.rs - One live terminal session: pty ends, child killer and Job Object, flow gate, exit record, phase and output channel
+src-tauri/src/lib/terminal/shell.rs - Profile-faithful PowerShell command and exact inherited environment for terminal spawn
+src-tauri/src/lib/terminal/start_dir.rs - Maps a repo root to the directory pwsh starts in and the WSL entry command it runs for a native WSL root
+src-tauri/src/lib/terminal/transaction.rs - One admitted terminal transaction from Opening through joined Terminal receipt
+src-tauri/src/lib/terminal/waiter_thread.rs - Retained child waiter that records exit and requests the single external reaper
+src-tauri/src/lib/terminal/windows_build.rs - Reads the host's CurrentBuildNumber so xterm can enable ConPTY-aware reflow; None wherever it cannot be known
+src-tauri/src/lib/terminal/windows_command_line.rs - Exact UTF-16 command-line and environment encoding for the Windows terminal child
+src-tauri/src/lib/terminal/windows_process.rs - CreateProcessW owner applying ConPTY and Job-list attributes in one exclusive creation call
+src-tauri/src/lib/terminal/windows_pty.rs - Windows ConPTY pipe and master owner feeding the exclusive at-creation process seam
+src-tauri/src/lib/terminal/worker_start.rs - Start barrier ensuring terminal worker handles are retained before either worker runs
+src-tauri/src/lib/wsl_control.rs - Shared bounded non-login WSL stdin-script boundary and native-root validation
 ```

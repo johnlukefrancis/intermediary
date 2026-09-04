@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-09-03
+Updated on: 2026-09-04
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -32,6 +32,22 @@ Depends on: ADR-000, ADR-007
 
 ## P1 — Major functionality broken
 
+- 2026-09-04: The app can sit at `AGENT OFFLINE` for minutes with no in-app recovery ("the #1 failure
+  point"). Observed in one afternoon, two links of the chain: (a) after the app's parent process died
+  during a D:-full incident, its `im_host_agent.exe` (pid 126020, spawned 05:53) survived holding port
+  3141 (the supervisor's Job Object carries no kill-on-close by policy); every relaunch and **Restart
+  Agent** then reported `Host agent exited early: exit code 1 … Failed to bind … (os error 10048)` instead
+  of retiring the orphan, although its executable path was the app-local one the identity check names.
+  A manual `Stop-Process` on that pid recovered it. The remediation path shells out to `powershell.exe`
+  to list and stop processes by exact path; the run log of the failing launch was overwritten by the
+  next launch, so which step returned "no match" is not proven. (b) With WSL under load (load average
+  9.8, two foreign `rustc` at 100 %), the WSL agent, which runs from the `/mnt/c` app-local path over 9P
+  and hashes its own binary at startup, missed the 30 s readiness bound; the supervisor killed it
+  (`exit code: 15`) and retried; the retry became ready in 23 s. While retrying, the banner shows the
+  raw agent-log tail rather than a retry state, so it reads as dead. Follow-up owner: a supervisor
+  hardening pass (host-side port-anchored reclamation mirroring ADR-013 rule 1 without a PowerShell
+  hop, a readiness bound and startup path that tolerate a loaded WSL, and a banner that says it is
+  retrying).
 - 2026-07-15: A Windows host-native `wb-lab` context bundle selected 1,104 changed paths but
   emitted a zero-byte patch with four Git command failures. The selected pathspec arguments were
   within Intermediary's 4,096-path/256 KiB product bound but exceeded the smaller Windows process
@@ -58,6 +74,12 @@ Depends on: ADR-000, ADR-007
 ## P3 — Minor issues
 
 - 2026-02-11: After sleep/wake, status can briefly show `Reconnecting (...)` while the client reconnects and rehydrates repo state. This is expected during recovery, but can feel noisy on frequent wake cycles.
+- 2026-09-04: The integrated terminal's exclusive Windows ConPTY adapter has a native test that creates
+  a real pseudoconsole child through the production `CreateProcessW` route, proves immediate Job
+  membership, terminates and observes the Job empty, and joins PTY drain. The installer build compiles
+  the same branch. Profile/TUI rendering, console-close feel, the `CF_UNICODETEXT` clipboard read, and the
+  `CurrentBuildNumber` registry read remain installed-app product witnesses rather than automated Windows
+  assertions (`docs/commands/verify_terminal.md`).
 
 ---
 

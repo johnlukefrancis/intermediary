@@ -147,8 +147,17 @@ if (-not (Test-Path $env:INTERMEDIARY_WIN_PATH)) {
 
 Set-Location $env:INTERMEDIARY_WIN_PATH
 
-if (-not (Test-Path "node_modules")) {
-  Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("install")
+# The WSL sync excludes node_modules, so the mirror's install goes stale whenever the lockfile
+# changes in WSL. Install when node_modules is missing or older than the synced pnpm-lock.yaml.
+$modulesManifest = Join-Path "node_modules" ".modules.yaml"
+$needsInstall = -not (Test-Path "node_modules") -or -not (Test-Path $modulesManifest)
+if (-not $needsInstall -and (Test-Path "pnpm-lock.yaml")) {
+  $lockWrite = (Get-Item "pnpm-lock.yaml").LastWriteTimeUtc
+  $modulesWrite = (Get-Item $modulesManifest).LastWriteTimeUtc
+  $needsInstall = $lockWrite -gt $modulesWrite
+}
+if ($needsInstall) {
+  Invoke-NativeCommand -FilePath "pnpm" -ArgumentList @("install", "--frozen-lockfile")
 }
 
 if (-not $isInstallerMode) {

@@ -1,5 +1,5 @@
 // Path: app/src/components/layout/repo_rail.tsx
-// Description: Right-rail instrument panel: slim icon-rocker header over the active rail body
+// Description: Right-rail instrument panel: slim icon-rocker header over the active rail body (zips | source | terminal)
 
 import type React from "react";
 import type { ActiveRail } from "../../shared/config.js";
@@ -8,12 +8,20 @@ import {
   deckSectionTabId,
   type DeckSectionOption,
 } from "./deck_section_switcher.js";
-import { ZipsIcon, SourceIcon } from "./deck_section_icons.js";
+import { ZipsIcon, SourceIcon, TerminalIcon } from "./deck_section_icons.js";
 import { conflictAlertTitle } from "../source_control/source_control_copy.js";
 import "../../styles/repo_rail.css";
 
 const RAIL_PANEL_ID = "repo-rail-panel";
 const RAIL_ID_PREFIX = "repo-rail";
+
+/** One body per rail section; the record keeps the union exhaustive when a section is added */
+export type RailBodies = Readonly<Record<ActiveRail, React.ReactNode>>;
+
+/** The body the standard rail and the handset deck render for the active section */
+export function railBody(rail: ActiveRail, bodies: RailBodies): React.ReactNode {
+  return bodies[rail];
+}
 
 /** Rail sections shared by the standard rail and the handset deck (which prepends FILES) */
 export function buildRailSections(
@@ -32,6 +40,7 @@ export function buildRailSections(
         ? { alert: { count: conflictCount, title: conflictAlertTitle(conflictCount) } }
         : {}),
     },
+    { value: "terminal", label: "TERMINAL", icon: <TerminalIcon /> },
   ];
 }
 
@@ -40,8 +49,7 @@ interface RepoRailProps {
   sourceCount: number;
   sourceConflictCount: number;
   onChangeRail: (rail: ActiveRail) => void;
-  zipsContent: React.ReactNode;
-  sourceContent: React.ReactNode;
+  bodies: RailBodies;
 }
 
 export function RepoRail({
@@ -49,8 +57,7 @@ export function RepoRail({
   sourceCount,
   sourceConflictCount,
   onChangeRail,
-  zipsContent,
-  sourceContent,
+  bodies,
 }: RepoRailProps): React.JSX.Element {
   return (
     <section className="panel repo-rail" data-panel="rail" data-rail={activeRail}>
@@ -70,7 +77,7 @@ export function RepoRail({
         id={RAIL_PANEL_ID}
         aria-labelledby={deckSectionTabId(RAIL_ID_PREFIX, activeRail)}
       >
-        {activeRail === "zips" ? zipsContent : sourceContent}
+        {railBody(activeRail, bodies)}
       </div>
     </section>
   );

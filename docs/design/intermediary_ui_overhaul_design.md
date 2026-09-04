@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-09-04 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher; ZIPS tree drag-in import, selection, and worktree actions)
+Updated on: 2026-09-04 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher; ZIPS tree drag-in import, selection, and worktree actions; integrated terminal rail and `--terminal-*` tokens)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -251,13 +251,14 @@ The Zip Bundles selection surface is a compact file explorer, not a directory-on
   notices with the agent's reason. After any action the tree forgets a moved directory's stale listings and
   re-lists the affected folders itself.
 
-## Rail and Source Control
+## Rail, Source Control, and Terminal
 
 The right column is a rail with a slim (~36px) header holding one shared segmented icon rocker
 (`DeckSectionSwitcher`): a bordered, elevated cluster of cells — ZIPS an archive-box glyph, SOURCE a
-git-branch glyph — with the active cell lit (accent glyph on a soft accent fill with glow) and inactive
-cells muted; the same component drives the handset deck's rocker, which prepends a stacked-documents FILES
-cell. The section word survives as the accessible name (screen-reader-only text, so the SOURCE cell reads
+git-branch glyph, TERMINAL a bare prompt glyph (chevron plus cursor bar, `>_`, judged at the rendered 15 px where
+a framed variant blurred into a block) — with the active cell lit (accent glyph on a
+soft accent fill with glow) and inactive cells muted; the same component drives the handset deck's
+rocker, which prepends a stacked-documents FILES cell. The section word survives as the accessible name (screen-reader-only text, so the SOURCE cell reads
 "SOURCE 3") and as the `title` tooltip; the bracket `[ ]` idiom stays on panel titles and badges, only the
 switcher dropped it. The active rail persists globally (`uiState.activeRail`); the handset FILES choice is
 local and the ZIPS/SOURCE choice writes through, so a resize across the 980/860 band never loses SOURCE.
@@ -284,6 +285,39 @@ zero.
   CONFLICT` subtitle, a pinned notice, and warning-toned marker lines.
 - Empty states follow the console prompt style: `> READING WORKING TREE`, `NO CHANGES`,
   `NOT A GIT REPOSITORY`, `GIT NOT FOUND`, `AGENT UPDATE REQUIRED`, `COMMIT RESULT UNKNOWN — REFRESHING`.
+
+### Terminal column
+
+- The TERMINAL cell is the third rail section (fourth on handset, where the terminal fills the chassis).
+  The column is a tab strip over the xterm host: `PWSH 1`, `PWSH 2` … buttons in the deck tab idiom (the
+  shell's OSC title as tooltip), a `×` per tab, and a trailing `+` (disabled at the twelve-session cap).
+  The host fills the remaining height; the session element sits `position: absolute; inset: 0` inside it
+  and the `.xterm` padding is the fit inset. Notices use the console prompt style: `> STARTING PWSH`,
+  `> PROCESS EXITED · CODE n` with RESTART / CLOSE, `> PWSH FAILED TO START` + the message with RETRY /
+  CLOSE, `> NO TERMINAL` with `+ NEW`.
+- Rail width: the deck grids are `minmax(0,1fr) <divider> clamp(360px, var(--rail-width), 70%)` (files)
+  and `clamp(300px, …)` (workspace), with the column gap replaced by a 16 px `DeckSplitter` column
+  (`deck_splitter.tsx` / `deck_splitter.css`): a 2 px grip that lights in accent on hover, focus, and
+  while dragging; pointer drag with capture previews `--rail-width` on the grid root and commits on
+  release; Left/Right keys step 2 %, Home and double-click reset to the 35 % default. The value persists
+  as `uiState.railWidthPercent` (20-70) and is shared by ZIPS, SOURCE, and TERMINAL. Under 768 px the
+  grids stack and the divider hides. `repo_rail.css` / `handset_deck.css` drop the body padding and
+  overflow for the TERMINAL section so the terminal reaches the panel edge.
+- Token slots, not a terminal scheme: each theme file (`theme_dark.css`, `theme_warm.css`,
+  `theme_light.css`) defines `--terminal-bg`, `--terminal-fg`, `--terminal-cursor`,
+  `--terminal-cursor-accent`, `--terminal-selection`, and the sixteen `--terminal-ansi-*` slots
+  (`black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`, and their `bright-` forms).
+  Every value is derived from existing tokens — reds/greens/blues/yellows from the success / error / info
+  / warning states, black/white from the surface and text tokens, magenta, cursor, and selection from the
+  accent variables — so the terminal follows the tab accent like every other panel. `--terminal-bg` carries
+  `--window-opacity-alpha` and xterm runs with `allowTransparency`, so the substrate shows through.
+  `terminal_theme.ts` reads the slots with `getComputedStyle` on `.app` at adopt time and on accent or
+  theme-mode changes; no colour is hardcoded in the terminal module.
+- Font `var(--font-mono)` at 14 px, cursor bar with blink. Blink follows the motion governor
+  (`isForegroundWindow()`), so an unfocused window shows a still cursor.
+- Parked sessions sit in an off-screen fixed host (`left: -10000px`, 960×600, `inert`) rather than
+  `visibility: hidden` in place: xterm pauses rendering when its element does not intersect the viewport,
+  and measurement still works for the next adopt.
 
 ## Auto Files
 

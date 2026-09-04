@@ -38,8 +38,10 @@ export const UiWindowBoundsByModeSchema = z.object({
 
 export type UiWindowBoundsByMode = z.infer<typeof UiWindowBoundsByModeSchema>;
 
-/** Right-rail instrument selection: zip bundles or source control */
-export const ActiveRailSchema = z.enum(["zips", "source"]);
+/** Right-rail instrument selection: zip bundles, source control, or the terminal.
+ *  An unknown value (a config written by a newer build) falls back to ZIPS instead of locking
+ *  persistence for the session, like `UiModeSchema`. */
+export const ActiveRailSchema = z.enum(["zips", "source", "terminal"]).catch("zips");
 
 export type ActiveRail = z.infer<typeof ActiveRailSchema>;
 
@@ -53,6 +55,8 @@ export const UiStateSchema = z.object({
   windowBoundsByMode: UiWindowBoundsByModeSchema.default({}),
   /** Right-rail section shown in the deck (defaulted, so no migration is needed) */
   activeRail: ActiveRailSchema.default("zips"),
+  /** Rail share of the deck width in standard layout, set by the drag divider (20-70) */
+  railWidthPercent: z.number().int().min(20).max(70).catch(35),
 });
 
 export type UiState = z.infer<typeof UiStateSchema>;
@@ -219,6 +223,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
       lastActiveGroupRepoIds: {},
       windowBoundsByMode: {},
       activeRail: "zips",
+      railWidthPercent: 35,
     },
     bundleSelections: {},
     globalExcludes: {

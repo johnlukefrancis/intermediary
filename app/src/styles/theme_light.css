@@ -191,3 +191,30 @@
   color: var(--theme-text-primary);
   text-shadow: 0 0 6px var(--color-accent-glow);
 }
+
+/* ===== TERMINAL SLOTS (light) ===== */
+/* Parchment surface: black is the dark text tone and the whites are the light border tones, as in
+   every light terminal scheme; colours come from the muted semantic states. */
+.app[data-theme-mode="light"] {
+  --terminal-bg: var(--theme-editor-bg);
+  --terminal-fg: var(--theme-editor-text);
+  --terminal-cursor: var(--color-accent);
+  --terminal-cursor-accent: var(--theme-border-subtle);
+  --terminal-selection: var(--color-accent-glow);
+  --terminal-ansi-black: var(--theme-text-primary);
+  --terminal-ansi-red: var(--theme-activity-hot);
+  --terminal-ansi-green: var(--theme-activity-low);
+  --terminal-ansi-yellow: var(--theme-editor-code);
+  --terminal-ansi-blue: var(--theme-editor-link);
+  --terminal-ansi-magenta: var(--color-accent);
+  --terminal-ansi-cyan: var(--theme-editor-quote);
+  --terminal-ansi-white: var(--theme-border);
+  --terminal-ansi-bright-black: var(--theme-text-muted);
+  --terminal-ansi-bright-red: var(--theme-error);
+  --terminal-ansi-bright-green: var(--theme-success);
+  --terminal-ansi-bright-yellow: var(--theme-warning);
+  --terminal-ansi-bright-blue: var(--theme-info);
+  --terminal-ansi-bright-magenta: var(--color-accent);
+  --terminal-ansi-bright-cyan: var(--theme-info);
+  --terminal-ansi-bright-white: var(--theme-border-subtle);
+}

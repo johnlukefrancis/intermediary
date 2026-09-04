@@ -13,6 +13,8 @@ pub mod manifest;
 pub(crate) mod omission;
 pub mod plan;
 pub mod process_job;
+#[cfg(windows)]
+mod process_job_termination;
 pub mod progress;
 pub mod progress_sink;
 pub mod scanner;
