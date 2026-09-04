@@ -1,5 +1,5 @@
 // Path: app/src/lib/terminal/terminal_theme.ts
-// Description: Reads the deck's --terminal-* and --font-mono tokens into xterm theme and options; an empty token leaves xterm's default in place
+// Description: Reads deck colour and font tokens into xterm theme and options; an empty token leaves xterm's default in place
 
 import type { ITerminalOptions, ITheme, IWindowsPty } from "@xterm/xterm";
 
@@ -14,6 +14,9 @@ const THEME_TOKENS: ReadonlyArray<readonly [ThemeColorKey, string]> = [
   ["cursor", "--terminal-cursor"],
   ["cursorAccent", "--terminal-cursor-accent"],
   ["selectionBackground", "--terminal-selection"],
+  ["scrollbarSliderBackground", "--color-text-muted"],
+  ["scrollbarSliderHoverBackground", "--color-text-secondary"],
+  ["scrollbarSliderActiveBackground", "--color-accent"],
   ["black", "--terminal-ansi-black"],
   ["red", "--terminal-ansi-red"],
   ["green", "--terminal-ansi-green"],
@@ -56,7 +59,7 @@ function colorProbe(root: Element): HTMLSpanElement {
   return probe;
 }
 
-/** Every declared `--terminal-*` slot, resolved to a colour xterm accepts; absent slots keep xterm's default */
+/** Every declared deck slot, resolved to a colour xterm accepts; absent slots keep xterm's default */
 export function readTerminalTheme(): ITheme {
   const root = tokenRoot();
   const declared = getComputedStyle(root);
