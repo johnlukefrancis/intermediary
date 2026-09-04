@@ -4,17 +4,23 @@
 import type React from "react";
 import { useId, useState } from "react";
 import type { SourceControlEntry } from "../../shared/protocol.js";
-import { ChevronIcon, MinusIcon, PlusIcon } from "./source_control_icons.js";
+import { ChevronIcon, DiscardIcon, MinusIcon, PlusIcon } from "./source_control_icons.js";
 import { SourceControlRow, type RowActionKind } from "./source_control_row.js";
 
 const MAX_ROWS = 500;
 
-/** Section-wide stage/unstage rendered as the same + / − glyph the row hover action uses */
+/** Section-wide action rendered as a header glyph: + / − like the row hover action, or discard */
 export interface SectionBulkAction {
-  kind: RowActionKind;
+  kind: RowActionKind | "discard";
   title: string;
   disabled: boolean;
   onClick: () => void;
+}
+
+function bulkIcon(kind: SectionBulkAction["kind"]): React.JSX.Element {
+  if (kind === "stage") return <PlusIcon />;
+  if (kind === "unstage") return <MinusIcon />;
+  return <DiscardIcon />;
 }
 
 interface SourceControlSectionProps {
@@ -23,7 +29,7 @@ interface SourceControlSectionProps {
   tone?: "alert";
   entries: SourceControlEntry[];
   rowAction: RowActionKind;
-  bulk?: SectionBulkAction;
+  bulk?: SectionBulkAction[];
   /** Every per-row action is disabled (an action is pending or status is not ready) */
   disabled: boolean;
   onRowAction: (entry: SourceControlEntry) => void;
@@ -70,18 +76,19 @@ export function SourceControlSection({
           <span className="source-control-section__title">{title}</span>
           <span className="source-control-section__count">[{entries.length}]</span>
         </button>
-        {bulk && (
+        {bulk?.map((action) => (
           <button
+            key={action.kind}
             type="button"
             className="source-control-section__bulk"
-            disabled={bulk.disabled}
-            title={bulk.title}
-            aria-label={bulk.title}
-            onClick={bulk.onClick}
+            disabled={action.disabled}
+            title={action.title}
+            aria-label={action.title}
+            onClick={action.onClick}
           >
-            {bulk.kind === "stage" ? <PlusIcon /> : <MinusIcon />}
+            {bulkIcon(action.kind)}
           </button>
-        )}
+        ))}
       </div>
       {!collapsed && (
         <div id={bodyId} className="source-control-section__rows" role="list">

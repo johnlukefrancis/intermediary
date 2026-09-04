@@ -48,6 +48,15 @@ export function MinusIcon(): React.JSX.Element {
   );
 }
 
+export function DiscardIcon(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 10h11a5 5 0 0 1 0 10h-5" />
+      <path d="M8 6l-4 4 4 4" />
+    </svg>
+  );
+}
+
 export function ChevronIcon(): React.JSX.Element {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

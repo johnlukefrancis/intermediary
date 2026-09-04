@@ -22,6 +22,7 @@ import {
   TRUNCATED_HINT,
   actionErrorHeading,
   branchLabel,
+  discardAllConfirmMessage,
   discardConfirmMessage,
   hookAddedMessage,
   hookChangedHeading,
@@ -82,6 +83,7 @@ export function SourceControlColumn({
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [discardTarget, setDiscardTarget] = useState<SourceControlEntry | null>(null);
+  const [discardAllOpen, setDiscardAllOpen] = useState(false);
   const [pendingCommit, setPendingCommit] = useState<PendingCommitRequest | null>(null);
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
   const {
@@ -102,6 +104,12 @@ export function SourceControlColumn({
   }, [unstage]);
   const stageAll = useCallback(() => { stage({ mode: "all" }); }, [stage]);
   const unstageAll = useCallback(() => { unstage({ mode: "all" }); }, [unstage]);
+  const openDiscardAll = useCallback(() => { setDiscardAllOpen(true); }, []);
+  const confirmDiscardAll = useCallback(() => {
+    const worktree = status?.worktree ?? [];
+    if (worktree.length > 0) discard(worktree.flatMap(discardTargets));
+    setDiscardAllOpen(false);
+  }, [discard, status]);
   const openContextMenu = useCallback((event: React.MouseEvent, entry: SourceControlEntry) => {
     setContextMenu({ x: event.clientX, y: event.clientY, entry });
   }, []);
@@ -219,6 +227,7 @@ export function SourceControlColumn({
         onRefresh={refresh}
         onStageAll={stageAll}
         onUnstageAll={unstageAll}
+        onDiscardAll={openDiscardAll}
         onStageEntry={stageEntry}
         onUnstageEntry={unstageEntry}
         onOpenDiff={onOpenDiff}
@@ -243,6 +252,16 @@ export function SourceControlColumn({
             setDiscardTarget(null);
           }}
           onCancel={() => { setDiscardTarget(null); }}
+        />
+      )}
+      {discardAllOpen && status !== null && status.worktree.length > 0 && (
+        <ConfirmModal
+          title="Discard all changes"
+          message={discardAllConfirmMessage(status.worktree)}
+          confirmLabel="Discard All"
+          isDestructive
+          onConfirm={confirmDiscardAll}
+          onCancel={() => { setDiscardAllOpen(false); }}
         />
       )}
       {pendingCommit && (

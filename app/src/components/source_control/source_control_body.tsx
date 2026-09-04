@@ -23,6 +23,7 @@ interface SourceControlBodyProps {
   onRefresh: () => void;
   onStageAll: () => void;
   onUnstageAll: () => void;
+  onDiscardAll: () => void;
   onStageEntry: (entry: SourceControlEntry) => void;
   onUnstageEntry: (entry: SourceControlEntry) => void;
   onOpenDiff: (entry: SourceControlEntry) => void;
@@ -36,6 +37,7 @@ export function SourceControlBody({
   onRefresh,
   onStageAll,
   onUnstageAll,
+  onDiscardAll,
   onStageEntry,
   onUnstageEntry,
   onOpenDiff,
@@ -93,12 +95,12 @@ export function SourceControlBody({
             title="STAGED CHANGES"
             entries={status.index}
             rowAction="unstage"
-            bulk={{
+            bulk={[{
               kind: "unstage",
               title: "Unstage all changes",
               disabled: actionsDisabled || status.index.length === 0,
               onClick: onUnstageAll,
-            }}
+            }]}
             onRowAction={onUnstageEntry}
             {...rowProps}
           />
@@ -106,14 +108,21 @@ export function SourceControlBody({
             title="CHANGES"
             entries={status.worktree}
             rowAction="stage"
-            bulk={{
+            bulk={[{
+              kind: "discard",
+              title: status.truncated
+                ? "Discard all changes (disabled while status is truncated)"
+                : "Discard all changes",
+              disabled: actionsDisabled || status.truncated || status.worktree.length === 0,
+              onClick: onDiscardAll,
+            }, {
               kind: "stage",
               title: status.truncated
                 ? "Stage all changes (disabled while status is truncated)"
                 : "Stage all changes",
               disabled: actionsDisabled || status.truncated || status.worktree.length === 0,
               onClick: onStageAll,
-            }}
+            }]}
             onRowAction={onStageEntry}
             {...rowProps}
           />

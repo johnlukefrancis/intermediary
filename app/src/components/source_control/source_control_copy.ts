@@ -95,6 +95,20 @@ export function discardConfirmMessage(entry: SourceControlEntry, targets: string
   return `This cannot be undone:\n\n${lines.join("\n")}`;
 }
 
+const DISCARD_ALL_LISTED_PATHS = 15;
+
+/** Discard-all names what it does in aggregate and lists a bounded sample of the paths */
+export function discardAllConfirmMessage(entries: SourceControlEntry[]): string {
+  const lines = entries.map((entry) => {
+    const effect = entry.change === "untracked" ? "deleted" : "restored from the index";
+    return `${entry.path} — ${effect}`;
+  });
+  const shown = lines.slice(0, DISCARD_ALL_LISTED_PATHS);
+  const hidden = lines.length - shown.length;
+  if (hidden > 0) shown.push(`…and ${hidden} more`);
+  return `This cannot be undone. All ${lines.length} unstaged change(s) will be discarded:\n\n${shown.join("\n")}`;
+}
+
 interface StatusErrorCopy {
   heading: string;
   /** Whether the agent's message adds anything beyond the heading */
