@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.22 — 2026-09-05
+
+- Fixed installed builds failing on machines without the Visual C++ redistributable ("VCRUNTIME140.dll was not found" from `im_host_agent.exe` on a fresh laptop): Windows MSVC binaries now statically link the C runtime (`.cargo/config.toml`, `crt-static`), so the app and both bundled agents run on a clean Windows install.
+
 ## 0.1.21 — 2026-09-05
 
 _0.1.19 was never tagged, and the v0.1.20 tag's release build failed in CI (pnpm refused the `packages`-less `pnpm-workspace.yaml`) before publishing anything; both ship here. This is also the first published GitHub release since 0.1.11 — 0.1.12 through 0.1.19 were built and installed locally._

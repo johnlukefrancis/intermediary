@@ -1,0 +1,4 @@
+# Statically link the MSVC C runtime so shipped Windows binaries (the app and
+# im_host_agent.exe) run on machines without the VC++ redistributable.
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]
