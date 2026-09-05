@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.1.20 — 2026-09-05
+## 0.1.21 — 2026-09-05
 
-_0.1.19 was never tagged; it ships here together with the follow-up polish below. This is also the first published GitHub release since 0.1.11 — 0.1.12 through 0.1.19 were built and installed locally._
+_0.1.19 was never tagged, and the v0.1.20 tag's release build failed in CI (pnpm refused the `packages`-less `pnpm-workspace.yaml`) before publishing anything; both ship here. This is also the first published GitHub release since 0.1.11 — 0.1.12 through 0.1.19 were built and installed locally._
+
+- Fixed the release workflow: `pnpm-workspace.yaml` now declares its single-package workspace (`packages: ['.']`), which CI's pnpm requires.
 
 - Source Control polish: the CHANGES header's bulk actions (discard-all, stage-all) are right-aligned in the section header, and the Discard All confirm modal is compacted to the tracked/untracked counts.
 
