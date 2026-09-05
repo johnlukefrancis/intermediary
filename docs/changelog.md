@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.20 — 2026-09-05
+
+_0.1.19 was never tagged; it ships here together with the follow-up polish below. This is also the first published GitHub release since 0.1.11 — 0.1.12 through 0.1.19 were built and installed locally._
+
+- Source Control polish: the CHANGES header's bulk actions (discard-all, stage-all) are right-aligned in the section header, and the Discard All confirm modal is compacted to the tracked/untracked counts.
+
 ## 0.1.19 — 2026-09-04
 
 - Added a Discard All button to the SOURCE rail: the CHANGES section header now carries a discard glyph beside stage-all (VS Code's placement). It opens a destructive confirm modal naming only the counts (tracked restored from the index, untracked deleted) so the modal stays small at any change count, then sends one batched discard whose targets carry the same per-file stamps the row action sends, so a file changed since review is refused rather than destroyed. Disabled while an action is pending, status is truncated, or CHANGES is empty.
