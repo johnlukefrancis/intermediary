@@ -84,11 +84,12 @@ fn file_delta_round_trips() {
         DeltaPayload::Image {
             bytes: 4096,
             mime_type: None,
+            mtime_ms: 1_757_168_000_000,
         },
     );
     assert_eq!(
         envelope(image.clone())["payload"],
-        json!({ "kind": "image", "bytes": 4096, "mimeType": null }),
+        json!({ "kind": "image", "bytes": 4096, "mimeType": null, "mtimeMs": 1_757_168_000_000_u64 }),
     );
     assert_eq!(round_trip(image.clone()), image);
 
@@ -138,11 +139,13 @@ fn baseline_and_reason_wire_names_are_camel_case() {
     }
 }
 
-/// The standalone carrier for the same counters `FileDeltaEvent` piggybacks.
+/// The standalone carrier for the same counters `FileDeltaEvent` piggybacks;
+/// it spends a `seq` of its own so a dropped one is a visible gap.
 #[test]
 fn file_delta_counters_round_trips() {
     let counters = FileDeltaCountersEvent {
         repo_id: "repo".to_string(),
+        seq: 8,
         withheld: 468,
         dropped: 12,
     };
@@ -153,6 +156,7 @@ fn file_delta_counters_round_trips() {
         json!({
             "type": "fileDeltaCounters",
             "repoId": "repo",
+            "seq": 8,
             "withheld": 468,
             "dropped": 12,
         }),

@@ -277,7 +277,24 @@ fn read_image_file_command_and_result_roundtrip() {
         UiCommand::ReadImageFile(command) => {
             assert_eq!(command.repo_id, "repo");
             assert_eq!(command.path, "docs/capture.png");
+            assert_eq!(command.max_bytes, None, "maxBytes is optional on the wire");
+            let wire = serde_json::to_value(UiCommand::ReadImageFile(command)).expect("serialize");
+            assert!(
+                wire.get("maxBytes").is_none(),
+                "an absent bound is not serialized"
+            );
         }
+        _ => panic!("expected ReadImageFile"),
+    }
+    let bounded: UiCommand = serde_json::from_value(json!({
+        "type": "readImageFile",
+        "repoId": "repo",
+        "path": "docs/capture.png",
+        "maxBytes": 4_194_304_u64
+    }))
+    .expect("parse bounded readImageFile");
+    match bounded {
+        UiCommand::ReadImageFile(command) => assert_eq!(command.max_bytes, Some(4_194_304)),
         _ => panic!("expected ReadImageFile"),
     }
 

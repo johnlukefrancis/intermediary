@@ -1,12 +1,13 @@
 // Path: crates/im_agent/src/repos/delta/delta_queue_tests.rs
 // Description: Settle queue folding, latency ceiling, cap and op-collapse tests
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use crate::protocol::FileKind;
 
-use super::settle_queue::{PendingOp, SettleQueue};
+use super::{PendingOp, SettleQueue};
 use super::{DRAIN_BATCH, MAX_LATENCY, QUEUE_CAP, SETTLE_WINDOW};
 
 fn abs(path: &str) -> PathBuf {
@@ -85,17 +86,17 @@ fn cap_counts_dropped() {
     }
 
     assert_eq!(queue.len(), QUEUE_CAP);
-    let (dropped, paths) = queue.take_dropped();
+    let (dropped, paths, overflowed) = queue.take_dropped();
     assert_eq!(dropped, 300 - QUEUE_CAP as u32);
-    assert_eq!(
-        paths.first().map(String::as_str),
-        Some("src/f256.ts"),
+    assert!(
+        paths.contains("src/f256.ts"),
         "the dropped paths come back so their baselines can be evicted",
     );
     assert_eq!(paths.len(), dropped as usize);
+    assert!(!overflowed, "44 distinct paths fit the bounded record");
     assert_eq!(
         queue.take_dropped(),
-        (0, Vec::<String>::new()),
+        (0, HashSet::new(), false),
         "taking the counter clears it",
     );
 
@@ -197,5 +198,69 @@ fn requeue_merge_recomputes_the_deadline() {
         queue.next_deadline(),
         Some(start + MAX_LATENCY),
         "the merged entry's ceiling runs from the earlier first sighting",
+    );
+}
+
+/// The dropped-path record is a set: a path re-marked while the queue is full
+/// counts every drop but is remembered once. Past `QUEUE_CAP` distinct paths
+/// the record stops growing and says so, and a dropped rename remembers both
+/// of its endpoints because neither baseline can be trusted any more.
+#[test]
+fn dropped_paths_dedup_then_overflow() {
+    let mut queue = SettleQueue::new();
+    let start = Instant::now();
+    for index in 0..QUEUE_CAP {
+        note(
+            &mut queue,
+            &format!("src/p{index}.ts"),
+            PendingOp::Add,
+            start,
+        );
+    }
+    for _ in 0..3 {
+        note(&mut queue, "src/late.ts", PendingOp::Modify, start);
+    }
+    queue.note_rename(
+        "src/from.ts",
+        "src/to.ts",
+        abs("src/to.ts"),
+        FileKind::Code,
+        start,
+    );
+    let (dropped, paths, overflowed) = queue.take_dropped();
+    assert_eq!(dropped, 4, "every drop is counted");
+    assert_eq!(
+        paths,
+        HashSet::from([
+            "src/late.ts".to_string(),
+            "src/from.ts".to_string(),
+            "src/to.ts".to_string(),
+        ]),
+        "each path once, and both rename endpoints",
+    );
+    assert!(!overflowed);
+
+    for index in 0..=QUEUE_CAP {
+        note(
+            &mut queue,
+            &format!("src/x{index}.ts"),
+            PendingOp::Add,
+            start,
+        );
+    }
+    let (dropped, paths, overflowed) = queue.take_dropped();
+    assert_eq!(dropped as usize, QUEUE_CAP + 1);
+    assert_eq!(
+        paths.len(),
+        QUEUE_CAP,
+        "the record never grows past the cap"
+    );
+    assert!(
+        overflowed,
+        "the one path the record could not hold is flagged"
+    );
+    assert!(
+        !queue.take_dropped().2,
+        "taking the record clears the overflow flag"
     );
 }

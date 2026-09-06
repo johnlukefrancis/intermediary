@@ -1,9 +1,9 @@
 // Path: app/src/lib/stream/stream_tile_targets_test.ts
-// Description: Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte budget, unfetchable tiles, BEFORE keys
+// Description: Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte and pixel budgets, unfetchable tiles, BEFORE keys
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { IMAGE_CARD_MAX_BYTES, IMAGE_TILE_BYTES_BUDGET, MAX_IMAGE_TILES } from "./stream_bounds.js";
+import { IMAGE_CARD_MAX_BYTES, IMAGE_TILE_BYTES_BUDGET, MAX_IMAGE_TILES, MAX_RETAINED_PIXELS } from "./stream_bounds.js";
 import { beforeKeys, collectTileTargets, retainedKeys, tileKey } from "./stream_tile_targets.js";
 import type { StreamImageStripCard, StreamStripTile } from "./stream_types.js";
 
@@ -24,7 +24,9 @@ function strip(id: number, specs: readonly TileSpec[], firstMs = 1000): StreamIm
     arrivedAtMs: firstMs + index,
     updatedAtMs: firstMs + index,
     edits: 1,
-    body: spec.gone === true ? { status: "gone" } : { status: "image", bytes: spec.bytes ?? 1, mimeType: spec.mimeType === undefined ? "image/png" : spec.mimeType },
+    body: spec.gone === true
+      ? { status: "gone" }
+      : { status: "image", bytes: spec.bytes ?? 1, mimeType: spec.mimeType === undefined ? "image/png" : spec.mimeType, mtimeMs: firstMs + index },
   }));
   return { kind: "images", id, tiles, arrivedAtMs: firstMs, updatedAtMs: firstMs, admittedAtMs: firstMs, expanded: false, exiting: false, static: true };
 }
@@ -61,6 +63,27 @@ void test("the byte budget releases before the count does", () => {
   assert.equal(kept.size, fits);
   assert.equal(kept.has(tileKey("r", 1, "p7.png")), true);
   assert.equal(kept.has(tileKey("r", 1, "p0.png")), false);
+});
+
+void test("the decoded-pixel budget releases the oldest tiles first and ignores tiles not yet decoded", () => {
+  const targets = collectTileTargets("r", [strip(1, paths("p", 6))]);
+  const half = MAX_RETAINED_PIXELS / 2;
+  // Newest two decoded to half the budget each; the third would overflow, so it and everything older release
+  const decoded = new Map<string, number>([
+    [tileKey("r", 1, "p5.png"), half],
+    [tileKey("r", 1, "p4.png"), half],
+    [tileKey("r", 1, "p3.png"), 1],
+  ]);
+  const kept = retainedKeys(targets, (key) => decoded.get(key) ?? 0);
+  assert.deepEqual([...kept].sort(), [tileKey("r", 1, "p4.png"), tileKey("r", 1, "p5.png")]);
+  // Undecoded tiles cost nothing until their probe reports a size
+  assert.equal(retainedKeys(targets).size, 6);
+  assert.equal(retainedKeys(targets, () => 1).size, 6);
+});
+
+void test("a target carries the tile's mtime beside its bytes so the panel can refuse another revision", () => {
+  const targets = collectTileTargets("r", [strip(1, [{ path: "a.png", bytes: 7 }], 5000)]);
+  assert.deepEqual(targets.map((target) => [target.bytes, target.mtimeMs]), [[7, 5000]]);
 });
 
 void test("a before key resolves to the previous tile of the same path, across strips and for a deleted tile", () => {

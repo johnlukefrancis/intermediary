@@ -84,7 +84,14 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
 
     let (mut sink, mut stream) = ws_stream.split();
     let (response_tx, mut response_rx) = mpsc::unbounded_channel::<Message>();
-    let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Message>();
+    // Two bounded lanes: a client that stops reading loses stream events (a
+    // `seq` gap) past `EVENT_QUEUE_CAP` / `EVENT_QUEUE_BYTES`, never memory,
+    // and never a control event - that lane backpressures the relay instead.
+    let (mut event_rx, relay_task) = ctx.event_bus.relay(
+        ctx.logger.clone(),
+        peer.to_string(),
+        "Host-agent broadcast lagged",
+    );
 
     let writer_logger = ctx.logger.clone();
     let writer = tokio::spawn(async move {
@@ -92,7 +99,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
             let next = tokio::select! {
                 biased;
                 response = response_rx.recv() => response,
-                event = event_rx.recv() => event,
+                event = event_rx.recv() => event.map(Message::Text),
             };
 
             let Some(message) = next else {
@@ -105,28 +112,6 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
                     Some(json!({"error": err.to_string()})),
                 );
                 break;
-            }
-        }
-    });
-
-    let mut broadcast_rx = ctx.event_bus.subscribe();
-    let broadcast_logger = ctx.logger.clone();
-    let event_tx_clone = event_tx.clone();
-    let broadcast_task = tokio::spawn(async move {
-        loop {
-            match broadcast_rx.recv().await {
-                Ok(text) => {
-                    if event_tx_clone.send(Message::Text(text)).is_err() {
-                        break;
-                    }
-                }
-                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                Err(tokio::sync::broadcast::error::RecvError::Lagged(skipped)) => {
-                    broadcast_logger.warn(
-                        "Host-agent broadcast lagged",
-                        Some(json!({"skipped": skipped})),
-                    );
-                }
             }
         }
     });
@@ -161,8 +146,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
     }
 
     drop(response_tx);
-    drop(event_tx);
-    broadcast_task.abort();
+    relay_task.abort();
     let _ = writer.await;
 
     ctx.logger.info(

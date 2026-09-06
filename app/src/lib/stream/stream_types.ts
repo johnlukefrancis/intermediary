@@ -114,17 +114,26 @@ export interface StreamNoticeRow {
 export interface StreamBurstOpen {
   id: number;
   untilMs: number;
+  /** Distinct member paths, at most BURST_MEMBER_CAP; paths past the cap are counted on the card only */
   paths: ReadonlySet<string>;
-  /** Top-level directory counts behind the card's top-3 strip */
+  /** Top-level directory counts behind the card's top-3 strip, at most BURST_TOP_DIRS_TRACKED plus `other` */
   dirCounts: ReadonlyMap<string, number>;
+}
+
+/** A closed burst still owns its members' late deltas until `untilMs`; after that they print as cards */
+export interface StreamBurstGrace {
+  id: number;
+  paths: ReadonlySet<string>;
+  untilMs: number;
 }
 
 export interface StreamRing {
   cards: readonly StreamRingCard[];
   notices: readonly StreamNoticeRow[];
-  /** Last fileDelta seq seen; null before the first delta and after a rehydrate */
+  /** Last seq seen on a fileDelta or fileDeltaCounters; null before the first and after a rehydrate */
   lastSeq: number | null;
   burstOpen: StreamBurstOpen | null;
+  burstGrace: StreamBurstGrace | null;
 }
 
 export type StreamPressure = "calm" | "busy" | "flood";

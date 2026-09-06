@@ -10,7 +10,7 @@ import { absorbIntoBurst, admit, openBurst } from "./stream_ring.js";
 import { applyFileDelta } from "./stream_ring_apply.js";
 import { collapsePending } from "./stream_ring_apply_burst.js";
 import { initialReduceState, takeId } from "./stream_ring_apply_support.js";
-import { fileCard, imageDelta, resetSeq, textDelta } from "./testing/stream_fixtures.js";
+import { IMAGE_MTIME_MS, fileCard, imageDelta, resetSeq, textDelta } from "./testing/stream_fixtures.js";
 import type { StreamImageStripCard, StreamReduceState } from "./stream_types.js";
 
 const opts = { outsideSelection: (): boolean => false };
@@ -39,7 +39,7 @@ void test("the first image delta opens a strip with one tile and never a file ca
   assert.ok(tile !== undefined);
   assert.equal(tile.path, "assets/a.png");
   assert.equal(tile.op, "add");
-  assert.deepEqual(tile.body, { status: "image", bytes: 1024, mimeType: "image/png" });
+  assert.deepEqual(tile.body, { status: "image", bytes: 1024, mimeType: "image/png", mtimeMs: IMAGE_MTIME_MS });
   assert.equal(strip.admittedAtMs, 0);
   assert.equal(strip.expanded, false);
 });
@@ -217,7 +217,7 @@ void test("an opaque payload for an image path is a NO PREVIEW tile in the strip
   let state = applyFileDelta(initialReduceState(), imageDelta("a.png"), 1000, opts);
   state = applyFileDelta(state, imageDelta("b.png", { payload: { kind: "opaque", bytes: 0, reason: "unreadable" } }), 1100, opts);
   assert.equal(state.pending.length, 1);
-  assert.deepEqual(pendingStrip(state).tiles[1]?.body, { status: "image", bytes: 0, mimeType: null });
+  assert.deepEqual(pendingStrip(state).tiles[1]?.body, { status: "image", bytes: 0, mimeType: null, mtimeMs: 0 });
 });
 
 void test("an open burst still swallows image paths: resolved bumps and no strip is created", () => {

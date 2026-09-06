@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
 
 use im_bundle::cancel::BundleCancelToken;
-use tokio::sync::{watch, Notify, Semaphore};
+use tokio::sync::{watch, Notify};
 
 use crate::logging::Logger;
 use crate::protocol::FileKind;
@@ -15,25 +15,44 @@ use crate::server::EventBus;
 
 mod baseline_cache;
 mod delta_budget;
+mod delta_limits;
 mod delta_read;
+mod delta_reads;
 mod delta_resolve;
+mod delta_resolve_text;
 mod delta_stamp;
 mod delta_worker;
+mod delta_worker_counters;
+mod delta_worker_emit;
+mod delta_worker_evict;
+mod settle_change;
 mod settle_queue;
 mod unified_patch;
 
 #[cfg(test)]
+mod delta_budget_tests;
+#[cfg(test)]
 mod delta_cache_tests;
+#[cfg(test)]
+mod delta_order_tests;
 #[cfg(test)]
 mod delta_patch_tests;
 #[cfg(test)]
 mod delta_queue_tests;
 #[cfg(test)]
 mod delta_resolve_tests;
+#[cfg(test)]
+mod delta_resolve_text_tests;
+#[cfg(test)]
+mod delta_test_support;
+#[cfg(test)]
+mod delta_worker_tests;
 
 pub(crate) use baseline_cache::BaselineCache;
+pub use delta_limits::DeltaLimits;
 pub(crate) use delta_read::{read_settled, ReadOutcome};
-pub(crate) use settle_queue::{PendingChange, PendingOp, SettleQueue};
+pub(crate) use settle_change::{PendingChange, PendingOp};
+pub(crate) use settle_queue::SettleQueue;
 pub(crate) use unified_patch::{all_added_patch, all_removed_patch, compute_patch, PatchOutput};
 
 /// Quiet time a path must hold before its delta is read: long enough to swallow
@@ -84,10 +103,22 @@ pub(crate) const BURST_BUDGET: u32 = 32;
 /// The window `BURST_BUDGET` refills over.
 pub(crate) const BURST_WINDOW: Duration = Duration::from_secs(2);
 
-/// Wall clock a single settled read or diff may take on the blocking pool
-/// before the delta is abandoned as `Opaque(unreadable)`. A stalled network
-/// share or a frozen filesystem must never park one of the two process-wide
-/// read permits for the life of the watcher.
+/// The bucket refills only while fewer than this many marks are pending: one
+/// drain's worth. A checkout's run holds the queue above it for its whole
+/// life, so the run costs `BURST_BUDGET` reads however long it takes, while a
+/// hot loop over a few files still refills every window.
+pub(crate) const BURST_REFILL_MAX_PENDING: usize = DRAIN_BATCH;
+
+/// Bare `gone` events allowed per `BURST_WINDOW` once the read budget is
+/// spent. Each is a handful of bytes, but a 10k-file delete must not become
+/// 10k bus slots; past this a delete is withheld like any other change.
+pub(crate) const GONE_BUDGET: u32 = 64;
+
+/// Wall clock a single settled read or diff may take on the blocking pool -
+/// and, separately, the wait for a read permit - before the delta is
+/// abandoned as `Opaque(unreadable)`. A stalled network share or a frozen
+/// filesystem must never park one of the two process-wide read permits for
+/// the life of the watcher, nor park every other repo's worker behind them.
 pub(crate) const READ_DEADLINE: Duration = Duration::from_secs(2);
 
 /// Ceiling on `git show :0:./<path>` when fetching an index baseline.
@@ -96,27 +127,6 @@ pub(crate) const INDEX_BLOB_TIMEOUT: Duration = Duration::from_secs(5);
 /// How long `stop` lets the worker observe the stop flag before aborting it;
 /// one blocking read or diff at most, so a watcher restart never waits on a burst.
 pub(crate) const STOP_GRACE: Duration = Duration::from_millis(250);
-
-/// Process-wide delta bounds: created once on the runtime and cloned into every
-/// watcher, so `DELTA_READ_CONCURRENCY` holds across repos, not per repo.
-#[derive(Clone)]
-pub struct DeltaLimits {
-    pub(crate) read_permits: Arc<Semaphore>,
-}
-
-impl DeltaLimits {
-    pub fn new() -> Self {
-        Self {
-            read_permits: Arc::new(Semaphore::new(DELTA_READ_CONCURRENCY)),
-        }
-    }
-}
-
-impl Default for DeltaLimits {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 /// One repo's delta pipeline: the settle queue the watcher marks inline and the
 /// worker task that resolves settled changes into `fileDelta` events. `note_*`

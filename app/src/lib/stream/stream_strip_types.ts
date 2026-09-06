@@ -3,9 +3,12 @@
 
 import type { DeltaOp } from "../../shared/protocol.js";
 
-/** What the wire said about the image; pixels are fetched by the panel under the size and mime gate */
+/**
+ * What the wire said about the image; pixels are fetched by the panel under the size and mime gate.
+ * `bytes` and `mtimeMs` name the revision the tile shows: pixels read back for any other revision are refused.
+ */
 export type StreamStripTileBody =
-  | { status: "image"; bytes: number; mimeType: string | null }
+  | { status: "image"; bytes: number; mimeType: string | null; mtimeMs: number }
   | { status: "gone" };
 
 export interface StreamStripTile {

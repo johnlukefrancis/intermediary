@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/repos/delta/delta_resolve_tests.rs
-// Description: Per-change decision tests - burst charge, rename baseline move, first-sighting truncate guard, image metadata failures
+// Description: Per-change decision tests - rename baseline move, first-sighting truncate guard, image metadata failures
 
 use std::fs;
 use std::sync::Arc;
@@ -7,76 +7,11 @@ use std::time::Instant;
 
 use tempfile::tempdir;
 
-use crate::logging::{LogConfig, LogLevel, Logger};
 use crate::protocol::{DeltaPayload, FileKind};
 
-use super::delta_budget::{BurstBucket, Charge};
-use super::delta_resolve::{expect_nonempty, move_rename_baseline, resolve_image, Resolution};
-use super::{
-    read_settled, BaselineCache, PendingChange, PendingOp, ReadOutcome, BURST_BUDGET, BURST_WINDOW,
-    MAX_RESETTLES,
-};
-
-/// The budget no longer looks at the file kind or at whether a baseline is
-/// cached: a token is charged for every change that will EMIT, because every
-/// emitted delta costs a slot on the 128-slot bus whatever it cost to produce.
-#[test]
-fn every_emitted_change_costs_a_token() {
-    let mut bucket = BurstBucket::new(Instant::now());
-    for _ in 0..BURST_BUDGET {
-        assert_eq!(bucket.charge(&PendingOp::Modify), Charge::Resolve);
-    }
-
-    assert_eq!(bucket.charge(&PendingOp::Add), Charge::Withhold);
-    assert_eq!(bucket.charge(&PendingOp::Modify), Charge::Withhold);
-    assert_eq!(
-        bucket.charge(&PendingOp::Rename {
-            from: "src/old.rs".to_string(),
-        }),
-        Charge::Withhold,
-    );
-    assert_eq!(
-        bucket.charge(&PendingOp::Remove),
-        Charge::GoneOnly,
-        "the one unbudgeted outcome: a deletion still prints, as a bare Gone",
-    );
-}
-
-/// A closing window says whether it denied anything, which is what lets the
-/// worker publish the counters instead of stranding them until the next delta.
-#[tokio::test]
-async fn a_window_that_denied_says_so_on_close() {
-    let temp = tempdir().expect("tempdir");
-    let logger = Logger::init(LogConfig {
-        log_dir: temp.path().join("logs"),
-        min_level: LogLevel::Warn,
-        emit_stdio: false,
-    })
-    .await
-    .expect("logger");
-    let start = Instant::now();
-
-    let mut quiet = BurstBucket::new(start);
-    assert!(
-        !quiet.roll(start + BURST_WINDOW, &logger, "repo-1"),
-        "a window that denied nothing closes silently",
-    );
-
-    let mut spent = BurstBucket::new(start);
-    for _ in 0..BURST_BUDGET {
-        assert_eq!(spent.charge(&PendingOp::Modify), Charge::Resolve);
-    }
-    assert_eq!(spent.charge(&PendingOp::Modify), Charge::Withhold);
-    assert!(
-        !spent.roll(start + BURST_WINDOW / 2, &logger, "repo-1"),
-        "a window still open is not closed",
-    );
-    assert!(spent.roll(start + BURST_WINDOW, &logger, "repo-1"));
-    assert!(
-        !spent.roll(start + BURST_WINDOW + BURST_WINDOW, &logger, "repo-1"),
-        "the denial count reset with the window",
-    );
-}
+use super::delta_resolve::{resolve_image, Resolution};
+use super::delta_resolve_text::{expect_nonempty, move_rename_baseline};
+use super::{read_settled, BaselineCache, PendingChange, PendingOp, ReadOutcome, MAX_RESETTLES};
 
 /// The baseline moves with a rename exactly once. A re-settled rename finds
 /// nothing left at the source, and a second move would evict the very baseline
@@ -156,15 +91,22 @@ async fn an_unreadable_image_still_publishes_an_image_payload() {
         deadline: now,
         folded: 0,
         resettles: 0,
+        index_baseline: None,
     };
 
     match resolve_image(&change).await {
         Resolution::Emit {
-            payload: DeltaPayload::Image { bytes, mime_type },
+            payload:
+                DeltaPayload::Image {
+                    bytes,
+                    mime_type,
+                    mtime_ms,
+                },
             failure,
             ..
         } => {
             assert_eq!(bytes, 0);
+            assert_eq!(mtime_ms, 0, "no stat, no revision to bind pixels to");
             assert_eq!(mime_type.as_deref(), Some("image/png"));
             assert!(
                 failure.is_some(),
@@ -184,4 +126,51 @@ async fn an_unreadable_image_still_publishes_an_image_payload() {
         matches!(resolve_image(&vanished).await, Resolution::Drop),
         "a path that is simply gone still drops",
     );
+}
+
+/// A readable image reports `bytes` and `mtime_ms` from the same stat, so the
+/// UI can bind the pixels it later fetches to exactly this revision.
+#[tokio::test]
+async fn an_image_carries_the_mtime_of_the_stat_that_sized_it() {
+    let root = tempdir().expect("tempdir");
+    let abs_path = root.path().join("shot.png");
+    fs::write(&abs_path, [1_u8, 2, 3, 4]).expect("image bytes");
+    let now = Instant::now();
+    let change = PendingChange {
+        path: "shot.png".to_string(),
+        abs_path: abs_path.clone(),
+        kind: FileKind::Image,
+        op: PendingOp::Modify,
+        first_seen: now,
+        last_seen: now,
+        deadline: now,
+        folded: 0,
+        resettles: 0,
+        index_baseline: None,
+    };
+    let expected_ms = fs::metadata(&abs_path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|since| since.as_millis())
+        .expect("mtime");
+
+    match resolve_image(&change).await {
+        Resolution::Emit {
+            payload: DeltaPayload::Image {
+                bytes, mtime_ms, ..
+            },
+            failure: None,
+            ..
+        } => {
+            assert_eq!(bytes, 4);
+            assert_eq!(u128::from(mtime_ms), expected_ms);
+        }
+        Resolution::Emit {
+            payload, failure, ..
+        } => {
+            panic!("expected a clean Image payload, got {payload:?} / {failure:?}")
+        }
+        Resolution::Resettle | Resolution::Drop => panic!("a readable image emits"),
+    }
 }

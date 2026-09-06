@@ -34,6 +34,8 @@ export const ReadImageFileCommandSchema = z.object({
   type: z.literal("readImageFile"),
   repoId: z.string(),
   path: z.string(),
+  /** When present, a file larger than this is refused (UNSUPPORTED_IMAGE_FILE) before any byte is read */
+  maxBytes: z.number().int().nonnegative().optional(),
 });
 
 /** Handshake from UI with config and staging paths */

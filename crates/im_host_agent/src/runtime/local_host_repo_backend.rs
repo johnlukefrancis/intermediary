@@ -7,7 +7,9 @@ use im_agent::protocol::{
     ListRepoDirectoryResult, ReadImageFileCommand, ReadImageFileResult, ReadTextFileCommand,
     ReadTextFileResult,
 };
-use im_agent::repos::{get_repo_top_level, list_repo_directory, read_image_file, read_text_file};
+use im_agent::repos::{
+    get_repo_top_level, list_repo_directory, read_image_file_bounded, read_text_file,
+};
 
 use crate::runtime::local_host_backend::LocalHostBackend;
 
@@ -34,7 +36,7 @@ impl LocalHostBackend {
         command: ReadImageFileCommand,
     ) -> Result<ReadImageFileResult, AgentError> {
         let repo_root = self.host_repo_root(&command.repo_id)?;
-        let result = read_image_file(repo_root, &command.path).await?;
+        let result = read_image_file_bounded(repo_root, &command.path, command.max_bytes).await?;
 
         Ok(ReadImageFileResult {
             repo_id: command.repo_id,

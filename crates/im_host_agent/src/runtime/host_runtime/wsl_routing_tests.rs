@@ -6,6 +6,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use im_agent::logging::{LogConfig, LogLevel, Logger};
 use im_agent::protocol::{AgentEvent, EventEnvelope};
+use im_agent::server::BusMessage;
 
 use super::*;
 
@@ -25,13 +26,13 @@ fn unique_log_dir() -> PathBuf {
     std::env::temp_dir().join(format!("im_host_agent_wsl_routing_{}", now.as_nanos()))
 }
 
-async fn recv_payload(rx: &mut tokio::sync::broadcast::Receiver<String>) -> AgentEvent {
+async fn recv_payload(rx: &mut tokio::sync::broadcast::Receiver<BusMessage>) -> AgentEvent {
     let wire = rx.recv().await.expect("event payload");
     let envelope: EventEnvelope = serde_json::from_str(&wire).expect("event envelope");
     envelope.payload
 }
 
-async fn assert_no_event(rx: &mut tokio::sync::broadcast::Receiver<String>) {
+async fn assert_no_event(rx: &mut tokio::sync::broadcast::Receiver<BusMessage>) {
     let result = tokio::time::timeout(Duration::from_millis(25), rx.recv()).await;
     assert!(result.is_err(), "unexpected extra event");
 }

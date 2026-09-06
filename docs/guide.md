@@ -69,6 +69,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/reports/source_control_hardening_review_20260903.md](reports/source_control_hardening_review_20260903.md) | External hardening review of the split tree: reviewed-snapshot commit identity, post-publication hook reporting, discard quarantine safety, and process-tree ownership |
 | [docs/reports/source_control_shutdown_owner_review_20260903.md](reports/source_control_shutdown_owner_review_20260903.md) | Fourth external review: one remaining P0 — the WSL emergency-stop route killed the agent after 750 ms, orphaning its Git process groups |
 | [docs/reports/zips_tree_write_surface_review_20260904.md](reports/zips_tree_write_surface_review_20260904.md) | Fifth external review, on the ZIPS write surface: `.git` reachability, cross-repo confirmation, replace authorization and replacing renames, quarantine sweep timing — closures and rejected remedies |
+| [docs/reports/stream_adversarial_review_20260906.md](reports/stream_adversarial_review_20260906.md) | Sixth external review, on the Stream panel candidate: baseline identity, image-revision binding, causal burst ownership, overload invalidation, bounded transport and visible loss, owned blocking permits — closures, actions, and accepted boundaries |
 
 ## Environment
 

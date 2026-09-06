@@ -7,6 +7,7 @@ import { MERGE_WINDOW_MS } from "./stream_bounds.js";
 import { bodyFor, extendCard } from "./stream_card_body.js";
 import { formatClock } from "./stream_card_grammar.js";
 import { applyImageDelta } from "./stream_image_strip.js";
+import { burstOwning } from "./stream_ring.js";
 import {
   newestCardOfPath,
   notice,
@@ -23,27 +24,31 @@ interface DeltaCounters {
   dropped: number;
 }
 
+/** Edits lost anywhere on the way (agent queue, bus, or the store's own intake) share one notice */
+export function applyDropped(state: StreamReduceState, dropped: number, now: number): StreamReduceState {
+  if (dropped <= 0) return state;
+  return notice(state, "dropped", "error", dropped, (n) => `${String(n)} EDITS DROPPED`, now);
+}
+
 /** The agent's honesty counters print as notices; the same keys merge across deltas and counter events */
 function applyCounters(state: StreamReduceState, counters: DeltaCounters, now: number): StreamReduceState {
   let next = state;
   if (counters.withheld > 0) {
     next = notice(next, "withheld", "warning", counters.withheld, (n) => `${String(n)} EDITS WITHHELD · BURST`, now);
   }
-  if (counters.dropped > 0) {
-    next = notice(next, "dropped", "error", counters.dropped, (n) => `${String(n)} EDITS DROPPED`, now);
-  }
-  return next;
+  return applyDropped(next, counters.dropped, now);
 }
 
-/** seq restarts are a new stream; a forward gap is a bus drop the user should know about */
-function applySeq(state: StreamReduceState, event: FileDeltaEvent, now: number): StreamReduceState {
+/**
+ * Deltas and counters events consume one sequence: a restart is a new stream, a forward gap is a
+ * drop (bus or queue) the user should know about, and either event advances `lastSeq`.
+ */
+function applySeq(state: StreamReduceState, seq: number, now: number): StreamReduceState {
   const last = state.ring.lastSeq;
-  let next: StreamReduceState = { ...state, ring: { ...state.ring, lastSeq: event.seq } };
-  if (last !== null && event.seq !== 1 && event.seq > last) {
-    const gap = event.seq - last - 1;
-    if (gap > 0) next = notice(next, "gap", "warning", gap, (n) => `${String(n)} EDITS NOT SHOWN`, now);
-  }
-  return applyCounters(next, event, now);
+  const next: StreamReduceState = { ...state, ring: { ...state.ring, lastSeq: seq } };
+  if (last === null || seq === 1 || seq <= last) return next;
+  const gap = seq - last - 1;
+  return gap > 0 ? notice(next, "gap", "warning", gap, (n) => `${String(n)} EDITS NOT SHOWN`, now) : next;
 }
 
 /** Counters the agent would otherwise strand when its queue goes quiet or a burst window closes */
@@ -52,7 +57,7 @@ export function applyDeltaCounters(
   event: FileDeltaCountersEvent,
   now: number
 ): StreamReduceState {
-  return applyCounters(state, event, now);
+  return applyCounters(applySeq(state, event.seq, now), event, now);
 }
 
 function canExtend(card: StreamFileCard, event: FileDeltaEvent, now: number): boolean {
@@ -73,11 +78,14 @@ export function applyFileDelta(
 ): StreamReduceState {
   if (!isVisibleFileKind(event.kind)) return state;
   const fileKind = event.kind;
-  let next = applySeq(withoutSettling(state, event.path), event, now);
+  let next = applyCounters(applySeq(withoutSettling(state, event.path), event.seq, now), event, now);
 
-  const burst = next.ring.burstOpen;
-  if (burst !== null && burst.paths.has(event.path)) {
-    return updateBurst(next, burst.id, (card) => ({ ...card, resolved: card.resolved + 1, updatedAtMs: now }));
+  // A member's delta lands on its burst while the burst is open or inside its grace after closing
+  const owner = burstOwning(next.ring, event.path, now);
+  if (owner !== null) {
+    const bumped = updateBurst(next, owner, (card) => ({ ...card, resolved: card.resolved + 1, updatedAtMs: now }));
+    // The burst card already left the ring: it can show nothing, so the delta takes the ordinary path
+    if (bumped.matched) return bumped.state;
   }
   const payload = event.payload;
   // An image path always lands in a strip, whatever its payload: an opaque one is a NO PREVIEW tile

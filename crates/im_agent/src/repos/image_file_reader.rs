@@ -1,16 +1,20 @@
 // Path: crates/im_agent/src/repos/image_file_reader.rs
 // Description: Repo-relative image file reader for in-app preview workspaces
 
+use std::fs::Metadata;
 use std::io;
 use std::path::Path;
 use std::time::UNIX_EPOCH;
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use tokio::fs;
+use tokio::io::AsyncReadExt as _;
 
 use crate::error::AgentError;
 use crate::staging::validate_relative_path;
 
+/// The preview ceiling every caller inherits: a decoded image this large is
+/// already past what a workspace tile can show.
 const MAX_IMAGE_FILE_BYTES: u64 = 25 * 1024 * 1024;
 
 #[derive(Debug, Clone)]
@@ -21,9 +25,26 @@ pub struct ImageFileReadResult {
     pub mtime_ms: u64,
 }
 
+/// The unbounded preview read: the process-wide `MAX_IMAGE_FILE_BYTES` alone.
 pub async fn read_image_file(
     repo_root: &str,
     relative_path: &str,
+) -> Result<ImageFileReadResult, AgentError> {
+    read_image_file_bounded(repo_root, relative_path, None).await
+}
+
+/// Reads one repo-relative image as base64. `max_bytes` is the caller's own
+/// gate (a stream tile's `IMAGE_CARD_MAX_BYTES`): a file over it is refused
+/// from the stat, BEFORE any byte is read, so an oversized image never costs a
+/// read on either backend. `MAX_IMAGE_FILE_BYTES` still applies on top. The
+/// result is bound to one revision: `bytes` is the length actually read and
+/// `mtime_ms` comes from a stat taken AFTER the read, which must match the
+/// stat taken before it or the read is refused as `Image changed while it was
+/// being read`.
+pub async fn read_image_file_bounded(
+    repo_root: &str,
+    relative_path: &str,
+    max_bytes: Option<u64>,
 ) -> Result<ImageFileReadResult, AgentError> {
     validate_relative_path(relative_path)?;
 
@@ -67,39 +88,105 @@ pub async fn read_image_file(
         ));
     }
 
-    if metadata.len() > MAX_IMAGE_FILE_BYTES {
-        return Err(AgentError::new(
-            "UNSUPPORTED_IMAGE_FILE",
-            "Image file is too large for the preview",
-        ));
-    }
+    let before = ImageStamp::of(&metadata);
+    size_gate(before.len, max_bytes)?;
 
-    let bytes = fs::read(&canonical_source)
+    // Read no more than one byte past the tightest bound: a file that grows
+    // between the stat and the read costs that one byte, never the excess.
+    let bound = max_bytes.map_or(MAX_IMAGE_FILE_BYTES, |bound| {
+        bound.min(MAX_IMAGE_FILE_BYTES)
+    });
+    let bytes = read_bounded(&canonical_source, bound)
         .await
         .map_err(|err| match err.kind() {
             io::ErrorKind::NotFound => AgentError::new("FILE_NOT_FOUND", "File does not exist"),
             _ => AgentError::internal(format!("Failed to read image file: {err}")),
         })?;
-    if bytes.len() as u64 > MAX_IMAGE_FILE_BYTES {
+    let read_len = bytes.len() as u64;
+    size_gate(read_len, max_bytes)?;
+
+    // The bytes are bound to ONE revision: the stamp after the read must
+    // equal the stamp before it, and the read must have seen that whole size.
+    let after = fs::metadata(&canonical_source)
+        .await
+        .map(|metadata| ImageStamp::of(&metadata))
+        .map_err(|err| match err.kind() {
+            io::ErrorKind::NotFound => AgentError::new("FILE_NOT_FOUND", "File does not exist"),
+            _ => AgentError::internal(format!("Failed to re-stat image file: {err}")),
+        })?;
+    verify_still(&before, &after, read_len)?;
+
+    Ok(ImageFileReadResult {
+        data_base64: STANDARD.encode(bytes),
+        mime_type: mime_type.to_string(),
+        bytes: read_len,
+        mtime_ms: after.mtime_ms,
+    })
+}
+
+/// Size and mtime at one instant; the pair before and after the read proves
+/// the bytes belong to a single revision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ImageStamp {
+    len: u64,
+    mtime_ms: u64,
+}
+
+impl ImageStamp {
+    fn of(metadata: &Metadata) -> Self {
+        let mtime_ms = metadata
+            .modified()
+            .ok()
+            .and_then(|mtime| mtime.duration_since(UNIX_EPOCH).ok())
+            .map(|since| u64::try_from(since.as_millis()).unwrap_or(u64::MAX))
+            .unwrap_or(0);
+        Self {
+            len: metadata.len(),
+            mtime_ms,
+        }
+    }
+}
+
+/// The two size ceilings, applied to the stat before the read and again to
+/// the length actually read, so a file that grew in between is still refused.
+fn size_gate(len: u64, max_bytes: Option<u64>) -> Result<(), AgentError> {
+    if max_bytes.is_some_and(|bound| len > bound) {
+        return Err(AgentError::new(
+            "UNSUPPORTED_IMAGE_FILE",
+            "Image exceeds the requested size bound",
+        ));
+    }
+    if len > MAX_IMAGE_FILE_BYTES {
         return Err(AgentError::new(
             "UNSUPPORTED_IMAGE_FILE",
             "Image file is too large for the preview",
         ));
     }
+    Ok(())
+}
 
-    let mtime_ms = metadata
-        .modified()
-        .ok()
-        .and_then(|mtime| mtime.duration_since(UNIX_EPOCH).ok())
-        .map(|duration| duration.as_millis() as u64)
-        .unwrap_or(0);
+/// Refuses bytes that do not belong to one revision: the stamp moved across
+/// the read, or the read saw a different length than the file has now. The
+/// UI treats this refusal as `IMAGE CHANGED` and refetches under the new card.
+fn verify_still(before: &ImageStamp, after: &ImageStamp, read_len: u64) -> Result<(), AgentError> {
+    if before != after || read_len != after.len {
+        return Err(AgentError::new(
+            "UNSUPPORTED_IMAGE_FILE",
+            "Image changed while it was being read",
+        ));
+    }
+    Ok(())
+}
 
-    Ok(ImageFileReadResult {
-        data_base64: STANDARD.encode(bytes),
-        mime_type: mime_type.to_string(),
-        bytes: metadata.len(),
-        mtime_ms,
-    })
+/// Reads at most `bound + 1` bytes; the one byte of overflow is what proves a
+/// grown file is over the bound without transferring the rest of it.
+async fn read_bounded(path: &Path, bound: u64) -> io::Result<Vec<u8>> {
+    let file = fs::File::open(path).await?;
+    let mut bytes = Vec::new();
+    file.take(bound.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .await?;
+    Ok(bytes)
 }
 
 /// The one extension-to-MIME mapping for previewable images; shared with the
@@ -122,121 +209,5 @@ pub(crate) fn mime_type_for_path(relative_path: &str) -> Option<&'static str> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::TempDir;
-
-    #[cfg(unix)]
-    use std::os::unix::fs as unix_fs;
-
-    fn repo_root() -> TempDir {
-        let root = TempDir::new().expect("tempdir");
-        fs::create_dir_all(root.path().join("docs/images")).expect("image dir");
-        root
-    }
-
-    #[tokio::test]
-    async fn reads_supported_image_file() {
-        let root = repo_root();
-        fs::write(root.path().join("docs/images/capture.png"), b"png bytes").expect("write png");
-
-        let result = read_image_file(
-            root.path().to_str().expect("root path"),
-            "docs/images/capture.png",
-        )
-        .await
-        .expect("read image");
-
-        assert_eq!(result.mime_type, "image/png");
-        assert_eq!(result.data_base64, "cG5nIGJ5dGVz");
-        assert_eq!(result.bytes, 9);
-        assert!(result.mtime_ms > 0);
-    }
-
-    #[tokio::test]
-    async fn rejects_traversal_paths() {
-        let root = repo_root();
-        let err = read_image_file(root.path().to_str().expect("root path"), "../outside.png")
-            .await
-            .expect_err("traversal should fail");
-
-        assert_eq!(err.code(), "INVALID_PATH");
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn rejects_symlink_file_outside_repo_root() {
-        let root = repo_root();
-        let outside = TempDir::new().expect("outside tempdir");
-        fs::write(outside.path().join("secret.png"), b"outside image").expect("write outside");
-        unix_fs::symlink(
-            outside.path().join("secret.png"),
-            root.path().join("docs/images/link.png"),
-        )
-        .expect("symlink file");
-
-        let err = read_image_file(
-            root.path().to_str().expect("root path"),
-            "docs/images/link.png",
-        )
-        .await
-        .expect_err("outside symlink should fail");
-
-        assert_eq!(err.code(), "INVALID_PATH");
-    }
-
-    #[tokio::test]
-    async fn reports_missing_files() {
-        let root = repo_root();
-        let err = read_image_file(
-            root.path().to_str().expect("root path"),
-            "docs/images/missing.png",
-        )
-        .await
-        .expect_err("missing file should fail");
-
-        assert_eq!(err.code(), "FILE_NOT_FOUND");
-    }
-
-    #[tokio::test]
-    async fn rejects_directory_paths() {
-        let root = repo_root();
-        let err = read_image_file(root.path().to_str().expect("root path"), "docs/images")
-            .await
-            .expect_err("directory should fail");
-
-        assert_eq!(err.code(), "UNSUPPORTED_IMAGE_FILE");
-    }
-
-    #[tokio::test]
-    async fn rejects_unsupported_extensions() {
-        let root = repo_root();
-        fs::write(root.path().join("docs/images/capture.tiff"), b"tiff bytes").expect("write tiff");
-
-        let err = read_image_file(
-            root.path().to_str().expect("root path"),
-            "docs/images/capture.tiff",
-        )
-        .await
-        .expect_err("unsupported image should fail");
-
-        assert_eq!(err.code(), "UNSUPPORTED_IMAGE_FILE");
-    }
-
-    #[tokio::test]
-    async fn rejects_oversized_images() {
-        let root = repo_root();
-        let bytes = vec![0_u8; (MAX_IMAGE_FILE_BYTES + 1) as usize];
-        fs::write(root.path().join("docs/images/large.png"), bytes).expect("write large image");
-
-        let err = read_image_file(
-            root.path().to_str().expect("root path"),
-            "docs/images/large.png",
-        )
-        .await
-        .expect_err("large image should fail");
-
-        assert_eq!(err.code(), "UNSUPPORTED_IMAGE_FILE");
-    }
-}
+#[path = "image_file_reader_tests.rs"]
+mod tests;

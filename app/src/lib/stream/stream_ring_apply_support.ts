@@ -53,16 +53,31 @@ export function replaceCard(state: StreamReduceState, where: CardPlace, card: St
   return { ...state, ring: { ...state.ring, cards } };
 }
 
+/** What `updateBurst` did: `matched` is false when no live burst card carries `id` any more */
+export interface BurstUpdate {
+  state: StreamReduceState;
+  matched: boolean;
+}
+
+/**
+ * Applies `update` to the live burst card `id`, in the pending FIFO or the ring. A card already
+ * evicted (or flagged exiting) can show nothing, so it never matches and the caller stays honest:
+ * a late member delta prints its own card rather than vanishing into a card the user cannot see.
+ */
 export function updateBurst(
   state: StreamReduceState,
   id: number,
   update: (card: StreamBurstCard) => StreamBurstCard
-): StreamReduceState {
-  const map = (card: StreamPendingCard): StreamPendingCard =>
-    card.kind === "burst" && card.id === id ? update(card) : card;
+): BurstUpdate {
+  let matched = false;
+  const map = (card: StreamPendingCard): StreamPendingCard => {
+    if (card.kind !== "burst" || card.id !== id || card.exiting) return card;
+    matched = true;
+    return update(card);
+  };
   const pending = state.pending.map(map);
   const cards = state.ring.cards.map((card) => (card.kind === "history" ? card : map(card)));
-  return { ...state, pending, ring: { ...state.ring, cards } };
+  return { state: { ...state, pending, ring: { ...state.ring, cards } }, matched };
 }
 
 /** The newest card matching `pick` among the last `budget` entries, skipping exiting cards */

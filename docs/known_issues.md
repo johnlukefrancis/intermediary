@@ -68,7 +68,6 @@ Depends on: ADR-000, ADR-007
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).
 - 2026-07-10: `agent_latest.log` is append-only and the installed runtime log was observed at about 780 MB, dominated by successful supervisor health-probe connection lifecycle entries. Long-running installs can accumulate unnecessary disk usage until logging gains bounded retention and probe-aware verbosity.
-- 2026-09-06: The agent event queue behind the 128-slot broadcast bus is an unbounded per-connection channel (pre-existing, `crates/im_agent/src/server/connection.rs`); with `fileDelta` events of up to 64 KiB it can hold more memory than before if a client socket stalls. The producer side is bounded (32 reads per 2 s per repo, budgeted deletes, counters instead of per-path events); a bounded queue with a drop counter is the recorded follow-up.
 
 ---
 
@@ -81,7 +80,7 @@ Depends on: ADR-000, ADR-007
   the same branch. Profile/TUI rendering, console-close feel, the `CF_UNICODETEXT` clipboard read, and the
   `CurrentBuildNumber` registry read remain installed-app product witnesses rather than automated Windows
   assertions (`docs/commands/verify_terminal.md`).
-- 2026-09-06: The Stream panel's Windows split-rename pairing (`RenameMode::From` then `To` from ReadDirectoryChangesW folded into one `[R]` card) and its motion, follow-scroll, image-tile, and burst behaviour are proven by unit tests and static review; the installed-app witness in `docs/commands/verify_stream.md` is the product acceptance and is owed on a host-rooted repo.
+- 2026-09-06: The Stream panel's Windows split-rename pairing (`RenameMode::From` then `To` from ReadDirectoryChangesW folded into one `[R]` card) and its motion, follow-scroll, image-tile, and burst behaviour are proven by unit tests and static review; the installed-app witness in `docs/commands/verify_stream.md` is the product acceptance and is owed on a host-rooted repo. The six P1 closures of `docs/reports/stream_adversarial_review_20260906.md` (index-first baseline, `mtimeMs`-bound pixels, causally refilled burst budget, overload cache clear, bounded transport with visible `seq` gaps, job-owned read permits) are in the same state: proven by tests and reading, owed at that witness. 0.1.23 is a candidate build until it passes.
 
 ---
 
@@ -135,6 +134,18 @@ linked worktrees) are recorded as accepted boundaries in `docs/design/source_con
 
 ## Resolved (recent)
 
+- 2026-09-06: The agent event queue behind the 128-slot broadcast bus was an unbounded per-connection channel
+  in both agents (pre-existing); with `fileDelta` events of up to 64 KiB it could hold more memory than before
+  if a client socket stalled. Closed at the second Stream adversarial review
+  (`docs/reports/stream_adversarial_review_20260906.md`): both connection owners now write stream events into a
+  queue bounded by BOTH count and size — `EVENT_QUEUE_CAP` 1024 events and `EVENT_QUEUE_BYTES` 8 MiB, whichever
+  trips first — with `try_send`, a drop counter, and one rate-limited warn per drop burst. Control events
+  (`snapshot`, `sourceControlChanged`, bundle progress, backend status) ride a separate backpressured lane
+  bounded at `CONTROL_QUEUE_CAP` 64 and are never dropped, so a stream flood can never evict them. The
+  producer side stays bounded too — 32 reads per 2 s per repo, deletes budgeted separately on their own
+  `GONE_BUDGET` 64 per window rather than exempt from budgeting, and counters instead of per-path events. No
+  drop event was added: `fileDelta` and `fileDeltaCounters` share one per-repo sequence, so every dropped
+  stream event is a visible `seq` gap.
 - 2026-09-03: The WSL agent's process tree had no owner once the supervisor killed the agent. The
   emergency route TERMed the agent and KILLed it 750 ms later, but the WSL agent's own SIGTERM drain runs
   up to 450 s and every Git command inside it owns a separate Unix process group — so the KILL orphaned

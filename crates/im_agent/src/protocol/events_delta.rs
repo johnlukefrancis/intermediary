@@ -71,6 +71,9 @@ pub enum DeltaPayload {
         bytes: u64,
         /// `None` for image extensions with no supported mime (heic/heif/tiff/tif).
         mime_type: Option<String>,
+        /// The file's mtime in epoch milliseconds from the same stat that
+        /// produced `bytes`, so the UI can bind fetched pixels to this revision.
+        mtime_ms: u64,
     },
     #[serde(rename_all = "camelCase")]
     Opaque { bytes: u64, reason: OpaqueReason },
@@ -85,8 +88,9 @@ pub enum DeltaPayload {
 #[serde(rename_all = "camelCase")]
 pub struct FileDeltaEvent {
     pub repo_id: String,
-    /// Strictly increasing per repo per agent process; a gap means the 128-slot
-    /// event bus dropped a delta, and a restart at 1 means a new stream.
+    /// Strictly increasing per repo per agent process, shared with
+    /// `fileDeltaCounters`; a gap means the bus or a connection queue dropped an
+    /// event, and a restart at 1 means a new stream.
     pub seq: u64,
     pub path: String,
     /// The previous path of a rename; absent otherwise.
@@ -117,6 +121,9 @@ pub struct FileDeltaEvent {
 #[serde(rename_all = "camelCase")]
 pub struct FileDeltaCountersEvent {
     pub repo_id: String,
+    /// Consumed from the same per-repo sequence as `fileDelta`, so a counters
+    /// event the transport drops is a visible gap like any other.
+    pub seq: u64,
     /// Paths the burst budget withheld since the previous emitted delta.
     pub withheld: u32,
     /// Paths the settle queue dropped at `QUEUE_CAP` since the previous emitted delta.

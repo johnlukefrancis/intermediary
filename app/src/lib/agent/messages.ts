@@ -113,15 +113,18 @@ export async function sendReadTextFile(
   });
 }
 
+/** `maxBytes` asks the agent to refuse an oversized file before reading it; omitted, the read is ungated */
 export async function sendReadImageFile(
   client: AgentClient,
   repoId: string,
-  path: string
+  path: string,
+  maxBytes?: number
 ): Promise<ReadImageFileResult> {
   return client.send<ReadImageFileResult>({
     type: "readImageFile",
     repoId,
     path,
+    ...(maxBytes === undefined ? {} : { maxBytes }),
   });
 }
 

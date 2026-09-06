@@ -1,55 +1,14 @@
 // Path: crates/im_agent/src/repos/delta/settle_queue.rs
 // Description: Pure per-path trailing coalescer for the delta pipeline
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::protocol::FileKind;
 
-use super::{MAX_LATENCY, QUEUE_CAP, SETTLE_WINDOW};
-
-/// What the watcher saw happen to a path, before the delta pipeline resolves it.
-/// A rename carries the path it came from so the baseline can move with it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum PendingOp {
-    Add,
-    Modify,
-    Remove,
-    Rename { from: String },
-}
-
-/// One path waiting for its quiet window. `first_seen` anchors `MAX_LATENCY`,
-/// `last_seen` anchors `SETTLE_WINDOW`, and `deadline` is the earlier of the two.
-#[derive(Debug, Clone)]
-pub(crate) struct PendingChange {
-    pub(crate) path: String,
-    pub(crate) abs_path: PathBuf,
-    pub(crate) kind: FileKind,
-    pub(crate) op: PendingOp,
-    pub(crate) first_seen: Instant,
-    pub(crate) last_seen: Instant,
-    pub(crate) deadline: Instant,
-    /// Re-marks folded into this one pending change.
-    pub(crate) folded: u32,
-    /// Times this change was re-armed because the file was still moving.
-    pub(crate) resettles: u32,
-}
-
-/// A re-mark of a path already pending collapses onto the pending op rather
-/// than queuing a second change: a create-then-delete is a delete, a
-/// delete-then-create is a create, and a rename replaces whatever was pending.
-fn collapse(existing: &PendingOp, incoming: PendingOp) -> PendingOp {
-    match (existing, &incoming) {
-        (_, PendingOp::Rename { .. }) => incoming,
-        (PendingOp::Add, PendingOp::Remove) => PendingOp::Remove,
-        (PendingOp::Remove, PendingOp::Add) => PendingOp::Add,
-        (PendingOp::Add, PendingOp::Modify | PendingOp::Add) => PendingOp::Add,
-        (PendingOp::Rename { from }, PendingOp::Modify | PendingOp::Add) => {
-            PendingOp::Rename { from: from.clone() }
-        }
-        _ => incoming,
-    }
-}
+use super::settle_change::{collapse, deadline_for, PendingChange, PendingOp};
+use super::{QUEUE_CAP, SETTLE_WINDOW};
 
 /// Trailing coalescer over paths. Every entry point takes `now` so the whole
 /// queue is deterministic under test; it performs no IO and never blocks, which
@@ -59,10 +18,13 @@ pub(crate) struct SettleQueue {
     /// is 256 comparisons at worst and no second index has to be kept correct.
     pending: Vec<PendingChange>,
     dropped: u32,
-    /// The paths behind `dropped`, bounded by the same `QUEUE_CAP`. The worker
-    /// evicts their baselines: a mark that never reached the resolver means the
-    /// cached text is no longer what the reader last saw.
-    dropped_paths: Vec<String>,
+    /// The distinct paths behind `dropped`, bounded by the same `QUEUE_CAP`.
+    /// The worker evicts their baselines: a mark that never reached the
+    /// resolver means the cached text is no longer what the reader last saw.
+    dropped_paths: HashSet<String>,
+    /// A path was dropped that the bounded record could not hold, so the
+    /// worker no longer knows which baselines went stale and clears them all.
+    dropped_overflowed: bool,
 }
 
 impl SettleQueue {
@@ -70,7 +32,8 @@ impl SettleQueue {
         Self {
             pending: Vec::new(),
             dropped: 0,
-            dropped_paths: Vec::new(),
+            dropped_paths: HashSet::new(),
+            dropped_overflowed: false,
         }
     }
 
@@ -98,9 +61,12 @@ impl SettleQueue {
         }
         if self.pending.len() >= QUEUE_CAP {
             self.dropped = self.dropped.saturating_add(1);
-            if self.dropped_paths.len() < QUEUE_CAP {
-                self.dropped_paths.push(path);
+            // A dropped rename leaves both endpoints untrustworthy: the text
+            // cached under `from` was never carried across.
+            if let PendingOp::Rename { from } = op {
+                self.record_dropped(from);
             }
+            self.record_dropped(path);
             return;
         }
         self.pending.push(PendingChange {
@@ -113,7 +79,21 @@ impl SettleQueue {
             deadline: deadline_for(now, now),
             folded: 0,
             resettles: 0,
+            index_baseline: None,
         });
+    }
+
+    /// Remembers a dropped path for baseline eviction, or flags the overflow
+    /// once the bounded record is full and the path is not already in it.
+    fn record_dropped(&mut self, path: String) {
+        if self.dropped_paths.contains(&path) {
+            return;
+        }
+        if self.dropped_paths.len() >= QUEUE_CAP {
+            self.dropped_overflowed = true;
+            return;
+        }
+        self.dropped_paths.insert(path);
     }
 
     /// Folds any change pending on `from` into a rename landing on `to`, so the
@@ -159,6 +139,11 @@ impl SettleQueue {
                 existing.resettles = existing.resettles.max(change.resettles.saturating_add(1));
                 existing.first_seen = existing.first_seen.min(change.first_seen);
                 existing.folded = existing.folded.saturating_add(change.folded);
+                // The fresh mark has no capture of its own; the re-settle keeps
+                // the index text the first attempt fetched.
+                if existing.index_baseline.is_none() {
+                    existing.index_baseline = change.index_baseline;
+                }
                 // The merged entry inherits the earlier `first_seen`, so its
                 // `MAX_LATENCY` ceiling moved: recompute rather than keep a
                 // deadline that no longer matches the anchors it was built from.
@@ -200,16 +185,19 @@ impl SettleQueue {
         due
     }
 
-    /// Reads and clears the marks discarded at `QUEUE_CAP`: how many, and which
-    /// paths (bounded by `QUEUE_CAP`) so their baselines can be evicted.
-    pub(crate) fn take_dropped(&mut self) -> (u32, Vec<String>) {
+    /// Reads and clears the marks discarded at `QUEUE_CAP`: how many, which
+    /// distinct paths (bounded by `QUEUE_CAP`) so their baselines can be
+    /// evicted, and whether that record itself overflowed - in which case the
+    /// worker must treat every baseline as stale.
+    pub(crate) fn take_dropped(&mut self) -> (u32, HashSet<String>, bool) {
         (
             std::mem::take(&mut self.dropped),
             std::mem::take(&mut self.dropped_paths),
+            std::mem::take(&mut self.dropped_overflowed),
         )
     }
 
-    #[cfg(test)]
+    /// Marks pending right now; the budget refills only while this is small.
     pub(crate) fn len(&self) -> usize {
         self.pending.len()
     }
@@ -222,10 +210,4 @@ impl SettleQueue {
     fn position(&self, path: &str) -> Option<usize> {
         self.pending.iter().position(|change| change.path == path)
     }
-}
-
-/// The quiet window, clamped so a continuously written file still emits once
-/// per `MAX_LATENCY`.
-fn deadline_for(first_seen: Instant, last_seen: Instant) -> Instant {
-    (last_seen + SETTLE_WINDOW).min(first_seen + MAX_LATENCY)
 }

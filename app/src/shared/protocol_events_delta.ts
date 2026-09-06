@@ -41,6 +41,8 @@ export const DeltaPayloadSchema = z.discriminatedUnion("kind", [
     kind: z.literal("image"),
     bytes: z.number().int().nonnegative(),
     mimeType: z.string().nullable(),
+    /** The file's mtime (ms) at the metadata read that produced the event: the revision the tile shows */
+    mtimeMs: z.number().int().nonnegative(),
   }),
   z.object({
     kind: z.literal("opaque"),
@@ -78,6 +80,8 @@ export type FileDeltaEvent = z.infer<typeof FileDeltaEventSchema>;
 export const FileDeltaCountersEventSchema = z.object({
   type: z.literal("fileDeltaCounters"),
   repoId: z.string(),
+  /** Consumed from the same per-repo sequence as fileDelta, so a drop before it still shows as a gap */
+  seq: z.number().int().nonnegative(),
   withheld: z.number().int().nonnegative(),
   dropped: z.number().int().nonnegative(),
 });

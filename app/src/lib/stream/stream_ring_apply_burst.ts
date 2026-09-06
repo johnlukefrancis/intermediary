@@ -7,7 +7,7 @@ import { BURST_CLOSE_MS, SETTLING_MAX, SETTLING_TTL_MS } from "./stream_bounds.j
 import { noteArrival, shouldCloseBurst, shouldOpenBurst, windowArrivals } from "./stream_burst_detect.js";
 import { absorbIntoBurstCard, newBurstCard, opForChangeType } from "./stream_burst_card.js";
 import { shouldCollapse } from "./stream_cadence.js";
-import { absorbIntoBurst, closeBurst, expireNotices, openBurst } from "./stream_ring.js";
+import { absorbIntoBurst, closeBurst, expireBurstGrace, expireNotices, openBurst } from "./stream_ring.js";
 import { takeId, updateBurst } from "./stream_ring_apply_support.js";
 import type { StreamBurstCard, StreamFileCard, StreamImageStripCard, StreamReduceState } from "./stream_types.js";
 
@@ -24,7 +24,7 @@ function absorbPath(
   if (open === null) return state;
   const next = { ...state, ring: absorbed.ring };
   const absorb = { op, fileKind, newPath: absorbed.newPath, dirCounts: open.dirCounts, now };
-  return updateBurst(next, open.id, (card) => absorbIntoBurstCard(card, absorb));
+  return updateBurst(next, open.id, (card) => absorbIntoBurstCard(card, absorb)).state;
 }
 
 /** Feeds burst detection and the settling line; a burst absorbs every path while it is open */
@@ -54,12 +54,14 @@ export function applyFileChanged(state: StreamReduceState, event: FileChangedEve
   return next;
 }
 
-/** Quiet closes the burst; stale settling paths and old notices are forgotten */
+/** Quiet closes the burst (into its grace); a lapsed grace, stale settling paths, and old notices are forgotten */
 export function settleReduce(state: StreamReduceState, now: number): StreamReduceState {
   let next = state;
   if (next.ring.burstOpen !== null && shouldCloseBurst(next.burstDetect, now)) {
-    next = { ...next, ring: closeBurst(next.ring) };
+    next = { ...next, ring: closeBurst(next.ring, now) };
   }
+  const graced = expireBurstGrace(next.ring, now);
+  if (graced !== next.ring) next = { ...next, ring: graced };
   if (next.settling.some((entry) => now - entry.atMs >= SETTLING_TTL_MS)) {
     next = { ...next, settling: next.settling.filter((entry) => now - entry.atMs < SETTLING_TTL_MS) };
   }
@@ -103,5 +105,5 @@ export function collapsePending(state: StreamReduceState, now: number): StreamRe
     resolved += card.tiles.length;
   }
   const targetId = target.id;
-  return updateBurst(next, targetId, (card) => ({ ...card, resolved: card.resolved + resolved }));
+  return updateBurst(next, targetId, (card) => ({ ...card, resolved: card.resolved + resolved })).state;
 }

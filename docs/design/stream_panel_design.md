@@ -23,7 +23,8 @@ themselves, in order, as they happen, and the panel stays bounded while they do.
   that prints the actual content of each edit as it lands — diff hunks for modified files, the body of
   a new file, the removed lines of a deletion, image tiles for pictures.
 - Each card names its own baseline, so what a card shows is never ambiguous: the diff versus the Git
-  index the first time a path is seen in this agent run, versus the previous card after that.
+  index the first time a path is seen in this agent run, versus the agent's previous sighting of that
+  path after that.
 - Latency of roughly 150–300 ms from save to card body on screen, for host-rooted and WSL-rooted repos
   alike, through the agent that already owns each root.
 - Bounded in every dimension — settle queue, read concurrency, bytes per file, diff bytes, burst
@@ -64,15 +65,20 @@ the `activeRail` precedent established, defaulting to `stream`.
   ordered set of cards. **Burst** is the single card that absorbs a flood. **Notice** is a console-prompt
   row outside the ring (reconnects, withheld counts, backend state). **History row** is a compact seed
   row derived from the existing recent list — path and time, never content.
-- **Baseline** vocabulary is user-visible and fixed: `SINCE LAST` (diff versus this run's previous card
-  for that path), `VS INDEX` (first sighting; diff versus the Git index), `NEW` (no baseline; every line
-  added), `GONE` (content unavailable, the path is simply reported removed).
+- **Baseline** vocabulary is user-visible and fixed: `SINCE LAST` (diff versus the agent's **previous
+  sighting** of that path in this run — the previous card only when no sighting was merged, withheld, or
+  dropped in between), `VS INDEX` (first sighting; diff versus the Git index blob captured before the
+  worktree read), `NEW` (no baseline; every line added), `GONE` (content unavailable, the path is simply
+  reported removed).
 - The wire says `previousSighting` / `index` / `none`; the chip is the human form of the same fact.
 
 ## Card grammar
 
 **A card shows what changed since the agent's previous sighting of that path, or since the index the
-first time (or nothing at all for a new file), and the card says which.**
+first time (or nothing at all for a new file), and the card says which.** "Previous sighting" is the
+agent's own last served text for that path, which is the previous card only when nothing between them
+was merged, withheld, or dropped; on a first sighting the index blob is read *before* the worktree, so
+the pair a `VS INDEX` card compares is captured in one causal order.
 
 One chassis, `.stream-card[data-kind][data-content][data-static]`, with a 3 px accent spine whose colour
 carries the change class: added → success, modified → info, deleted → error, binary → warning, burst →
@@ -98,8 +104,12 @@ carry the same fact.
   never grows past twice its decoded size, so a screenshot fills the slot while a small icon is at
   most doubled and centred on the checkerboard. Expanding a strip pairs each modified tile with its
   retained BEFORE across two columns. Pixels arrive only through `readImageFile` as bytes into a Blob
-  URL, under the size and mime gate; an image path whose metadata the agent could not read still
-  lands as a tile (zero bytes, `PREVIEW FAILED` or `NO PREVIEW`), never as a file card.
+  URL, under the size and mime gate (`maxBytes` travels with the request and the agent refuses an
+  oversized file before reading it). Pixels are bound to the revision that produced the card: the
+  payload carries `mtimeMs` beside `bytes`, and a fetch whose bytes or mtime do not match is discarded
+  with `IMAGE CHANGED` rather than shown under the wrong card. An image path whose metadata the agent
+  could not read still lands as a tile (zero bytes, `PREVIEW FAILED` or `NO PREVIEW`), never as a file
+  card.
 - **Opaque bodies** are one 48 px line: `BINARY · 4.2 MB` or `TOO LARGE FOR STREAM`.
 - **Burst cards** are fixed 96 px: `×N`, `N CHANGES IN 1.4 s`, the top three directories, an `A · M · D`
   strip, and a `RESOLVED` count. **History rows** are 24 px; **notices** are 32 px console prompts.
@@ -116,6 +126,19 @@ numeric literal outside the two bounds files.
 `INDEX_BLOB_LIMIT` = `MAX_DELTA_FILE_BYTES`. Ceilings: 16 MiB of baseline cache per repo, at most two
 reads in flight per agent process, bus worst case ≈ 9 MiB.
 
+- Added at the 2026-09-06 adversarial-review closure: `BURST_REFILL_MAX_PENDING` = `DRAIN_BATCH` (the
+  budget refills only while the queue is quiet or holds fewer pending marks than this, so one flood is
+  charged once however long it runs), `GONE_BUDGET` 64 per `BURST_WINDOW` (deletes are budgeted on their
+  own cheap allowance instead of being unbudgeted), and `EVENT_QUEUE_CAP` 1024 in both agents' server
+  connection owners (`try_send` into a bounded per-connection event queue; overflow increments a drop
+  counter and logs one rate-limited warn per drop burst).
+- Added at the same closure, in `crates/im_agent/src/server/event_bus.rs`: `CONTROL_QUEUE_CAP` 64 (the
+  control lane carries only snapshots, `sourceControlChanged`, bundle progress, and backend status — a
+  handful of events per user action, so 64 is deep enough to ride out a slow socket and shallow enough
+  that a stalled client cannot hoard memory), and `EVENT_QUEUE_BYTES` 8 MiB (the stream lane is bounded
+  by serialized bytes as well as by `EVENT_QUEUE_CAP` count, because 1024 slots of up to 64 KiB each
+  would otherwise reach 64 MiB per connection; 8 MiB is the ceiling one stalled client may hold).
+
 **UI** (`app/src/lib/stream/stream_bounds.ts`): `RING_SIZE` 20 · `NOTICE_MAX` 3 · `HISTORY_ROWS` 12 ·
 `LINE_CAP` 12 · `LINE_CAP_HANDSET` 6 · `EXPAND_CAP` 80 · `MAX_EXPANDED` 2 · `FLUSH_MS` 48 ·
 `CADENCE_BASE_MS` 260 · `CADENCE_MIN_MS` 70 · `LAG_BUDGET_MS` 1500 · `IDLE_WAKE_MS` 1000 ·
@@ -127,7 +150,8 @@ reads in flight per agent process, bus worst case ≈ 9 MiB.
 Worst-case DOM: twenty cards ≈ 880 nodes, ≈ 1,520 with two expanded. `LINE_CAP` and the cadence numbers
 are taste defaults JL tunes at the first witness session.
 
-- Added at the review closure: `READ_DEADLINE` 2 s (bounds a settled read or diff join), `RENAME_PAIR_WINDOW` 80 ms (strictly inside the settle window), `NOTICE_TTL_MS` 45 s and `NOTICE_MERGE_MS` 2 s (notice rows age out and same-key notices merge), `SETTLING_TTL_MS` 1.5 s / `SETTLING_MAX` 8 (the settling line), `BURST_TOP_DIRS` 3, `PRESSURE_BUSY_AT` 4 / `PRESSURE_FLOOD_AT` 12 (cadence bands), `DBLCLICK_GRACE_MS` 220 (a double-click never leaves a card expanded).
+- Added at the first review closure: `READ_DEADLINE` 2 s (bounds a settled read or diff join, and now the image metadata read too), `RENAME_PAIR_WINDOW` 80 ms (strictly inside the settle window), `NOTICE_TTL_MS` 45 s and `NOTICE_MERGE_MS` 2 s (notice rows age out and same-key notices merge), `SETTLING_TTL_MS` 1.5 s / `SETTLING_MAX` 8 (the settling line), `BURST_TOP_DIRS` 3, `PRESSURE_BUSY_AT` 4 / `PRESSURE_FLOOD_AT` 12 (cadence bands), `DBLCLICK_GRACE_MS` 220 (a double-click never leaves a card expanded).
+- Added at the 2026-09-06 adversarial-review closure: `MAX_TILE_PIXELS` 24 MP (decoded pixels one tile may hold, so a small file that decodes huge cannot blow the panel's memory), `MAX_RETAINED_PIXELS` 64 MP (decoded pixels retained across the whole ring; older tiles release their Blob first), `BURST_ABSORB_GRACE_MS` 6 s (a closed burst keeps absorbing its member paths this long, so a late delta bumps `RESOLVED` instead of opening a card), `BURST_MEMBER_CAP` 256 (member paths one burst remembers), `BURST_TOP_DIRS_TRACKED` 32 (directories tracked to compute the top three), `INTAKE_CAP` 1024 (events the pre-flush intake buffer holds; the oldest `fileChanged` is dropped first and counted).
 
 ## Motion governor amendment
 
@@ -175,6 +199,10 @@ steps on top of the global collapse. The LIVE dot sits outside the scroller and 
 | Image modified with its previous tile still retained | The tile shows the AFTER pixels with an `M` badge; clicking the strip expands it and every modified tile whose BEFORE tile is still retained becomes a two-column BEFORE/AFTER pair. Clicking again collapses it. |
 | Image deleted | The tile greys, a rule strikes it, and it keeps its slot; with no pixels retained the slot reads `DELETED`. The strip's height does not change. |
 | Image tile released by `MAX_IMAGE_TILES` retention | The Blob URL is revoked and the slot reads `RELEASED` at exactly the same size. A released tile never changes a strip's height and never moves the reading position. |
+| Image rewritten while its pixels were being read | The agent refuses the read (`UNSUPPORTED_IMAGE_FILE`, `Image changed while it was being read`) rather than returning bytes spanning two revisions; the tile shows `IMAGE CHANGED` at its slot size, never newer pixels under the older card. The path's next `fileDelta` brings its own tile. |
+| First sighting reads back empty while the index holds content | The empty read is the truncate half of a truncate-then-write, not an emptied file: on a `modify` it is held back and resettled, so there is no card and no baseline is cached. The next settled write prints `VS INDEX` against the index blob captured before it. An `add` landing empty is taken at face value. |
+| Image changed again before its pixels were fetched | The fetched bytes no longer match the payload's `bytes` and `mtimeMs`, so nothing is decoded: the tile keeps its slot and reads `IMAGE CHANGED`. The next `fileDelta` for that path prints the new revision with its own pixels. Stale pixels are never shown under an older card. |
+| Image whose decoded size exceeds `MAX_TILE_PIXELS`, or a strip past `MAX_RETAINED_PIXELS` | The oversized tile reads `NO PREVIEW · TOO LARGE` at the same slot size and never refetches; past the retained-pixel budget the oldest tiles release their Blobs and read `RELEASED`. Slot geometry is unchanged in both cases. |
 | Image > 4 MiB, or heic/heif/tiff/tif | The slot reads `NO PREVIEW` over the size or the extension and no bytes cross the wire (gated by `fileDelta.image.bytes`/`mimeType`); the slot is the same size as every other. |
 | Tile double-clicked / right-clicked / dragged | The image viewer, or the image diff for a modified tracked image / the shared file actions for that tile's path / drag-out of that tile's path. The strip itself opens nothing. |
 | Strip focused with the keyboard | Left and Right move the selected tile, Enter opens it, Space toggles the BEFORE/AFTER expansion; Up, Down, Home and End still move between cards. |
@@ -182,7 +210,12 @@ steps on top of the global collapse. The LIVE dot sits outside the scroller and 
 | Binary or > 512 KiB text-classified file | `BINARY · 4.2 MB` / `TOO LARGE FOR STREAM` 48 px card; double-click still opens the workspace (which applies its own limits). |
 | A branch checkout touching 500 files | Within a second the distinct-path rate crosses `BURST_THRESHOLD`: one burst card slams in (`×500 · 1.4 s`, top-3 dirs, `A 12 · M 480 · D 8`); the agent reads ≤ `BURST_BUDGET` paths whose deltas bump `RESOLVED`; withheld paths produce no events; `> 468 EDITS WITHHELD · BURST` prints from the `withheld` counter; the ring keeps its other 19 cards; ≤ 2 reads in flight in the agent; SOURCE still refreshes via its own coalescer. |
 | Steady 15 files/s for 3 s (no distinct-path burst) | Cards print at the cadence floor; the pending backlog reaching `BURST_THRESHOLD` collapses the rest into a burst card; the withheld notice reports the agent's budget. |
-| Delta lost on bus lag (`seq` gap) | Notice `> N EDITS NOT SHOWN`; nothing else waits on it (cards are created only from deltas that arrived). |
+| Late delta for a path whose burst already closed | The burst absorbs it for `BURST_ABSORB_GRACE_MS` after closing: `RESOLVED` increments in place and no card is created. Deltas pending at close are applied before the burst closes, so a member never prints behind its own burst; past the grace, or past `BURST_MEMBER_CAP` members, the path prints as an ordinary card. |
+| Late delta whose burst card has already left the ring | A card the user cannot see absorbs nothing: the bump finds no live burst card and the delta falls through to the ordinary card path, so the edit is still printed. An evicted burst card also drops its absorb grace, so its remaining members take the same route. |
+| Delta or counters event lost on bus lag (`seq` gap) | Notice `> N EDITS NOT SHOWN`; nothing else waits on it (cards are created only from deltas that arrived). `fileDeltaCounters` travels on the same per-repo sequence as `fileDelta`, so a dropped counters event is a gap like any other — there is no separate drop event. |
+| Intake overflow (`INTAKE_CAP`) | The pre-flush intake buffer refuses to grow past `INTAKE_CAP`: the oldest `fileChanged` is dropped first (its only consumer is the recent list, which reconciles on its own), then the oldest event of any kind, and the dropped count prints as a notice. The reducer pass and the ring are untouched. |
+| Agent's per-connection stream queue full (`EVENT_QUEUE_CAP` events or `EVENT_QUEUE_BYTES`) | The agent drops rather than growing: the event is not sent, a drop counter increments, one rate-limited warn is logged per drop burst, and the UI sees the loss as a `seq` gap notice. Whichever bound trips first applies, so a flood of large deltas is bounded by bytes and a flood of small ones by count. |
+| Stream flood while a control event is due | The control lane (`CONTROL_QUEUE_CAP`) is separate and backpressured: a snapshot, `sourceControlChanged`, bundle progress, or backend status is never evicted by dropped stream events, so the repo list, SOURCE, a running bundle, and the WSL backend's state stay truthful while edits are being dropped. |
 | Filter changed | Non-matching cards hide (`data-filtered`); ring untouched; switching back reveals them in place. |
 | Path outside the active ZIP selection | Card renders muted with `OUTSIDE SELECTION` (never hidden). |
 | Mode switched away and back | The table shows; the store keeps admitting; STREAM returns with the ring current, older cards static, `> N CHANGES WHILE AWAY`. |
@@ -243,8 +276,14 @@ The runbook is `docs/commands/verify_stream.md` (finalized at closeout); the ins
 - **`tracked` on the wire is best-effort.** The tracked-path set reloads up to about a second behind the
   index, so the flag decorates; the delete path never depends on it.
 - **Bus pressure is bounded and drops are visible.** `fileDelta` adds at most 32 events per 2 s per repo
-  (≤ 64 KiB each) on top of today's `fileChanged`; withheld paths add nothing, and anything the broadcast
-  bus drops shows up as a `seq` gap notice rather than a silent hole.
+  (≤ 64 KiB each, plus `GONE_BUDGET` 64 cheap `gone` events) on top of today's `fileChanged`; withheld
+  paths add nothing; each connection's stream queue is bounded at `EVENT_QUEUE_CAP` 1024 events **and**
+  `EVENT_QUEUE_BYTES` 8 MiB and drops rather than growing; and anything the bus or a queue drops shows up
+  as a `seq` gap notice rather than a silent hole, because `fileDelta` and `fileDeltaCounters` share one
+  per-repo sequence. Control events — `snapshot`, `sourceControlChanged`, bundle progress, and backend
+  status — do not share that queue: they ride a separate backpressured lane bounded at
+  `CONTROL_QUEUE_CAP` 64, which a stream flood can never evict, so the repo list, SOURCE, a running
+  bundle, and the WSL backend's own state stay truthful while edits are being dropped.
 - **A slow writer may print twice.** A process that pauses longer than about 360 ms mid-file defeats the
   settle window and prints the partial, then the rest. Honest and bounded; the alternative is holding
   edits behind an unbounded wait.
@@ -268,12 +307,22 @@ The runbook is `docs/commands/verify_stream.md` (finalized at closeout); the ins
     window), not by a notify tracker cookie or a same-parent check; an unpaired `From` stays the honest
     delete it always was, and the pairing is proven by unit test until the host-repo witness runs.
   - A delete whose baseline is cached but whose read budget is spent still emits a `gone` event with no
-    patch: tiny, count-bounded by the queue cap per drain, and the one deliberately unbudgeted outcome.
-  - The per-connection event queue behind the broadcast bus is unbounded (pre-existing); the producer-side
-    budget is the mitigation, and a bounded queue with a drop counter is the recorded follow-up.
+    patch: tiny, and budgeted on its own cheap allowance (`GONE_BUDGET` 64 per `BURST_WINDOW`) rather than
+    exempt from budgeting.
   - The DOM holds at most twenty-one cards: the ring plus one card mid-exit, spliced on the next admit.
   - An expanded card keeps its clamped line stagger during a flood (the card's declaration wins over the
     scroller's band); expansion is user-driven and rare.
   - Counters that would strand at the end of a burst travel on one additive `fileDeltaCounters` event;
     the same counters piggyback on the next `fileDelta` when one follows, and the UI merges both into
-    one notice.
+    one notice. The counters event consumes the per-repo sequence like a delta, so losing it is a gap.
+- **Adjudicated at the second 2026-09-06 adversarial review** (six P1, one P2, all accepted and closed —
+  `docs/reports/stream_adversarial_review_20260906.md`). Three boundaries the closures deliberately keep:
+  - **The index cannot be snapshotted at notify time.** ADR-009 forbids IO on the notify path, so the
+    index baseline is captured at the settle deadline, before the worktree read and carried across every
+    re-settle. A stage landing inside the settle window is therefore part of the baseline; the chip stays
+    truthful about what was compared, which is what the card grammar promises.
+  - **The last event of a stream, if dropped, is invisible until the next event.** A `seq` gap is detected
+    by the arrival of a later event, and no heartbeat was added — a recurring cost paid for a rare case.
+  - **An in-flight blocking read cannot be cancelled at watcher stop.** The read permit now lives inside
+    the blocking job, so a `READ_DEADLINE` timeout can never free a permit a running read still holds; a
+    stalled read still finishes on its pool thread, merely no longer observed and never waited on.

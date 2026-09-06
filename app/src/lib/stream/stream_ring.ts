@@ -2,6 +2,8 @@
 // Description: Pure ring operations: admit and evict, expand, notices, burst cards, history seed, static sweep
 
 import {
+  BURST_ABSORB_GRACE_MS,
+  BURST_MEMBER_CAP,
   HISTORY_ROWS,
   MAX_EXPANDED,
   NOTICE_MAX,
@@ -21,11 +23,23 @@ import type {
   StreamRingCard,
 } from "./stream_types.js";
 
-export const EMPTY_RING: StreamRing = { cards: [], notices: [], lastSeq: null, burstOpen: null };
+export const EMPTY_RING: StreamRing = { cards: [], notices: [], lastSeq: null, burstOpen: null, burstGrace: null };
+
+/**
+ * A burst card that is leaving takes its absorb grace with it: a card the user can no longer see
+ * must not keep swallowing its members' late deltas. Only the ids actually leaving drop the grace,
+ * so a burst card still waiting in the pending FIFO keeps absorbing for its members.
+ */
+function withoutGraceFor(ring: StreamRing, leaving: (id: number) => boolean): StreamRing {
+  const grace = ring.burstGrace;
+  return grace !== null && leaving(grace.id) ? { ...ring, burstGrace: null } : ring;
+}
 
 export function spliceExited(ring: StreamRing): StreamRing {
   if (!ring.cards.some((card) => card.exiting)) return ring;
-  return { ...ring, cards: ring.cards.filter((card) => !card.exiting) };
+  const gone = new Set(ring.cards.filter((card) => card.exiting).map((card) => card.id));
+  const cards = ring.cards.filter((card) => !card.exiting);
+  return withoutGraceFor({ ...ring, cards }, (id) => gone.has(id));
 }
 
 /** File cards and image strips expand in place; both are eviction-exempt while expanded */
@@ -50,16 +64,20 @@ function victimIndex(cards: readonly StreamRingCard[]): number {
  * evictable card is flagged exiting so the motion sheet can play it out before the next admit.
  */
 export function admit(ring: StreamRing, card: StreamRingCard): StreamRing {
-  const cards = [...spliceExited(ring).cards, card];
+  let spliced = spliceExited(ring);
+  const cards = [...spliced.cards, card];
   const live = cards.filter((entry) => !entry.exiting).length;
   if (live > RING_SIZE) {
     const index = victimIndex(cards);
     if (index !== -1) {
       const victim = cards[index];
-      if (victim !== undefined) cards[index] = { ...victim, exiting: true };
+      if (victim !== undefined) {
+        cards[index] = { ...victim, exiting: true };
+        spliced = withoutGraceFor(spliced, (id) => id === victim.id);
+      }
     }
   }
-  return { ...ring, cards };
+  return { ...spliced, cards };
 }
 
 /** Toggle one file card or strip; when a third opens, the oldest expanded card collapses first */
@@ -136,22 +154,45 @@ export function openBurst(ring: StreamRing, id: number, untilMs: number): Stream
   return { ...ring, burstOpen: { id, untilMs, paths: new Set(), dirCounts: new Map() } };
 }
 
-/** Records the path in the open burst; returns the ring and whether the path was new to it */
+/**
+ * Records the path in the open burst; returns the ring and whether the path was new to it. Past
+ * BURST_MEMBER_CAP a new path is counted but not remembered, so its delta prints as a card, honestly.
+ */
 export function absorbIntoBurst(
   ring: StreamRing,
   path: string,
   untilMs: number
 ): { ring: StreamRing; newPath: boolean } {
-  if (ring.burstOpen === null) return { ring, newPath: false };
-  const newPath = !ring.burstOpen.paths.has(path);
-  const paths = new Set(ring.burstOpen.paths);
-  paths.add(path);
-  const dirCounts = newPath ? countDir(ring.burstOpen.dirCounts, path) : ring.burstOpen.dirCounts;
-  return { ring: { ...ring, burstOpen: { ...ring.burstOpen, paths, dirCounts, untilMs } }, newPath };
+  const open = ring.burstOpen;
+  if (open === null) return { ring, newPath: false };
+  const newPath = !open.paths.has(path);
+  let paths = open.paths;
+  if (newPath && paths.size < BURST_MEMBER_CAP) {
+    const grown = new Set(paths);
+    grown.add(path);
+    paths = grown;
+  }
+  const dirCounts = newPath ? countDir(open.dirCounts, path) : open.dirCounts;
+  return { ring: { ...ring, burstOpen: { ...open, paths, dirCounts, untilMs } }, newPath };
 }
 
-export function closeBurst(ring: StreamRing): StreamRing {
-  return ring.burstOpen === null ? ring : { ...ring, burstOpen: null };
+/** Closing hands the members to a grace window: their deltas still land on the card until it lapses */
+export function closeBurst(ring: StreamRing, now: number): StreamRing {
+  const open = ring.burstOpen;
+  if (open === null) return ring;
+  return { ...ring, burstOpen: null, burstGrace: { id: open.id, paths: open.paths, untilMs: now + BURST_ABSORB_GRACE_MS } };
+}
+
+/** The burst id still owning `path` at `now`: the open burst, else the closed one inside its grace, else null */
+export function burstOwning(ring: StreamRing, path: string, now: number): number | null {
+  if (ring.burstOpen?.paths.has(path) === true) return ring.burstOpen.id;
+  const grace = ring.burstGrace;
+  return grace !== null && now < grace.untilMs && grace.paths.has(path) ? grace.id : null;
+}
+
+/** The same ring comes back while the grace is live or absent */
+export function expireBurstGrace(ring: StreamRing, now: number): StreamRing {
+  return ring.burstGrace !== null && now >= ring.burstGrace.untilMs ? { ...ring, burstGrace: null } : ring;
 }
 
 export function updateBurstCard(

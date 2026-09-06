@@ -506,6 +506,10 @@
       "summary": "Context delivering the built tree decorations to the recursive bundle explorer rows"
     },
     {
+      "path": "app/src/hooks/stream/stream_tile_records.ts",
+      "summary": "The panel's tile pixel records: statuses, Blob release, the decoded-pixel lookup, and the published projection"
+    },
+    {
       "path": "app/src/hooks/stream/use_deferred_click.ts",
       "summary": "A single click that fires only once the double-click grace has passed; shared by file cards and image strips"
     },
@@ -523,7 +527,7 @@
     },
     {
       "path": "app/src/hooks/stream/use_stream_images.ts",
-      "summary": "Per-panel image tiles keyed by strip and path: gated readImageFile reads, decoded Blob tiles, bounded retention and r..."
+      "summary": "Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, decoded Blob tiles, bounded retent..."
     },
     {
       "path": "app/src/hooks/terminal/use_terminal_group.ts",
@@ -795,7 +799,7 @@
     },
     {
       "path": "app/src/lib/stream/stream_ring_apply_burst_test.ts",
-      "summary": "Burst reducer rules: open at the threshold, absorb, close on quiet, collapse against the open burst, notice TTL"
+      "summary": "Burst reducer rules: open at the threshold, absorb, close on quiet into a grace, eviction fall-through, membership ca..."
     },
     {
       "path": "app/src/lib/stream/stream_ring_apply_burst.ts",
@@ -807,7 +811,7 @@
     },
     {
       "path": "app/src/lib/stream/stream_ring_apply_test.ts",
-      "summary": "Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart, counters"
+      "summary": "Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart on deltas and counters, coun..."
     },
     {
       "path": "app/src/lib/stream/stream_ring_apply.ts",
@@ -831,11 +835,11 @@
     },
     {
       "path": "app/src/lib/stream/stream_store_support.ts",
-      "summary": "Store-side pure helpers: browser timer deps, transport facts, the selection remap, and the snapshot projection"
+      "summary": "Store-side pure helpers: browser timer deps, intake cap, history seed, transport facts, the selection remap, and the..."
     },
     {
       "path": "app/src/lib/stream/stream_store_test.ts",
-      "summary": "Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, idle notice..."
+      "summary": "Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, intake cap,..."
     },
     {
       "path": "app/src/lib/stream/stream_store.ts",
@@ -850,8 +854,16 @@
       "summary": "How an image strip's head, rail, and footer read: count label, shared directory, op tally, clock span, bytes"
     },
     {
+      "path": "app/src/lib/stream/stream_tile_pixels_test.ts",
+      "summary": "Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decoded-size gate; the mid-read..."
+    },
+    {
+      "path": "app/src/lib/stream/stream_tile_pixels.ts",
+      "summary": "Pure pixel-acceptance rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, and the d..."
+    },
+    {
       "path": "app/src/lib/stream/stream_tile_targets_test.ts",
-      "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte budget, unfetchable tiles..."
+      "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte and pixel budgets, unfetc..."
     },
     {
       "path": "app/src/lib/stream/stream_tile_targets.ts",
@@ -1462,12 +1474,24 @@
       "summary": "Byte-bounded LRU of the text last served per path, per repo"
     },
     {
+      "path": "crates/im_agent/src/repos/delta/delta_budget_tests.rs",
+      "summary": "Burst budget tests - per-emit charge, gone budget, causal refill (a flood never refills mid-run, a hot loop does), wi..."
+    },
+    {
       "path": "crates/im_agent/src/repos/delta/delta_budget.rs",
-      "summary": "The delta read budget - burst token bucket, per-window log gates, and the per-change charge decision"
+      "summary": "The delta read budget - burst token bucket, causal refill, gone budget, per-window log gates, and the per-change char..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_cache_tests.rs",
       "summary": "Baseline cache tests - byte budget, LRU eviction and the rename carry"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_limits.rs",
+      "summary": "Process-wide delta bounds - the one read-permit semaphore every repo's worker shares"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_order_tests.rs",
+      "summary": "Resolver causal-order tests through the ReadSources seam - index blob before worktree, capture reused on re-settle, a..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_patch_tests.rs",
@@ -1482,24 +1506,60 @@
       "summary": "Blocking stat-read-restat of one settled file for the delta pipeline"
     },
     {
+      "path": "crates/im_agent/src/repos/delta/delta_reads.rs",
+      "summary": "The two reads a text delta depends on - index blob and settled worktree read - behind one seam the resolver is tested..."
+    },
+    {
       "path": "crates/im_agent/src/repos/delta/delta_resolve_tests.rs",
-      "summary": "Per-change decision tests - burst charge, rename baseline move, first-sighting truncate guard, image metadata failures"
+      "summary": "Per-change decision tests - rename baseline move, first-sighting truncate guard, image metadata failures"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_resolve_text_tests.rs",
+      "summary": "Text-arm tests - the zero-length first-sighting rule and the READ_DEADLINE bound on the permit wait"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_resolve_text.rs",
+      "summary": "The text arm of the resolver - index baseline captured before the worktree read, deadline-bounded owned read permits,..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_resolve.rs",
-      "summary": "Resolves one settled change into a fileDelta payload - baseline ladder, settled read, image metadata"
+      "summary": "Resolves one settled change into a fileDelta payload - dispatch by kind and op, image metadata, the deletion card"
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_stamp.rs",
       "summary": "RFC 3339 mtime stamps for one delta - now, a SystemTime, or the milliseconds a settled read reported"
     },
     {
+      "path": "crates/im_agent/src/repos/delta/delta_test_support.rs",
+      "summary": "Resolver test seam - a scripted ReadSources recorder, a change fixture, and the harness that runs resolve against them"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_worker_counters.rs",
+      "summary": "The withheld and dropped counters a worker owes the UI, the one sequence they share with fileDelta, and when a standa..."
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_worker_emit.rs",
+      "summary": "Builds the fileDelta wire event from one resolved change and the worker's stamp"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_worker_evict.rs",
+      "summary": "Baseline eviction for changes that never reached the resolver - dropped marks (bounded record, overflow clears all) a..."
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_worker_tests.rs",
+      "summary": "Worker-level tests - a withheld rename evicts both baselines, counters consume the shared seq, the time-bound standal..."
+    },
+    {
       "path": "crates/im_agent/src/repos/delta/delta_worker.rs",
-      "summary": "The delta worker loop - drains settled changes, applies the burst budget, stamps and publishes fileDelta"
+      "summary": "The delta worker loop - drains settled changes, applies the burst budget, evicts stale baselines, stamps and publishe..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/mod.rs",
       "summary": "Bounded delta pipeline for fileDelta - named bounds, DeltaService owner, pure-core exports"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/settle_change.rs",
+      "summary": "One pending change on the settle queue - its op vocabulary, op collapse, and deadline arithmetic"
     },
     {
       "path": "crates/im_agent/src/repos/delta/settle_queue.rs",
@@ -1520,6 +1580,10 @@
     {
       "path": "crates/im_agent/src/repos/ignore_matcher.rs",
       "summary": "Ignore glob matcher for repo watcher"
+    },
+    {
+      "path": "crates/im_agent/src/repos/image_file_reader_tests.rs",
+      "summary": "Image preview reader tests - mime gate, root escape, size bounds (process-wide and per-request), one-revision binding"
     },
     {
       "path": "crates/im_agent/src/repos/image_file_reader.rs",
@@ -1738,8 +1802,16 @@
       "summary": "Source-control command handlers for WebSocket dispatch (status, diff, actions)"
     },
     {
+      "path": "crates/im_agent/src/server/event_bus_relay.rs",
+      "summary": "The per-connection relay - a drop-on-full stream lane under slot and byte ceilings, a backpressured control lane, and..."
+    },
+    {
+      "path": "crates/im_agent/src/server/event_bus_tests.rs",
+      "summary": "Event bus tests - lane tagging at broadcast, a stream flood against a stalled writer, the byte ceiling gate, the drop..."
+    },
+    {
       "path": "crates/im_agent/src/server/event_bus.rs",
-      "summary": "Broadcast agent events to connected WebSocket clients"
+      "summary": "Broadcast agent events to connected WebSocket clients - each event serialized once and tagged with its lane at broadc..."
     },
     {
       "path": "crates/im_agent/src/server/handshake_auth.rs",

@@ -45,6 +45,11 @@ function slotNote(tile: StreamStripTile, pixels: TilePixels | undefined): string
       return "RELEASED";
     case "error":
       return "PREVIEW FAILED";
+    // The file moved on past the revision this card announced; its next delta brings its own tile
+    case "superseded":
+      return "IMAGE CHANGED";
+    case "tooLarge":
+      return "NO PREVIEW · TOO LARGE";
     default:
       return "";
   }

@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/repos/delta/delta_worker.rs
-// Description: The delta worker loop - drains settled changes, applies the burst budget, stamps and publishes fileDelta
+// Description: The delta worker loop - drains settled changes, applies the burst budget, evicts stale baselines, stamps and publishes fileDelta and the counters it owes
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -9,15 +9,18 @@ use im_bundle::cancel::BundleCancelToken;
 use tokio::sync::{watch, Notify, Semaphore};
 
 use crate::logging::Logger;
-use crate::protocol::{AgentEvent, DeltaOp, DeltaPayload, FileDeltaCountersEvent, FileDeltaEvent};
+use crate::protocol::{AgentEvent, DeltaPayload, FileDeltaCountersEvent};
 use crate::repos::source_control_watch::TrackedPathSet;
 use crate::server::EventBus;
 
 use super::delta_budget::{BurstBucket, Charge};
+use super::delta_reads::{DiskReads, ReadSources};
 use super::delta_resolve::{resolve, Resolution, ResolveContext};
+use super::delta_worker_counters::DeltaCounters;
+use super::delta_worker_emit::{file_delta_event, DeltaStamp};
+use super::delta_worker_evict::{evict_withheld, DroppedEviction};
 use super::{
-    BaselineCache, DeltaLimits, PendingChange, PendingOp, SettleQueue, CACHE_BYTES_PER_REPO,
-    DRAIN_BATCH,
+    BaselineCache, DeltaLimits, PendingChange, SettleQueue, CACHE_BYTES_PER_REPO, DRAIN_BATCH,
 };
 
 /// The service side of the worker: the queue the watcher marks, the nudge
@@ -36,15 +39,15 @@ pub(super) struct DeltaWorker {
     logger: Logger,
     tracked: TrackedPathSet,
     permits: Arc<Semaphore>,
+    reads: Arc<dyn ReadSources>,
     queue: Arc<Mutex<SettleQueue>>,
     nudge: Arc<Notify>,
     stop: watch::Receiver<bool>,
     cancel: BundleCancelToken,
     cache: BaselineCache,
     burst: BurstBucket,
-    seq: u64,
-    withheld: u32,
-    dropped: u32,
+    counters: DeltaCounters,
+    dropped_eviction: DroppedEviction,
 }
 
 impl DeltaWorker {
@@ -64,15 +67,15 @@ impl DeltaWorker {
             logger,
             tracked,
             permits: limits.read_permits,
+            reads: Arc::new(DiskReads),
             queue: links.queue,
             nudge: links.nudge,
             stop: links.stop,
             cancel: links.cancel,
             cache: BaselineCache::new(CACHE_BYTES_PER_REPO),
             burst: BurstBucket::new(Instant::now()),
-            seq: 0,
-            withheld: 0,
-            dropped: 0,
+            counters: DeltaCounters::new(Instant::now()),
+            dropped_eviction: DroppedEviction::new(),
         }
     }
 
@@ -99,19 +102,24 @@ impl DeltaWorker {
             }
 
             let now = Instant::now();
-            let window_denied = self.burst.roll(now, &self.logger, &self.repo_id);
-            let (batch, dropped, dropped_paths) = {
-                let mut queue = self.lock_queue();
+            // The refill is judged on the queue as it stands BEFORE this drain,
+            // batch included: mid-run the count stays above the refill ceiling.
+            let (pending, batch, dropped, dropped_paths, overflowed) = {
+                let mut queue = self.queue.lock().unwrap_or_else(|err| err.into_inner());
+                let pending = queue.len();
                 let batch = queue.drain_due(now, DRAIN_BATCH);
-                let (dropped, dropped_paths) = queue.take_dropped();
-                (batch, dropped, dropped_paths)
+                let (dropped, dropped_paths, overflowed) = queue.take_dropped();
+                (pending, batch, dropped, dropped_paths, overflowed)
             };
-            self.dropped = self.dropped.saturating_add(dropped);
-            // A mark discarded at `QUEUE_CAP` never reached the resolver, so the
-            // cached text is no longer what the reader last saw.
-            for path in &dropped_paths {
-                self.cache.remove(path);
-            }
+            let window_denied = self.burst.roll(now, pending, &self.logger, &self.repo_id);
+            self.counters.note_dropped(dropped);
+            self.dropped_eviction.apply(
+                &mut self.cache,
+                &dropped_paths,
+                overflowed,
+                &self.logger,
+                &self.repo_id,
+            );
             if !self.event_bus.has_receivers() {
                 // Idle daemon: nobody is listening, so a sighting only evicts
                 // the baseline; the next sighting after a subscriber arrives
@@ -127,29 +135,34 @@ impl DeltaWorker {
                 }
                 self.process(change).await;
             }
-            if window_denied || self.lock_queue().next_deadline().is_none() {
+            let quiet = self.lock_queue().next_deadline().is_none();
+            if self
+                .counters
+                .standalone_due(Instant::now(), window_denied, quiet)
+            {
                 self.flush_counters();
             }
         }
     }
 
-    /// Publishes the counters on their own when nothing is left to piggyback
-    /// them on: the queue went quiet, or a burst window that denied something
-    /// closed. Whichever carrier goes first delivers, and both take the
+    /// Publishes the counters on their own (`DeltaCounters::standalone_due`
+    /// says when). Whichever carrier goes first delivers, and both take the
     /// counters, so the UI never sees the same withheld path twice.
-    fn flush_counters(&mut self) {
-        if self.withheld == 0 && self.dropped == 0 {
+    pub(super) fn flush_counters(&mut self) {
+        if self.counters.is_zero() {
             return;
         }
+        let taken = self.counters.take(Instant::now());
         self.event_bus
             .broadcast_event(AgentEvent::FileDeltaCounters(FileDeltaCountersEvent {
                 repo_id: self.repo_id.clone(),
-                withheld: std::mem::take(&mut self.withheld),
-                dropped: std::mem::take(&mut self.dropped),
+                seq: taken.seq,
+                withheld: taken.withheld,
+                dropped: taken.dropped,
             }));
     }
 
-    async fn process(&mut self, change: PendingChange) {
+    pub(super) async fn process(&mut self, mut change: PendingChange) {
         // A re-settled change already paid its token on the first attempt;
         // charging again would let one stubborn file eat the whole window.
         let charge = if change.resettles > 0 {
@@ -160,8 +173,8 @@ impl DeltaWorker {
         let may_spawn = match charge {
             Charge::Resolve => true,
             Charge::Withhold => {
-                self.withheld = self.withheld.saturating_add(1);
-                self.cache.remove(&change.path);
+                self.counters.note_withheld();
+                evict_withheld(&mut self.cache, &change);
                 return;
             }
             // The delete still prints, as a `Gone` card with no baseline.
@@ -171,10 +184,11 @@ impl DeltaWorker {
             root: &self.root,
             cache: &mut self.cache,
             permits: &self.permits,
+            reads: &self.reads,
             cancel: &self.cancel,
             may_spawn,
         };
-        match resolve(&mut context, &change).await {
+        match resolve(&mut context, &mut change).await {
             Resolution::Resettle => self.lock_queue().requeue(change, Instant::now()),
             Resolution::Drop => {}
             Resolution::Emit {
@@ -200,32 +214,15 @@ impl DeltaWorker {
     }
 
     fn emit(&mut self, change: PendingChange, payload: DeltaPayload, mtime: String) {
-        self.seq = self.seq.saturating_add(1);
-        let (op, from_path) = match change.op {
-            PendingOp::Add => (DeltaOp::Add, None),
-            PendingOp::Modify => (DeltaOp::Modify, None),
-            PendingOp::Remove => (DeltaOp::Remove, None),
-            PendingOp::Rename { from } => (DeltaOp::Rename, Some(from)),
-        };
-        let size = match &payload {
-            DeltaPayload::Text { patch, .. } => patch.len() as u64,
-            DeltaPayload::Image { bytes, .. } | DeltaPayload::Opaque { bytes, .. } => *bytes,
-            DeltaPayload::Gone => 0,
-        };
-        let event = FileDeltaEvent {
+        let taken = self.counters.take(Instant::now());
+        let stamp = DeltaStamp {
             repo_id: self.repo_id.clone(),
-            seq: self.seq,
-            tracked: Some(self.tracked.contains(&change.path)),
-            path: change.path,
-            from_path,
-            kind: change.kind,
-            op,
-            mtime,
-            folded: change.folded,
-            withheld: std::mem::take(&mut self.withheld),
-            dropped: std::mem::take(&mut self.dropped),
-            payload,
+            seq: taken.seq,
+            tracked: self.tracked.contains(&change.path),
+            withheld: taken.withheld,
+            dropped: taken.dropped,
         };
+        let event = file_delta_event(stamp, change, payload, mtime);
         self.logger.debug(
             "fileDelta",
             Some(serde_json::json!({
@@ -236,7 +233,7 @@ impl DeltaWorker {
                 "folded": event.folded,
                 "withheld": event.withheld,
                 "dropped": event.dropped,
-                "size": size,
+                "size": event.payload_size(),
                 "cacheBytes": self.cache.bytes(),
             })),
         );

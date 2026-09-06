@@ -7,7 +7,7 @@ use crate::error::AgentError;
 use crate::protocol::{self, UiResponse};
 use crate::repos::worktree::worktree_action;
 use crate::repos::{
-    get_repo_top_level, import_files, list_repo_directory, read_image_file, read_text_file,
+    get_repo_top_level, import_files, list_repo_directory, read_image_file_bounded, read_text_file,
 };
 use crate::source_control::SourceControlLocks;
 use crate::staging::{StageFileCancelToken, StagingRootKind};
@@ -37,7 +37,7 @@ pub async fn read_image_file_command(
     ctx: &ConnectionContext,
 ) -> Result<UiResponse, AgentError> {
     let repo_root = command_repo_root(&command.repo_id, ctx).await?;
-    let result = read_image_file(&repo_root, &command.path).await?;
+    let result = read_image_file_bounded(&repo_root, &command.path, command.max_bytes).await?;
     Ok(UiResponse::ReadImageFileResult(
         protocol::ReadImageFileResult {
             repo_id: command.repo_id,
@@ -139,13 +139,8 @@ pub async fn worktree_action_command(
     let _guard = locks.acquire(root).await?;
 
     let kind = command.action.kind();
-    let entries = worktree_action(
-        root,
-        &command.action,
-        &locks,
-        &StageFileCancelToken::new(),
-    )
-    .await?;
+    let entries =
+        worktree_action(root, &command.action, &locks, &StageFileCancelToken::new()).await?;
 
     Ok(UiResponse::WorktreeActionResult(
         protocol::WorktreeActionResult {

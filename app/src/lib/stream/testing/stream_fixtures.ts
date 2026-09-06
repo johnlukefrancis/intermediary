@@ -41,6 +41,9 @@ export function textDelta(path: string, overrides: Partial<FileDeltaEvent> = {},
   };
 }
 
+/** The mtime every fixture image carries unless a test names its own revision */
+export const IMAGE_MTIME_MS = 1_700_000_000_000;
+
 /** An image delta: metadata only, a live png by default; pass `{ op: "remove", payload: { kind: "gone" } }` for a delete */
 export function imageDelta(path: string, overrides: Partial<FileDeltaEvent> = {}, bytes = 1024): FileDeltaEvent {
   seq += 1;
@@ -55,7 +58,7 @@ export function imageDelta(path: string, overrides: Partial<FileDeltaEvent> = {}
     folded: 0,
     withheld: 0,
     dropped: 0,
-    payload: { kind: "image", bytes, mimeType: "image/png" },
+    payload: { kind: "image", bytes, mimeType: "image/png", mtimeMs: IMAGE_MTIME_MS },
     ...overrides,
   };
 }

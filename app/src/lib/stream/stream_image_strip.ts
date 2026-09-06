@@ -18,17 +18,17 @@ export function mergeOp(previous: DeltaOp, next: DeltaOp): DeltaOp {
   return next;
 }
 
-/** An opaque (or, from an older agent, text) payload is a NO PREVIEW tile: no mime means no fetch */
+/** An opaque (or, from an older agent, text) payload is a NO PREVIEW tile: no mime means no fetch, so it names no revision */
 export function stripTileBody(payload: ImagePayload): StreamStripTileBody {
   switch (payload.kind) {
     case "image":
-      return { status: "image", bytes: payload.bytes, mimeType: payload.mimeType };
+      return { status: "image", bytes: payload.bytes, mimeType: payload.mimeType, mtimeMs: payload.mtimeMs };
     case "gone":
       return { status: "gone" };
     case "opaque":
-      return { status: "image", bytes: payload.bytes, mimeType: null };
+      return { status: "image", bytes: payload.bytes, mimeType: null, mtimeMs: 0 };
     case "text":
-      return { status: "image", bytes: 0, mimeType: null };
+      return { status: "image", bytes: 0, mimeType: null, mtimeMs: 0 };
   }
 }
 

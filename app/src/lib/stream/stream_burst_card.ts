@@ -3,7 +3,7 @@
 
 import type { VisibleFileKind } from "../files/file_feed.js";
 import type { DeltaOp, FileChangeType } from "../../shared/protocol.js";
-import { BURST_TOP_DIRS } from "./stream_bounds.js";
+import { BURST_TOP_DIRS, BURST_TOP_DIRS_TRACKED } from "./stream_bounds.js";
 import type { StreamBurstCard } from "./stream_types.js";
 
 export type DirCounts = ReadonlyMap<string, number>;
@@ -44,9 +44,15 @@ export function burstDir(path: string): string {
   return slash === -1 ? "/" : path.slice(0, slash);
 }
 
+/** The bucket every directory past BURST_TOP_DIRS_TRACKED lands in */
+export const BURST_OTHER_DIR = "other";
+
+/** One count per top-level directory; once BURST_TOP_DIRS_TRACKED are tallied, a new directory counts as `other` */
 export function countDir(dirCounts: DirCounts, path: string): Map<string, number> {
   const next = new Map(dirCounts);
-  const dir = burstDir(path);
+  const real = burstDir(path);
+  const tracked = next.size - (next.has(BURST_OTHER_DIR) ? 1 : 0);
+  const dir = next.has(real) || tracked < BURST_TOP_DIRS_TRACKED ? real : BURST_OTHER_DIR;
   next.set(dir, (next.get(dir) ?? 0) + 1);
   return next;
 }

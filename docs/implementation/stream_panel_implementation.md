@@ -2,8 +2,12 @@
 Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006, ADR-007, ADR-008, ADR-009, ADR-010, ADR-012
-Status: **Built** — rungs 1–8 landed and checked (tsc, eslint, 43 TS tests, cargo check with zero warnings, 337 Rust tests, Windows-side Tauri crate check); 0.1.23 installer build and the installed-app witness (`docs/commands/verify_stream.md`) are the remaining acceptance. This document is the durable execution owner for the
-Stream panel; the design contract is `docs/design/stream_panel_design.md`.
+Status: **Candidate — installed-app acceptance owed.** Rungs 1–8 landed and checked (tsc, eslint, TS tests,
+cargo check with zero warnings, Rust tests, Windows-side Tauri crate check), and the second adversarial
+review's six P1 closures landed on top of them; the 0.1.23 installer build and the installed-app witness
+(`docs/commands/verify_stream.md`) are the acceptance, and nothing here is Built until JL has seen it run.
+This document is the durable execution owner for the Stream panel; the design contract is
+`docs/design/stream_panel_design.md`.
 
 ## Intent and witness
 
@@ -81,11 +85,21 @@ scripts in `docs/commands/workflow/closeout_checks.md`.
 - [x] Rung 8 (static review: transform/opacity only; taste pass owed): JL taste pass; no Layout/Recalc from `.stream-*`; ≥ 55 fps through a flood; unfocused keeps
       animating; minimized lands instantly; reduced motion instant.
 - [ ] Rung 9: `docs/commands/workflow/closeout_checks.md` end to end; installer rebuilt, reinstalled, app running.
+- [ ] Rung 10 (review round 5): the six P1 closures re-checked in the installed app — a first-sighting card after a save-then-stage, an image overwritten mid-fetch (`IMAGE CHANGED`), a slow checkout costing one budget, a `QUEUE_CAP` overflow printing only `VS INDEX` afterwards, a `seq` gap notice under a stalled socket, and a stalled read that never frees its permit.
 
 ## Live receipt
 
 - Target: `/home/johnf/dev/intermediary`, branch `master`, base `1f99568`.
 - Approved plan: `/home/johnf/.claude/plans/claude-i-have-a-silly-backus.md` (2026-09-06).
-- Frontier: rungs 1–8 landed; four adversarial reviews (0 P0, 11 P1, 16 P2, 15 P3) adjudicated — every P1 and the behaviour-visible P2/P3s fixed, the rest recorded as accepted boundaries in the design doc and `docs/known_issues.md`; version bumped to 0.1.23; the installer build is running on the Windows twin.
-- Next: JL witness per `docs/commands/verify_stream.md` (three live rounds on GLITCHFISH already drove the scroller-track fix, image strips, proportional tile sizing, and the cross-repo seed fix); taste numbers tune live.
+- Frontier: rungs 1–8 landed; four adversarial reviews (0 P0, 11 P1, 16 P2, 15 P3) adjudicated — every P1 and the behaviour-visible P2/P3s fixed, the rest recorded as accepted boundaries in the design doc and `docs/known_issues.md`; version bumped to 0.1.23.
+- Adversarial closure (2026-09-06): an external review found six P1 contract failures and one P2; two closure rounds landed (index-first baselines, revision-bound pixels with `maxBytes` at the byte owner and a re-stat, causal budget refill, lossless invalidation, two-lane bounded transport with `seq` on counters, owned permits with bounded waits, the zero-length first-sighting rule) — `docs/reports/stream_adversarial_review_20260906.md`. During the first round a lane restored non-owned files from the index and wiped two parallel lanes' edits; both were recovered by replaying their recorded write commands; lane briefs now forbid formatters and restores over non-owned files.
+- **Review round 5 (2026-09-06, external adversarial review of the staged 0.1.23 candidate — `docs/reports/stream_adversarial_review_20260906.md`): 0 P0, 6 P1, 1 P2, all accepted and all closed in this round** against one frozen wire contract (`mtimeMs` on the image payload, `seq` on `fileDeltaCounters`, optional `maxBytes` on `readImageFile`; no new event — drops are `seq` gaps):
+  - P1-1 index baseline read before the worktree read and carried across re-settles; a zero-stat first sighting prints no card; `SINCE LAST` documented as *since the previous sighting*.
+  - P1-2 image pixels bound to the revision (`bytes` + `mtimeMs`, else `IMAGE CHANGED`); `maxBytes` enforced at the byte owner in both backends; `MAX_TILE_PIXELS` 24 MP and `MAX_RETAINED_PIXELS` 64 MP.
+  - P1-3 causal burst ownership: the agent's budget refills only when quiet or below `BURST_REFILL_MAX_PENDING`; the UI applies deltas before closing a burst and absorbs members for `BURST_ABSORB_GRACE_MS`, capped by `BURST_MEMBER_CAP` / `BURST_TOP_DIRS_TRACKED`.
+  - P1-4 dropped paths deduped to `QUEUE_CAP`, whole-cache clear on overflow, both rename endpoints evicted.
+  - P1-5 `EVENT_QUEUE_CAP` 1024 bounded per-connection queues with drop counters in both agents; `INTAKE_CAP` 1024 in the UI; `GONE_BUDGET` 64; counters on the shared sequence.
+  - P1-6 read permits owned by the blocking job; image metadata under `READ_DEADLINE`.
+  - P2 this document's status, the 16:10 slot aspect in the architecture doc, the `GONE_BUDGET` wording in `docs/known_issues.md`, and candidate wording in the roadmap and changelog.
+- Next: rebuild, install, JL acceptance per `docs/commands/verify_stream.md`, then commit. (Three live rounds on GLITCHFISH already drove the scroller-track fix, image strips, proportional tile sizing, and the cross-repo seed fix; taste numbers tune live.)
 - Open: taste numbers (`LINE_CAP` 12, `CADENCE_BASE_MS` 260, `RING_SIZE` 20) tune at the witness; `STREAM_MIN_AGENT_VERSION` is finalized with the release version.

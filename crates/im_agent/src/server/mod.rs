@@ -9,7 +9,7 @@ pub mod shutdown;
 pub mod stdin_eof;
 mod ws_server;
 
-pub use event_bus::EventBus;
+pub use event_bus::{BusMessage, EventBus, EventLane};
 pub use runtime_identity::{attach_runtime_identity_header, runtime_binary_sha256};
 pub use shutdown::{
     drain_source_control, drain_source_control_bounded, finalize_shutdown, schedule_process_exit,

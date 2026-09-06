@@ -106,6 +106,10 @@ pub struct ReadTextFileCommand {
 pub struct ReadImageFileCommand {
     pub repo_id: String,
     pub path: String,
+    /// When present, a file larger than this is refused before any byte is
+    /// read; the caller's own preview gate travels with the request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

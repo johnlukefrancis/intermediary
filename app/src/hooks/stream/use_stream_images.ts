@@ -1,73 +1,34 @@
 // Path: app/src/hooks/stream/use_stream_images.ts
-// Description: Per-panel image tiles keyed by strip and path: gated readImageFile reads, decoded Blob tiles, bounded retention and revocation
+// Description: Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, decoded Blob tiles, bounded retention and revocation
 
 import { useEffect, useRef, useState } from "react";
 import { sendReadImageFile } from "../../lib/agent/messages.js";
-import { IMAGE_FETCH_CONCURRENCY } from "../../lib/stream/stream_bounds.js";
-import { beforeKeys, collectTileTargets, retainedKeys, type TileTarget } from "../../lib/stream/stream_tile_targets.js";
+import { IMAGE_CARD_MAX_BYTES, IMAGE_FETCH_CONCURRENCY } from "../../lib/stream/stream_bounds.js";
+import { exceedsTilePixels, readRefusedAsChanged, sameRevision } from "../../lib/stream/stream_tile_pixels.js";
+import { collectTileTargets, retainedKeys, type TileTarget } from "../../lib/stream/stream_tile_targets.js";
 import type { StreamSnapshot } from "../../lib/stream/stream_types.js";
 import { useAgent } from "../use_agent.js";
 import { base64ToBlob } from "../use_image_blob_url.js";
+import {
+  decodedPixelsOf,
+  emptyTiles,
+  projectTiles,
+  release,
+  revoke,
+  type StreamImageTiles,
+  type StreamTileOutcome,
+  type TileRecord,
+} from "./stream_tile_records.js";
 
-/** "dropped" is a tile released to stay inside MAX_IMAGE_TILES; it keeps its slot, never refetches */
-export type StreamTileStatus = "idle" | "loading" | "ready" | "dropped" | "error";
-
-export interface StreamImageTile {
-  status: StreamTileStatus;
-  /** This slot's own Blob URL, alive exactly as long as the tile is retained */
-  url: string | null;
-  width: number;
-  height: number;
-  /** The pixels this path showed before its newest edit: the BEFORE half of an expanded pair */
-  beforeUrl: string | null;
-}
-
-/** The panel's tile set: `byKey` is keyed by `tileKey(repoId, cardId, path)` (stream_tile_targets.ts) */
-export interface StreamImageTiles {
-  readonly repoId: string;
-  readonly byKey: ReadonlyMap<string, StreamImageTile>;
-}
-
-interface TileRecord {
-  status: StreamTileStatus;
-  url: string | null;
-  /** The Blob a replaced-in-place tile showed before its refetch; revoked with the record */
-  previousUrl: string | null;
-  width: number;
-  height: number;
-  /** The tile's updatedAtMs the pixels were read for; a newer stamp means a refetch */
-  stamp: number;
-}
-
-function emptyTiles(repoId: string): StreamImageTiles {
-  return { repoId, byKey: new Map<string, StreamImageTile>() };
-}
-
-function revoke(url: string | null): void {
-  if (url !== null) URL.revokeObjectURL(url);
-}
-
-function release(record: TileRecord): void {
-  revoke(record.url);
-  revoke(record.previousUrl);
-  record.url = null;
-  record.previousUrl = null;
-}
-
-function sameTile(a: StreamImageTile, b: StreamImageTile): boolean {
-  return (
-    a.status === b.status &&
-    a.url === b.url &&
-    a.width === b.width &&
-    a.height === b.height &&
-    a.beforeUrl === b.beforeUrl
-  );
-}
+export type { StreamImageTile, StreamImageTiles, StreamTileStatus } from "./stream_tile_records.js";
 
 /**
  * One tile owner per panel, keyed by strip id and path. Pixels are read only for retained,
  * previewable tiles while the stream is visible and the document showing, at most
- * IMAGE_FETCH_CONCURRENCY in flight; every tile outside `retainedKeys` keeps its slot and loses
+ * IMAGE_FETCH_CONCURRENCY in flight, under IMAGE_CARD_MAX_BYTES on the agent side, and are
+ * accepted only for the exact revision (bytes + mtime) the tile announced — a mismatch, and the
+ * agent's own refusal of a file rewritten under its read, both leave the slot reading IMAGE CHANGED;
+ * a decoded bitmap past MAX_TILE_PIXELS is released at once. Every tile outside `retainedKeys` keeps its slot and loses
  * its Blob. A tile replaced in place keeps its old Blob as BEFORE while the AFTER is refetched.
  */
 export function useStreamImages(repoId: string, snapshot: StreamSnapshot): StreamImageTiles {
@@ -94,47 +55,17 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
   }, [repoId]);
 
   useEffect(() => {
-    const publish = (targets: readonly TileTarget[], records: Map<string, TileRecord>): void => {
-      const next = new Map<string, StreamImageTile>();
-      const befores = beforeKeys(targets);
-      let changed = false;
-      for (const [index, target] of targets.entries()) {
-        const record = records.get(target.key);
-        const beforeKey = befores[index] ?? null;
-        const before = beforeKey === null ? undefined : records.get(beforeKey);
-        const candidate: StreamImageTile = {
-          status: record?.status ?? "idle",
-          url: record?.url ?? null,
-          width: record?.width ?? 0,
-          height: record?.height ?? 0,
-          beforeUrl: record?.previousUrl ?? (before?.status === "ready" ? before.url : null),
-        };
-        const carried = tilesRef.current.byKey.get(target.key);
-        if (carried !== undefined && sameTile(carried, candidate)) {
-          next.set(target.key, carried);
-        } else {
-          next.set(target.key, candidate);
-          changed = true;
-        }
-      }
-      const current = tilesRef.current;
-      if (!changed && current.repoId === repoId && next.size === current.byKey.size) return;
-      const published: StreamImageTiles = { repoId, byKey: next };
-      tilesRef.current = published;
-      setTiles(published);
-    };
-
     /** Late results are dropped and their Blob revoked: the token is the repo epoch plus the tile's stamp */
-    const settle = (key: string, epoch: number, stamp: number, url: string | null, width: number, height: number): void => {
-      const record = recordsRef.current.get(key);
-      if (epoch !== epochRef.current || record === undefined || record.status !== "loading" || record.stamp !== stamp) {
+    const settle = (target: TileTarget, epoch: number, outcome: StreamTileOutcome, url: string | null, width: number, height: number): void => {
+      const record = recordsRef.current.get(target.key);
+      if (epoch !== epochRef.current || record === undefined || record.status !== "loading" || record.stamp !== target.stamp) {
         revoke(url);
         return;
       }
       record.url = url;
       record.width = width;
       record.height = height;
-      record.status = url === null ? "error" : "ready";
+      record.status = outcome;
       pumpRef.current();
     };
 
@@ -143,21 +74,40 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
       try {
         url = URL.createObjectURL(base64ToBlob(dataBase64, mimeType));
       } catch {
-        settle(target.key, epoch, target.stamp, null, 0, 0);
+        settle(target, epoch, "error", null, 0, 0);
         return;
       }
       const probe = new Image();
-      probe.onload = () => { settle(target.key, epoch, target.stamp, url, probe.naturalWidth, probe.naturalHeight); };
-      probe.onerror = () => { URL.revokeObjectURL(url); settle(target.key, epoch, target.stamp, null, 0, 0); };
+      probe.onload = () => {
+        const { naturalWidth: width, naturalHeight: height } = probe;
+        // The gate runs on the probe's reported size: the bitmap is let go before any slot shows it
+        if (exceedsTilePixels(width, height)) {
+          URL.revokeObjectURL(url);
+          settle(target, epoch, "tooLarge", null, 0, 0);
+          return;
+        }
+        settle(target, epoch, "ready", url, width, height);
+      };
+      probe.onerror = () => { URL.revokeObjectURL(url); settle(target, epoch, "error", null, 0, 0); };
       probe.src = url;
     };
 
     const start = (target: TileTarget): void => {
       if (client === null) return;
       const epoch = epochRef.current;
-      void sendReadImageFile(client, repoId, target.path)
-        .then((result) => { decode(target, epoch, result.dataBase64, result.mimeType); })
-        .catch(() => { settle(target.key, epoch, target.stamp, null, 0, 0); });
+      void sendReadImageFile(client, repoId, target.path, IMAGE_CARD_MAX_BYTES)
+        .then((result) => {
+          // Never newer pixels under an older card: any other revision than the tile's is refused
+          if (!sameRevision(target, result)) {
+            settle(target, epoch, "superseded", null, 0, 0);
+            return;
+          }
+          decode(target, epoch, result.dataBase64, result.mimeType);
+        })
+        // A read the agent refused because the file moved under it is IMAGE CHANGED, not a failure
+        .catch((error: unknown) => {
+          settle(target, epoch, readRefusedAsChanged(error) ? "superseded" : "error", null, 0, 0);
+        });
     };
 
     const sync = (): void => {
@@ -169,7 +119,7 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
         release(record);
         records.delete(key);
       }
-      const retained = retainedKeys(targets);
+      const retained = retainedKeys(targets, decodedPixelsOf(records));
       let inFlight = 0;
       for (const [key, record] of records) {
         if (retained.has(key)) {
@@ -193,7 +143,10 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
         records.set(target.key, { status: "loading", url: null, previousUrl, width: 0, height: 0, stamp: target.stamp });
         start(target);
       }
-      publish(targets, records);
+      const published = projectTiles(repoId, targets, records, tilesRef.current);
+      if (published === null) return;
+      tilesRef.current = published;
+      setTiles(published);
     };
 
     pumpRef.current = sync;

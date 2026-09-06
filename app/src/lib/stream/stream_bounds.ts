@@ -25,6 +25,9 @@ export const MAX_EXPANDED = 2;
 /** Intake buffer flush period: one reducer pass per this many ms, never per event */
 export const FLUSH_MS = 48;
 
+/** Events the intake buffer holds between flushes; past it the oldest fileChanged drop first, then the oldest of the rest */
+export const INTAKE_CAP = 1024;
+
 /** Calm cadence between admissions, the slowest the conductor ever prints */
 export const CADENCE_BASE_MS = 260;
 
@@ -49,6 +52,15 @@ export const BURST_WINDOW_MS = 1000;
 /** Quiet period that closes an open burst card */
 export const BURST_CLOSE_MS = 750;
 
+/** A closed burst still absorbs its members' deltas for this long: agent MAX_LATENCY + a full read window + relay */
+export const BURST_ABSORB_GRACE_MS = 6000;
+
+/** Distinct paths an open burst remembers; beyond it new paths are counted, not stored, and their deltas print as cards */
+export const BURST_MEMBER_CAP = 256;
+
+/** Top-level directories a burst tallies individually; every further directory lands in the `other` bucket */
+export const BURST_TOP_DIRS_TRACKED = 32;
+
 /** Per-repo stores retained (LRU, the visible repo pinned) */
 export const STORE_MAX = 4;
 
@@ -66,6 +78,12 @@ export const MAX_IMAGE_TILES = 24;
 
 /** Summed source bytes of retained tiles; bounds decoded bitmap memory when tiles sit near the 4 MiB gate (24 MiB) */
 export const IMAGE_TILE_BYTES_BUDGET = 24 * 1024 * 1024;
+
+/** Most decoded pixels one tile may hold: a 4 MiB PNG can decode to hundreds of MB, so the probe's size is gated too */
+export const MAX_TILE_PIXELS = 24_000_000;
+
+/** Summed decoded pixels of retained tiles, beside the byte budget; oldest tiles release first (~256 MB of RGBA) */
+export const MAX_RETAINED_PIXELS = 64_000_000;
 
 /** Narrowest tile column on the standard deck: one tile spans the row, two halve it, three third it, about four seat per ~850 px row, then wrap */
 export const STRIP_TILE_PX = 200;

@@ -1,5 +1,5 @@
 // Path: app/src/lib/stream/stream_ring_apply_test.ts
-// Description: Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart, counters
+// Description: Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart on deltas and counters, counters
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -128,13 +128,28 @@ void test("a seq gap prints a notice; a restart or first delta does not", () => 
   assert.equal(state.ring.notices.at(-1)?.text, "9 EDITS WITHHELD · BURST");
 });
 
+void test("a counters event consumes the shared sequence: a gap before it prints, and it advances lastSeq", () => {
+  resetSeq();
+  let state = applyFileDelta(initialReduceState(), textDelta("a.ts", { seq: 4 }), 1000, opts);
+  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", seq: 6, withheld: 0, dropped: 0 }, 1001);
+  assert.equal(state.ring.lastSeq, 6);
+  assert.equal(state.ring.notices.at(-1)?.text, "1 EDITS NOT SHOWN");
+  state = applyFileDelta(state, textDelta("b.ts", { seq: 7 }), 1002, opts);
+  assert.equal(state.ring.notices.length, 1);
+  assert.equal(state.ring.lastSeq, 7);
+  // A counters event is a restart too when its seq is 1
+  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", seq: 1, withheld: 0, dropped: 0 }, 1003);
+  assert.equal(state.ring.notices.length, 1);
+  assert.equal(state.ring.lastSeq, 1);
+});
+
 void test("a counters event merges into the same withheld and dropped notices as a delta", () => {
   resetSeq();
   let state = applyFileDelta(initialReduceState(), textDelta("a.ts", { withheld: 3 }), 1000, opts);
-  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", withheld: 2, dropped: 0 }, 1500);
+  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", seq: 2, withheld: 2, dropped: 0 }, 1500);
   assert.equal(state.ring.notices.length, 1);
   assert.equal(state.ring.notices[0]?.text, "5 EDITS WITHHELD · BURST");
-  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", withheld: 0, dropped: 4 }, 1600);
+  state = applyDeltaCounters(state, { type: "fileDeltaCounters", repoId: "r", seq: 3, withheld: 0, dropped: 4 }, 1600);
   assert.equal(state.ring.notices.at(-1)?.text, "4 EDITS DROPPED");
   assert.equal(state.ring.notices.at(-1)?.tone, "error");
   assert.equal(state.pending.length, 1);

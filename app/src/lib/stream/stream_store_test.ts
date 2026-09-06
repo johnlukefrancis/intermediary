@@ -1,9 +1,9 @@
 // Path: app/src/lib/stream/stream_store_test.ts
-// Description: Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, idle notice expiry
+// Description: Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, intake cap, burst close order, idle notice expiry
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BURST_THRESHOLD, CADENCE_BASE_MS, FLUSH_MS, NOTICE_TTL_MS, STATIC_AFTER_MS } from "./stream_bounds.js";
+import { BURST_CLOSE_MS, BURST_THRESHOLD, CADENCE_BASE_MS, FLUSH_MS, INTAKE_CAP, NOTICE_TTL_MS, STATIC_AFTER_MS } from "./stream_bounds.js";
 import { createStreamStore } from "./stream_store.js";
 import { snapshotHasEntries } from "./stream_store_support.js";
 import { changed, imageDelta, resetSeq, textDelta } from "./testing/stream_fixtures.js";
@@ -120,6 +120,45 @@ void test("document hidden pauses admission; a deep backlog collapses into one b
   store.dispose();
 });
 
+void test("the intake buffer is capped: the oldest fileChanged drop first and the next flush prints them as dropped", () => {
+  resetSeq();
+  const clock = fakeClock();
+  const store = createStreamStore("r", clock);
+  store.setVisible(true);
+  for (let index = 0; index < INTAKE_CAP; index += 1) store.intake(changed("same.ts"));
+  store.intake(textDelta("a.ts"));
+  store.intake(textDelta("b.ts"));
+  store.intake(textDelta("c.ts"));
+  clock.advance(FLUSH_MS);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.ring.notices.at(-1)?.text, "3 EDITS DROPPED");
+  assert.equal(snapshot.ring.notices.at(-1)?.tone, "error");
+  // Every delta survived: only fileChanged events were let go
+  assert.equal(cardsOf(store) + snapshot.pending, 3);
+  store.dispose();
+});
+
+void test("a member delta that shares the flush with the burst's close is absorbed, not printed", () => {
+  resetSeq();
+  const clock = fakeClock();
+  const store = createStreamStore("r", clock);
+  store.setVisible(true);
+  for (let index = 0; index < BURST_THRESHOLD; index += 1) store.intake(changed(`src/f${String(index)}.ts`));
+  clock.advance(FLUSH_MS);
+  assert.notEqual(store.getSnapshot().ring.burstOpen, null);
+  // The close is due before this flush runs; the delta must still land on the burst card
+  clock.advance(BURST_CLOSE_MS - FLUSH_MS / 2);
+  store.intake(textDelta("src/f3.ts"));
+  clock.advance(FLUSH_MS);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.ring.cards.length, 1);
+  assert.equal(snapshot.pending, 0);
+  const burst = snapshot.ring.cards[0];
+  assert.equal(burst?.kind, "burst");
+  assert.equal(burst.resolved, 1);
+  store.dispose();
+});
+
 void test("a card that waited in the FIFO is not static at admit: the static clock starts at admission", () => {
   resetSeq();
   const clock = fakeClock();
@@ -150,7 +189,7 @@ void test("a counters event prints the withheld notice, which expires after NOTI
   const clock = fakeClock();
   const store = createStreamStore("r", clock);
   store.setVisible(true);
-  store.intake({ type: "fileDeltaCounters", repoId: "r", withheld: 7, dropped: 0 });
+  store.intake({ type: "fileDeltaCounters", repoId: "r", seq: 1, withheld: 7, dropped: 0 });
   clock.advance(FLUSH_MS);
   assert.equal(store.getSnapshot().ring.notices[0]?.text, "7 EDITS WITHHELD · BURST");
   assert.equal(cardsOf(store), 0);
@@ -214,7 +253,7 @@ void test("a notice or the settling line counts as an entry while the ring holds
   const store = createStreamStore("r", clock);
   store.setVisible(true);
   assert.equal(snapshotHasEntries(store.getSnapshot()), false);
-  store.intake({ type: "fileDeltaCounters", repoId: "r", withheld: 5, dropped: 0 });
+  store.intake({ type: "fileDeltaCounters", repoId: "r", seq: 1, withheld: 5, dropped: 0 });
   clock.advance(FLUSH_MS);
   const withNotice = store.getSnapshot();
   assert.equal(withNotice.ring.cards.length, 0);

@@ -76,6 +76,14 @@ impl BaselineCache {
         self.insert(to.to_string(), text);
     }
 
+    /// Forgets every baseline: the worker lost track of which paths changed
+    /// (the dropped-path record overflowed), so no cached text can be trusted
+    /// to be what the reader last saw. Every next sighting says `VS INDEX`.
+    pub(crate) fn clear(&mut self) {
+        self.entries.clear();
+        self.bytes = 0;
+    }
+
     pub(crate) fn bytes(&self) -> usize {
         self.bytes
     }

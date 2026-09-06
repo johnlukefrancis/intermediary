@@ -13,7 +13,7 @@ use crate::repos::repo_watcher_events::{handle_event, EventContext, PendingRenam
 use crate::repos::source_control_watch::{
     SourceControlChangeDetector, SourceControlWatch, TrackedPathSet,
 };
-use crate::server::EventBus;
+use crate::server::{BusMessage, EventBus};
 use notify::event::{ModifyKind, RenameMode};
 use notify::{Event, EventKind};
 use std::path::PathBuf;
@@ -132,7 +132,7 @@ fn assert_renamed(pending: &[PendingChange], from: &str, to: &str) {
 
 /// `fileChanged` is untouched by the delta marks: unlink for the source, then
 /// add for the destination, exactly as Auto Files has always received them.
-fn assert_unlink_then_add(events: &mut broadcast::Receiver<String>) {
+fn assert_unlink_then_add(events: &mut broadcast::Receiver<BusMessage>) {
     let mut seen = Vec::new();
     while let Ok(text) = events.try_recv() {
         if text.contains("\"fileChanged\"") {

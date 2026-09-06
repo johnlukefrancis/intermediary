@@ -2,16 +2,22 @@
 // Description: Per-repo Stream store outside React: intake buffer, reducers, the cadence conductor, and the snapshot
 
 import type { AgentEvent } from "../../shared/protocol.js";
-import { isVisibleFileKind } from "../files/file_feed.js";
-import { FLUSH_MS, IDLE_WAKE_MS, STATIC_AFTER_MS } from "./stream_bounds.js";
+import { FLUSH_MS, IDLE_WAKE_MS, INTAKE_CAP, STATIC_AFTER_MS } from "./stream_bounds.js";
 import { cadenceMs } from "./stream_cadence.js";
-import { admit, expand, markStatic, needsSettle, nextNoticeExpiryMs, pushNotice, seedHistory, spliceExited } from "./stream_ring.js";
-import { applyDeltaCounters, applyFileDelta } from "./stream_ring_apply.js";
+import { admit, expand, markStatic, needsSettle, nextNoticeExpiryMs, pushNotice, spliceExited } from "./stream_ring.js";
+import { applyDeltaCounters, applyDropped, applyFileDelta } from "./stream_ring_apply.js";
 import { applyFileChanged, collapsePending, settleReduce } from "./stream_ring_apply_burst.js";
 import { initialReduceState } from "./stream_ring_apply_support.js";
-import { OFFLINE_TRANSPORT, browserStoreDeps, buildSnapshot, isHeld, remapSelection } from "./stream_store_support.js";
+import {
+  OFFLINE_TRANSPORT,
+  browserStoreDeps,
+  buildSnapshot,
+  dropOldestIntake,
+  isHeld,
+  remapSelection,
+  seedFromSnapshot,
+} from "./stream_store_support.js";
 import type {
-  StreamHistorySeed,
   StreamReduceState,
   StreamSelectionFilter,
   StreamSnapshot,
@@ -20,25 +26,11 @@ import type {
   StreamTimerHandle,
 } from "./stream_types.js";
 
-type SnapshotEvent = Extract<AgentEvent, { type: "snapshot" }>;
-
-/**
- * The only seed route: the repo's own snapshot (flush drops every foreign event), and only while
- * the ring holds no card — a repeat snapshot, a reconnect, or a late arrival never rewrites live cards.
- */
-function seedFromSnapshot(state: StreamReduceState, event: SnapshotEvent): StreamReduceState {
-  const seeds = event.recent.flatMap((file): StreamHistorySeed[] =>
-    isVisibleFileKind(file.kind)
-      ? [{ path: file.path, fileKind: file.kind, lastSeenAtIso: file.activity?.lastSeenAtIso ?? file.mtime }]
-      : []
-  );
-  const ring = seedHistory(state.ring, seeds, state.nextId);
-  return ring === state.ring ? state : { ...state, ring, nextId: state.nextId + ring.cards.length };
-}
-
 export function createStreamStore(repoId: string, deps: StreamStoreDeps = browserStoreDeps()): StreamStore {
   let state: StreamReduceState = initialReduceState();
   let intake: AgentEvent[] = [];
+  /** Events the capped intake buffer let go since the last flush; printed as one dropped notice */
+  let intakeDropped = 0;
   let flushTimer: StreamTimerHandle | null = null;
   let tickTimer: StreamTimerHandle | null = null;
   /** The armed tick only sweeps; a new arrival may preempt it for an admit */
@@ -152,7 +144,9 @@ export function createStreamStore(repoId: string, deps: StreamStoreDeps = browse
     const now = deps.now();
     const events = intake;
     intake = [];
-    state = settleReduce(state, now);
+    state = applyDropped(state, intakeDropped, now);
+    intakeDropped = 0;
+    // Deltas land before the burst settles: one that shares the flush with the close is still absorbed
     for (const event of events) {
       // Every event this store folds names this repo; a misrouted or stale one never lands a card
       if (!("repoId" in event) || event.repoId !== repoId) continue;
@@ -161,6 +155,7 @@ export function createStreamStore(repoId: string, deps: StreamStoreDeps = browse
       else if (event.type === "fileDeltaCounters") state = applyDeltaCounters(state, event, now);
       else if (event.type === "snapshot") state = seedFromSnapshot(state, event);
     }
+    state = settleReduce(state, now);
     state = collapsePending(state, now);
     commit();
     schedule(now);
@@ -170,6 +165,10 @@ export function createStreamStore(repoId: string, deps: StreamStoreDeps = browse
     repoId,
     intake(event) {
       if (disposed) return;
+      if (intake.length >= INTAKE_CAP) {
+        dropOldestIntake(intake);
+        intakeDropped += 1;
+      }
       intake.push(event);
       flushTimer ??= deps.setTimer(flush, FLUSH_MS);
     },
