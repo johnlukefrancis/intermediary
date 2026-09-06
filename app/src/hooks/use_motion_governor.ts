@@ -7,6 +7,12 @@ import { isForegroundWindow } from "../lib/window/foreground.js";
 
 export interface UseMotionGovernorResult {
   motionPaused: boolean;
+  /** Hidden or minimized (not merely unfocused): the Stream lands cards instantly and pauses admission */
+  documentHidden: boolean;
+}
+
+function isDocumentHidden(): boolean {
+  return document.hidden || document.visibilityState !== "visible";
 }
 
 /**
@@ -23,6 +29,7 @@ export function useMotionGovernor(): UseMotionGovernorResult {
   const [motionPaused, setMotionPaused] = useState<boolean>(
     () => !isForegroundWindow()
   );
+  const [documentHidden, setDocumentHidden] = useState<boolean>(isDocumentHidden);
 
   useEffect(() => {
     let mounted = true;
@@ -31,6 +38,7 @@ export function useMotionGovernor(): UseMotionGovernorResult {
     const recompute = (): void => {
       if (mounted) {
         setMotionPaused(!isForegroundWindow());
+        setDocumentHidden(isDocumentHidden());
       }
     };
     document.addEventListener("visibilitychange", recompute);
@@ -48,6 +56,7 @@ export function useMotionGovernor(): UseMotionGovernorResult {
         const unlisten = await appWindow.onFocusChanged(({ payload: focused }) => {
           if (!mounted) return;
           setMotionPaused(!focused || document.hidden);
+          setDocumentHidden(isDocumentHidden());
         });
 
         if (mounted) {
@@ -72,5 +81,5 @@ export function useMotionGovernor(): UseMotionGovernorResult {
     };
   }, []);
 
-  return { motionPaused };
+  return { motionPaused, documentHidden };
 }

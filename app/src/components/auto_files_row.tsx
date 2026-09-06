@@ -2,12 +2,12 @@
 // Description: Single Auto files table row with activity telemetry
 
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { getFileFamily, FileIcon } from "../lib/icons/index.js";
 import { AutoFilesActivityStack } from "./auto_files_activity_stack.js";
+import { useDragOutPointer } from "../hooks/use_drag_out_pointer.js";
+import { formatRelativeTime } from "../lib/files/relative_time.js";
 import type { FeedFileEntry, FileSortMode } from "../lib/files/file_feed.js";
-
-const DRAG_START_DISTANCE_PX = 6;
 
 interface AutoFilesRowProps {
   file: FeedFileEntry;
@@ -21,19 +21,6 @@ interface AutoFilesRowProps {
   ) => void;
   onOpen: (path: string) => void;
   onContextMenu: (e: React.MouseEvent, file: FeedFileEntry) => void;
-}
-
-function formatRelativeTime(isoDate: string): string {
-  const then = new Date(isoDate).getTime();
-  if (Number.isNaN(then)) return "--";
-
-  const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h ago`;
-  return `${Math.floor(diffHour / 24)}d ago`;
 }
 
 function getFileName(path: string): string {
@@ -61,63 +48,14 @@ export function AutoFilesRow({
   onOpen,
   onContextMenu,
 }: AutoFilesRowProps): React.JSX.Element {
-  const dragStartRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
-
-  const clearPointerCapture = useCallback((target: Element, pointerId: number): void => {
-    if (!(target instanceof HTMLElement) || !target.hasPointerCapture(pointerId)) return;
-    target.releasePointerCapture(pointerId);
-  }, []);
-
-  const handlePointerDown = useCallback(
-    (event: React.PointerEvent) => {
-      if (event.button !== 0) return;
-      if ((event.target as HTMLElement).closest("button")) return;
-
-      if (event.shiftKey || event.metaKey || event.ctrlKey) {
-        event.preventDefault();
-        onSelect(file.path, event);
-        return;
-      }
-
-      dragStartRef.current = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-      };
-      event.currentTarget.setPointerCapture(event.pointerId);
+  const handleDragStart = useCallback(() => onDragStart(file.path), [file.path, onDragStart]);
+  const handleSelect = useCallback(
+    (event: Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">) => {
+      onSelect(file.path, event);
     },
     [file.path, onSelect]
   );
-
-  const handlePointerMove = useCallback(
-    (event: React.PointerEvent) => {
-      const start = dragStartRef.current;
-      if (!start || start.pointerId !== event.pointerId) return;
-      if ((event.buttons & 1) !== 1) {
-        clearPointerCapture(event.currentTarget, event.pointerId);
-        dragStartRef.current = null;
-        return;
-      }
-
-      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-      if (distance < DRAG_START_DISTANCE_PX) return;
-
-      clearPointerCapture(event.currentTarget, event.pointerId);
-      dragStartRef.current = null;
-      void onDragStart(file.path);
-    },
-    [clearPointerCapture, file.path, onDragStart]
-  );
-
-  const handlePointerEnd = useCallback(
-    (event: React.PointerEvent) => {
-      clearPointerCapture(event.currentTarget, event.pointerId);
-      if (dragStartRef.current?.pointerId === event.pointerId) {
-        dragStartRef.current = null;
-      }
-    },
-    [clearPointerCapture]
-  );
+  const pointer = useDragOutPointer({ onDragStart: handleDragStart, onSelect: handleSelect });
 
   const directory = getDirectory(file.path);
 
@@ -127,10 +65,7 @@ export function AutoFilesRow({
       data-selected={isSelected || undefined}
       data-activity={file.activityBadge ?? undefined}
       data-emphasis={sortMode}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
+      {...pointer}
       onDoubleClick={() => { onOpen(file.path); }}
       onContextMenu={(event) => {
         event.preventDefault();

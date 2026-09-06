@@ -8,7 +8,8 @@ export type ImageBlobUrlState =
   | { status: "ready"; url: string }
   | { status: "error"; message: string };
 
-function base64ToBlob(dataBase64: string, mimeType: string): Blob {
+/** The one base64 → Blob decoder; the Stream's tile loader shares it */
+export function base64ToBlob(dataBase64: string, mimeType: string): Blob {
   const binary = globalThis.atob(dataBase64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {

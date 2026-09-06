@@ -1,7 +1,7 @@
 {
   "name": "intermediary",
   "private": true,
-  "version": "0.1.22",
+  "version": "0.1.23",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -18,7 +18,8 @@
     "gen:classification": "node scripts/classification/generate_code_classification_artifacts.mjs",
     "headers:list": "node scripts/fileledger/add_file_headers.mjs --list",
     "headers:write": "node scripts/fileledger/add_file_headers.mjs --write",
-    "gen:ledger": "node scripts/fileledger/gen_file_ledger.mjs"
+    "gen:ledger": "node scripts/fileledger/gen_file_ledger.mjs",
+    "test:ts": "node scripts/test/run_ts_tests.mjs"
   },
   "dependencies": {
     "@crabnebula/tauri-plugin-drag": "^2.1.0",

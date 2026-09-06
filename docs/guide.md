@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-09-04
+Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -41,6 +41,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/design/source_control_design.md](design/source_control_design.md) | Source Control view: goals, behaviour table, cancellation/timeouts, acceptance |
 | [docs/design/zips_tree_write_surface_design.md](design/zips_tree_write_surface_design.md) | ZIPS tree write surface: drag-in import and delete / move / copy / rename behaviour, replace authorization, `.git` law, accepted boundaries |
 | [docs/design/terminal_design.md](design/terminal_design.md) | Integrated terminal (TERMINAL rail): goals, behaviour table, key and clipboard policy, accepted boundaries, acceptance |
+| [docs/design/stream_panel_design.md](design/stream_panel_design.md) | Stream panel (default left mode): live edit stream, card grammar, cadence, bounds, behaviour table, acceptance |
 
 ## Architecture
 
@@ -49,12 +50,14 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/architecture/bundle_format_architecture.md](architecture/bundle_format_architecture.md) | Bundle v2 generated handoff entries, selection-bounded Git evidence, coherence, and failure semantics |
 | [docs/architecture/source_control_architecture.md](architecture/source_control_architecture.md) | Source Control ownership, protocol, watcher signal, cancellation and timeout ladder |
 | [docs/architecture/terminal_architecture.md](architecture/terminal_architecture.md) | Integrated terminal ownership, open/close/app-exit ordering, invariants I1–I10, failure modes |
+| [docs/architecture/stream_architecture.md](architecture/stream_architecture.md) | Stream panel ownership (agent delta pipeline, fileDelta wire, UI store and surface), lifecycle, invariants, failure modes |
 
 ## Implementation
 
 | Document | Purpose |
 |----------|---------|
 | [docs/implementation/terminal_hardening_implementation.md](implementation/terminal_hardening_implementation.md) | Active execution owner for the terminal lifecycle, WSL-entry, bounded-output, Job-at-creation, cap, and flow-credit hardening |
+| [docs/implementation/stream_panel_implementation.md](implementation/stream_panel_implementation.md) | Active execution owner for the Stream panel: agent delta pipeline, fileDelta protocol, store, cards, motion |
 
 ## Reports
 
@@ -105,6 +108,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/verify_wsl_port_detection.md](commands/verify_wsl_port_detection.md) | Manually verify WSL port-listener detection end-to-end through wsl.exe |
 | [docs/commands/verify_wsl_agent_tree_kill.md](commands/verify_wsl_agent_tree_kill.md) | Manually verify the WSL emergency stop's process-tree sweep and the agent's stdin-EOF shutdown owner |
 | [docs/commands/verify_terminal.md](commands/verify_terminal.md) | Manually witness the integrated terminal in the installed app: tabs, WSL entry, TUIs, clipboard, switches, close semantics, flood, minimize, app-exit idle probe |
+| [docs/commands/verify_stream.md](commands/verify_stream.md) | Manually witness the Stream panel in the installed app: cards, re-edit merging, bursts, images, follow-scroll, governor carve-out, persistence, DevTools checks |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/release_windows.md](commands/release_windows.md) | Windows-first release flow, version bumping, and GitHub release automation |
 | [docs/commands/build_installer_from_wsl.md](commands/build_installer_from_wsl.md) | Build, silently install, and relaunch the Windows installer from a WSL shell |

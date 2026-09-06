@@ -7,7 +7,6 @@ import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { ThreeColumn } from "../components/layout/three_column.js";
 import { HandsetDeck } from "../components/layout/handset_deck.js";
 import { RepoRail } from "../components/layout/repo_rail.js";
-import { AutoFilesPanel } from "../components/auto_files_panel.js";
 import { RepoWorkspacePanel } from "../components/repo_workspace_panel.js";
 import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
@@ -19,13 +18,12 @@ import { useAgent } from "../hooks/use_agent.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
 import { useNotes } from "../hooks/use_notes.js";
 import { useRepoWorkspace } from "../hooks/use_repo_workspace.js";
+import { useRepoStream } from "../hooks/stream/use_repo_stream.js";
 import { useSourceControlState } from "../hooks/source_control/use_source_control_state.js";
 import { buildRepoRailBodies } from "./repo_tab_rail.js";
-import {
-  buildAutoFileFeed,
-  type FileSortMode,
-  type FileTypeFilter,
-} from "../lib/files/file_feed.js";
+import { RepoTabFilePanel } from "./repo_tab_file_panel.js";
+import { buildAutoFileFeed, type FeedFileEntry, type FileTypeFilter } from "../lib/files/file_feed.js";
+import { isStreamMode, sortModeOf, type FilesMode } from "../lib/files/files_mode.js";
 import { isFileIncluded } from "../lib/bundles/bundle_selection_visibility.js";
 import type { UiMode } from "../shared/config.js";
 
@@ -36,8 +34,9 @@ interface RepoTabProps {
 
 export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
-  const { config, setRailWidthPercent } = useConfig();
-  const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
+  const { config, setRailWidthPercent, setFilesMode } = useConfig();
+  const repo = config.repos.find((entry) => entry.repoId === repoId);
+  const repoRoot = repo?.root;
   const {
     recentFiles,
     stagedByPath,
@@ -66,12 +65,11 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const sourceControl = useSourceControlState(repoId);
   const deckSection = useDeckSection();
   const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
-  const [sortMode, setSortMode] = useState<FileSortMode>("auto");
+  // The panel mode is global and persisted; the type filter stays per-tab and per-session
+  const filesMode = config.uiState.filesMode;
   const activePreset = bundleState.presets.get(bundleState.activePresetId);
   const activeBundleSelection =
-    activePreset?.isSelectionInitialized && activePreset.isSelectionTopologyReady
-    ? activePreset.selection
-    : null;
+    activePreset?.isSelectionInitialized && activePreset.isSelectionTopologyReady ? activePreset.selection : null;
 
   const bundleVisibleRecentFiles = useMemo(
     () => activeBundleSelection
@@ -80,9 +78,12 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     [activeBundleSelection, recentFiles]
   );
 
-  const feedFiles = useMemo(
-    () => buildAutoFileFeed(bundleVisibleRecentFiles, fileFilter, sortMode),
-    [bundleVisibleRecentFiles, fileFilter, sortMode]
+  // The table feed is only built for the table modes; the stream seeds from the recent list itself
+  const feedFiles = useMemo<FeedFileEntry[]>(
+    () => isStreamMode(filesMode)
+      ? []
+      : buildAutoFileFeed(bundleVisibleRecentFiles, fileFilter, sortModeOf(filesMode, "auto")),
+    [bundleVisibleRecentFiles, fileFilter, filesMode]
   );
 
   const fileSelection = useFileSelection(feedFiles);
@@ -122,12 +123,12 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
     [fileSelection]
   );
 
-  const handleSortModeChange = useCallback(
-    (mode: FileSortMode) => {
-      setSortMode(mode);
+  const handleModeChange = useCallback(
+    (mode: FilesMode) => {
+      setFilesMode(mode);
       fileSelection.clearSelection();
     },
-    [fileSelection]
+    [fileSelection, setFilesMode]
   );
 
   useEffect(() => {
@@ -144,34 +145,36 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   }, [fileSelection]);
 
   const isConnected = connectionState.status === "connected";
-  const recentEmptyMessage =
-    !isConnected || hydrationStatus === "waiting_for_agent"
-      ? "Waiting for agent..."
-      : hydrationStatus === "hydrating" || hydrationStatus === "retrying" || isLoading
-        ? "Loading..."
-        : hydrationStatus === "error"
-          ? "Unable to load files"
-          : "No recent files";
-
-  const fileEmptyMessage = recentFiles.length > 0 && feedFiles.length === 0
-    ? activeBundleSelection && bundleVisibleRecentFiles.length === 0
-      ? "Hidden by ZIP selection"
-      : "No matching files"
-    : recentEmptyMessage;
-
   const isHandset = uiMode === "handset";
+  // The store keeps admitting either way; visible only drives cadence and the while-away count
+  const streamVisible = isStreamMode(filesMode) && repoWorkspace.workspace.kind === "none"
+    && (!isHandset || deckSection.handsetSection === "files");
+  const stream = useRepoStream(repoId, {
+    visible: streamVisible, bundleSelection: activeBundleSelection,
+    openFile: repoWorkspace.openFile, openDiff: repoWorkspace.openDiff, onDragStart: handleFileDrag,
+  });
 
   const renderFilePanel = (headerPrefix?: React.ReactNode): React.JSX.Element => (
-    <AutoFilesPanel
-      files={feedFiles}
+    <RepoTabFilePanel
       repoId={repoId}
-      emptyMessage={fileEmptyMessage}
+      repoLabel={repo?.label ?? repoId}
+      mode={filesMode}
       filter={fileFilter}
-      sortMode={sortMode}
+      feedFiles={feedFiles}
+      stream={stream}
+      handset={isHandset}
       selectedPaths={fileSelection.selectedPaths}
       headerPrefix={headerPrefix}
+      loadState={{
+        isConnected,
+        hydrationStatus,
+        isLoading,
+        recentCount: recentFiles.length,
+        hiddenByBundleSelection:
+          activeBundleSelection !== null && bundleVisibleRecentFiles.length === 0,
+      }}
       onFilterChange={handleFilterChange}
-      onSortModeChange={handleSortModeChange}
+      onModeChange={handleModeChange}
       onSelect={fileSelection.handleSelect}
       onDragStart={handleFileDrag}
       onOpen={repoWorkspace.openFile}

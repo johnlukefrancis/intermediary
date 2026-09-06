@@ -16,7 +16,11 @@ use super::commands_import::ImportConflictPolicy;
 /// a destination is taken, so they reuse its policy rather than minting a
 /// second vocabulary for it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum WorktreeAction {
     /// Removes the named entries. Recoverable by construction: each is claimed
     /// into this repository's discard quarantine instead of being unlinked, so
@@ -105,7 +109,11 @@ mod tests {
 
         let decoded: InboundRequestEnvelope =
             serde_json::from_value(wire).expect("deserialize inbound");
-        let InboundRequestEnvelope::Request { request_id, payload } = decoded else {
+        let InboundRequestEnvelope::Request {
+            request_id,
+            payload,
+        } = decoded
+        else {
             panic!("expected a request envelope");
         };
         assert_eq!(request_id, "req-1");

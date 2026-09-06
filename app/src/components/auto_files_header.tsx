@@ -2,20 +2,26 @@
 // Description: Header controls for the unified Auto files panel
 
 import type React from "react";
-import type { FileSortMode, FileTypeFilter } from "../lib/files/file_feed.js";
+import { StreamIcon } from "./stream/stream_icons.js";
+import type { FileTypeFilter } from "../lib/files/file_feed.js";
+import type { FilesMode } from "../lib/files/files_mode.js";
 
 interface AutoFilesHeaderProps {
   filter: FileTypeFilter;
-  sortMode: FileSortMode;
+  mode: FilesMode;
   prefix?: React.ReactNode;
+  /** Rendered immediately right of the rocker; the Stream panel puts its LIVE indicator here */
+  liveSlot?: React.ReactNode;
   onFilterChange: (filter: FileTypeFilter) => void;
-  onSortModeChange: (mode: FileSortMode) => void;
+  onModeChange: (mode: FilesMode) => void;
 }
 
-const SORT_MODES: ReadonlyArray<{ value: FileSortMode; label: string; icon: React.ReactNode }> = [
-  { value: "auto", label: "Auto", icon: <GridIcon /> },
-  { value: "latest", label: "Latest", icon: <ListIcon /> },
-  { value: "active", label: "Active", icon: <PulseIcon /> },
+/** The one rocker over the panel's four modes; STREAM leads because it is the default */
+const PANEL_MODES: ReadonlyArray<{ value: FilesMode; title: string; icon: React.ReactNode }> = [
+  { value: "stream", title: "Stream mode", icon: <StreamIcon /> },
+  { value: "auto", title: "Auto sort", icon: <GridIcon /> },
+  { value: "latest", title: "Latest sort", icon: <ListIcon /> },
+  { value: "active", title: "Active sort", icon: <PulseIcon /> },
 ];
 
 const FILTERS: ReadonlyArray<{ value: FileTypeFilter; label: string; icon: React.ReactNode }> = [
@@ -27,30 +33,33 @@ const FILTERS: ReadonlyArray<{ value: FileTypeFilter; label: string; icon: React
 
 export function AutoFilesHeader({
   filter,
-  sortMode,
+  mode,
   prefix,
+  liveSlot,
   onFilterChange,
-  onSortModeChange,
+  onModeChange,
 }: AutoFilesHeaderProps): React.JSX.Element {
   return (
     <div className="auto-files-header">
       {prefix}
-      <div className="auto-files-mode" role="toolbar" aria-label="File sort modes">
-        {SORT_MODES.map((entry) => (
+      <div className="auto-files-mode" role="toolbar" aria-label="File panel modes">
+        {PANEL_MODES.map((entry) => (
           <button
             key={entry.value}
             type="button"
             className={`auto-files-icon-button${
-              sortMode === entry.value ? " auto-files-icon-button--active" : ""
+              mode === entry.value ? " auto-files-icon-button--active" : ""
             }`}
-            aria-label={`${entry.label} sort`}
-            title={`${entry.label} sort`}
-            onClick={() => { onSortModeChange(entry.value); }}
+            aria-label={entry.title}
+            title={entry.title}
+            aria-pressed={mode === entry.value}
+            onClick={() => { onModeChange(entry.value); }}
           >
             {entry.icon}
           </button>
         ))}
       </div>
+      {liveSlot}
       <div className="auto-files-filter" role="toolbar" aria-label="File type filters">
         {FILTERS.map((entry) => {
           const isIconOnly = entry.value !== "all";

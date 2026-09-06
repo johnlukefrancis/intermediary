@@ -126,6 +126,7 @@ impl AgentRuntime {
             recent_store: store.clone(),
             logger: logger.clone(),
             event_bus: event_bus.clone(),
+            delta_limits: self.delta_limits.clone(),
         })
     }
 }

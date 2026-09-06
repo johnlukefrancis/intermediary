@@ -1,5 +1,5 @@
 # Workflow Closeout Commands
-Updated on: 2026-02-04
+Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-012
 
@@ -30,6 +30,12 @@ pnpm run gen:ledger
 ```bash
 pnpm exec tsc --noEmit
 pnpm exec eslint
+```
+
+## TypeScript tests
+
+```bash
+pnpm run test:ts
 ```
 
 ## Rust checks

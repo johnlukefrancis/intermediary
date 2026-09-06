@@ -31,6 +31,7 @@ app/src/components/bundles/tree_interaction_context.tsx - Owns the ZIPS-tree cli
 app/src/components/confirm_modal.tsx - Generic confirmation dialog with portal rendering
 app/src/components/context_menu.tsx - Generic reusable right-click context menu with glass aesthetic
 app/src/components/diff_workspace.tsx - Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts
+app/src/components/diff/diff_line_rows.tsx - The one renderer of parsed diff lines as `.diff-line` rows, shared by the workspace and the stream
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
@@ -72,6 +73,20 @@ app/src/components/source_control/source_control_section.tsx - Collapsible MERGE
 app/src/components/source_control/source_control_status_line.tsx - Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column
 app/src/components/source_control/source_control_warnings.tsx - Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column
 app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
+app/src/components/stream/stream_burst_card.tsx - Fixed-height card standing in for a flood of changes: count, span, top dirs, per-op and per-kind strips, resolved
+app/src/components/stream/stream_card_head.tsx - The one-line card head: badge, file icon, name over dir, +N M, baseline chip, edit count, clock
+app/src/components/stream/stream_card.tsx - Memoized file card chassis: spine, head, body dispatch, click / double-click / drag / right-click / keys
+app/src/components/stream/stream_follow_pill.tsx - Sticky "N NEW" button shown while the reader has scrolled away from the live tail
+app/src/components/stream/stream_header_live.tsx - The Stream header's LIVE indicator: one dot plus a mono state label
+app/src/components/stream/stream_history_row.tsx - Compact scrollback row seeding the Stream panel from the existing recent list
+app/src/components/stream/stream_host.tsx - Renders nothing; keeps the Stream store registry fed for the life of the app
+app/src/components/stream/stream_icons.tsx - Stroke glyphs owned by the Stream panel, drawn in the Auto files header idiom
+app/src/components/stream/stream_image_strip.tsx - The image strip card: head with count and op tally, the growing-then-wrapping tile grid, clock-span footer, tile sele...
+app/src/components/stream/stream_image_tile.tsx - One tile of an image strip: a 16:10 checkerboard slot sized by its column, badge, edit counter, name, the BEFORE/AFTE...
+app/src/components/stream/stream_notice_row.tsx - Console-prompt notice row: honesty counters and transport state printed inline in the stream
+app/src/components/stream/stream_panel.tsx - The Stream panel shell: mode rocker with the LIVE slot, support states, and the live scroller
+app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
+app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
@@ -114,6 +129,11 @@ app/src/hooks/source_control/source_control_refresh.ts - Status refresh timing o
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
 app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
 app/src/hooks/source_control/use_tree_decorations.tsx - Context delivering the built tree decorations to the recursive bundle explorer rows
+app/src/hooks/stream/use_deferred_click.ts - A single click that fires only once the double-click grace has passed; shared by file cards and image strips
+app/src/hooks/stream/use_repo_stream.ts - Binds the active repo's Stream store to React: visibility, selection filter, card and tile actions
+app/src/hooks/stream/use_stream_follow.ts - Follow-scroll for the Stream scroller: tail pin, unread count while unpinned, freeze, resume
+app/src/hooks/stream/use_stream_host.ts - Mounted once: the one agent subscription and host facts pushed into every Stream store
+app/src/hooks/stream/use_stream_images.ts - Per-panel image tiles keyed by strip and path: gated readImageFile reads, decoded Blob tiles, bounded retention and r...
 app/src/hooks/terminal/use_terminal_group.ts - Subscribes a component to one repo's terminal group snapshot from the module-level registry
 app/src/hooks/terminal/use_terminal_host.ts - Adopts the active terminal tab into a host element for its mount, parks on cleanup, and keeps it fitted, themed and f...
 app/src/hooks/terminal/use_terminal_lifecycle.ts - App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every...
@@ -121,11 +141,12 @@ app/src/hooks/use_agent.tsx - Agent context provider and connection management h
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
-app/src/hooks/use_config_actions_rail.ts - Config actions for the persisted right rail: the deck section (zips | source | terminal) and the rail width
+app/src/hooks/use_config_actions_rail.ts - Config actions for persisted panel state: the rail section, the rail width, and the left files mode
 app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
 app/src/hooks/use_deck_section.ts - One owner for the deck section: persisted right rail plus the handset-only FILES flag
+app/src/hooks/use_drag_out_pointer.ts - Pointer handlers for the 6 px drag-out threshold with pointer capture, shared by rows, images, and stream cards
 app/src/hooks/use_drag.ts - Drag-out logic with on-demand staging
 app/src/hooks/use_effective_ui_mode.ts - Derives runtime effective UI mode from preferred mode and live window state
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
@@ -154,7 +175,11 @@ app/src/lib/agent/messages.ts - Typed helper functions for sending agent command
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/bundles/flatten_visible_tree.ts - Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders
+app/src/lib/diff/diff_lines_test.ts - Golden line model for parsePatch over a unified patch and a combined conflict patch
+app/src/lib/diff/diff_lines.ts - Pure unified/combined patch parser and the shared diff line model
 app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
+app/src/lib/files/files_mode.ts - The left file panel's mode vocabulary: the live Stream plus the three table sort modes
+app/src/lib/files/relative_time.ts - One formatter for "Ns/Nm/Nh/Nd ago" labels shared by the file table and the stream
 app/src/lib/format_bytes.ts - Byte-count formatting shared by bundle rows and image-diff pane footers
 app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file-type icon resolution
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
@@ -163,6 +188,37 @@ app/src/lib/icons/index.ts - Barrel export for file-type icon system
 app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
 app/src/lib/source_control/conflict_count.ts - Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root
 app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
+app/src/lib/stream/stream_agent_support.ts - Whether the connected agent build publishes fileDelta events the Stream panel can render
+app/src/lib/stream/stream_bounds.ts - Every numeric bound the Stream panel obeys; the only stream module with literals
+app/src/lib/stream/stream_burst_card.ts - Pure burst card arithmetic: counts per op and kind, top directories, elapsed time
+app/src/lib/stream/stream_burst_detect_test.ts - Distinct-path rate detection over fileChanged arrivals: open at the threshold, close on quiet
+app/src/lib/stream/stream_burst_detect.ts - Pure distinct-path rate detector over fileChanged arrivals that opens and closes bursts
+app/src/lib/stream/stream_cadence_test.ts - Cadence clamp and pressure band arithmetic
+app/src/lib/stream/stream_cadence.ts - Pure cadence and pressure arithmetic for the Stream conductor
+app/src/lib/stream/stream_card_body_test.ts - Body cap rules: a single oversized patch keeps its head; whole older segments fall out first
+app/src/lib/stream/stream_card_body.ts - Builds and extends card bodies from fileDelta payloads under the EXPAND_CAP line bound
+app/src/lib/stream/stream_card_grammar_test.ts - Line selection: head of a single segment, tail across several, one hunk per segment, newest offset
+app/src/lib/stream/stream_card_grammar.ts - The one authority for how a Stream card reads: badge, rail, baseline chip, line selection, clock
+app/src/lib/stream/stream_image_strip_test.ts - Strip reducer rules: open, append in order whatever the gap, replace in place, remove wins, new strip on max or a car...
+app/src/lib/stream/stream_image_strip.ts - Pure reducer folding image deltas into the tail strip (or replacing a tile in the newest one), else opening a new strip
+app/src/lib/stream/stream_ring_apply_burst_test.ts - Burst reducer rules: open at the threshold, absorb, close on quiet, collapse against the open burst, notice TTL
+app/src/lib/stream/stream_ring_apply_burst.ts - Pure reducers for fileChanged arrivals: burst detection and absorption, settling, backlog collapse
+app/src/lib/stream/stream_ring_apply_support.ts - Shared reducer plumbing: reduce state seed, id allocation, card replacement, notices, path lookup
+app/src/lib/stream/stream_ring_apply_test.ts - Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart, counters
+app/src/lib/stream/stream_ring_apply.ts - Pure reducers turning fileDelta and fileDeltaCounters events into cards, merges, and honesty notices
+app/src/lib/stream/stream_ring_test.ts - Ring bounds: admit and evict order, history first, expanded exempt, notice bound, static sweep
+app/src/lib/stream/stream_ring.ts - Pure ring operations: admit and evict, expand, notices, burst cards, history seed, static sweep
+app/src/lib/stream/stream_store_registry.ts - The per-repo store registry: LRU-bounded, visible store pinned, one event router for every store
+app/src/lib/stream/stream_store_seed_test.ts - Only the repo's own events land: cross-repo snapshots never seed, a foreign fileDelta prints no card, live rings neve...
+app/src/lib/stream/stream_store_support.ts - Store-side pure helpers: browser timer deps, transport facts, the selection remap, and the snapshot projection
+app/src/lib/stream/stream_store_test.ts - Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, idle notice...
+app/src/lib/stream/stream_store.ts - Per-repo Stream store outside React: intake buffer, reducers, the cadence conductor, and the snapshot
+app/src/lib/stream/stream_strip_types.ts - Ring member contracts for an image strip: the tiles one card holds and the body each tile carries
+app/src/lib/stream/stream_strip_view.ts - How an image strip's head, rail, and footer read: count label, shared directory, op tally, clock span, bytes
+app/src/lib/stream/stream_tile_targets_test.ts - Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte budget, unfetchable tiles...
+app/src/lib/stream/stream_tile_targets.ts - Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE
+app/src/lib/stream/stream_types.ts - Card, ring, snapshot, transport, and store contracts for the per-repo Stream store
+app/src/lib/stream/testing/stream_fixtures.ts - Event and card builders shared by the Stream unit tests; never imported by app code
 app/src/lib/tabs/tab_items.ts - Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs
 app/src/lib/terminal/terminal_flow.ts - Per-session monotonic output credit acknowledgements: coalesced after xterm parses bytes, or on receipt while the pag...
 app/src/lib/terminal/terminal_ipc.ts - Typed Tauri invoke wrappers and the output-channel seam for terminal sessions (mirrors src-tauri terminal/frames.rs)
@@ -173,7 +229,7 @@ app/src/lib/terminal/terminal_registry.ts - Module-level owner of every terminal
 app/src/lib/terminal/terminal_renderer.ts - WebGL renderer policy: attached once per session after its first adopt and kept while parked; DOM renderer on context...
 app/src/lib/terminal/terminal_session_io.ts - One pty lifetime for a terminal tab: open handshake, queued and serialised input, output pump with credit acks, debou...
 app/src/lib/terminal/terminal_session.ts - One terminal tab living outside React: the xterm instance and wrapper element, renderer adopt/park, fit, pty lifecycl...
-app/src/lib/terminal/terminal_theme.ts - Reads the deck's --terminal-* and --font-mono tokens into xterm theme and options; an empty token leaves xterm's defa...
+app/src/lib/terminal/terminal_theme.ts - Reads deck colour and font tokens into xterm theme and options; an empty token leaves xterm's default in place
 app/src/lib/terminal/terminal_types.ts - Frontend terminal session model: tab/group snapshots and the registry API the rail consumes
 app/src/lib/theme/accent_utils.ts - Convert hex accent color to CSS variable values for runtime theming
 app/src/lib/theme/texture_catalog.ts - Build-time texture catalog for theme substrate/dither selection
@@ -193,10 +249,13 @@ app/src/shared/config/persisted_config_repo_roots_migration.ts - Repo root migra
 app/src/shared/config/persisted_config.ts - Persisted config schema, types, and defaults
 app/src/shared/config/repo_config.ts - RepoConfig schema and type
 app/src/shared/config/repo_root.ts - Repo root authority union schema and path normalization helpers
+app/src/shared/config/ui_state_schema.ts - Persisted UI state schema: rail section, left panel mode, window bounds
 app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
+app/src/shared/protocol_events_delta.ts - Zod mirror of the agent fileDelta event: bounded content of one settled file change
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
+app/src/shared/protocol_file_meta.ts - Leaf file metadata enums shared by the file change and file delta event schemas
 app/src/shared/protocol_import.ts - Drag-and-drop file import command/result schemas shared with the agent
 app/src/shared/protocol_repo_commands.ts - Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas
 app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
@@ -248,6 +307,11 @@ app/src/styles/source_control_rows.css - Source Control change rows: icon, name 
 app/src/styles/source_control_sections.css - Source Control collapsible section headers, bulk actions, and row containers
 app/src/styles/source_control.css - Source Control column: status line, warnings, commit box, and notices
 app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
+app/src/styles/stream/stream_card_body.css - Stream card bodies: the diff density override, footers and ghosts, burst and notice rows
+app/src/styles/stream/stream_card_image.css - Stream image strips: the growing-then-wrapping tile grid, width-sized checkerboard slots, badges, names, the BEFORE/A...
+app/src/styles/stream/stream_card.css - Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules
+app/src/styles/stream/stream_motion.css - Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion
+app/src/styles/stream/stream_panel.css - Stream panel shell: the flat scroller surface, the LIVE slot, and compact history rows
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/terminal_column.css - Terminal rail body: tab strip, xterm host and session element, console-prompt notices
@@ -258,6 +322,7 @@ app/src/styles/theme_dark.css - Dark glass vintage theme - fills semantic token 
 app/src/styles/theme_light.css - Light theme overrides - warm parchment/linen tones, muted and soft
 app/src/styles/theme_warm.css - Warm theme overrides - golden hour amber tones, saturated and warm
 app/src/styles/tokens.css - Design system tokens - spacing, radii, blur, shadows, typography, motion
+app/src/tabs/repo_tab_file_panel.tsx - Chooses the Stream panel or the Auto files table for the repo tab's file slot
 app/src/tabs/repo_tab_rail.tsx - Composes the ZIPS, SOURCE and TERMINAL rail bodies for one repo tab; RepoTab hands them to the rail or the handset deck
 app/src/tabs/repo_tab.tsx - Generic repo tab component with Auto files, the right rail (zips | source | terminal), and the workspace
 app/src/types/agent_supervisor.ts - Types for Tauri host-agent supervisor responses
@@ -284,6 +349,7 @@ crates/im_agent/src/protocol/commands_tr_fleet.rs - TR fleet command payloads fo
 crates/im_agent/src/protocol/commands_worktree.rs - UI-to-agent command payload for deleting, moving, copying, and renaming worktree entries
 crates/im_agent/src/protocol/commands.rs - UI-to-agent command payloads for the WebSocket protocol
 crates/im_agent/src/protocol/envelopes.rs - Protocol envelope types for request/response messaging
+crates/im_agent/src/protocol/events_delta.rs - Wire types for the fileDelta event - what changed inside one file
 crates/im_agent/src/protocol/events_legacy_wire.rs - Legacy hostPath/windowsPath wire shapes and conversions for staged-info and bundle-built events
 crates/im_agent/src/protocol/events_runtime.rs - Runtime status and error event payloads
 crates/im_agent/src/protocol/events.rs - Agent event payloads and file entry types
@@ -295,11 +361,25 @@ crates/im_agent/src/protocol/responses_source_control.rs - Agent-to-UI source-co
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
 crates/im_agent/src/protocol/responses_worktree.rs - Agent-to-UI response payload naming the entries one worktree action produced
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
+crates/im_agent/src/protocol/tests_delta.rs - Wire-shape tests for the fileDelta event and its payload union
 crates/im_agent/src/protocol/tests_shutdown.rs - Wire-shape tests for the shutdown command and its result
 crates/im_agent/src/protocol/tests_source_control.rs - Wire-shape tests for the source-control command and status payloads
 crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization and backward-compat tests
 crates/im_agent/src/protocol/tr_fleet_tests.rs - TR fleet protocol command/response serialization tests
 crates/im_agent/src/repos/categorizer.rs - File kind classification based on globs and fallback heuristics
+crates/im_agent/src/repos/delta/baseline_cache.rs - Byte-bounded LRU of the text last served per path, per repo
+crates/im_agent/src/repos/delta/delta_budget.rs - The delta read budget - burst token bucket, per-window log gates, and the per-change charge decision
+crates/im_agent/src/repos/delta/delta_cache_tests.rs - Baseline cache tests - byte budget, LRU eviction and the rename carry
+crates/im_agent/src/repos/delta/delta_patch_tests.rs - Patch grammar, truncation and settled-read tests for the delta pipeline
+crates/im_agent/src/repos/delta/delta_queue_tests.rs - Settle queue folding, latency ceiling, cap and op-collapse tests
+crates/im_agent/src/repos/delta/delta_read.rs - Blocking stat-read-restat of one settled file for the delta pipeline
+crates/im_agent/src/repos/delta/delta_resolve_tests.rs - Per-change decision tests - burst charge, rename baseline move, first-sighting truncate guard, image metadata failures
+crates/im_agent/src/repos/delta/delta_resolve.rs - Resolves one settled change into a fileDelta payload - baseline ladder, settled read, image metadata
+crates/im_agent/src/repos/delta/delta_stamp.rs - RFC 3339 mtime stamps for one delta - now, a SystemTime, or the milliseconds a settled read reported
+crates/im_agent/src/repos/delta/delta_worker.rs - The delta worker loop - drains settled changes, applies the burst budget, stamps and publishes fileDelta
+crates/im_agent/src/repos/delta/mod.rs - Bounded delta pipeline for fileDelta - named bounds, DeltaService owner, pure-core exports
+crates/im_agent/src/repos/delta/settle_queue.rs - Pure per-path trailing coalescer for the delta pipeline
+crates/im_agent/src/repos/delta/unified_patch.rs - Hunks-only unified patch text and exact stats for one delta
 crates/im_agent/src/repos/file_activity.rs - Activity metadata updates for recent file ranking
 crates/im_agent/src/repos/generated_code_extensions.rs - Generated extension list for fallback code classification in the Rust agent. Generated by: scripts/classification/gen...
 crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watcher
@@ -319,9 +399,11 @@ crates/im_agent/src/repos/recent_files_store.rs - Persist recent files with debo
 crates/im_agent/src/repos/repo_directory_listing.rs - Lazy repo-relative directory listing for file explorer views
 crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded nested bundle-selector directory paths
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
+crates/im_agent/src/repos/repo_watcher_delta_marks.rs - How watcher events mark the delta queue - one note per change, one rename per two-path arm
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
-crates/im_agent/src/repos/repo_watcher_tests.rs - Unit tests for the repo watcher's initial-entries ignore filtering
-crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU and event emission
+crates/im_agent/src/repos/repo_watcher_startup.rs - Repo watcher startup - notify watcher creation, external git watches, initial tracked-path load
+crates/im_agent/src/repos/repo_watcher_tests.rs - Unit tests for the repo watcher's initial-entries ignore filtering and rename delta marks
+crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU, delta pipeline, and event emission
 crates/im_agent/src/repos/source_control_watch/coalescer.rs - Rate-limit sourceControlChanged emission with a guaranteed trailing event
 crates/im_agent/src/repos/source_control_watch/detector_tests.rs - Unit tests for the source-control change detector (tracked-set override, git metadata allowlist)
 crates/im_agent/src/repos/source_control_watch/detector.rs - Decide whether a raw watcher event can move `git status` for a repo
@@ -386,6 +468,7 @@ crates/im_agent/src/source_control/discard/tests_entries.rs - Delete tests: what
 crates/im_agent/src/source_control/discard/tests_quarantine.rs - Real-git tests for the discard quarantine's phase files, its per-target directories, and retention
 crates/im_agent/src/source_control/discard/tests_stamps.rs - Real-git tests binding a discard to the exact file state the user reviewed (stamp, absence, order)
 crates/im_agent/src/source_control/discard/tests_sweep.rs - Tests for the once-per-process discard quarantine sweep: what it finishes, what it spares, and what it survives
+crates/im_agent/src/source_control/index_blob.rs - Reads one path's stage-0 index blob (`git show :0:./<rel>`) as bounded UTF-8 text for the delta baseline
 crates/im_agent/src/source_control/locks/mod.rs - Mutation serialization keyed by the physical Git directory, plus the drain gate
 crates/im_agent/src/source_control/locks/tests.rs - Real-git tests for mutation serialization by physical git dir, drain, and mutationInProgress
 crates/im_agent/src/source_control/mod.rs - Git working-tree status, per-file diff, and index/commit/remote actions for one repo root
@@ -505,6 +588,7 @@ scripts/release/bump_version.mjs - Update all release-facing version files to a 
 scripts/release/check_versions.mjs - Validate that all public Intermediary version files stay in lockstep.
 scripts/release/stage_windows_release_assets.mjs - Collect Windows bundle outputs into a release artifact directory with sha256 files.
 scripts/release/version_contract.mjs - Shared version-contract helpers for Intermediary release automation.
+scripts/test/run_ts_tests.mjs - Bundles every app/src/**/*_test.ts(x) with esbuild into a temp dir and runs node --test over it.
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
@@ -580,6 +664,7 @@ src-tauri/src/lib/config/path.rs - Resolve persisted config file location for ap
 src-tauri/src/lib/config/types.rs - Persisted configuration types for Intermediary
 src-tauri/src/lib/config/types/model.rs - Supporting persisted configuration model types
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
+src-tauri/src/lib/config/types/ui_state.rs - Remembered UI state: rail section, left files mode, rail width, and window bounds
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt

@@ -5,7 +5,9 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashSet;
 
-use super::model::{ACTIVE_RAILS, RAIL_WIDTH_PERCENT_MAX, RAIL_WIDTH_PERCENT_MIN};
+use super::ui_state::{
+    ACTIVE_RAILS, FILES_MODES, RAIL_WIDTH_PERCENT_MAX, RAIL_WIDTH_PERCENT_MIN,
+};
 use super::{
     PersistedConfig, CONFIG_VERSION, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
     MIN_WINDOW_WIDTH,
@@ -86,6 +88,13 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
         return Err(format!(
             "ui_state.active_rail must be one of {ACTIVE_RAILS:?}, got {:?}",
             config.ui_state.active_rail
+        ));
+    }
+
+    if !FILES_MODES.contains(&config.ui_state.files_mode.as_str()) {
+        return Err(format!(
+            "ui_state.files_mode must be one of {FILES_MODES:?}, got {:?}",
+            config.ui_state.files_mode
         ));
     }
 

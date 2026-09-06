@@ -9,9 +9,9 @@ import { AutoFilesHeader } from "./auto_files_header.js";
 import { AutoFilesRow } from "./auto_files_row.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useFileActions } from "../hooks/use_file_actions.js";
+import { sortModeOf, type FilesMode } from "../lib/files/files_mode.js";
 import type {
   FeedFileEntry,
-  FileSortMode,
   FileTypeFilter,
 } from "../lib/files/file_feed.js";
 import type { RepoRoot } from "../shared/config.js";
@@ -21,11 +21,11 @@ interface AutoFilesPanelProps {
   repoId: string;
   emptyMessage?: string;
   filter: FileTypeFilter;
-  sortMode: FileSortMode;
+  mode: FilesMode;
   selectedPaths: ReadonlySet<string>;
   headerPrefix?: React.ReactNode;
   onFilterChange: (filter: FileTypeFilter) => void;
-  onSortModeChange: (mode: FileSortMode) => void;
+  onModeChange: (mode: FilesMode) => void;
   onSelect: (
     path: string,
     event: Pick<React.MouseEvent, "ctrlKey" | "metaKey" | "shiftKey">
@@ -45,15 +45,17 @@ export function AutoFilesPanel({
   repoId,
   emptyMessage = "No files",
   filter,
-  sortMode,
+  mode,
   selectedPaths,
   headerPrefix,
   onFilterChange,
-  onSortModeChange,
+  onModeChange,
   onSelect,
   onDragStart,
   onOpen,
 }: AutoFilesPanelProps): React.JSX.Element {
+  // The table is never rendered in stream mode, so "auto" is the sort this panel falls back to
+  const sortMode = sortModeOf(mode, "auto");
   const { config } = useConfig();
   const fileActions = useFileActions();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -79,10 +81,10 @@ export function AutoFilesPanel({
       <header className="panel-header auto-files-panel-header">
         <AutoFilesHeader
           filter={filter}
-          sortMode={sortMode}
+          mode={mode}
           prefix={headerPrefix}
           onFilterChange={onFilterChange}
-          onSortModeChange={onSortModeChange}
+          onModeChange={onModeChange}
         />
       </header>
       <div className="panel-content auto-files-content">

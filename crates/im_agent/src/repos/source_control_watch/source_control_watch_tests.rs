@@ -3,7 +3,7 @@
 
 use super::{load_tracked_paths, SourceControlChangeDetector, SourceControlWatch, TrackedPathSet};
 use crate::logging::{LogConfig, LogLevel, Logger};
-use crate::repos::{RecentFilesStore, RepoWatcher, RepoWatcherConfig};
+use crate::repos::{DeltaLimits, RecentFilesStore, RepoWatcher, RepoWatcherConfig};
 use crate::server::EventBus;
 use notify::event::ModifyKind;
 use notify::{Event, EventKind};
@@ -48,6 +48,7 @@ async fn a_working_tree_burst_emits_one_leading_and_one_trailing_event() {
         recent_store: RecentFilesStore::new(temp.path().join("state"), logger.clone()),
         logger: logger.clone(),
         event_bus: event_bus.clone(),
+        delta_limits: DeltaLimits::new(),
     })
     .await
     .expect("watcher starts");

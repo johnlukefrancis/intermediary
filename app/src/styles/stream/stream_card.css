@@ -1,0 +1,220 @@
+/*
+ * Path: app/src/styles/stream/stream_card.css
+ * Description: Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules
+ */
+
+/* ===== CHASSIS ===== */
+/* Flat on the flat scroller: no backdrop-filter anywhere inside a moving card. Motion lives in
+   stream_motion.css; the only transition here is the hover/focus background. */
+.stream-card {
+  position: relative;
+  margin: 0 var(--space-2) var(--space-2);
+  padding-left: 3px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-sm);
+  background: var(--color-editor-bg);
+  overflow: hidden;
+  contain: layout paint style;
+  cursor: default;
+  user-select: none;
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+.stream-card[data-expandable]:not([data-expanded]) {
+  cursor: pointer;
+}
+
+.stream-card:hover {
+  background: var(--color-bg-hover-subtle);
+}
+
+.stream-card:focus {
+  outline: none;
+}
+
+.stream-card:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ===== SPINE (3 px accent rail per kind) ===== */
+.stream-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--stream-rail, var(--color-border));
+  transform-origin: 0 0;
+}
+
+.stream-card[data-rail="success"] { --stream-rail: var(--color-success); }
+.stream-card[data-rail="info"] { --stream-rail: var(--color-info); }
+.stream-card[data-rail="error"] { --stream-rail: var(--color-error); }
+.stream-card[data-rail="warning"] { --stream-rail: var(--color-warning); }
+.stream-card[data-rail="accent"] { --stream-rail: var(--color-accent); }
+
+/* ===== HEAD ===== */
+/* The name track keeps at least 8ch and the meta track can shrink to nothing, so a narrow panel
+   ellipsises the name and clips the chips instead of letting the meta push the row wider. */
+.stream-card__head {
+  display: grid;
+  grid-template-columns: 22px 14px minmax(8ch, 1fr) minmax(0, auto) 52px;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-height: 24px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+}
+
+.stream-card__head .badge {
+  padding: 0;
+  justify-content: center;
+}
+
+/* A strip's head has no change badge: the name cell already prints `N IMAGES` and every tile
+   carries its own badge, so the badge track is simply dropped for strips. */
+.stream-card--strip .stream-card__head {
+  grid-template-columns: 14px minmax(8ch, 1fr) minmax(0, auto) 52px;
+}
+
+.stream-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream-card__icon .file-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.stream-card__path {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stream-card__name {
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-card__from {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-normal);
+}
+
+/* Head-truncated: the deepest directory survives, the root end elides */
+.stream-card__dir {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.stream-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.stream-card__stats {
+  display: inline-flex;
+  gap: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.stream-card__stat[data-stat="added"] { color: var(--color-success); }
+.stream-card__stat[data-stat="removed"] { color: var(--color-error); }
+
+.stream-card__chip,
+.stream-card__edits {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stream-card__edits {
+  color: var(--color-accent);
+  border-color: var(--color-accent-soft);
+}
+
+/* Outside the active ZIP selection: muted, never hidden */
+.stream-card__chip[data-chip="outside"] {
+  border-style: dashed;
+}
+
+/* The rest opacity also ends the arrival keyframes (stream_motion.css), so no snap when static lands */
+.stream-card[data-outside-selection] {
+  --stream-rest-opacity: 0.55;
+  opacity: var(--stream-rest-opacity);
+}
+
+.stream-card__clock {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ===== STATES ===== */
+.stream-card[data-exiting] {
+  pointer-events: none;
+}
+
+/* The type filter hides, never unmounts: switching back reveals the ring in place */
+.stream-card[data-filtered],
+.stream-history-row[data-filtered] {
+  display: none;
+}
+
+.stream-history-row:focus {
+  outline: none;
+}
+
+.stream-history-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* ===== RESPONSIVE ===== */
+/* The relief follows the PANEL's width, not the viewport's: .stream-scroller is an inline-size
+   container (stream_panel.css), so a narrow left panel on a wide window gets the same rules as
+   the handset chassis. */
+@container (max-width: 380px) {
+  .stream-card__head {
+    grid-template-columns: 22px 14px minmax(8ch, 1fr) minmax(0, auto);
+  }
+
+  .stream-card--strip .stream-card__head {
+    grid-template-columns: 14px minmax(8ch, 1fr) minmax(0, auto);
+  }
+
+  .stream-card__clock {
+    display: none;
+  }
+}
+
+@container (max-width: 320px) {
+  .stream-card__dir {
+    display: none;
+  }
+}

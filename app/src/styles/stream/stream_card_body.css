@@ -1,0 +1,174 @@
+/*
+ * Path: app/src/styles/stream/stream_card_body.css
+ * Description: Stream card bodies: the diff density override, footers and ghosts, burst and notice rows
+ */
+
+/* ===== TEXT BODY (density override of the shared .diff-line grammar) ===== */
+.stream-card__lines {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  color: var(--color-editor-text);
+  tab-size: 4;
+}
+
+.stream-card .diff-line {
+  grid-template-columns: 4ch minmax(0, 1fr);
+  column-gap: var(--space-2);
+  min-height: 1.45em;
+  padding: 0 var(--space-2) 0 var(--space-1);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.stream-card .diff-line__no:first-child {
+  display: none;
+}
+
+.stream-card .diff-line__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Deleted content strikes; the card rests dimmed, and its arrival keyframes end at the same rest */
+.stream-card[data-kind="text-deleted"] {
+  --stream-rest-opacity: 0.72;
+  opacity: var(--stream-rest-opacity);
+}
+
+.stream-card[data-kind="text-deleted"] .diff-line[data-kind="del"] .diff-line__text {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-error);
+}
+
+/* ===== FOOTERS AND GHOSTS ===== */
+.stream-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 22px;
+  padding: 0 var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stream-card__foot-action {
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  background: transparent;
+  color: var(--color-accent);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  transition: background var(--duration-normal) var(--ease-out);
+}
+
+.stream-card__foot-action:hover {
+  background: var(--color-bg-hover);
+}
+
+.stream-card__ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ===== BURST ===== */
+.stream-card--burst {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  height: 96px;
+  padding: 0 var(--space-3) 0 calc(var(--space-3) + 3px);
+  font-family: var(--font-mono);
+}
+
+.stream-burst__count {
+  color: var(--color-accent);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.stream-burst__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.stream-burst__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-burst__dirs {
+  color: var(--color-text-muted);
+}
+
+.stream-burst__ops {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Stays a block (.stream-burst__line) so it ellipsises at a glyph boundary like the other lines;
+   a flex container would clip mid-glyph instead. The gap is a margin between inline children. */
+.stream-burst__kinds {
+  color: var(--color-text-muted);
+}
+
+.stream-burst__kinds > span + span {
+  margin-left: var(--space-2);
+}
+
+.stream-burst__ops [data-op="add"] { color: var(--color-success); }
+.stream-burst__ops [data-op="modify"] { color: var(--color-info); }
+.stream-burst__ops [data-op="remove"] { color: var(--color-error); }
+.stream-burst__ops [data-op="rename"] { color: var(--color-warning); }
+
+.stream-burst__resolved {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}
+
+/* ===== NOTICE (console prompt, 32 px) ===== */
+.stream-notice {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stream-notice::before {
+  content: "> ";
+  margin-right: var(--space-1);
+  color: var(--color-accent);
+}
+
+.stream-notice[data-tone="success"] { color: var(--color-success); }
+.stream-notice[data-tone="warning"] { color: var(--color-warning); }
+.stream-notice[data-tone="error"] { color: var(--color-error); }

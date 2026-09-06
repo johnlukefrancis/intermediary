@@ -42,6 +42,12 @@ import {
   WorktreeActionCommandSchema, WorktreeActionResultSchema,
 } from "./protocol_worktree.js";
 export {
+  DeltaBaselineSchema, DeltaOpSchema, DeltaPayloadSchema, DeltaStatsSchema,
+  FileDeltaCountersEventSchema, FileDeltaEventSchema, OpaqueReasonSchema,
+  type DeltaBaseline, type DeltaOp, type DeltaPayload, type DeltaStats,
+  type FileDeltaCountersEvent, type FileDeltaEvent, type OpaqueReason,
+} from "./protocol_events_delta.js";
+export {
   AgentErrorCodeSchema, AgentEventSchema, BundleBuildPhaseSchema, BundleBuildProgressEventSchema,
   BundleBuiltEventSchema, ErrorEventSchema, FileActivityBucketSchema, FileActivitySchema,
   FileChangeTypeSchema, FileChangedEventSchema,

@@ -6,16 +6,20 @@ use crate::protocol::{
     AgentEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, RepoTopologyChangedEvent,
 };
 use crate::repos::categorizer::Categorizer;
+use crate::repos::delta::DeltaService;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
 use crate::repos::repo_topology_change::event_affects_top_level_metadata;
 use crate::repos::source_control_watch::SourceControlWatch;
 use crate::server::EventBus;
-use notify::event::{ModifyKind, RenameMode};
+use notify::event::ModifyKind;
 use notify::{Event, EventKind};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tokio::sync::RwLock;
+
+use crate::repos::repo_watcher_delta_marks::handle_rename_event;
+pub(crate) use crate::repos::repo_watcher_delta_marks::{DeltaIntent, PendingRename};
 
 /// Everything one watcher task needs to interpret a raw `notify` event. Built
 /// once per watcher and reused for every event, so new signals ride here
@@ -30,6 +34,9 @@ pub(crate) struct EventContext<'a> {
     pub(crate) event_bus: &'a EventBus,
     pub(crate) logger: &'a Logger,
     pub(crate) source_control: &'a SourceControlWatch,
+    pub(crate) delta: &'a DeltaService,
+    /// The unpaired `RenameMode::From` half; see `repo_watcher_delta_marks`.
+    pub(crate) pending_rename: PendingRename,
 }
 
 impl<'a> EventContext<'a> {
@@ -42,40 +49,56 @@ impl<'a> EventContext<'a> {
         }
     }
 
-    async fn apply_change(&self, path: &Path, change_type: FileChangeType) {
-        let relative_path = match path.strip_prefix(self.root_path) {
-            Ok(relative) => relative,
-            Err(_) => {
-                self.logger.warn(
-                    "Skipping path outside repo root",
-                    Some(serde_json::json!({
-                        "repoId": self.repo_id,
-                        "path": path.to_string_lossy()
-                    })),
-                );
-                return;
-            }
+    /// The repo-relative slash path, or `None` for a path outside the root.
+    pub(super) fn relative_of(&self, path: &Path) -> Option<String> {
+        let relative = path.strip_prefix(self.root_path).ok()?;
+        Some(
+            relative
+                .to_string_lossy()
+                .replace(std::path::MAIN_SEPARATOR, "/"),
+        )
+    }
+
+    /// What `apply_change` would publish for `path`: `None` when the watcher
+    /// does not report it (outside the root, ignored, or `FileKind::Other`).
+    fn classify(&self, path: &Path) -> Option<(String, FileKind)> {
+        let Some(relative_str) = self.relative_of(path) else {
+            self.logger.warn(
+                "Skipping path outside repo root",
+                Some(serde_json::json!({
+                    "repoId": self.repo_id,
+                    "path": path.to_string_lossy()
+                })),
+            );
+            return None;
         };
-
-        let relative_str = relative_path
-            .to_string_lossy()
-            .replace(std::path::MAIN_SEPARATOR, "/");
-
         if self.ignore_matcher.should_ignore(&relative_str) {
-            return;
+            return None;
         }
-
         let kind = self.categorizer.categorize(&relative_str);
         if kind == FileKind::Other {
-            return;
+            return None;
         }
+        Some((relative_str, kind))
+    }
+
+    /// Publishes one `fileChanged` and, for `DeltaIntent::Note`, marks the
+    /// delta queue. Returns what was published so a rename arm can mark its
+    /// single delta after both halves went out.
+    pub(super) async fn apply_change(
+        &self,
+        path: &Path,
+        change_type: FileChangeType,
+        intent: DeltaIntent,
+    ) -> Option<(String, FileKind)> {
+        let (relative_str, kind) = self.classify(path)?;
 
         let mtime = match change_type {
             FileChangeType::Unlink => chrono::Utc::now(),
             _ => match tokio::fs::metadata(path).await {
                 Ok(metadata) => {
                     if metadata.is_dir() {
-                        return;
+                        return None;
                     }
                     match metadata.modified() {
                         Ok(modified) => chrono::DateTime::<chrono::Utc>::from(modified),
@@ -115,7 +138,7 @@ impl<'a> EventContext<'a> {
 
         let event_payload = FileChangedEvent::new(
             self.repo_id.to_string(),
-            relative_str,
+            relative_str.clone(),
             kind,
             change_type,
             mtime.to_rfc3339(),
@@ -123,6 +146,11 @@ impl<'a> EventContext<'a> {
         );
         self.event_bus
             .broadcast_event(AgentEvent::FileChanged(event_payload));
+
+        if intent == DeltaIntent::Note {
+            self.note_delta(relative_str.clone(), path, kind, change_type);
+        }
+        Some((relative_str, kind))
     }
 }
 
@@ -156,7 +184,9 @@ pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
     };
 
     for path in &event.paths {
-        context.apply_change(path, change_type).await;
+        context
+            .apply_change(path, change_type, DeltaIntent::Note)
+            .await;
     }
 }
 
@@ -173,55 +203,6 @@ fn map_event_kind(kind: &EventKind) -> Option<FileChangeType> {
         EventKind::Modify(_) => Some(FileChangeType::Change),
         EventKind::Remove(_) => Some(FileChangeType::Unlink),
         _ => None,
-    }
-}
-
-async fn handle_rename_event(context: &EventContext<'_>, mode: RenameMode, paths: &[PathBuf]) {
-    match mode {
-        RenameMode::Both => {
-            if let Some(from_path) = paths.get(0) {
-                context
-                    .apply_change(from_path, FileChangeType::Unlink)
-                    .await;
-            }
-            if let Some(to_path) = paths.get(1) {
-                context.apply_change(to_path, FileChangeType::Add).await;
-            }
-        }
-        RenameMode::From => {
-            if let Some(from_path) = paths.get(0) {
-                context
-                    .apply_change(from_path, FileChangeType::Unlink)
-                    .await;
-            }
-        }
-        RenameMode::To => {
-            if let Some(to_path) = paths.get(0) {
-                context.apply_change(to_path, FileChangeType::Add).await;
-            }
-        }
-        RenameMode::Any | RenameMode::Other => {
-            if paths.len() >= 2 {
-                if let Some(from_path) = paths.get(0) {
-                    context
-                        .apply_change(from_path, FileChangeType::Unlink)
-                        .await;
-                }
-                if let Some(to_path) = paths.get(1) {
-                    context.apply_change(to_path, FileChangeType::Add).await;
-                }
-            } else if let Some(path) = paths.get(0) {
-                let change_type = infer_rename_change_type(path).await;
-                context.apply_change(path, change_type).await;
-            }
-        }
-    }
-}
-
-async fn infer_rename_change_type(path: &Path) -> FileChangeType {
-    match tokio::fs::metadata(path).await {
-        Ok(_) => FileChangeType::Add,
-        Err(_) => FileChangeType::Unlink,
     }
 }
 

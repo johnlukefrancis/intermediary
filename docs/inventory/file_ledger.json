@@ -114,6 +114,10 @@
       "summary": "Read-only unified/combined diff viewer inside the shared workspace shell; flags merge conflicts"
     },
     {
+      "path": "app/src/components/diff/diff_line_rows.tsx",
+      "summary": "The one renderer of parsed diff lines as `.diff-line` rows, shared by the workspace and the stream"
+    },
+    {
       "path": "app/src/components/drag_error_notice.tsx",
       "summary": "Small inline error notice for drag failures"
     },
@@ -276,6 +280,62 @@
     {
       "path": "app/src/components/status_bar.tsx",
       "summary": "Status bar with connection status LED, error display, and options button"
+    },
+    {
+      "path": "app/src/components/stream/stream_burst_card.tsx",
+      "summary": "Fixed-height card standing in for a flood of changes: count, span, top dirs, per-op and per-kind strips, resolved"
+    },
+    {
+      "path": "app/src/components/stream/stream_card_head.tsx",
+      "summary": "The one-line card head: badge, file icon, name over dir, +N M, baseline chip, edit count, clock"
+    },
+    {
+      "path": "app/src/components/stream/stream_card.tsx",
+      "summary": "Memoized file card chassis: spine, head, body dispatch, click / double-click / drag / right-click / keys"
+    },
+    {
+      "path": "app/src/components/stream/stream_follow_pill.tsx",
+      "summary": "Sticky \"N NEW\" button shown while the reader has scrolled away from the live tail"
+    },
+    {
+      "path": "app/src/components/stream/stream_header_live.tsx",
+      "summary": "The Stream header's LIVE indicator: one dot plus a mono state label"
+    },
+    {
+      "path": "app/src/components/stream/stream_history_row.tsx",
+      "summary": "Compact scrollback row seeding the Stream panel from the existing recent list"
+    },
+    {
+      "path": "app/src/components/stream/stream_host.tsx",
+      "summary": "Renders nothing; keeps the Stream store registry fed for the life of the app"
+    },
+    {
+      "path": "app/src/components/stream/stream_icons.tsx",
+      "summary": "Stroke glyphs owned by the Stream panel, drawn in the Auto files header idiom"
+    },
+    {
+      "path": "app/src/components/stream/stream_image_strip.tsx",
+      "summary": "The image strip card: head with count and op tally, the growing-then-wrapping tile grid, clock-span footer, tile sele..."
+    },
+    {
+      "path": "app/src/components/stream/stream_image_tile.tsx",
+      "summary": "One tile of an image strip: a 16:10 checkerboard slot sized by its column, badge, edit counter, name, the BEFORE/AFTE..."
+    },
+    {
+      "path": "app/src/components/stream/stream_notice_row.tsx",
+      "summary": "Console-prompt notice row: honesty counters and transport state printed inline in the stream"
+    },
+    {
+      "path": "app/src/components/stream/stream_panel.tsx",
+      "summary": "The Stream panel shell: mode rocker with the LIVE slot, support states, and the live scroller"
+    },
+    {
+      "path": "app/src/components/stream/stream_scroller.tsx",
+      "summary": "The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest"
+    },
+    {
+      "path": "app/src/components/stream/stream_text_body.tsx",
+      "summary": "Capped diff lines in the shared row grammar with the \"+N MORE  OPEN DIFF\" and \"NEW FILE\" footers"
     },
     {
       "path": "app/src/components/tab_bar.tsx",
@@ -446,6 +506,26 @@
       "summary": "Context delivering the built tree decorations to the recursive bundle explorer rows"
     },
     {
+      "path": "app/src/hooks/stream/use_deferred_click.ts",
+      "summary": "A single click that fires only once the double-click grace has passed; shared by file cards and image strips"
+    },
+    {
+      "path": "app/src/hooks/stream/use_repo_stream.ts",
+      "summary": "Binds the active repo's Stream store to React: visibility, selection filter, card and tile actions"
+    },
+    {
+      "path": "app/src/hooks/stream/use_stream_follow.ts",
+      "summary": "Follow-scroll for the Stream scroller: tail pin, unread count while unpinned, freeze, resume"
+    },
+    {
+      "path": "app/src/hooks/stream/use_stream_host.ts",
+      "summary": "Mounted once: the one agent subscription and host facts pushed into every Stream store"
+    },
+    {
+      "path": "app/src/hooks/stream/use_stream_images.ts",
+      "summary": "Per-panel image tiles keyed by strip and path: gated readImageFile reads, decoded Blob tiles, bounded retention and r..."
+    },
+    {
       "path": "app/src/hooks/terminal/use_terminal_group.ts",
       "summary": "Subscribes a component to one repo's terminal group snapshot from the module-level registry"
     },
@@ -475,7 +555,7 @@
     },
     {
       "path": "app/src/hooks/use_config_actions_rail.ts",
-      "summary": "Config actions for the persisted right rail: the deck section (zips | source | terminal) and the rail width"
+      "summary": "Config actions for persisted panel state: the rail section, the rail width, and the left files mode"
     },
     {
       "path": "app/src/hooks/use_config_actions.ts",
@@ -492,6 +572,10 @@
     {
       "path": "app/src/hooks/use_deck_section.ts",
       "summary": "One owner for the deck section: persisted right rail plus the handset-only FILES flag"
+    },
+    {
+      "path": "app/src/hooks/use_drag_out_pointer.ts",
+      "summary": "Pointer handlers for the 6 px drag-out threshold with pointer capture, shared by rows, images, and stream cards"
     },
     {
       "path": "app/src/hooks/use_drag.ts",
@@ -606,8 +690,24 @@
       "summary": "Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders"
     },
     {
+      "path": "app/src/lib/diff/diff_lines_test.ts",
+      "summary": "Golden line model for parsePatch over a unified patch and a combined conflict patch"
+    },
+    {
+      "path": "app/src/lib/diff/diff_lines.ts",
+      "summary": "Pure unified/combined patch parser and the shared diff line model"
+    },
+    {
       "path": "app/src/lib/files/file_feed.ts",
       "summary": "Auto file feed filtering, ranking, and row metric helpers"
+    },
+    {
+      "path": "app/src/lib/files/files_mode.ts",
+      "summary": "The left file panel's mode vocabulary: the live Stream plus the three table sort modes"
+    },
+    {
+      "path": "app/src/lib/files/relative_time.ts",
+      "summary": "One formatter for \"Ns/Nm/Nh/Nd ago\" labels shared by the file table and the stream"
     },
     {
       "path": "app/src/lib/format_bytes.ts",
@@ -640,6 +740,130 @@
     {
       "path": "app/src/lib/source_control/tree_decorations.ts",
       "summary": "Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations"
+    },
+    {
+      "path": "app/src/lib/stream/stream_agent_support.ts",
+      "summary": "Whether the connected agent build publishes fileDelta events the Stream panel can render"
+    },
+    {
+      "path": "app/src/lib/stream/stream_bounds.ts",
+      "summary": "Every numeric bound the Stream panel obeys; the only stream module with literals"
+    },
+    {
+      "path": "app/src/lib/stream/stream_burst_card.ts",
+      "summary": "Pure burst card arithmetic: counts per op and kind, top directories, elapsed time"
+    },
+    {
+      "path": "app/src/lib/stream/stream_burst_detect_test.ts",
+      "summary": "Distinct-path rate detection over fileChanged arrivals: open at the threshold, close on quiet"
+    },
+    {
+      "path": "app/src/lib/stream/stream_burst_detect.ts",
+      "summary": "Pure distinct-path rate detector over fileChanged arrivals that opens and closes bursts"
+    },
+    {
+      "path": "app/src/lib/stream/stream_cadence_test.ts",
+      "summary": "Cadence clamp and pressure band arithmetic"
+    },
+    {
+      "path": "app/src/lib/stream/stream_cadence.ts",
+      "summary": "Pure cadence and pressure arithmetic for the Stream conductor"
+    },
+    {
+      "path": "app/src/lib/stream/stream_card_body_test.ts",
+      "summary": "Body cap rules: a single oversized patch keeps its head; whole older segments fall out first"
+    },
+    {
+      "path": "app/src/lib/stream/stream_card_body.ts",
+      "summary": "Builds and extends card bodies from fileDelta payloads under the EXPAND_CAP line bound"
+    },
+    {
+      "path": "app/src/lib/stream/stream_card_grammar_test.ts",
+      "summary": "Line selection: head of a single segment, tail across several, one hunk per segment, newest offset"
+    },
+    {
+      "path": "app/src/lib/stream/stream_card_grammar.ts",
+      "summary": "The one authority for how a Stream card reads: badge, rail, baseline chip, line selection, clock"
+    },
+    {
+      "path": "app/src/lib/stream/stream_image_strip_test.ts",
+      "summary": "Strip reducer rules: open, append in order whatever the gap, replace in place, remove wins, new strip on max or a car..."
+    },
+    {
+      "path": "app/src/lib/stream/stream_image_strip.ts",
+      "summary": "Pure reducer folding image deltas into the tail strip (or replacing a tile in the newest one), else opening a new strip"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_apply_burst_test.ts",
+      "summary": "Burst reducer rules: open at the threshold, absorb, close on quiet, collapse against the open burst, notice TTL"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_apply_burst.ts",
+      "summary": "Pure reducers for fileChanged arrivals: burst detection and absorption, settling, backlog collapse"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_apply_support.ts",
+      "summary": "Shared reducer plumbing: reduce state seed, id allocation, card replacement, notices, path lookup"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_apply_test.ts",
+      "summary": "Delta reducer rules: create vs extend-newest-of-path, zero-stat skip, seq gap vs restart, counters"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_apply.ts",
+      "summary": "Pure reducers turning fileDelta and fileDeltaCounters events into cards, merges, and honesty notices"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring_test.ts",
+      "summary": "Ring bounds: admit and evict order, history first, expanded exempt, notice bound, static sweep"
+    },
+    {
+      "path": "app/src/lib/stream/stream_ring.ts",
+      "summary": "Pure ring operations: admit and evict, expand, notices, burst cards, history seed, static sweep"
+    },
+    {
+      "path": "app/src/lib/stream/stream_store_registry.ts",
+      "summary": "The per-repo store registry: LRU-bounded, visible store pinned, one event router for every store"
+    },
+    {
+      "path": "app/src/lib/stream/stream_store_seed_test.ts",
+      "summary": "Only the repo's own events land: cross-repo snapshots never seed, a foreign fileDelta prints no card, live rings neve..."
+    },
+    {
+      "path": "app/src/lib/stream/stream_store_support.ts",
+      "summary": "Store-side pure helpers: browser timer deps, transport facts, the selection remap, and the snapshot projection"
+    },
+    {
+      "path": "app/src/lib/stream/stream_store_test.ts",
+      "summary": "Conductor rules under injected timers: flush, idle wake, cadence, away admits, hidden pause and collapse, idle notice..."
+    },
+    {
+      "path": "app/src/lib/stream/stream_store.ts",
+      "summary": "Per-repo Stream store outside React: intake buffer, reducers, the cadence conductor, and the snapshot"
+    },
+    {
+      "path": "app/src/lib/stream/stream_strip_types.ts",
+      "summary": "Ring member contracts for an image strip: the tiles one card holds and the body each tile carries"
+    },
+    {
+      "path": "app/src/lib/stream/stream_strip_view.ts",
+      "summary": "How an image strip's head, rail, and footer read: count label, shared directory, op tally, clock span, bytes"
+    },
+    {
+      "path": "app/src/lib/stream/stream_tile_targets_test.ts",
+      "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte budget, unfetchable tiles..."
+    },
+    {
+      "path": "app/src/lib/stream/stream_tile_targets.ts",
+      "summary": "Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE"
+    },
+    {
+      "path": "app/src/lib/stream/stream_types.ts",
+      "summary": "Card, ring, snapshot, transport, and store contracts for the per-repo Stream store"
+    },
+    {
+      "path": "app/src/lib/stream/testing/stream_fixtures.ts",
+      "summary": "Event and card builders shared by the Stream unit tests; never imported by app code"
     },
     {
       "path": "app/src/lib/tabs/tab_items.ts",
@@ -683,7 +907,7 @@
     },
     {
       "path": "app/src/lib/terminal/terminal_theme.ts",
-      "summary": "Reads the deck's --terminal-* and --font-mono tokens into xterm theme and options; an empty token leaves xterm's defa..."
+      "summary": "Reads deck colour and font tokens into xterm theme and options; an empty token leaves xterm's default in place"
     },
     {
       "path": "app/src/lib/terminal/terminal_types.ts",
@@ -762,6 +986,10 @@
       "summary": "Repo root authority union schema and path normalization helpers"
     },
     {
+      "path": "app/src/shared/config/ui_state_schema.ts",
+      "summary": "Persisted UI state schema: rail section, left panel mode, window bounds"
+    },
+    {
       "path": "app/src/shared/config/version.ts",
       "summary": "Persisted config schema version"
     },
@@ -774,8 +1002,16 @@
       "summary": "Bundle-related agent protocol schemas and types"
     },
     {
+      "path": "app/src/shared/protocol_events_delta.ts",
+      "summary": "Zod mirror of the agent fileDelta event: bounded content of one settled file change"
+    },
+    {
       "path": "app/src/shared/protocol_events.ts",
       "summary": "Agent event and file metadata schemas shared by protocol envelope parsing"
+    },
+    {
+      "path": "app/src/shared/protocol_file_meta.ts",
+      "summary": "Leaf file metadata enums shared by the file change and file delta event schemas"
     },
     {
       "path": "app/src/shared/protocol_import.ts",
@@ -982,6 +1218,26 @@
       "summary": "Status bar with connection LED, error display, and options button"
     },
     {
+      "path": "app/src/styles/stream/stream_card_body.css",
+      "summary": "Stream card bodies: the diff density override, footers and ghosts, burst and notice rows"
+    },
+    {
+      "path": "app/src/styles/stream/stream_card_image.css",
+      "summary": "Stream image strips: the growing-then-wrapping tile grid, width-sized checkerboard slots, badges, names, the BEFORE/A..."
+    },
+    {
+      "path": "app/src/styles/stream/stream_card.css",
+      "summary": "Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules"
+    },
+    {
+      "path": "app/src/styles/stream/stream_motion.css",
+      "summary": "Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion"
+    },
+    {
+      "path": "app/src/styles/stream/stream_panel.css",
+      "summary": "Stream panel shell: the flat scroller surface, the LIVE slot, and compact history rows"
+    },
+    {
       "path": "app/src/styles/tab_bar_dropdown.css",
       "summary": "Dropdown-specific styles for tab bar worktree actions"
     },
@@ -1020,6 +1276,10 @@
     {
       "path": "app/src/styles/tokens.css",
       "summary": "Design system tokens - spacing, radii, blur, shadows, typography, motion"
+    },
+    {
+      "path": "app/src/tabs/repo_tab_file_panel.tsx",
+      "summary": "Chooses the Stream panel or the Auto files table for the repo tab's file slot"
     },
     {
       "path": "app/src/tabs/repo_tab_rail.tsx",
@@ -1126,6 +1386,10 @@
       "summary": "Protocol envelope types for request/response messaging"
     },
     {
+      "path": "crates/im_agent/src/protocol/events_delta.rs",
+      "summary": "Wire types for the fileDelta event - what changed inside one file"
+    },
+    {
       "path": "crates/im_agent/src/protocol/events_legacy_wire.rs",
       "summary": "Legacy hostPath/windowsPath wire shapes and conversions for staged-info and bundle-built events"
     },
@@ -1170,6 +1434,10 @@
       "summary": "Agent-to-UI response payloads for the WebSocket protocol"
     },
     {
+      "path": "crates/im_agent/src/protocol/tests_delta.rs",
+      "summary": "Wire-shape tests for the fileDelta event and its payload union"
+    },
+    {
       "path": "crates/im_agent/src/protocol/tests_shutdown.rs",
       "summary": "Wire-shape tests for the shutdown command and its result"
     },
@@ -1188,6 +1456,58 @@
     {
       "path": "crates/im_agent/src/repos/categorizer.rs",
       "summary": "File kind classification based on globs and fallback heuristics"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/baseline_cache.rs",
+      "summary": "Byte-bounded LRU of the text last served per path, per repo"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_budget.rs",
+      "summary": "The delta read budget - burst token bucket, per-window log gates, and the per-change charge decision"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_cache_tests.rs",
+      "summary": "Baseline cache tests - byte budget, LRU eviction and the rename carry"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_patch_tests.rs",
+      "summary": "Patch grammar, truncation and settled-read tests for the delta pipeline"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_queue_tests.rs",
+      "summary": "Settle queue folding, latency ceiling, cap and op-collapse tests"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_read.rs",
+      "summary": "Blocking stat-read-restat of one settled file for the delta pipeline"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_resolve_tests.rs",
+      "summary": "Per-change decision tests - burst charge, rename baseline move, first-sighting truncate guard, image metadata failures"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_resolve.rs",
+      "summary": "Resolves one settled change into a fileDelta payload - baseline ladder, settled read, image metadata"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_stamp.rs",
+      "summary": "RFC 3339 mtime stamps for one delta - now, a SystemTime, or the milliseconds a settled read reported"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_worker.rs",
+      "summary": "The delta worker loop - drains settled changes, applies the burst budget, stamps and publishes fileDelta"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/mod.rs",
+      "summary": "Bounded delta pipeline for fileDelta - named bounds, DeltaService owner, pure-core exports"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/settle_queue.rs",
+      "summary": "Pure per-path trailing coalescer for the delta pipeline"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/unified_patch.rs",
+      "summary": "Hunks-only unified patch text and exact stats for one delta"
     },
     {
       "path": "crates/im_agent/src/repos/file_activity.rs",
@@ -1266,16 +1586,24 @@
       "summary": "Detect watcher events that invalidate repo top-level metadata"
     },
     {
+      "path": "crates/im_agent/src/repos/repo_watcher_delta_marks.rs",
+      "summary": "How watcher events mark the delta queue - one note per change, one rename per two-path arm"
+    },
+    {
       "path": "crates/im_agent/src/repos/repo_watcher_events.rs",
       "summary": "Event handling for repo watcher changes and rename mapping"
     },
     {
+      "path": "crates/im_agent/src/repos/repo_watcher_startup.rs",
+      "summary": "Repo watcher startup - notify watcher creation, external git watches, initial tracked-path load"
+    },
+    {
       "path": "crates/im_agent/src/repos/repo_watcher_tests.rs",
-      "summary": "Unit tests for the repo watcher's initial-entries ignore filtering"
+      "summary": "Unit tests for the repo watcher's initial-entries ignore filtering and rename delta marks"
     },
     {
       "path": "crates/im_agent/src/repos/repo_watcher.rs",
-      "summary": "Notify-based repo watcher with MRU and event emission"
+      "summary": "Notify-based repo watcher with MRU, delta pipeline, and event emission"
     },
     {
       "path": "crates/im_agent/src/repos/source_control_watch/coalescer.rs",
@@ -1532,6 +1860,10 @@
     {
       "path": "crates/im_agent/src/source_control/discard/tests_sweep.rs",
       "summary": "Tests for the once-per-process discard quarantine sweep: what it finishes, what it spares, and what it survives"
+    },
+    {
+      "path": "crates/im_agent/src/source_control/index_blob.rs",
+      "summary": "Reads one path's stage-0 index blob (`git show :0:./<rel>`) as bounded UTF-8 text for the delta baseline"
     },
     {
       "path": "crates/im_agent/src/source_control/locks/mod.rs",
@@ -2010,6 +2342,10 @@
       "summary": "Shared version-contract helpers for Intermediary release automation."
     },
     {
+      "path": "scripts/test/run_ts_tests.mjs",
+      "summary": "Bundles every app/src/**/*_test.ts(x) with esbuild into a temp dir and runs node --test over it."
+    },
+    {
       "path": "scripts/zip/zip_bundles.mjs",
       "summary": "Builds timestamped Intermediary zip bundles for ChatGPT context."
     },
@@ -2308,6 +2644,10 @@
     {
       "path": "src-tauri/src/lib/config/types/tests.rs",
       "summary": "Tests for persisted configuration types"
+    },
+    {
+      "path": "src-tauri/src/lib/config/types/ui_state.rs",
+      "summary": "Remembered UI state: rail section, left files mode, rail width, and window bounds"
     },
     {
       "path": "src-tauri/src/lib/config/types/validation.rs",

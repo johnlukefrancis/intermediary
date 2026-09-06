@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-09-04 (Source Control rail and column; ZIPS tree Git decorations; icon rocker deck section switcher; ZIPS tree drag-in import, selection, and worktree actions; integrated terminal rail and `--terminal-*` tokens)
+Updated on: 2026-09-06 (Stream panel card grammar and arrival choreography; motion governor carve-out for the stream scroller; deliberate `--ease-spring` arrivals)
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -332,6 +332,56 @@ The left deck surface is a single Auto Files table matching `docs/screenshots/un
 - The activity column keeps the rough left-to-right waveform as the primary read, with the 24-hour pulse strip tucked into the top-left of the same section as a secondary indicator.
 - Bursty or rising files get subtle warm activity treatment without changing row height, and selected rows keep the active accent state.
 
+## Stream panel
+
+STREAM is the default left-panel mode and shares the Auto Files chassis: same `.panel` glass, same header
+rocker chrome, same filters. The table is replaced by a flat, scrolling deck of cards that print what an
+agent just wrote. The `.panel` keeps the glass; the scroller inside it is flat editor background with no
+`backdrop-filter`, because nothing that moves may composite a blur.
+
+- One chassis, `.stream-card[data-kind][data-content][data-static]`: deck stroke, `--radius-deck-sm`,
+  `--color-editor-bg`, `contain: layout paint style`, and a 3 px accent spine whose colour carries the
+  change class — added → success, modified → info, deleted → error, binary → warning, burst → accent.
+  Colour is never the only channel: the `[A]`/`[M]`/`[D]`/`[R]` badge letter, the `+`/`−` glyphs, and the
+  strike rule carry the same fact.
+- The 24 px head is a fixed grid: badge, `FileIcon`, filename over a head-truncated directory line,
+  tabular mono `+N −M`, a baseline chip (`SINCE LAST` / `VS INDEX` / `NEW` / `GONE`), `×N` when edits
+  merged, and an absolute clock stamped once at admit. Chips reuse the deck's `--radius-deck-xs`,
+  uppercase, `0.06em` letter-spacing idiom.
+- Bodies reuse existing grammars rather than inventing surfaces: text uses the shared
+  `.diff-line[data-kind]` rows at stream density, images use the image-diff checkerboard pane (one-up on
+  add, two-up BEFORE/AFTER on modify), opaque payloads and deletions use one 48 px uppercase mono ghost,
+  and notices use the console-prompt idiom (`> RECONNECTED — RESUMING`) already used by empty states.
+- Focus follows the deck convention exactly: `outline: 2px solid var(--color-accent)` with
+  `outline-offset: 2px`, roving tabindex down the ring, and Escape releases focus and resumes follow.
+- Narrow chassis drops detail rather than reflowing: ≤ 980 px collapses the LIVE label to its dot,
+  ≤ 380 px drops the clock, ≤ 320 px hides the directory line.
+
+### Stream choreography
+
+Arrivals are the point of the surface, so the Stream is the one place in the deck that spends motion
+deliberately. Everything lives in `app/src/styles/stream/stream_motion.css`, loaded last.
+
+- **Transform, opacity and clip only.** No keyframe touches a layout property, so a flood costs the
+  compositor and never the layout engine.
+- **Every keyframe's base state is its resting state.** "No animation" always renders the final look —
+  that is what makes an instant landing (hidden window, reduced motion, an old card) legal rather than a
+  second visual design.
+- **Four inherited custom properties carry the whole rhythm** — `--stream-enter-duration`,
+  `--stream-drop-duration`, `--stream-line-step`, `--stream-chain-step` — rebound on
+  `.stream-scroller[data-pressure="calm|busy|flood"]`. Under pressure the choreography compresses instead
+  of queueing; at flood the stagger steps are zero and only the duration tokens remain.
+- **The grammar:** cards enter on `--ease-out` (translate + fade); a new file unfolds from its top edge;
+  an image drops with a slight rotate and settles, cascading `--stream-chain-step` apart for up to three
+  arrivals; diff lines print left-to-right one `--stream-line-step` apart; a deletion's strike rule draws
+  across each removed line after it prints; the spine sweeps down; an evicted card exits upward; the burst
+  count pops.
+- **`--ease-spring` (documented "use sparingly") is used here on purpose**, and only here: the new-file
+  unfold, the image drop, the thumbnail settle, and the burst count. The overshoot is what makes an
+  arrival read as an arrival; every other stream motion stays on `--ease-out`.
+- **Cards older than one second carry `data-static`** and drop out of every arrival binding, so
+  scroll-back and panel remounts never replay a flood.
+
 ---
 
 ## V2: Deck Tokens
@@ -461,7 +511,7 @@ For frosted glass panels, use the utility class or manual application:
 |-------|-------|-------|
 | `--ease-out` | `cubic-bezier(0.33, 1, 0.68, 1)` | Enter animations, appearing elements |
 | `--ease-in-out` | `cubic-bezier(0.65, 0, 0.35, 1)` | Symmetric animations, pulsing |
-| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Bouncy effects (use sparingly) |
+| `--ease-spring` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Bouncy effects (use sparingly). Deliberate exception: Stream card arrivals — new-file unfold, image drop, thumbnail settle, burst count — where the overshoot is the point. |
 
 ### Reduced Motion
 
@@ -482,6 +532,33 @@ This is handled globally in `motion.css` — no per-component opt-out needed.
 - **CSS gate:** `[data-motion="paused"]` on the `.app` element drives a universal `animation-play-state: paused` rule in `motion.css` (mirrors the reduced-motion block), so every current and future animation is governed without per-component opt-in. The substrate additionally releases `will-change` in `effects.css`.
 - **Behavior:** Animations pause in place and resume seamlessly on refocus.
 - **Implementation:** `app/src/hooks/use_motion_governor.ts`
+
+**Amendment — the stream scroller (2026-09-06).** The universal rule above splits "hidden" from
+"unfocused" for exactly one surface. A second monitor showing an agent at work must keep printing, so
+`app/src/styles/stream/stream_motion.css` (loaded after `motion.css`) carves the scroller out of the
+pause and tightens the hidden case in its place. This is the only scoped exception to the universal
+contract; everything outside `.stream-scroller`, the LIVE dot included, stays governed exactly as before.
+
+```css
+/* Visible but unfocused: the stream keeps running; everything outside the scroller still pauses. */
+.app[data-motion="paused"] .stream-scroller *,
+.app[data-motion="paused"] .stream-scroller *::before,
+.app[data-motion="paused"] .stream-scroller *::after { animation-play-state: running !important; }
+/* Hidden or minimized: nothing animates and cards render in their resting state. */
+.app[data-visibility="hidden"] .stream-scroller *,
+.app[data-visibility="hidden"] .stream-scroller *::before,
+.app[data-visibility="hidden"] .stream-scroller *::after { animation: none !important; }
+```
+
+- **Second gate:** `data-visibility="hidden" | "visible"` is written on `.app` from `document.hidden`
+  (the same governor hook reports it), so hidden/minimized and merely-unfocused stop being one state for
+  this surface. Cards admitted while hidden land instantly in their resting state.
+- **Why `animation: none` is safe:** every stream keyframe rests at the final look, so the carve-out
+  never leaves a card mid-transform. Cards older than `STATIC_AFTER_MS` carry `data-static` and are
+  outside the arrival bindings entirely.
+- **Reduced motion still wins:** `motion.css` collapses the durations globally and the stream sheet zeroes
+  its stagger steps on top, so a capped body lands at once instead of rippling in.
+- **Design authority:** `docs/design/stream_panel_design.md` § Motion governor amendment.
 
 ---
 

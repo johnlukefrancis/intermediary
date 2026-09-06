@@ -13,6 +13,8 @@ type HelloStatus = "idle" | "pending" | "ok" | "error";
 export interface HelloState {
   status: HelloStatus;
   watchedRepoIds: string[];
+  /** Agent build reported by clientHelloResult; null until a hello succeeds and on disconnect */
+  agentVersion: string | null;
   lastHelloAt: number | null;
   lastError: string | null;
 }
@@ -28,6 +30,7 @@ interface UseClientHelloOptions {
 const INITIAL_HELLO_STATE: HelloState = {
   status: "idle",
   watchedRepoIds: [],
+  agentVersion: null,
   lastHelloAt: null,
   lastError: null,
 };
@@ -80,6 +83,7 @@ export function useClientHello(options: UseClientHelloOptions): HelloState {
     setHelloState({
       status: "pending",
       watchedRepoIds: [],
+      agentVersion: null,
       lastHelloAt: null,
       lastError: null,
     });
@@ -96,6 +100,7 @@ export function useClientHello(options: UseClientHelloOptions): HelloState {
         setHelloState({
           status: "ok",
           watchedRepoIds: result.watchedRepoIds,
+          agentVersion: result.agentVersion,
           lastHelloAt: Date.now(),
           lastError: null,
         });
@@ -107,6 +112,7 @@ export function useClientHello(options: UseClientHelloOptions): HelloState {
         setHelloState({
           status: "error",
           watchedRepoIds: [],
+          agentVersion: null,
           lastHelloAt: null,
           lastError: message,
         });

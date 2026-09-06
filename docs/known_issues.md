@@ -1,6 +1,6 @@
 # Known Issues — Intermediary
 
-Updated on: 2026-09-04
+Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -68,6 +68,7 @@ Depends on: ADR-000, ADR-007
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).
 - 2026-07-10: `agent_latest.log` is append-only and the installed runtime log was observed at about 780 MB, dominated by successful supervisor health-probe connection lifecycle entries. Long-running installs can accumulate unnecessary disk usage until logging gains bounded retention and probe-aware verbosity.
+- 2026-09-06: The agent event queue behind the 128-slot broadcast bus is an unbounded per-connection channel (pre-existing, `crates/im_agent/src/server/connection.rs`); with `fileDelta` events of up to 64 KiB it can hold more memory than before if a client socket stalls. The producer side is bounded (32 reads per 2 s per repo, budgeted deletes, counters instead of per-path events); a bounded queue with a drop counter is the recorded follow-up.
 
 ---
 
@@ -80,6 +81,7 @@ Depends on: ADR-000, ADR-007
   the same branch. Profile/TUI rendering, console-close feel, the `CF_UNICODETEXT` clipboard read, and the
   `CurrentBuildNumber` registry read remain installed-app product witnesses rather than automated Windows
   assertions (`docs/commands/verify_terminal.md`).
+- 2026-09-06: The Stream panel's Windows split-rename pairing (`RenameMode::From` then `To` from ReadDirectoryChangesW folded into one `[R]` card) and its motion, follow-scroll, image-tile, and burst behaviour are proven by unit tests and static review; the installed-app witness in `docs/commands/verify_stream.md` is the product acceptance and is owed on a host-rooted repo.
 
 ---
 

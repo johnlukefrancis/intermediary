@@ -1,0 +1,231 @@
+/*
+ * Path: app/src/styles/stream/stream_motion.css
+ * Description: Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion
+ */
+
+/* Loaded LAST (after motion.css and the other stream sheets) so the scoped governor
+ * carve-out can outrank the universal pause rule in motion.css.
+ *
+ * Three laws hold for everything in this sheet:
+ *   1. Only transform, opacity and clip animate. No layout property is ever keyframed.
+ *   2. Every keyframe's base state IS the resting state, so "no animation" renders the
+ *      final look — that is what makes `animation: none` a legal instant landing.
+ *   3. Arrival bindings are guarded by :not([data-static]):not([data-exiting]), so an old
+ *      card never replays on scroll-back or remount and an evicting card never fights the
+ *      exit keyframe on specificity.
+ */
+
+/* ===== PRESSURE BANDS ===== */
+/* The conductor writes data-pressure on the scroller from its pending backlog
+ * (calm 0-3, busy 4-11, flood 12+). The band compresses the whole choreography by
+ * moving four inherited custom properties — no selector below changes. */
+.stream-scroller {
+  --stream-enter-duration: var(--duration-slow);
+  --stream-drop-duration: var(--duration-slower);
+  --stream-line-step: 26ms;
+  --stream-chain-step: 60ms;
+}
+
+.stream-scroller[data-pressure="busy"] {
+  --stream-enter-duration: var(--duration-normal);
+  --stream-drop-duration: var(--duration-slow);
+  --stream-line-step: 12ms;
+  --stream-chain-step: 30ms;
+}
+
+.stream-scroller[data-pressure="flood"] {
+  --stream-enter-duration: var(--duration-fast);
+  --stream-drop-duration: var(--duration-normal);
+  --stream-line-step: 0ms;
+  --stream-chain-step: 0ms;
+}
+
+/* An expanded card prints up to EXPAND_CAP lines; clamp the step so the whole body
+ * lands inside ~300 ms. --stream-line-count is published by stream_card.tsx. */
+.stream-card[data-expanded] {
+  --stream-line-step: min(26ms, calc(300ms / max(1, var(--stream-line-count, 12))));
+}
+
+/* ===== KEYFRAMES ===== */
+/* Chassis keyframes end at --stream-rest-opacity (1 unless a card rests dimmed: deletions,
+ * paths outside the selection), so the moment data-static lands nothing snaps. */
+@keyframes stream-card-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: var(--stream-rest-opacity, 1); transform: none; }
+}
+
+@keyframes stream-card-unfold {
+  0% { opacity: 0; transform: translate3d(0, -6px, 0) scaleY(0.86); }
+  60% { opacity: var(--stream-rest-opacity, 1); transform: scaleY(1.02); }
+  100% { opacity: var(--stream-rest-opacity, 1); transform: none; }
+}
+
+@keyframes stream-card-drop {
+  0% { opacity: 0; transform: translate3d(0, -28px, 0) scale(0.86) rotate(-1.5deg); }
+  70% { opacity: var(--stream-rest-opacity, 1); transform: translate3d(0, 3px, 0) scale(1.01) rotate(0.2deg); }
+  100% { opacity: var(--stream-rest-opacity, 1); transform: none; }
+}
+
+/* Ends at the thumb's own rest (1, or 0.6 for a deleted tile — stream_card_image.css) */
+@keyframes stream-thumb-settle {
+  0% { opacity: 0; transform: scale(0.94) rotate(0.8deg); }
+  70% { opacity: var(--stream-rest-opacity, 1); transform: scale(1.02) rotate(-0.2deg); }
+  100% { opacity: var(--stream-rest-opacity, 1); transform: none; }
+}
+
+@keyframes stream-line-print {
+  from { opacity: 0; transform: translate3d(-6px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes stream-line-strike {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes stream-rail-sweep {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes stream-card-exit {
+  from { opacity: var(--stream-rest-opacity, 1); transform: none; }
+  to { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.98); }
+}
+
+@keyframes stream-burst-count {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ===== ARRIVAL ===== */
+/* Default chassis arrival; the burst card rides this rule too (it carries .stream-card). */
+.stream-card:not([data-static]):not([data-exiting]) {
+  animation: stream-card-enter var(--stream-enter-duration) var(--ease-out) both;
+}
+
+/* A new file unfolds from its top edge — the one deliberate --ease-spring use in the deck,
+ * amended into the design system's Motion section. */
+.stream-card:not([data-static]):not([data-exiting])[data-kind="text-added"] {
+  transform-origin: 0 0;
+  animation: stream-card-unfold var(--duration-slower) var(--ease-spring) both;
+}
+
+/* ===== IMAGE STRIPS ===== */
+/* The strip chassis rides the default stream-card-enter rule above (data-kind="images" matches
+ * no kind-specific selector). Its tiles drop in reading order, one --stream-chain-step apart:
+ * --stream-chain is the tile's index inside the strip, published inline by stream_image_tile.tsx. */
+.stream-card:not([data-static]):not([data-exiting]) .stream-strip__tile {
+  animation: stream-card-drop var(--stream-drop-duration) var(--ease-spring) both;
+  animation-delay: calc(var(--stream-chain, 0) * var(--stream-chain-step));
+}
+
+/* A tile appended to a strip that has already gone static prints alone, exactly like the
+ * data-fresh diff rows of an extended text card; the strip publishes --stream-chain 0 for
+ * every tile once it is static (an inline value, so no sheet rule could reset it here). */
+.stream-card[data-static]:not([data-exiting]) .stream-strip__tile[data-fresh] {
+  animation: stream-card-drop var(--stream-drop-duration) var(--ease-spring) both;
+}
+
+/* The img only exists once its Blob decoded, so this fires exactly once per tile — bound
+ * regardless of data-static, because a static strip can still be waiting on its pixels. It
+ * inherits the tile's --stream-chain so the settle lands with the drop. */
+.stream-card:not([data-exiting]) .stream-card__thumb {
+  animation: stream-thumb-settle var(--duration-slow) var(--ease-spring) both;
+  animation-delay: calc(var(--stream-chain, 0) * var(--stream-chain-step));
+}
+
+/* The 3 px spine sweeps down from the head (transform-origin 0 0 lives in stream_card.css). */
+.stream-card:not([data-static]):not([data-exiting])::before {
+  animation: stream-rail-sweep var(--stream-enter-duration) var(--ease-out) both;
+}
+
+/* Console notices print with the chassis rhythm; seeded history rows deliberately do not
+ * animate — they are scrollback that was already there. */
+.stream-notice {
+  animation: stream-card-enter var(--stream-enter-duration) var(--ease-out) both;
+}
+
+.stream-card:not([data-static]):not([data-exiting]) .stream-burst__count {
+  animation: stream-burst-count var(--duration-slow) var(--ease-spring) both;
+}
+
+/* ===== LINE PRINT ===== */
+.stream-card:not([data-static]):not([data-exiting]) .diff-line {
+  animation: stream-line-print var(--duration-normal) var(--ease-out) both;
+  animation-delay: calc(var(--stream-line-index, 0) * var(--stream-line-step));
+}
+
+/* An extended card stays static (its arrival never replays), but the rows the re-edit added
+ * are data-fresh with their own index from 0, so only the new lines print. */
+.stream-card[data-static]:not([data-exiting]) .diff-line[data-fresh] {
+  animation: stream-line-print var(--duration-normal) var(--ease-out) both;
+  animation-delay: calc(var(--stream-line-index, 0) * var(--stream-line-step));
+}
+
+/* The deletion strike is a transform-animated rule, so it can be drawn rather than
+ * appear: it replaces the text-decoration strike from stream_card_body.css (same
+ * specificity, later sheet) and rests at scaleX(1) when nothing animates. */
+.stream-card[data-kind="text-deleted"] .diff-line[data-kind="del"] .diff-line__text {
+  position: relative;
+  text-decoration: none;
+}
+
+.stream-card[data-kind="text-deleted"] .diff-line[data-kind="del"] .diff-line__text::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--color-error);
+  transform-origin: 0 50%;
+}
+
+/* Delayed past this line's own print so the strike lands after the text. */
+.stream-card:not([data-static]):not([data-exiting])[data-kind="text-deleted"] .diff-line[data-kind="del"] .diff-line__text::after {
+  animation: stream-line-strike var(--duration-normal) var(--ease-out) both;
+  animation-delay: calc(var(--stream-line-index, 0) * var(--stream-line-step) + var(--duration-normal));
+}
+
+/* ===== EXIT ===== */
+/* The ring flags the oldest evictable card and splices it on the next admit or settle tick
+ * (>= STATIC_AFTER_MS later), so this keyframe always has its window. */
+.stream-card[data-exiting] {
+  animation: stream-card-exit var(--duration-slow) var(--ease-out) forwards;
+}
+
+/* ===== GOVERNOR CARVE-OUT ===== */
+/* motion.css pauses every animation on .app[data-motion="paused"] — hidden, minimized OR
+ * merely unfocused. JL's decision: a second monitor showing an agent at work must keep
+ * printing. Scoped to the scroller and nothing else; the LIVE dot outside it stays governed.
+ * Documented in docs/design/stream_panel_design.md and the design system's Motion Governor. */
+.app[data-motion="paused"] .stream-scroller,
+.app[data-motion="paused"] .stream-scroller *,
+.app[data-motion="paused"] .stream-scroller *::before,
+.app[data-motion="paused"] .stream-scroller *::after {
+  animation-play-state: running !important;
+}
+
+/* ===== HIDDEN OR MINIMIZED: INSTANT ===== */
+/* Nobody is looking: cards land in their resting state with no work for the compositor.
+ * Legal only because every keyframe above rests at the final look. */
+.app[data-visibility="hidden"] .stream-scroller,
+.app[data-visibility="hidden"] .stream-scroller *,
+.app[data-visibility="hidden"] .stream-scroller *::before,
+.app[data-visibility="hidden"] .stream-scroller *::after {
+  animation: none !important;
+}
+
+/* ===== REDUCED MOTION ===== */
+/* motion.css already collapses every duration; the stagger lives in delays, so zero the
+ * steps here or a capped body would still ripple in over a third of a second. */
+@media (prefers-reduced-motion: reduce) {
+  .stream-scroller,
+  .stream-scroller[data-pressure="busy"],
+  .stream-scroller[data-pressure="flood"],
+  .stream-card[data-expanded] {
+    --stream-line-step: 0ms;
+    --stream-chain-step: 0ms;
+  }
+}

@@ -12,6 +12,7 @@ import {
   type UiMode,
   type UiWindowBounds,
 } from "../shared/config.js";
+import type { FilesMode } from "../shared/config/ui_state_schema.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
   useSetAutoStageGlobal,
@@ -42,7 +43,11 @@ import {
   useSetRecentFilesLimit,
   useToggleStarredFile,
 } from "./use_config_actions_extended.js";
-import { useSetActiveRail, useSetRailWidthPercent } from "./use_config_actions_rail.js";
+import {
+  useSetActiveRail,
+  useSetFilesMode,
+  useSetRailWidthPercent,
+} from "./use_config_actions_rail.js";
 
 interface ConfigContextValue {
   /** Current config (always available, defaults if load failed) */
@@ -67,6 +72,8 @@ interface ConfigContextValue {
   setActiveRail: (rail: ActiveRail) => void;
   /** Update the rail's share of the deck width (drag divider) */
   setRailWidthPercent: (percent: number) => void;
+  /** Update the left file panel mode (stream | auto | latest | active) */
+  setFilesMode: (mode: FilesMode) => void;
   /** Update bundle selection for a repo/preset */
   setBundleSelection: (
     repoId: string,
@@ -157,6 +164,7 @@ export function ConfigProvider({
   );
   const setActiveRail = useSetActiveRail(setConfig, saveConfig);
   const setRailWidthPercent = useSetRailWidthPercent(setConfig, saveConfig);
+  const setFilesMode = useSetFilesMode(setConfig, saveConfig);
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
   const setGlobalExcludes = useSetGlobalExcludes(setConfig, saveConfig);
   const setClassificationExcludes = useSetClassificationExcludes(
@@ -204,6 +212,7 @@ export function ConfigProvider({
     setLastActiveGroupRepoId,
     setActiveRail,
     setRailWidthPercent,
+    setFilesMode,
     setBundleSelection,
     setGlobalExcludes,
     setClassificationExcludes,

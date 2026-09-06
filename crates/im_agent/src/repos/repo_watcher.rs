@@ -1,23 +1,26 @@
 // Path: crates/im_agent/src/repos/repo_watcher.rs
-// Description: Notify-based repo watcher with MRU and event emission
+// Description: Notify-based repo watcher with MRU, delta pipeline, and event emission
 
-use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::{Path, PathBuf};
+use notify::{RecommendedWatcher, Watcher};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{mpsc, watch, Mutex, RwLock};
+use tokio::sync::{watch, Mutex, RwLock};
 
 use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::protocol::{AgentEvent, FileEntry, SnapshotEvent};
 use crate::repos::categorizer::Categorizer;
+use crate::repos::delta::{DeltaLimits, DeltaService};
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
-use crate::repos::repo_watcher_events::{handle_event, raw_os_code, EventContext};
+use crate::repos::repo_watcher_events::{handle_event, raw_os_code, EventContext, PendingRename};
+use crate::repos::repo_watcher_startup::{
+    create_watcher, filter_initial_entries, load_tracked_set,
+};
 use crate::repos::source_control_watch::{
-    load_tracked_paths, resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
-    TrackedPathSet,
+    resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
 };
 use crate::repos::watcher_error::build_watcher_error_event;
 use crate::server::EventBus;
@@ -33,6 +36,7 @@ pub struct RepoWatcherConfig {
     pub recent_store: RecentFilesStore,
     pub logger: Logger,
     pub event_bus: EventBus,
+    pub delta_limits: DeltaLimits,
 }
 
 pub struct RepoWatcher {
@@ -44,6 +48,7 @@ pub struct RepoWatcher {
     event_bus: EventBus,
     watcher: Mutex<Option<RecommendedWatcher>>,
     extra_watch_paths: Vec<PathBuf>,
+    delta: Arc<DeltaService>,
     stop_tx: watch::Sender<bool>,
     task: tokio::task::JoinHandle<()>,
 }
@@ -70,27 +75,9 @@ impl RepoWatcher {
             mru.load_from(initial_entries);
         }
 
-        // A linked worktree keeps its git dir outside the root, so `git status`
-        // can move without a single event under the watched tree.
         let root_path = PathBuf::from(&config.root_path);
         let external_watches = resolve_external_watches(&root_path, &config.logger).await;
-
-        // Loaded once here so the detector's tracked-path override is live
-        // from the watcher's first event; a `.git/index` change later
-        // refreshes it in place (`SourceControlWatch::note_event`).
-        let tracked = TrackedPathSet::empty();
-        match load_tracked_paths(&root_path).await {
-            Ok(paths) => tracked.store(paths),
-            Err(reason) => {
-                config.logger.warn(
-                    "Source control watch has no tracked-path signal",
-                    Some(serde_json::json!({
-                        "rootPath": root_path.to_string_lossy(),
-                        "reason": reason,
-                    })),
-                );
-            }
-        }
+        let tracked = load_tracked_set(&root_path, &config.logger).await;
 
         let detector = SourceControlChangeDetector::new(
             &root_path,
@@ -104,34 +91,12 @@ impl RepoWatcher {
             .map(|(path, _)| path.clone())
             .collect();
 
-        let (event_tx, mut event_rx) = mpsc::unbounded_channel::<Result<Event, notify::Error>>();
-        let watch_root = config.root_path.clone();
-        let extra_watches = external_watches.watch_paths;
-        let watch_logger = config.logger.clone();
-        let watcher = tokio::task::spawn_blocking(move || {
-            let mut watcher = notify::recommended_watcher(move |res| {
-                let _ = event_tx.send(res);
-            })
-            .map_err(|err| AgentError::internal(format!("Failed to create watcher: {err}")))?;
-
-            watcher
-                .watch(Path::new(&watch_root), RecursiveMode::Recursive)
-                .map_err(|err| AgentError::internal(format!("Failed to watch repo: {err}")))?;
-            for (path, mode) in &extra_watches {
-                if let Err(err) = watcher.watch(path, *mode) {
-                    watch_logger.warn(
-                        "Failed to watch external git dir",
-                        Some(serde_json::json!({
-                            "path": path.to_string_lossy(),
-                            "error": err.to_string(),
-                        })),
-                    );
-                }
-            }
-            Ok::<RecommendedWatcher, AgentError>(watcher)
-        })
-        .await
-        .map_err(|err| AgentError::internal(format!("Watcher startup task failed: {err}")))??;
+        let (watcher, mut event_rx) = create_watcher(
+            config.root_path.clone(),
+            external_watches.watch_paths,
+            config.logger.clone(),
+        )
+        .await?;
 
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
@@ -139,6 +104,18 @@ impl RepoWatcher {
         let logger = config.logger.clone();
         let event_bus = config.event_bus.clone();
         let recent_store = config.recent_store.clone();
+
+        // Built after the tracked set so the first delta can stamp `tracked`;
+        // the worker starts here and is stopped in `stop` before the task.
+        let delta = Arc::new(DeltaService::new(
+            repo_id.clone(),
+            root_path.clone(),
+            event_bus.clone(),
+            logger.clone(),
+            tracked.clone(),
+            config.delta_limits.clone(),
+        ));
+        let delta_task = Arc::clone(&delta);
 
         let mru_lock = Arc::new(RwLock::new(mru));
         let mru_clone = Arc::clone(&mru_lock);
@@ -161,6 +138,8 @@ impl RepoWatcher {
                 event_bus: &event_bus,
                 logger: &logger,
                 source_control: &source_control,
+                delta: &delta_task,
+                pending_rename: PendingRename::new(),
             };
 
             // Armed only while the coalescer owes a trailing event, so an idle
@@ -217,6 +196,7 @@ impl RepoWatcher {
             event_bus: config.event_bus,
             watcher: Mutex::new(Some(watcher)),
             extra_watch_paths,
+            delta,
             stop_tx,
             task,
         })
@@ -226,6 +206,7 @@ impl RepoWatcher {
         &self.repo_id
     }
 
+    /// Stop order: task loop, unwatch, delta worker, task abort, recents flush.
     pub async fn stop(&self) {
         let _ = self.stop_tx.send(true);
         if let Some(mut watcher) = self.watcher.lock().await.take() {
@@ -239,6 +220,7 @@ impl RepoWatcher {
             })
             .await;
         }
+        self.delta.stop().await;
         self.task.abort();
         self.recent_store.flush_repo(&self.repo_id).await;
         self.logger.info(
@@ -266,17 +248,4 @@ impl RepoWatcher {
             event_bus.broadcast_event(AgentEvent::Snapshot(snapshot));
         });
     }
-}
-
-pub(super) fn filter_initial_entries(
-    entries: Vec<FileEntry>,
-    ignore_matcher: &IgnoreMatcher,
-) -> Vec<FileEntry> {
-    entries
-        .into_iter()
-        .filter(|entry| {
-            let normalized_path = entry.path.replace('\\', "/");
-            !ignore_matcher.should_ignore(&normalized_path)
-        })
-        .collect()
 }

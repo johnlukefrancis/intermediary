@@ -12,7 +12,7 @@ use crate::protocol::{
     ClientHelloCommand, ClientHelloResult, RefreshResult, SetOptionsCommand, SetOptionsResult,
     WatchRepoResult,
 };
-use crate::repos::{is_valid_repo_root, RecentFilesStore, RepoWatcher};
+use crate::repos::{is_valid_repo_root, DeltaLimits, RecentFilesStore, RepoWatcher};
 use crate::server::EventBus;
 use crate::source_control::SourceControlLocks;
 use crate::staging::PathBridgeConfig;
@@ -32,6 +32,8 @@ pub struct AgentRuntime {
     pub recent_files_limit: usize,
     /// Per-repo serialization for source-control mutations; cloned out and awaited without holding this runtime.
     pub source_control_locks: SourceControlLocks,
+    /// Process-wide delta read bounds, cloned into every repo watcher.
+    pub delta_limits: DeltaLimits,
 }
 
 impl AgentRuntime {
@@ -52,6 +54,7 @@ impl AgentRuntime {
             auto_stage_on_change: true,
             recent_files_limit: 40,
             source_control_locks: SourceControlLocks::new(),
+            delta_limits: DeltaLimits::new(),
         }
     }
 

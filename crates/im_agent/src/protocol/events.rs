@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::events_delta::{FileDeltaCountersEvent, FileDeltaEvent};
 use super::events_legacy_wire::{BundleBuiltEventWire, StagedInfoWire};
 use super::events_runtime::{AgentErrorEvent, WslBackendStatusEvent};
 
@@ -166,6 +167,10 @@ pub enum AgentEvent {
     WslBackendStatus(WslBackendStatusEvent),
     #[serde(rename = "sourceControlChanged")]
     SourceControlChanged(SourceControlChangedEvent),
+    #[serde(rename = "fileDelta")]
+    FileDelta(FileDeltaEvent),
+    #[serde(rename = "fileDeltaCounters")]
+    FileDeltaCounters(FileDeltaCountersEvent),
 }
 
 impl FileChangedEvent {

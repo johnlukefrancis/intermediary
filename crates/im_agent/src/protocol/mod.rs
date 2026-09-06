@@ -8,6 +8,7 @@ mod commands_tr_fleet;
 mod commands_worktree;
 mod envelopes;
 mod events;
+mod events_delta;
 mod events_legacy_wire;
 mod events_runtime;
 mod responses;
@@ -21,6 +22,8 @@ mod responses_worktree;
 #[cfg(test)]
 mod cancel_bundle_tests;
 #[cfg(test)]
+mod tests_delta;
+#[cfg(test)]
 mod tests_shutdown;
 #[cfg(test)]
 mod tests_source_control;
@@ -32,16 +35,16 @@ pub use commands::{
     UiCommand, WatchRepoCommand,
 };
 pub use commands_import::{ImportConflictPolicy, ImportFilesCommand};
-pub use commands_worktree::{WorktreeAction, WorktreeActionCommand, WorktreeActionKind};
-pub use commands_tr_fleet::{
-    GetTrFleetStatusCommand, TrFleetActionCommand, TrFleetActionPayload, TrFleetWatchBackend,
-};
 pub use commands_source_control::{
     SourceControlActionCommand, SourceControlActionKind, SourceControlActionPayload,
     SourceControlArea, SourceControlDiffCommand, SourceControlDiscardTarget,
     SourceControlImageDiffCommand, SourceControlScope, SourceControlStatusCommand,
     SourceControlWorktreeStamp,
 };
+pub use commands_tr_fleet::{
+    GetTrFleetStatusCommand, TrFleetActionCommand, TrFleetActionPayload, TrFleetWatchBackend,
+};
+pub use commands_worktree::{WorktreeAction, WorktreeActionCommand, WorktreeActionKind};
 pub use envelopes::{
     EnvelopeKind, EventEnvelope, InboundRequestEnvelope, RequestEnvelope, ResponseEnvelope,
     ResponseError,
@@ -50,6 +53,10 @@ pub use events::{
     AgentEvent, BundleBuildProgressEvent, BundleBuiltEvent, FileActivity, FileActivityBucket,
     FileChangeType, FileChangedEvent, FileEntry, FileKind, RepoTopologyChangedEvent, SnapshotEvent,
     SourceControlChangedEvent, StagedInfo,
+};
+pub use events_delta::{
+    DeltaBaseline, DeltaOp, DeltaPayload, DeltaStats, FileDeltaCountersEvent, FileDeltaEvent,
+    OpaqueReason,
 };
 pub use events_runtime::{
     AgentErrorCode, AgentErrorDetails, AgentErrorEvent, WslBackendConnectionStatus,
@@ -61,7 +68,6 @@ pub use responses::{
     StageFileResult, UiResponse, WatchRepoResult,
 };
 pub use responses_import::{ImportFilesResult, ImportedFile};
-pub use responses_worktree::WorktreeActionResult;
 pub use responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
 pub use responses_source_control::{
     ImageDiffSide, ImageDiffSource, SourceControlActionResult, SourceControlChange,
@@ -73,6 +79,7 @@ pub use responses_tr_fleet::{
     GetTrFleetStatusResult, TrFleetActionKind, TrFleetActionResult, TrFleetEndpointError,
     TrFleetEndpointErrorCode, TrFleetTargetStatus,
 };
+pub use responses_worktree::WorktreeActionResult;
 
 #[cfg(test)]
 mod tests;

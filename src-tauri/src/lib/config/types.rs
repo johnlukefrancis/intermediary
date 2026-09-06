@@ -5,14 +5,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 mod model;
+mod ui_state;
 mod validation;
 use model::deserialize_ui_mode_or_default;
 pub use model::{
     clamp_window_bounds, default_window_bounds_for_mode, resolve_window_bounds_for_mode,
     BundlePreset, BundleSelection, GlobalExcludes, LoadConfigResult, RepoConfig, RepoRoot,
-    StarredFilesEntry, TabTheme, ThemeMode, UiMode, UiState, UiWindowBounds, MAX_WINDOW_HEIGHT,
-    MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH,
+    StarredFilesEntry, TabTheme, ThemeMode, UiMode, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH,
+    MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH,
 };
+pub use ui_state::{UiState, UiWindowBounds};
 pub use validation::validate_config;
 
 /// Current config schema version

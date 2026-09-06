@@ -153,12 +153,20 @@ fn status_carries_the_index_identity_the_lock_state_and_entry_stamps() {
     assert_eq!(wire["snapshotId"], json!("def"));
     assert_eq!(wire["mutationInProgress"], json!(false));
     assert_eq!(wire["index"][0].get("worktreeStamp"), None);
-    assert_eq!(wire["index"][0].get("worktreeMissing"), None, "false is omitted");
+    assert_eq!(
+        wire["index"][0].get("worktreeMissing"),
+        None,
+        "false is omitted"
+    );
     assert_eq!(
         wire["worktree"][0]["worktreeStamp"],
         json!({ "bytes": 7, "mtimeMs": 42, "mtimeNanos": 9 })
     );
-    assert_eq!(wire["worktree"][0].get("worktreeMissing"), None, "false is omitted");
+    assert_eq!(
+        wire["worktree"][0].get("worktreeMissing"),
+        None,
+        "false is omitted"
+    );
     assert_eq!(wire["worktree"][1]["worktreeMissing"], json!(true));
     assert_eq!(wire["worktree"][1].get("worktreeStamp"), None);
     let back: SourceControlStatus = serde_json::from_value(wire).expect("deserialize status");

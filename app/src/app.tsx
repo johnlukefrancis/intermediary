@@ -7,6 +7,7 @@ import { StatusBar } from "./components/status_bar.js";
 import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
+import { StreamHost } from "./components/stream/stream_host.js";
 import { useConfig } from "./hooks/use_config.js";
 import { useEffectiveUiMode } from "./hooks/use_effective_ui_mode.js";
 import { useModeWindowSnap } from "./hooks/use_mode_window_snap.js";
@@ -32,7 +33,7 @@ export function App(): React.JSX.Element {
     setLastActiveGroupRepoId,
     setWindowBoundsForMode,
   } = useConfig();
-  const { motionPaused } = useMotionGovernor();
+  const { motionPaused, documentHidden } = useMotionGovernor();
   const effectiveUiMode = useEffectiveUiMode(config.uiMode, isLoaded);
 
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
@@ -216,6 +217,7 @@ export function App(): React.JSX.Element {
         ref={appRef}
         className="app"
         data-motion={motionPaused ? "paused" : undefined}
+        data-visibility={documentHidden ? "hidden" : "visible"}
         data-theme-mode={config.themeMode}
         data-ui-mode={effectiveUiMode}
         style={themeStyle}
@@ -241,6 +243,7 @@ export function App(): React.JSX.Element {
       className="app"
       data-active-tab={activeRepoId}
       data-motion={motionPaused ? "paused" : undefined}
+      data-visibility={documentHidden ? "hidden" : "visible"}
       data-theme-mode={config.themeMode}
       data-ui-mode={effectiveUiMode}
       style={themeStyle}
@@ -257,6 +260,7 @@ export function App(): React.JSX.Element {
         <AgentOfflineBanner />
         <StatusBar />
       </header>
+      <StreamHost documentHidden={documentHidden} />
       <main className="tab-content">
         {activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} />}
       </main>

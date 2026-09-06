@@ -38,6 +38,9 @@ export type { AppConfig } from "./config/app_config.js";
 
 export { CONFIG_VERSION } from "./config/version.js";
 
+export { FILES_MODES, FilesModeSchema } from "./config/ui_state_schema.js";
+export type { FilesMode } from "./config/ui_state_schema.js";
+
 export {
   ActiveRailSchema,
   BundleSelectionSchema,

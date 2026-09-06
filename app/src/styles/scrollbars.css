@@ -4,44 +4,53 @@
  */
 
 /* ===== WEBKIT SCROLLBARS (Chrome, Safari, Edge) ===== */
-.panel-content::-webkit-scrollbar {
+/* .stream-scroller is its own scroll root inside .panel-content and gets the same 6 px accent thumb */
+.panel-content::-webkit-scrollbar,
+.stream-scroller::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.panel-content::-webkit-scrollbar-track {
+.panel-content::-webkit-scrollbar-track,
+.stream-scroller::-webkit-scrollbar-track {
   background: transparent;
   border-radius: var(--radius-sm);
 }
 
-.panel-content::-webkit-scrollbar-thumb {
+.panel-content::-webkit-scrollbar-thumb,
+.stream-scroller::-webkit-scrollbar-thumb {
   background: var(--color-border);
   border-radius: var(--radius-sm);
   transition: background var(--duration-normal) var(--ease-out);
 }
 
-.panel-content::-webkit-scrollbar-thumb:hover {
+.panel-content::-webkit-scrollbar-thumb:hover,
+.stream-scroller::-webkit-scrollbar-thumb:hover {
   background: var(--color-accent-soft);
 }
 
-.panel-content::-webkit-scrollbar-thumb:active {
+.panel-content::-webkit-scrollbar-thumb:active,
+.stream-scroller::-webkit-scrollbar-thumb:active {
   background: var(--color-accent);
   box-shadow: 0 0 4px var(--color-accent-glow);
 }
 
-.panel-content::-webkit-scrollbar-corner {
+.panel-content::-webkit-scrollbar-corner,
+.stream-scroller::-webkit-scrollbar-corner {
   background: transparent;
 }
 
 /* ===== FIREFOX SCROLLBARS ===== */
-.panel-content {
+.panel-content,
+.stream-scroller {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
 
 /* Firefox hover state via media query workaround */
 @supports (scrollbar-color: auto) {
-  .panel-content:hover {
+  .panel-content:hover,
+  .stream-scroller:hover {
     scrollbar-color: var(--color-accent-soft) transparent;
   }
 }

@@ -1,7 +1,7 @@
 // Path: docs/commands/checks_local.md
 // Description: Local typecheck, lint, and Rust check commands for this repo.
 # Local Checks
-Updated on: 2026-03-27
+Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-008, ADR-012
 
@@ -38,5 +38,14 @@ To run bundle CLI crate unit tests:
 ```bash
 cargo test -p im_bundle
 ```
+
+## TypeScript tests
+
+```bash
+pnpm run test:ts
+```
+
+Bundles every `app/src/**/*_test.ts(x)` with esbuild into a temp directory outside the repo and
+runs `node --test` over the result. Exits non-zero on the first failing test file.
 
 For building and verifying the bundle CLI binary, see `docs/commands/bundle_cli.md`.

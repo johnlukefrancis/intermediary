@@ -356,7 +356,10 @@ fn source_control_image_diff_command_and_result_roundtrip() {
     }
 
     let reserialized = serde_json::to_value(&response).expect("serialize image diff result");
-    assert_eq!(reserialized, response_json, "a missing side stays explicit null");
+    assert_eq!(
+        reserialized, response_json,
+        "a missing side stays explicit null"
+    );
 }
 
 #[test]

@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-09-04
+Updated on: 2026-09-06
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -86,6 +86,7 @@ Intermediary uses a **host-routed architecture**:
   - Independent global substrate texture-intensity control (0-100, default 100)
   - Shared workspace replaces the Auto Files panel for supported UTF-8 file scratch buffers or supported image previews; scratch edits never write back to repo files, and Markdown-like text buffers render a live semantic editor layer. A changed image opened from SOURCE renders the same way, as a two-pane side-by-side image diff rather than a single preview
   - Auto Files exposes Auto/Latest/Active sort modes plus All/Documents/Code/Images icon filters; rows render last active time, update count, and one consolidated left-to-right activity telemetry column with a weighted waveform and top-left 24-hour pulse strip
+  - Stream is the default left-panel mode (first cell of the same rocker, persisted as `uiState.filesMode`, mirrored in Rust): a per-repo store outside React consumes `fileDelta` events into a twenty-card ring admitted by a cadence conductor (compressing calm → busy → flood, collapsing bursts into one card), renders text cards through the shared diff line grammar (`app/src/lib/diff/diff_lines.ts`), image strips (tiles left to right, one card per run of image edits) from `readImageFile` bytes under a 4 MiB gate, opaque and gone cards, honesty notices from the wire counters, and compact history rows; re-saves inside 1.5 s extend the newest card; click expands, double-click opens the workspace, drag stages, right-click acts; follow-scroll with a `▼ N NEW` pill; the stream keeps animating while the window is visible but unfocused and lands instantly when hidden (`docs/design/stream_panel_design.md`)
   - Auto Files is scoped by the active Zip Bundles preset after repo topology is ready: files excluded by the visible bundle selection are hidden from the left picker until the active preset selection includes them again
   - File-row and opened text-file title right-click context menus with `Open File`, `Open Containing Folder`, and `Copy Relative Path`
   - File-row double-click opens supported text files through the agent-routed `readTextFile` command and common image files through `readImageFile`
@@ -174,6 +175,7 @@ Intermediary uses a **host-routed architecture**:
   - Emits `sourceControlChanged` (coalesced to at most one per 250ms with a trailing emit) for `.git` metadata writes and working-tree changes outside the repo's structural ignore globs; a tracked-path set loaded from `git ls-files -z` at watcher start (refreshed on `.git/index` changes) overrides the structural exclude so a tracked file under `node_modules`/`target`/ignore globs still emits, while untracked noise there stays suppressed; linked worktrees get a second watch on their real git dir
   - Source-control commands run Git through the shared `im_bundle::git` facade on blocking workers, serialized per repo (lock keyed by the physical git dir) for mutations, with WSL-routed reads cancellable and mutations bounded by timeout only; on `shutdown` the agent stops admitting new mutations and waits for the in-flight one — `drained: false` never exits it, only the 450 s emergency bound does, terminating its owned process tree and logging `unknown` with the residue
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
+  - Delta pipeline (`repos/delta/`, shared with the host agent): every reported text or image sighting is marked on a per-path settle queue (120 ms trailing, 500 ms max hold, 256 pending) with no IO on the notify path; a per-repo worker drains due paths, charges a burst budget (32 reads per 2 s; withheld paths are counted, never emitted; a budget-exhausted delete still emits `gone`), reads the file on a blocking worker behind a process-wide two-permit semaphore with a stat → read → re-stat mid-write guard (three re-arms), diffs against the previous sighting held in a 16 MiB per-repo baseline cache — or `git show :0:./<path>` the first time — with `similar` under a 150 ms deadline, and broadcasts `fileDelta`; nothing is read while no client is subscribed
   - Bundle building via `im_bundle` with a v2 manifest, selection-bounded captured-HEAD Git status/patch evidence, host-safe batching for Windows-scale selected path sets, and generated handoff orientation (atomic finalize + prune old bundles only after finalize; the blocking worker owns the build lock through cancellation and cleanup)
   - Atomic file staging for WSL repo operations, with cooperative cancellation removing temporary copies before the request completes
   - Auto-stage on change (configurable)
@@ -194,6 +196,8 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 
 **Agent → UI events:**
 - `fileChanged { repoId, path, kind, changeType, mtime, activity?, staged? }`, where `activity.history` carries 24-hour bucket data for Auto Files telemetry
+- `fileDelta { repoId, seq, path, fromPath?, kind, op: add|modify|remove|rename, mtime, tracked?, folded, withheld, dropped, payload }` where `payload.kind` is `text { patch, stats, baseline: previousSighting|index|none, truncated }` (hunks-only unified patch, 64 KiB cap), `image { bytes, mimeType }` (metadata only; the UI fetches pixels through `readImageFile` under its own gate), `opaque { bytes, reason: binary|tooLarge|unreadable }`, or `gone`; emitted once per settled text or image sighting by the watcher's delta pipeline, `seq` strictly increasing per repo per watcher start, the counters accumulated since the previous emitted delta
+- `fileDeltaCounters { repoId, withheld, dropped }` emitted by the delta worker when its queue goes quiet or a burst window closes with counters that no following `fileDelta` would carry; the UI folds it into the same honesty notices
 - `snapshot { repoId, recent: FileEntry[] }`
 - `repoTopologyChanged { repoId }` emitted when watcher events can invalidate top-level files, top-level directories, or bundle-selector subdirectory metadata up to repo depth 4
 - `bundleBuilt { repoId, presetId, hostPath, aliasHostPath, bytes, fileCount, builtAtIso }`
@@ -308,6 +312,8 @@ intermediary/
 │       ├── components/     # UI components
 │       ├── hooks/          # React hooks (useAgent, useConfig, etc.)
 │       ├── lib/            # Agent client, messages
+│       │   ├── diff/       # Shared unified/combined patch parser and line model
+│       │   └── stream/     # Stream store, ring, cadence, grammar (outside React)
 │       ├── shared/         # Protocol types, config schema
 │       ├── styles/         # CSS modules
 │       └── tabs/           # Per-repo tab components
@@ -325,6 +331,7 @@ intermediary/
 │   └── src/
 │       ├── bundles/        # Bundle building
 │       ├── repos/          # File watching
+│       │   └── delta/      # Settle queue, baseline cache, similar diff, delta worker → fileDelta
 │       ├── server/         # WebSocket server, router
 │       ├── source_control/ # Git status, diff, and index/commit/remote actions
 │       ├── staging/        # File staging, path bridge
@@ -342,7 +349,7 @@ intermediary/
 1. **File Change → UI Update:** Repo file changes → backend watcher (Windows local or WSL) → host agent event bus → UI updates the Auto Files table from the unified recent list after applying the topology-ready active Zip Bundles selection; topology-changing directory events also refresh bundle explorer root metadata
 2. **Drag-out:** User drags row → UI requests staging from host agent → request routed by repo root kind → staged Windows path returned → UI starts OS drag
 3. **Bundle Build:** User edits root/directory/file selections in the Zip Bundles explorer → host agent routes by repo kind → the shared blocking writer captures HEAD/status, scans current files and Git paths through one selection predicate, reconciles selected Git-ignored ordinary files, batches selected tracked paths below host process-argument ceilings while keeping rename pairs atomic, writes ordinary files, verifies repeated patch/status/ignore classification and selected bytes, emits manifest/status/patch/handoff entries, then atomically finalizes → host agent forwards `bundleBuilt` event and response
-4. **Drag-in import:** User drags OS files over the Zip Bundles tree → Tauri drag-drop events deliver paths and a physical position → UI hit-tests the tree (`data-drop-dir`), spring-expands hovered directories, and on drop sends `importFiles` → host agent runs it lock-free for host roots or forwards it for WSL roots → the owning agent validates, pre-checks conflicts, and copies under the mutation lock → watcher emits `fileChanged` / `sourceControlChanged` (and `repoTopologyChanged` for root-level files) → tree, Auto Files, and SOURCE update
+. **Live edit → Stream card:** agent saves a file → watcher emits `fileChanged` and marks the delta queue → after the settle window the delta worker reads, diffs against the previous sighting or the index blob, and broadcasts `fileDelta` → the per-repo stream store parses the patch once, creates or extends a card, and the conductor admits it into the twenty-card ring at cadence → the card prints its hunks in the shared diff grammar
 
 ## Related docs
 

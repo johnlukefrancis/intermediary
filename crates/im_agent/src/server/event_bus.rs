@@ -33,6 +33,12 @@ impl EventBus {
         self.inner.sender.subscribe()
     }
 
+    /// Whether anyone is subscribed; producers with real cost (delta reads)
+    /// skip their work for an idle daemon.
+    pub fn has_receivers(&self) -> bool {
+        self.inner.sender.receiver_count() > 0
+    }
+
     pub fn broadcast_event(&self, event: AgentEvent) {
         let event_id = self.next_event_id();
         let envelope = EventEnvelope {

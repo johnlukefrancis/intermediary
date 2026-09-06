@@ -2,16 +2,19 @@
 // Description: Agent event and file metadata schemas shared by protocol envelope parsing
 
 import { z } from "zod";
+import { FileChangeTypeSchema, FileKindSchema } from "./protocol_file_meta.js";
+import { FileDeltaCountersEventSchema, FileDeltaEventSchema } from "./protocol_events_delta.js";
 
 // -----------------------------------------------------------------------------
 // File metadata
 // -----------------------------------------------------------------------------
 
-export const FileKindSchema = z.enum(["docs", "code", "image", "other"]);
-export type FileKind = z.infer<typeof FileKindSchema>;
-
-export const FileChangeTypeSchema = z.enum(["add", "change", "unlink"]);
-export type FileChangeType = z.infer<typeof FileChangeTypeSchema>;
+export {
+  FileChangeTypeSchema,
+  FileKindSchema,
+  type FileChangeType,
+  type FileKind,
+} from "./protocol_file_meta.js";
 
 export const FileActivityBucketSchema = z.object({
   bucketStartIso: z.string(),
@@ -164,6 +167,8 @@ export type WslBackendStatusEvent = z.infer<typeof WslBackendStatusEventSchema>;
 export const AgentEventSchema = z.discriminatedUnion("type", [
   HelloEventSchema,
   FileChangedEventSchema,
+  FileDeltaEventSchema,
+  FileDeltaCountersEventSchema,
   SnapshotEventSchema,
   RepoTopologyChangedEventSchema,
   BundleBuiltEventSchema,

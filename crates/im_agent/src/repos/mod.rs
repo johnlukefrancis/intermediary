@@ -2,6 +2,7 @@
 // Description: Repository scanning module exports
 
 mod categorizer;
+pub(crate) mod delta;
 mod file_activity;
 mod generated_code_extensions;
 mod ignore_matcher;
@@ -16,7 +17,9 @@ mod repo_directory_listing;
 mod repo_top_level;
 mod repo_topology_change;
 mod repo_watcher;
+mod repo_watcher_delta_marks;
 mod repo_watcher_events;
+mod repo_watcher_startup;
 #[cfg(test)]
 mod repo_watcher_tests;
 mod source_control_watch;
@@ -25,6 +28,7 @@ mod watcher_error;
 pub mod worktree;
 
 pub use categorizer::Categorizer;
+pub use delta::DeltaLimits;
 pub(crate) use file_activity::{
     activity_from_mtime, normalize_activity_history, observed_at_from_mtime, update_activity,
 };

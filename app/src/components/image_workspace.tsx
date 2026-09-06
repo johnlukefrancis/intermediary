@@ -2,10 +2,8 @@
 // Description: Fit-to-panel image preview surface for shared repo workspaces
 
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useDragOutPointer } from "../hooks/use_drag_out_pointer.js";
 import { useImageBlobUrl } from "../hooks/use_image_blob_url.js";
-
-const DRAG_START_DISTANCE_PX = 6;
 
 interface ImageWorkspaceViewerProps {
   path: string;
@@ -25,59 +23,7 @@ export function ImageWorkspaceViewer({
   onDragStart,
 }: ImageWorkspaceViewerProps): React.JSX.Element {
   const source = useImageBlobUrl(dataBase64, mimeType);
-  const dragStartRef = useRef<{
-    pointerId: number;
-    x: number;
-    y: number;
-  } | null>(null);
-
-  const clearPointerCapture = useCallback((target: Element, pointerId: number): void => {
-    if (!(target instanceof HTMLElement) || !target.hasPointerCapture(pointerId)) return;
-    target.releasePointerCapture(pointerId);
-  }, []);
-
-  const handlePointerDown = useCallback(
-    (event: React.PointerEvent) => {
-      if (event.button !== 0 || source.status !== "ready") return;
-      dragStartRef.current = {
-        pointerId: event.pointerId,
-        x: event.clientX,
-        y: event.clientY,
-      };
-      event.currentTarget.setPointerCapture(event.pointerId);
-    },
-    [source.status]
-  );
-
-  const handlePointerMove = useCallback(
-    (event: React.PointerEvent) => {
-      const start = dragStartRef.current;
-      if (!start || start.pointerId !== event.pointerId) return;
-      if ((event.buttons & 1) !== 1) {
-        clearPointerCapture(event.currentTarget, event.pointerId);
-        dragStartRef.current = null;
-        return;
-      }
-
-      const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
-      if (distance < DRAG_START_DISTANCE_PX) return;
-
-      clearPointerCapture(event.currentTarget, event.pointerId);
-      dragStartRef.current = null;
-      void onDragStart();
-    },
-    [clearPointerCapture, onDragStart]
-  );
-
-  const handlePointerEnd = useCallback(
-    (event: React.PointerEvent) => {
-      clearPointerCapture(event.currentTarget, event.pointerId);
-      if (dragStartRef.current?.pointerId === event.pointerId) {
-        dragStartRef.current = null;
-      }
-    },
-    [clearPointerCapture]
-  );
+  const pointer = useDragOutPointer({ onDragStart, enabled: source.status === "ready" });
 
   if (isLoading) {
     return <p className="empty-state empty-state--waiting">Loading image</p>;
@@ -99,10 +45,7 @@ export function ImageWorkspaceViewer({
     <div
       className="text-workspace-image-shell"
       data-draggable="true"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
+      {...pointer}
       title="Drag image to attach elsewhere"
     >
       <img

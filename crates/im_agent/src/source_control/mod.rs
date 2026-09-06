@@ -20,6 +20,7 @@ mod actions;
 mod commit;
 mod diff;
 mod discard;
+mod index_blob;
 mod locks;
 mod paths;
 mod runner;
@@ -45,6 +46,9 @@ pub(crate) use paths::{ensure_no_git_component, ensure_within_root, normalize_pa
 /// a delete is a quarantine claim, and the quarantine — its markers, its live
 /// operation registry, its startup sweep — is owned here.
 pub(crate) use discard::quarantine_entries;
+/// The stage-0 blob of one path, the delta pipeline's baseline for a first
+/// sighting or a deletion; runs through the same bounded read runner.
+pub(crate) use index_blob::read_index_blob;
 
 /// A captured per-file patch. `truncated` means the bounded output budget was
 /// exhausted; `binary` means Git reported a binary difference and `patch`

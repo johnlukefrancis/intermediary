@@ -1,0 +1,194 @@
+/*
+ * Path: app/src/styles/stream/stream_card_image.css
+ * Description: Stream image strips: the growing-then-wrapping tile grid, width-sized checkerboard slots, badges, names, the BEFORE/AFTER pair
+ */
+
+/* ===== STRIP ROW (the grid law) ===== */
+/* One tile spans the whole row; each new tile splits it evenly (two share, three share...) until a
+   column would drop under --stream-strip-tile, then the row wraps and every row — the last one
+   included — keeps the same column width (auto-fit collapses tracks only while there are fewer
+   tiles than tracks). The column minimum is capped at a third of the row less two gaps so a
+   narrow panel still seats --stream-strip-min-columns tiles. The row's height is a pure function
+   of (tile count, row width) — never of any tile's pixel status. --stream-strip-tile,
+   --stream-strip-slot-max and --stream-strip-min-columns are published inline by
+   stream_image_strip.tsx from stream_bounds.ts. */
+.stream-strip__row {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(
+      min(var(--stream-strip-tile), calc((100% - var(--space-2) * (var(--stream-strip-min-columns) - 1)) / var(--stream-strip-min-columns))),
+      1fr
+    )
+  );
+  gap: var(--space-2);
+  padding: var(--space-2);
+}
+
+/* The strip is the tallest card the ring can hold: it must never be the flex item that absorbs
+   the scroller's overflow (stream_panel.css pins every entry; this keeps the strip safe alone). */
+.stream-card--strip {
+  flex: none;
+}
+
+/* A tile is one grid cell: its width is the column's, never its own; no cap fights the grid. */
+.stream-strip__tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0;
+  cursor: default;
+}
+
+/* Outside the active ZIP selection: muted, never hidden (the file-card rule, per tile). The rest
+   opacity also ends the tile's drop keyframe (stream_motion.css), so nothing snaps when it lands. */
+.stream-strip__tile[data-outside-selection] {
+  --stream-rest-opacity: 0.55;
+  opacity: var(--stream-rest-opacity);
+}
+
+/* ===== SLOT (the F3 invariant) ===== */
+/* The slot's height is a function of its width alone — 16:10 of the column (screenshots and game
+   frames), capped at --stream-strip-slot-max — whatever the pixels are doing: loading, ready,
+   released, deleted, or never fetched. Nothing inside it can change the row height. Checkerboard
+   from the image-diff pane. */
+.stream-strip__slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: auto;
+  max-height: var(--stream-strip-slot-max);
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  background-color: var(--color-bg-elevated);
+  background-image:
+    conic-gradient(
+      var(--color-bg-hover) 0deg 90deg,
+      transparent 90deg 180deg,
+      var(--color-bg-hover) 180deg 270deg,
+      transparent 270deg 360deg
+    );
+  background-size: 16px 16px;
+}
+
+/* The .stream-card__thumb class is shared so stream-thumb-settle (stream_motion.css) binds once per decode.
+   The thumb fills its slot and letterboxes inside it (never crops), so a screenshot stretches to the
+   row's width — but never past twice its decoded size: stream_image_tile.tsx publishes
+   --stream-thumb-w / --stream-thumb-h once the pixels are known, so a tiny icon is at most doubled
+   and sits centred on the checkerboard. The thumb owns its own rest opacity (1, or 0.6 when deleted
+   below): the tile's muted rest must not inherit into the settle keyframe and compound with the
+   tile's own opacity. */
+.stream-strip__slot .stream-card__thumb {
+  --stream-rest-opacity: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: min(100%, calc(var(--stream-thumb-w, 100000px) * 2));
+  max-height: min(100%, calc(var(--stream-thumb-h, 100000px) * 2));
+  object-fit: contain;
+  -webkit-user-drag: none;
+}
+
+/* RELEASED / NO PREVIEW / DELETED / PREVIEW FAILED live INSIDE the slot, never instead of it */
+.stream-strip__note {
+  padding: 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.stream-strip__label {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ===== BADGE, COUNTER, NAME ===== */
+.stream-strip__badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 0;
+  justify-content: center;
+}
+
+.stream-strip__edits {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-deck-xs);
+  background: var(--color-bg-elevated);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* Fixed height, single line: a long name must not add a row to the strip */
+.stream-strip__name {
+  height: 14px;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== DELETED: greyed, one rule strikes the slot, the slot keeps its size ===== */
+/* The rest opacity ends stream-thumb-settle too, so a deleted thumb never snaps from 1 to 0.6 */
+.stream-strip__tile[data-op="remove"] .stream-card__thumb {
+  --stream-rest-opacity: 0.6;
+  opacity: var(--stream-rest-opacity);
+  filter: grayscale(1);
+}
+
+.stream-strip__tile[data-op="remove"] .stream-strip__slot::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  left: var(--space-1);
+  height: 1px;
+  background: var(--color-error);
+}
+
+/* ===== KEYBOARD SELECTION (Left/Right inside a focused strip) ===== */
+.stream-card--strip:focus-visible .stream-strip__tile[aria-current="true"] .stream-strip__slot {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ===== EXPANDED: a modified tile with a retained BEFORE becomes a two-column pair ===== */
+/* The repeat above always lays out at least --stream-strip-min-columns tracks (its minimum is a
+   third of the row or less), so a two-track span always fits; each half is one column wide and
+   keeps the column's slot height, so the pair changes only width. */
+.stream-card[data-expanded] .stream-strip__tile[data-pair] {
+  grid-column: span 2;
+}
+
+/* The pair's gap equals the grid's, so each half is exactly one column wide and its slot exactly
+   the row's height. */
+.stream-strip__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}

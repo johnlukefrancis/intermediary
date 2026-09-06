@@ -37,6 +37,14 @@ import "./styles/source_control_sections.css";
 import "./styles/source_control_rows.css";
 import "./styles/diff_workspace.css";
 import "./styles/image_diff_workspace.css";
+// Stream sheets land last so the panel can override the shared panel and diff grammar
+import "./styles/stream/stream_panel.css";
+import "./styles/stream/stream_card.css";
+import "./styles/stream/stream_card_body.css";
+import "./styles/stream/stream_card_image.css";
+// The choreography sheet lands after motion.css and every stream sheet: it carves the
+// stream scroller out of the universal governor pause and overrides the deleted-line strike.
+import "./styles/stream/stream_motion.css";
 
 const container = document.getElementById("root");
 if (!container) {

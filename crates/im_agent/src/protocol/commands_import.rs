@@ -105,7 +105,11 @@ mod tests {
 
         let decoded: InboundRequestEnvelope =
             serde_json::from_value(wire).expect("deserialize inbound");
-        let InboundRequestEnvelope::Request { request_id, payload } = decoded else {
+        let InboundRequestEnvelope::Request {
+            request_id,
+            payload,
+        } = decoded
+        else {
             panic!("expected a request envelope");
         };
         assert_eq!(request_id, "req-1");
@@ -137,7 +141,10 @@ mod tests {
                 json!({ "replace": [] }),
             ),
             (
-                ImportConflictPolicy::Replace(vec!["docs/a.md".to_string(), "docs/b.md".to_string()]),
+                ImportConflictPolicy::Replace(vec![
+                    "docs/a.md".to_string(),
+                    "docs/b.md".to_string(),
+                ]),
                 json!({ "replace": ["docs/a.md", "docs/b.md"] }),
             ),
         ] {
