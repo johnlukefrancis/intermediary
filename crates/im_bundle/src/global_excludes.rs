@@ -74,6 +74,11 @@ const RECOMMENDED_FILE_SUFFIXES: &[&str] = &[
     ".a",
 ];
 
+/// 3D scene files: Blender saves and its numbered backups are hundreds of MB and carry
+/// nothing an agent reads. Added at config version 27; the Tauri config migration uses
+/// this list to extend baseline configs.
+pub const RECOMMENDED_SCENE_FILE_SUFFIXES: &[&str] = &[".blend", ".blend1"];
+
 const RECOMMENDED_PATH_SEGMENTS: &[&str] = &[
     ".huggingface",
     "huggingface_hub",
@@ -218,6 +223,7 @@ pub fn recommended_global_excludes() -> GlobalExcludes {
             .collect(),
         extensions: RECOMMENDED_FILE_SUFFIXES
             .iter()
+            .chain(RECOMMENDED_SCENE_FILE_SUFFIXES.iter())
             .map(|value| value.to_string())
             .collect(),
         patterns: RECOMMENDED_PATH_SEGMENTS

@@ -3,9 +3,9 @@
 
 import {
   migrateLegacyModelDirPatterns,
-  migrateRecommendedExtensions,
   normalizeLegacyGlobalExcludes,
 } from "./persisted_config_global_excludes_migration.js";
+import { migrateRecommendedExtensionAdditions } from "./persisted_config_recommended_extensions_migration.js";
 import {
   migrateRepoRoots,
   normalizeLegacyRepoRoots,
@@ -40,7 +40,7 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
 
   // Migration: v7 -> v8: Add new recommended binary/model-weight extensions.
   if (config.configVersion < 8) {
-    next = migrateRecommendedExtensions(next);
+    next = migrateRecommendedExtensionAdditions(next, 8);
   }
 
   // Migration: v11 -> v12: Normalize localhost agent host to loopback IP.
@@ -74,6 +74,10 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   }
   if (config.configVersion < 26) {
     next = migrateRecentFilesLimitDefault(next);
+  }
+  // Migration: v26 -> v27: Add recommended 3D scene extensions (.blend, .blend1).
+  if (config.configVersion < 27) {
+    next = migrateRecommendedExtensionAdditions(next, 27);
   }
 
   return { ...next, configVersion: CONFIG_VERSION };

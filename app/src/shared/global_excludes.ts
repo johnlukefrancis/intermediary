@@ -49,6 +49,22 @@ export const GLOBAL_EXCLUDE_BINARY_EXTENSIONS = [
   ".a",
 ];
 
+/** 3D scene files: Blender saves and its numbered backups are hundreds of MB and carry nothing an agent reads. */
+export const GLOBAL_EXCLUDE_SCENE_EXTENSIONS = [".blend", ".blend1"];
+
+/**
+ * Recommended extension groups by the config version that added them.
+ * Migrations use this to recognise a baseline config and merge only what
+ * that version added; explicit user lists are never rewritten.
+ */
+export const GLOBAL_EXCLUDE_EXTENSION_ADDITIONS_BY_VERSION: ReadonlyArray<{
+  version: number;
+  extensions: string[];
+}> = [
+  { version: 8, extensions: [...GLOBAL_EXCLUDE_BINARY_EXTENSIONS, ".gguf"] },
+  { version: 27, extensions: [...GLOBAL_EXCLUDE_SCENE_EXTENSIONS] },
+];
+
 export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "weights"];
 export const GLOBAL_EXCLUDE_OPTIONAL_MODEL_DIR_PATTERNS = [
   ...GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS,
@@ -140,6 +156,10 @@ export const GLOBAL_EXCLUDE_EXTENSION_OPTIONS: GlobalExcludeExtensionOption[] = 
     label: value,
   })),
   ...GLOBAL_EXCLUDE_BINARY_EXTENSIONS.map((value) => ({
+    value,
+    label: value,
+  })),
+  ...GLOBAL_EXCLUDE_SCENE_EXTENSIONS.map((value) => ({
     value,
     label: value,
   })),

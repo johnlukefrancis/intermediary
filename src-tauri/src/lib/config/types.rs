@@ -18,7 +18,7 @@ pub use ui_state::{UiState, UiWindowBounds};
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 26;
+pub const CONFIG_VERSION: u32 = 27;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

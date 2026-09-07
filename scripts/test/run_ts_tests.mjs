@@ -46,7 +46,10 @@ async function main() {
             format: 'esm',
             target: 'node20',
             sourcemap: 'inline',
-            packages: 'external',
+            // Vite's dev flag has no owner under node --test; tests see the production shape.
+            define: { 'import.meta.env.DEV': 'false' },
+            // Dependencies (zod, ...) are inlined: the bundle runs outside the repo and cannot
+            // resolve node_modules. Node builtins stay external through platform: 'node'.
             outExtension: { '.js': '.mjs' },
             logLevel: 'warning',
         });

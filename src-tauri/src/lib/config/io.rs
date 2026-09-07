@@ -11,6 +11,8 @@ use std::fs;
 use std::io::Write;
 use std::path::Path;
 
+#[path = "io/global_excludes_migrations.rs"]
+mod global_excludes_migrations;
 #[path = "io/repo_root_migration.rs"]
 mod repo_root_migration;
 #[path = "io/schema_migrations.rs"]

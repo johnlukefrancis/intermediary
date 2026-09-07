@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Blender scene files (`.blend`, and the `.blend1` backups Blender writes beside them) are now recommended global excludes, so bundles built for ChatGPT no longer swell with hundreds-of-megabyte binaries an agent cannot read. Configs still carrying the recommended baseline pick the two extensions up through a v27 config migration (TypeScript and Rust); a list the user has trimmed is left as written, and both extensions are toggles in Options → Excludes → Extensions.
+
 ## 0.1.23 — 2026-09-06
 
 _Candidate build: everything below is implemented and checked, but 0.1.23 is not accepted until JL has run the installed-app witness in `docs/commands/verify_stream.md`._

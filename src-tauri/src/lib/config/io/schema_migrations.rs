@@ -1,6 +1,9 @@
 // Path: src-tauri/src/lib/config/io/schema_migrations.rs
 // Description: Versioned persisted-config schema migrations
 
+use super::global_excludes_migrations::{
+    migrate_legacy_model_dir_patterns, migrate_recommended_scene_extensions,
+};
 use crate::config::generated_code_globs::GENERATED_CODE_EXTENSION_GLOBS;
 use crate::config::types::{PersistedConfig, CONFIG_VERSION};
 use std::collections::HashSet;
@@ -63,6 +66,10 @@ pub(super) fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     // Bundle selection included_subdirs is additive and uses a serde default.
     if config.config_version < 26 && config.recent_files_limit == 40 {
         config.recent_files_limit = 200;
+    }
+    // Version 26 -> 27: Add recommended 3D scene extensions (.blend, .blend1).
+    if config.config_version < 27 {
+        migrate_recommended_scene_extensions(&mut config);
     }
 
     config.config_version = CONFIG_VERSION;
@@ -169,39 +176,6 @@ pub(super) fn default_code_globs_without_inl() -> Vec<String> {
         .into_iter()
         .filter(|glob| !glob.eq_ignore_ascii_case(INL_CODE_GLOB))
         .collect()
-}
-
-const LEGACY_MODEL_DIR_PATTERNS: &[&str] = &["models", "weights", "checkpoints"];
-const CURRENT_RECOMMENDED_PATTERNS: &[&str] = &[
-    ".huggingface",
-    "huggingface_hub",
-    "wandb",
-    "mlruns",
-    "lightning_logs",
-];
-
-fn migrate_legacy_model_dir_patterns(config: &mut PersistedConfig) {
-    let current_patterns = build_normalized_set(
-        config
-            .global_excludes
-            .patterns
-            .iter()
-            .map(|value| value.as_str()),
-    );
-    let legacy_recommended_patterns = build_normalized_set(
-        LEGACY_MODEL_DIR_PATTERNS
-            .iter()
-            .chain(CURRENT_RECOMMENDED_PATTERNS.iter())
-            .copied(),
-    );
-    if current_patterns != legacy_recommended_patterns {
-        return;
-    }
-
-    let legacy_model_dir_set = build_normalized_set(LEGACY_MODEL_DIR_PATTERNS.iter().copied());
-    config.global_excludes.patterns.retain(|pattern| {
-        !legacy_model_dir_set.contains(&pattern.trim().trim_matches('/').to_lowercase())
-    });
 }
 
 pub(super) fn build_normalized_set<'a>(values: impl Iterator<Item = &'a str>) -> HashSet<String> {
