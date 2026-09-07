@@ -2,7 +2,7 @@
 // Description: Versioned persisted-config schema migrations
 
 use super::global_excludes_migrations::{
-    migrate_legacy_model_dir_patterns, migrate_recommended_scene_extensions,
+    migrate_legacy_model_dir_patterns, seed_recommended_scene_extensions,
 };
 use crate::config::generated_code_globs::GENERATED_CODE_EXTENSION_GLOBS;
 use crate::config::types::{PersistedConfig, CONFIG_VERSION};
@@ -67,9 +67,10 @@ pub(super) fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     if config.config_version < 26 && config.recent_files_limit == 40 {
         config.recent_files_limit = 200;
     }
-    // Version 26 -> 27: Add recommended 3D scene extensions (.blend, .blend1).
-    if config.config_version < 27 {
-        migrate_recommended_scene_extensions(&mut config);
+    // Version 26 -> 27: recommended 3D scene extensions, baseline-gated (superseded by 28).
+    // Version 27 -> 28: seed .blend/.blend1 into every config once.
+    if config.config_version < 28 {
+        seed_recommended_scene_extensions(&mut config);
     }
 
     config.config_version = CONFIG_VERSION;

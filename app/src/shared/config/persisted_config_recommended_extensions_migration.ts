@@ -21,10 +21,10 @@ import type { PersistedConfig } from "./persisted_config.js";
 /**
  * Apply the recommended-extension addition introduced at `version`.
  *
- * A config that still carries every recommended entry as it stood before
- * that version is treated as the recommended baseline and gains the new
- * extensions. Any config the user has trimmed is left untouched: explicit
- * exclude lists are authoritative.
+ * A `seed: "all"` addition lands in every config once: the user never had
+ * these entries, so seeding them overrides no decision, and removing them
+ * afterwards sticks. A `seed: "baseline"` addition only reaches configs that
+ * still carry every recommended entry as it stood before that version.
  */
 export function migrateRecommendedExtensionAdditions(
   config: PersistedConfig,
@@ -49,7 +49,10 @@ export function migrateRecommendedExtensionAdditions(
     normalizeExtensionValue
   ).filter((value) => !addedAtOrAfter.has(value));
 
-  if (!carriesRecommendedBaseline(config, baselineExtensions)) {
+  if (
+    step.seed === "baseline" &&
+    !carriesRecommendedBaseline(config, baselineExtensions)
+  ) {
     return config;
   }
 

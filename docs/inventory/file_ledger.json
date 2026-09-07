@@ -983,7 +983,7 @@
     },
     {
       "path": "app/src/shared/config/persisted_config_recommended_extensions_migration_test.ts",
-      "summary": "Recommended-baseline configs gain newly recommended exclude extensions; trimmed lists stay authoritative"
+      "summary": "Every config is seeded once with the scene extensions; baseline-gated additions still respect trimmed lists"
     },
     {
       "path": "app/src/shared/config/persisted_config_recommended_extensions_migration.ts",

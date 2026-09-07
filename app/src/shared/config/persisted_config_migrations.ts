@@ -75,9 +75,10 @@ export function migrateConfig(config: PersistedConfig): PersistedConfig {
   if (config.configVersion < 26) {
     next = migrateRecentFilesLimitDefault(next);
   }
-  // Migration: v26 -> v27: Add recommended 3D scene extensions (.blend, .blend1).
-  if (config.configVersion < 27) {
-    next = migrateRecommendedExtensionAdditions(next, 27);
+  // Migration: v26 -> v27: recommended 3D scene extensions, baseline-gated (superseded by v28).
+  // Migration: v27 -> v28: seed .blend/.blend1 into every config once.
+  if (config.configVersion < 28) {
+    next = migrateRecommendedExtensionAdditions(next, 28);
   }
 
   return { ...next, configVersion: CONFIG_VERSION };

@@ -54,15 +54,21 @@ export const GLOBAL_EXCLUDE_SCENE_EXTENSIONS = [".blend", ".blend1"];
 
 /**
  * Recommended extension groups by the config version that added them.
- * Migrations use this to recognise a baseline config and merge only what
- * that version added; explicit user lists are never rewritten.
+ * `seed: "baseline"` merges only into configs that still carry the recommended
+ * baseline; `seed: "all"` seeds every config once at that version. Either way
+ * the entries land in the user's explicit list, where removing them sticks.
  */
 export const GLOBAL_EXCLUDE_EXTENSION_ADDITIONS_BY_VERSION: ReadonlyArray<{
   version: number;
   extensions: string[];
+  seed: "baseline" | "all";
 }> = [
-  { version: 8, extensions: [...GLOBAL_EXCLUDE_BINARY_EXTENSIONS, ".gguf"] },
-  { version: 27, extensions: [...GLOBAL_EXCLUDE_SCENE_EXTENSIONS] },
+  {
+    version: 8,
+    extensions: [...GLOBAL_EXCLUDE_BINARY_EXTENSIONS, ".gguf"],
+    seed: "baseline",
+  },
+  { version: 28, extensions: [...GLOBAL_EXCLUDE_SCENE_EXTENSIONS], seed: "all" },
 ];
 
 export const GLOBAL_EXCLUDE_MODEL_DIR_PATTERNS = ["models", "weights"];

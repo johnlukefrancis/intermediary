@@ -248,7 +248,7 @@ app/src/shared/config/glob_defaults.ts - Default glob patterns for docs, code, a
 app/src/shared/config/persisted_config_code_globs_migration.ts - Default-only additive migration for expanded code globs coverage.
 app/src/shared/config/persisted_config_global_excludes_migration.ts - Legacy global excludes normalization and the model-dir pattern migration
 app/src/shared/config/persisted_config_migrations.ts - Persisted config migrations and legacy normalization
-app/src/shared/config/persisted_config_recommended_extensions_migration_test.ts - Recommended-baseline configs gain newly recommended exclude extensions; trimmed lists stay authoritative
+app/src/shared/config/persisted_config_recommended_extensions_migration_test.ts - Every config is seeded once with the scene extensions; baseline-gated additions still respect trimmed lists
 app/src/shared/config/persisted_config_recommended_extensions_migration.ts - Merge newly recommended exclude extensions into configs that still carry the recommended baseline
 app/src/shared/config/persisted_config_repo_roots_migration.ts - Repo root migration helpers for persisted config normalization
 app/src/shared/config/persisted_config.ts - Persisted config schema, types, and defaults

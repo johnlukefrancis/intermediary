@@ -1,5 +1,5 @@
 // Path: app/src/shared/config/persisted_config_recommended_extensions_migration_test.ts
-// Description: Recommended-baseline configs gain newly recommended exclude extensions; trimmed lists stay authoritative
+// Description: Every config is seeded once with the scene extensions; baseline-gated additions still respect trimmed lists
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -12,8 +12,8 @@ function baselineAt(version: number) {
   return { ...config, configVersion: version };
 }
 
-void test("a v26 recommended baseline gains the scene extensions", () => {
-  const stored = baselineAt(26);
+void test("a v27 recommended baseline gains the scene extensions", () => {
+  const stored = baselineAt(27);
   stored.globalExcludes.extensions = stored.globalExcludes.extensions.filter(
     (value) => !GLOBAL_EXCLUDE_SCENE_EXTENSIONS.includes(value)
   );
@@ -26,19 +26,37 @@ void test("a v26 recommended baseline gains the scene extensions", () => {
   }
 });
 
-void test("a trimmed v26 exclude list is left as the user wrote it", () => {
-  const stored = baselineAt(26);
-  stored.globalExcludes.extensions = stored.globalExcludes.extensions.filter(
-    (value) => !GLOBAL_EXCLUDE_SCENE_EXTENSIONS.includes(value) && value !== ".bin"
-  );
-  const before = [...stored.globalExcludes.extensions];
+void test("a trimmed v27 config is seeded with the scene extensions and nothing else", () => {
+  const stored = baselineAt(27);
+  stored.globalExcludes = {
+    dirNames: ["target"],
+    dirSuffixes: [],
+    fileNames: [],
+    extensions: [],
+    patterns: [],
+  };
 
   const migrated = parsePersistedConfig(stored);
 
-  assert.deepEqual(migrated.globalExcludes.extensions, before);
+  assert.deepEqual(migrated.globalExcludes.extensions, [...GLOBAL_EXCLUDE_SCENE_EXTENSIONS]);
+  assert.deepEqual(migrated.globalExcludes.dirNames, ["target"]);
 });
 
-void test("a v7 baseline gains both the v8 and the v27 additions", () => {
+void test("a trimmed v7 config does not regain the baseline-gated v8 additions", () => {
+  const stored = baselineAt(7);
+  stored.globalExcludes.extensions = stored.globalExcludes.extensions.filter(
+    (value) =>
+      !GLOBAL_EXCLUDE_SCENE_EXTENSIONS.includes(value) && ![".exe", ".bin"].includes(value)
+  );
+
+  const migrated = parsePersistedConfig(stored);
+
+  assert.ok(!migrated.globalExcludes.extensions.includes(".exe"));
+  assert.ok(!migrated.globalExcludes.extensions.includes(".bin"));
+  assert.ok(migrated.globalExcludes.extensions.includes(".blend"));
+});
+
+void test("a v7 baseline gains both the v8 and the v28 additions", () => {
   const stored = baselineAt(7);
   stored.globalExcludes.extensions = stored.globalExcludes.extensions.filter(
     (value) =>
