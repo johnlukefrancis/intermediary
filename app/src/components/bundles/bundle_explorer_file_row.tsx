@@ -14,6 +14,8 @@ interface BundleExplorerFileRowProps {
   depth: number;
   enabled: boolean;
   included: boolean;
+  /** A global exclude rule drops this file at build time; the row says so instead of a toggle. */
+  globallyExcluded: boolean;
   renameInFlight: boolean;
   onToggle: (path: string) => void;
   onOpen: (path: string) => void;
@@ -24,6 +26,7 @@ export function BundleExplorerFileRow({
   depth,
   enabled,
   included,
+  globallyExcluded,
   renameInFlight,
   onToggle,
   onOpen,
@@ -50,12 +53,14 @@ export function BundleExplorerFileRow({
 
   const family = getFileFamily(path);
   const decoration = useFileDecoration(path);
+  const title = globallyExcluded ? `${path} — excluded by a global rule` : path;
 
   return (
     <div
       className={`bundle-explorer-file-row bundle-explorer-row--depth-${Math.min(depth, 4)}`}
       data-included={included || undefined}
       data-disabled={!enabled || undefined}
+      data-global-exclude={globallyExcluded || undefined}
       data-change={decoration?.variant}
       data-selected={interaction.selected || undefined}
       data-cut={interaction.cut || undefined}
@@ -63,13 +68,13 @@ export function BundleExplorerFileRow({
       onDoubleClick={handleDoubleClick}
       onContextMenu={interaction.onContextMenu}
       onPointerDown={interaction.onPointerDown}
-      title={decoration === null ? path : `${path} — ${decoration.label}`}
+      title={decoration === null ? title : `${title} — ${decoration.label}`}
     >
       <button
         type="button"
         className="bundle-explorer-file-toggle"
         disabled={!enabled}
-        aria-label={included ? `Exclude ${path}` : `Include ${path}`}
+        aria-label={globallyExcluded ? `${path} is excluded by a global rule` : included ? `Exclude ${path}` : `Include ${path}`}
         aria-pressed={included}
         onClick={handleToggle}
       >

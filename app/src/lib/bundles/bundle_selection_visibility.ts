@@ -2,6 +2,11 @@
 // Description: Shared path visibility helpers for bundle selection state
 
 import type { BundleSelection } from "../../shared/protocol.js";
+import {
+  isGloballyExcludedFileName,
+  isGloballyExcludedPath,
+  type NormalizedGlobalExcludes,
+} from "../../shared/global_exclude_rules.js";
 
 export function baseName(path: string): string {
   const parts = path.split("/").filter(Boolean);
@@ -66,14 +71,28 @@ export function directoryHasExclusions(path: string, selection: BundleSelection)
   );
 }
 
-export function isFileEnabled(path: string, selection: BundleSelection): boolean {
+/** True when a global rule drops the file at build time whatever the selection says (`selection.rs`). */
+export function isFileGloballyExcluded(path: string, excludes: NormalizedGlobalExcludes): boolean {
+  return isGloballyExcludedFileName(baseName(path), excludes) || isGloballyExcludedPath(path, excludes);
+}
+
+export function isFileEnabled(
+  path: string,
+  selection: BundleSelection,
+  excludes: NormalizedGlobalExcludes
+): boolean {
+  if (isFileGloballyExcluded(path, excludes)) return false;
   const parent = parentPath(path);
   if (parent === "") return selection.includeRoot;
   return isDirectoryIncluded(parent, selection);
 }
 
-export function isFileIncluded(path: string, selection: BundleSelection): boolean {
-  return isFileEnabled(path, selection) && !selection.excludedFiles.includes(path);
+export function isFileIncluded(
+  path: string,
+  selection: BundleSelection,
+  excludes: NormalizedGlobalExcludes
+): boolean {
+  return isFileEnabled(path, selection, excludes) && !selection.excludedFiles.includes(path);
 }
 
 export function sortedWith(path: string, values: readonly string[]): string[] {

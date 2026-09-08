@@ -3,9 +3,10 @@
 
 import type React from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
+import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
 import { BundleExplorerDirectory } from "./bundle_explorer_directory.js";
 import { BundleExplorerFileRow } from "./bundle_explorer_file_row.js";
-import { isFileEnabled, isFileIncluded } from "../../lib/bundles/bundle_selection_visibility.js";
+import { isFileEnabled, isFileGloballyExcluded, isFileIncluded } from "../../lib/bundles/bundle_selection_visibility.js";
 import type { DirectoryListingState } from "../../hooks/bundles/use_directory_listings.js";
 import { useRootDropTarget } from "./tree_interaction_context.js";
 
@@ -13,6 +14,7 @@ interface BundleExplorerTreeProps {
   topLevelDirs: string[];
   topLevelFiles: string[];
   selection: BundleSelection;
+  globalExcludes: NormalizedGlobalExcludes;
   expandedDirs: ReadonlySet<string>;
   listings: ReadonlyMap<string, DirectoryListingState>;
   renameInFlight: boolean;
@@ -30,6 +32,7 @@ export function BundleExplorerTree({
   topLevelDirs,
   topLevelFiles,
   selection,
+  globalExcludes,
   expandedDirs,
   listings,
   renameInFlight,
@@ -65,6 +68,7 @@ export function BundleExplorerTree({
           path={dirPath}
           depth={0}
           selection={selection}
+          globalExcludes={globalExcludes}
           expandedDirs={expandedDirs}
           listings={listings}
           renameInFlight={renameInFlight}
@@ -79,8 +83,9 @@ export function BundleExplorerTree({
           key={filePath}
           path={filePath}
           depth={0}
-          enabled={isFileEnabled(filePath, selection)}
-          included={isFileIncluded(filePath, selection)}
+          enabled={isFileEnabled(filePath, selection, globalExcludes)}
+          included={isFileIncluded(filePath, selection, globalExcludes)}
+          globallyExcluded={isFileGloballyExcluded(filePath, globalExcludes)}
           renameInFlight={renameInFlight}
           onToggle={onToggleFile}
           onOpen={onOpenFile}

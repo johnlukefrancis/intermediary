@@ -194,10 +194,6 @@
       "summary": "Collapsible checkbox group for advanced excludes options"
     },
     {
-      "path": "app/src/components/options/excludes/excludes_normalizers.ts",
-      "summary": "Normalization helpers for global excludes inputs"
-    },
-    {
       "path": "app/src/components/options/excludes/excludes_recommendations.ts",
       "summary": "Helpers for recommended global excludes toggles"
     },
@@ -686,6 +682,10 @@
       "summary": "Detect transient WSL transport/bootstrap failures and compute retry delays"
     },
     {
+      "path": "app/src/lib/bundles/bundle_selection_visibility_test.ts",
+      "summary": "Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included"
+    },
+    {
       "path": "app/src/lib/bundles/bundle_selection_visibility.ts",
       "summary": "Shared path visibility helpers for bundle selection state"
     },
@@ -1012,6 +1012,14 @@
     {
       "path": "app/src/shared/config/version.ts",
       "summary": "Persisted config schema version"
+    },
+    {
+      "path": "app/src/shared/global_exclude_rules_test.ts",
+      "summary": "The frontend global-exclude matcher agrees with the Rust scanner on suffixes, names, and path segments"
+    },
+    {
+      "path": "app/src/shared/global_exclude_rules.ts",
+      "summary": "Normalize global excludes and match names and paths the way the bundle scanner does"
     },
     {
       "path": "app/src/shared/global_excludes.ts",

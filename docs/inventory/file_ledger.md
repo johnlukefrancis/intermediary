@@ -51,7 +51,6 @@ app/src/components/options/agent_section.tsx - Options panel controls for host +
 app/src/components/options/controls/tri_state_rocker.tsx - Reusable hardware-style rocker control for options
 app/src/components/options/excludes_section.tsx - Excludes configuration section for the options panel
 app/src/components/options/excludes/advanced_group.tsx - Collapsible checkbox group for advanced excludes options
-app/src/components/options/excludes/excludes_normalizers.ts - Normalization helpers for global excludes inputs
 app/src/components/options/excludes/excludes_recommendations.ts - Helpers for recommended global excludes toggles
 app/src/components/options/excludes/excludes_updates.ts - Pure update helpers for global excludes toggles
 app/src/components/options/excludes/use_excludes_state.ts - State and handlers for the excludes section UI
@@ -174,6 +173,7 @@ app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-
 app/src/lib/agent/messages_worktree.ts - Typed helper for sending the ZIPS-tree worktree action command
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
+app/src/lib/bundles/bundle_selection_visibility_test.ts - Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/bundles/flatten_visible_tree.ts - Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders
 app/src/lib/diff/diff_lines_test.ts - Golden line model for parsePatch over a unified patch and a combined conflict patch
@@ -256,6 +256,8 @@ app/src/shared/config/repo_config.ts - RepoConfig schema and type
 app/src/shared/config/repo_root.ts - Repo root authority union schema and path normalization helpers
 app/src/shared/config/ui_state_schema.ts - Persisted UI state schema: rail section, left panel mode, window bounds
 app/src/shared/config/version.ts - Persisted config schema version
+app/src/shared/global_exclude_rules_test.ts - The frontend global-exclude matcher agrees with the Rust scanner on suffixes, names, and path segments
+app/src/shared/global_exclude_rules.ts - Normalize global excludes and match names and paths the way the bundle scanner does
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events_delta.ts - Zod mirror of the agent fileDelta event: bounded content of one settled file change

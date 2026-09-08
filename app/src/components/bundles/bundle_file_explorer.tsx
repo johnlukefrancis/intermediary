@@ -5,6 +5,7 @@ import { topmostPaths } from "../../lib/bundles/bundle_selection_visibility.js";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
+import { normalizeGlobalExcludes } from "../../shared/global_exclude_rules.js";
 import { useConfig } from "../../hooks/use_config.js";
 import { useDirectoryListings } from "../../hooks/bundles/use_directory_listings.js";
 import { useTreeDropImport } from "../../hooks/bundles/use_tree_drop_import.js";
@@ -53,6 +54,7 @@ export function BundleFileExplorer({
     expandedDirs, listings, toggleExpanded, expandDirectory, refreshDirectory, forgetSubtree,
   } = useDirectoryListings({ repoId, topLevelDirs, topLevelFiles });
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
+  const globalExcludes = useMemo(() => normalizeGlobalExcludes(config.globalExcludes), [config.globalExcludes]);
   const listRef = useRef<HTMLDivElement>(null);
   const inclusion = useBundleInclusion({ selection, topLevelDirs, onSelectionChange });
 
@@ -211,6 +213,7 @@ export function BundleFileExplorer({
           topLevelDirs={topLevelDirs}
           topLevelFiles={topLevelFiles}
           selection={selection}
+        globalExcludes={globalExcludes}
           expandedDirs={expandedDirs}
           listings={listings}
           renameInFlight={actions.inFlight}

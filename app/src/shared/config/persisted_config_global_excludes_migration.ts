@@ -15,6 +15,7 @@ import {
   GLOBAL_EXCLUDE_HF_CACHE_PATTERNS,
   GLOBAL_EXCLUDE_EXPERIMENT_PATTERNS,
 } from "../global_excludes.js";
+import { normalizePatternValue } from "../global_exclude_rules.js";
 import type { PersistedConfig } from "./persisted_config.js";
 
 export function migrateLegacyModelDirPatterns(
@@ -170,21 +171,6 @@ export function normalizeLegacyGlobalExcludes(input: unknown): unknown {
       patterns: mergedPatterns,
     },
   };
-}
-
-export function normalizeExtensionValue(value: string): string {
-  const trimmed = value.trim().toLowerCase();
-  if (trimmed.length === 0) return "";
-  if (trimmed === "~") return "~";
-  return trimmed.startsWith(".") ? trimmed : `.${trimmed}`;
-}
-
-export function normalizePatternValue(value: string): string {
-  return value.trim().replace(/^\/+|\/+$/g, "").toLowerCase();
-}
-
-export function normalizeNameValue(value: string): string {
-  return value.trim().toLowerCase();
 }
 
 export function mergeUnique(...groups: string[][]): string[] {

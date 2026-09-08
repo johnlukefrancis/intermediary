@@ -3,10 +3,10 @@
 
 import type { GlobalExcludes } from "../../../shared/global_excludes.js";
 import {
-  normalizeExtension,
-  normalizeName,
-  normalizePattern,
-} from "./excludes_normalizers.js";
+  normalizeExtensionValue,
+  normalizeNameValue,
+  normalizePatternValue,
+} from "../../../shared/global_exclude_rules.js";
 
 export interface NormalizedValues {
   extensions: string[];
@@ -21,7 +21,7 @@ export function updateExtensions(
   value: string,
   enabled: boolean
 ): GlobalExcludes {
-  const normalized = normalizeExtension(value);
+  const normalized = normalizeExtensionValue(value);
   const extensionSet = new Set(values.extensions);
   if (enabled) {
     extensionSet.add(normalized);
@@ -42,7 +42,7 @@ export function updatePatterns(
   value: string,
   enabled: boolean
 ): GlobalExcludes {
-  const normalized = normalizePattern(value);
+  const normalized = normalizePatternValue(value);
   const patternSet = new Set(values.patterns);
   if (enabled) {
     patternSet.add(normalized);
@@ -63,7 +63,7 @@ export function updateDirNames(
   value: string,
   enabled: boolean
 ): GlobalExcludes {
-  const normalized = normalizePattern(value);
+  const normalized = normalizePatternValue(value);
   const dirSet = new Set(values.dirNames);
   if (enabled) {
     dirSet.add(normalized);
@@ -84,7 +84,7 @@ export function updateDirSuffixes(
   value: string,
   enabled: boolean
 ): GlobalExcludes {
-  const normalized = normalizeExtension(value);
+  const normalized = normalizeExtensionValue(value);
   const suffixSet = new Set(values.dirSuffixes);
   if (enabled) {
     suffixSet.add(normalized);
@@ -105,7 +105,7 @@ export function updateFileNames(
   value: string,
   enabled: boolean
 ): GlobalExcludes {
-  const normalized = normalizeName(value);
+  const normalized = normalizeNameValue(value);
   const fileSet = new Set(values.fileNames);
   if (enabled) {
     fileSet.add(normalized);

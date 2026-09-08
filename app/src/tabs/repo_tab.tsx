@@ -25,6 +25,7 @@ import { RepoTabFilePanel } from "./repo_tab_file_panel.js";
 import { buildAutoFileFeed, type FeedFileEntry, type FileTypeFilter } from "../lib/files/file_feed.js";
 import { isStreamMode, sortModeOf, type FilesMode } from "../lib/files/files_mode.js";
 import { isFileIncluded } from "../lib/bundles/bundle_selection_visibility.js";
+import { normalizeGlobalExcludes } from "../shared/global_exclude_rules.js";
 import type { UiMode } from "../shared/config.js";
 
 interface RepoTabProps {
@@ -71,11 +72,12 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const activeBundleSelection =
     activePreset?.isSelectionInitialized && activePreset.isSelectionTopologyReady ? activePreset.selection : null;
 
+  const globalExcludes = useMemo(() => normalizeGlobalExcludes(config.globalExcludes), [config.globalExcludes]);
   const bundleVisibleRecentFiles = useMemo(
     () => activeBundleSelection
-      ? recentFiles.filter((file) => isFileIncluded(file.path, activeBundleSelection))
+      ? recentFiles.filter((file) => isFileIncluded(file.path, activeBundleSelection, globalExcludes))
       : recentFiles,
-    [activeBundleSelection, recentFiles]
+    [activeBundleSelection, globalExcludes, recentFiles]
   );
 
   // The table feed is only built for the table modes; the stream seeds from the recent list itself
@@ -150,7 +152,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const streamVisible = isStreamMode(filesMode) && repoWorkspace.workspace.kind === "none"
     && (!isHandset || deckSection.handsetSection === "files");
   const stream = useRepoStream(repoId, {
-    visible: streamVisible, bundleSelection: activeBundleSelection,
+    visible: streamVisible, bundleSelection: activeBundleSelection, globalExcludes,
     openFile: repoWorkspace.openFile, openDiff: repoWorkspace.openDiff, onDragStart: handleFileDrag,
   });
 

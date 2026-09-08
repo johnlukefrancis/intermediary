@@ -11,11 +11,11 @@ import {
   GLOBAL_EXCLUDE_RECOMMENDED_PATTERNS,
 } from "../global_excludes.js";
 import {
-  mergeUnique,
   normalizeExtensionValue,
   normalizeNameValue,
   normalizePatternValue,
-} from "./persisted_config_global_excludes_migration.js";
+} from "../global_exclude_rules.js";
+import { mergeUnique } from "./persisted_config_global_excludes_migration.js";
 import type { PersistedConfig } from "./persisted_config.js";
 
 /**

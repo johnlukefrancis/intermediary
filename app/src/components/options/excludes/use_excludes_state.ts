@@ -13,10 +13,10 @@ import {
   GLOBAL_EXCLUDE_PATTERN_OPTIONS,
 } from "../../../shared/global_excludes.js";
 import {
-  normalizeExtension,
-  normalizeName,
-  normalizePattern,
-} from "./excludes_normalizers.js";
+  normalizeExtensionValue,
+  normalizeNameValue,
+  normalizePatternValue,
+} from "../../../shared/global_exclude_rules.js";
 import {
   buildRecommendedExcludes,
   isRecommendedEnabled,
@@ -106,23 +106,23 @@ export function useExcludesState({
   );
 
   const normalizedExtensions = useMemo(
-    () => excludes.extensions.map(normalizeExtension).filter((value) => value.length > 0),
+    () => excludes.extensions.map(normalizeExtensionValue).filter((value) => value.length > 0),
     [excludes.extensions]
   );
   const normalizedPatterns = useMemo(
-    () => excludes.patterns.map(normalizePattern).filter((value) => value.length > 0),
+    () => excludes.patterns.map(normalizePatternValue).filter((value) => value.length > 0),
     [excludes.patterns]
   );
   const normalizedDirNames = useMemo(
-    () => excludes.dirNames.map(normalizePattern).filter((value) => value.length > 0),
+    () => excludes.dirNames.map(normalizePatternValue).filter((value) => value.length > 0),
     [excludes.dirNames]
   );
   const normalizedDirSuffixes = useMemo(
-    () => excludes.dirSuffixes.map(normalizeExtension).filter((value) => value.length > 0),
+    () => excludes.dirSuffixes.map(normalizeExtensionValue).filter((value) => value.length > 0),
     [excludes.dirSuffixes]
   );
   const normalizedFileNames = useMemo(
-    () => excludes.fileNames.map(normalizeName).filter((value) => value.length > 0),
+    () => excludes.fileNames.map(normalizeNameValue).filter((value) => value.length > 0),
     [excludes.fileNames]
   );
 

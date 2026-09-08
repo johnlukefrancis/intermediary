@@ -7,11 +7,13 @@ import { isFileIncluded } from "../../lib/bundles/bundle_selection_visibility.js
 import { streamStoreRegistry } from "../../lib/stream/stream_store_registry.js";
 import type { StreamRingCard, StreamSnapshot, StreamStripTile } from "../../lib/stream/stream_types.js";
 import type { BundleSelection, SourceControlChange, SourceControlEntry } from "../../shared/protocol.js";
+import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
 
 export interface RepoStreamOptions {
   /** Stream mode, no workspace open, and (on the handset) the FILES section */
   visible: boolean;
   bundleSelection: BundleSelection | null;
+  globalExcludes: NormalizedGlobalExcludes;
   openFile: (path: string) => void;
   openDiff: (entry: SourceControlEntry) => void;
   onDragStart: (path: string) => void | Promise<void>;
@@ -40,7 +42,7 @@ function changeFor(op: "modify" | "remove" | "rename"): SourceControlChange {
 }
 
 export function useRepoStream(repoId: string, options: RepoStreamOptions): RepoStream {
-  const { visible, bundleSelection, openFile, openDiff, onDragStart } = options;
+  const { visible, bundleSelection, globalExcludes, openFile, openDiff, onDragStart } = options;
   const store = useMemo(() => streamStoreRegistry.getOrCreate(repoId), [repoId]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
@@ -55,8 +57,10 @@ export function useRepoStream(repoId: string, options: RepoStreamOptions): RepoS
   useEffect(() => { store.setVisible(visible); }, [store, visible]);
 
   useEffect(() => {
-    store.setSelectionFilter(bundleSelection === null ? null : (path) => isFileIncluded(path, bundleSelection));
-  }, [bundleSelection, store]);
+    store.setSelectionFilter(
+      bundleSelection === null ? null : (path) => isFileIncluded(path, bundleSelection, globalExcludes)
+    );
+  }, [bundleSelection, globalExcludes, store]);
 
   const expand = useCallback((id: number) => { store.expand(id); }, [store]);
 

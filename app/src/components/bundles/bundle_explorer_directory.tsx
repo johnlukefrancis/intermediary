@@ -4,6 +4,7 @@
 import type React from "react";
 import { useCallback } from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
+import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
 import { IndeterminateCheckbox } from "./indeterminate_checkbox.js";
 import { BundleExplorerFileRow } from "./bundle_explorer_file_row.js";
 import {
@@ -12,6 +13,7 @@ import {
   isDirectoryEnabled,
   isDirectoryIncluded,
   isFileEnabled,
+  isFileGloballyExcluded,
   isFileIncluded,
 } from "../../lib/bundles/bundle_selection_visibility.js";
 import type { DirectoryListingState } from "../../hooks/bundles/use_directory_listings.js";
@@ -23,6 +25,7 @@ interface BundleExplorerDirectoryProps {
   path: string;
   depth: number;
   selection: BundleSelection;
+  globalExcludes: NormalizedGlobalExcludes;
   expandedDirs: ReadonlySet<string>;
   listings: ReadonlyMap<string, DirectoryListingState>;
   renameInFlight: boolean;
@@ -40,6 +43,7 @@ export function BundleExplorerDirectory({
   path,
   depth,
   selection,
+  globalExcludes,
   expandedDirs,
   listings,
   renameInFlight,
@@ -129,8 +133,9 @@ export function BundleExplorerDirectory({
               key={filePath}
               path={filePath}
               depth={depth + 1}
-              enabled={isFileEnabled(filePath, selection)}
-              included={isFileIncluded(filePath, selection)}
+              enabled={isFileEnabled(filePath, selection, globalExcludes)}
+              included={isFileIncluded(filePath, selection, globalExcludes)}
+              globallyExcluded={isFileGloballyExcluded(filePath, globalExcludes)}
               renameInFlight={renameInFlight}
               onToggle={onToggleFile}
               onOpen={onOpenFile}
@@ -142,6 +147,7 @@ export function BundleExplorerDirectory({
               path={dirPath}
               depth={depth + 1}
               selection={selection}
+              globalExcludes={globalExcludes}
               expandedDirs={expandedDirs}
               listings={listings}
               renameInFlight={renameInFlight}
