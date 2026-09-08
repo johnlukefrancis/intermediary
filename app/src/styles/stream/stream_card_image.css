@@ -42,11 +42,18 @@
   cursor: default;
 }
 
-/* Outside the active ZIP selection: muted, never hidden (the file-card rule, per tile). The rest
-   opacity also ends the tile's drop keyframe (stream_motion.css), so nothing snaps when it lands. */
-.stream-strip__tile[data-outside-selection] {
-  --stream-rest-opacity: 0.55;
-  opacity: var(--stream-rest-opacity);
+/* Outside the active ZIP selection: the chrome is muted and the slot border goes dashed (the file
+   card's dashed "outside" chip, per tile), but the pixels stay at full brightness — a photo at
+   half opacity over the checkerboard reads as a bad exposure, not as a state. The tile's rest
+   opacity therefore stays 1 and its drop keyframe (stream_motion.css) lands untouched. */
+.stream-strip__tile[data-outside-selection] .stream-strip__slot {
+  border-style: dashed;
+}
+
+.stream-strip__tile[data-outside-selection] .stream-strip__badge,
+.stream-strip__tile[data-outside-selection] .stream-strip__edits,
+.stream-strip__tile[data-outside-selection] .stream-strip__name {
+  opacity: 0.55;
 }
 
 /* ===== SLOT (the F3 invariant) ===== */
@@ -82,8 +89,7 @@
    row's width — but never past twice its decoded size: stream_image_tile.tsx publishes
    --stream-thumb-w / --stream-thumb-h once the pixels are known, so a tiny icon is at most doubled
    and sits centred on the checkerboard. The thumb owns its own rest opacity (1, or 0.6 when deleted
-   below): the tile's muted rest must not inherit into the settle keyframe and compound with the
-   tile's own opacity. */
+   below), so no ancestor rest value inherits into the settle keyframe. */
 .stream-strip__slot .stream-card__thumb {
   --stream-rest-opacity: 1;
   display: block;
