@@ -31,7 +31,9 @@ function isAtTail(element: HTMLElement): boolean {
 /**
  * While pinned and not frozen, every snapshot change lands the tail in a layout effect (no smooth
  * scroll, so a card never arrives mid-glide). A focused or expanded card freezes the pin so
- * reading is never yanked; `resume` releases it.
+ * reading is never yanked; `resume` releases it. The freeze protects a reading position, and a
+ * fresh scroller (repo tab switch, workspace closed, STREAM mode returning) has none: its first
+ * landing always takes the tail, however many cards the store still holds expanded.
  */
 export function useStreamFollow(
   scrollerRef: RefObject<HTMLDivElement | null>,
@@ -42,6 +44,8 @@ export function useStreamFollow(
   const [unread, setUnread] = useState(0);
   const pinnedRef = useRef(true);
   const seenIdRef = useRef(0);
+  /** False until this scroller has landed its first tail; a freeze only holds after that */
+  const landedRef = useRef(false);
 
   const pinTo = useCallback((next: boolean) => {
     if (pinnedRef.current === next) return;
@@ -72,7 +76,8 @@ export function useStreamFollow(
     const element = scrollerRef.current;
     if (!element) return;
     const newest = newestCardId(snapshot);
-    if (pinnedRef.current && !frozen) {
+    if (pinnedRef.current && (!frozen || !landedRef.current)) {
+      landedRef.current = true;
       element.scrollTop = element.scrollHeight;
       seenIdRef.current = newest;
       setUnread(0);

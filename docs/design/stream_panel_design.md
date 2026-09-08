@@ -231,6 +231,7 @@ steps on top of the global collapse. The LIVE dot sits outside the scroller and 
 | Older agent (below `STREAM_MIN_AGENT_VERSION`) | `AGENT UPDATE REQUIRED · <version>+` empty state; Auto/Latest/Active still work. |
 | User scrolls up | Follow unpins; new cards land below without moving the view; `▼ N NEW` pill; click or scroll to bottom re-pins. |
 | Card focused with the keyboard | Follow freezes; Up/Down/Home/End move; Enter opens; Space expands; Escape releases and resumes follow. |
+| Scroller remounts (repo tab switch, workspace closed, STREAM mode returning, the first card replacing an empty state) | Lands on the tail pinned, whatever the store still holds expanded or focused: the freeze protects a reading position, and a fresh scroller has none. Only after that first landing do an expanded or focused card hold the view. |
 
 ## Acceptance
 
