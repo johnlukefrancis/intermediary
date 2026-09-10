@@ -73,13 +73,18 @@ winget install --id Gitleaks.Gitleaks -e
 winget install --id Python.Python.3.13 -e
 winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 winget install --id Rustlang.Rustup -e
+New-Item -ItemType Directory -Force "$HOME\.cargo\bin" | Out-Null
+Invoke-WebRequest https://get.nexte.st/latest/windows -OutFile "$env:TEMP\nextest.zip"; Expand-Archive "$env:TEMP\nextest.zip" "$env:TEMP\nextest" -Force; Copy-Item "$env:TEMP\nextest\cargo-nextest.exe" "$HOME\.cargo\bin\"
 git config --global user.name "John Luke"
 git config --global user.email "johnfultonfrank@gmail.com"
 ```
 
 The Build Tools line is multi-GB and asks for UAC; rustup needs it for the
-MSVC linker. Set the same git identity inside WSL. Open a fresh terminal
-after this so PATH picks up the new tools.
+MSVC linker. The nextest lines drop the prebuilt `cargo-nextest` into
+`~\.cargo\bin`: Workbench AGENTS.md names `cargo nextest run -p <package>` as
+the test route and agents burn time when it is missing. Set the same git
+identity inside WSL. Open a fresh terminal after this so PATH picks up the
+new tools.
 
 ## 5. Windows (PowerShell): authenticate and clone bare metadata
 
@@ -141,12 +146,14 @@ chmod +x ~/bin/jl-agent-sync ~/bin/agent-git
 
 ## 9. WSL: Rust, browser shim, and project clones
 
-Rust in WSL is native rustup, not the Windows wrapper the main PC uses. The
-shim lets `gh` and similar tools open links in the Windows browser. Projects
-live under `~/dev` on ext4; TriangleRain and Unreal stay on the main PC.
+Rust in WSL is native rustup, not the Windows wrapper the main PC uses, and
+gets the same prebuilt `cargo-nextest` as Windows. The shim lets `gh` and
+similar tools open links in the Windows browser. Projects live under
+`~/dev` on ext4; TriangleRain and Unreal stay on the main PC.
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+curl -LsSf https://get.nexte.st/latest/linux | tar zxf - -C ~/.cargo/bin
 mkdir -p ~/.local/bin
 printf '#!/usr/bin/env bash\nexec /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -Command "Start-Process \\"$1\\""\n' > ~/.local/bin/xdg-open
 chmod +x ~/.local/bin/xdg-open && ln -sfn ~/.local/bin/xdg-open ~/.local/bin/wslview
