@@ -1,9 +1,9 @@
 // Path: app/src/lib/stream/stream_tile_targets_test.ts
-// Description: Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte and pixel budgets, unfetchable tiles, BEFORE keys
+// Description: Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, unfetchable tiles, BEFORE keys
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { IMAGE_CARD_MAX_BYTES, IMAGE_TILE_BYTES_BUDGET, MAX_IMAGE_TILES, MAX_RETAINED_PIXELS } from "./stream_bounds.js";
+import { IMAGE_CARD_MAX_BYTES, MAX_IMAGE_TILES } from "./stream_bounds.js";
 import { beforeKeys, collectTileTargets, retainedKeys, tileKey } from "./stream_tile_targets.js";
 import type { StreamImageStripCard, StreamStripTile } from "./stream_types.js";
 
@@ -53,32 +53,6 @@ void test("unfetchable tiles never take a retention slot: no mime, over the gate
   const targets = collectTileTargets("r", cards);
   assert.deepEqual(targets.map((target) => target.fetchable), [false, false, false, true]);
   assert.deepEqual([...retainedKeys(targets)], [tileKey("r", 1, "ok.png")]);
-});
-
-void test("the byte budget releases before the count does", () => {
-  const specs = Array.from({ length: 8 }, (_, index) => ({ path: `p${String(index)}.png`, bytes: IMAGE_CARD_MAX_BYTES }));
-  const kept = retainedKeys(collectTileTargets("r", [strip(1, specs)]));
-  const fits = Math.floor(IMAGE_TILE_BYTES_BUDGET / IMAGE_CARD_MAX_BYTES);
-  assert.ok(fits < MAX_IMAGE_TILES);
-  assert.equal(kept.size, fits);
-  assert.equal(kept.has(tileKey("r", 1, "p7.png")), true);
-  assert.equal(kept.has(tileKey("r", 1, "p0.png")), false);
-});
-
-void test("the decoded-pixel budget releases the oldest tiles first and ignores tiles not yet decoded", () => {
-  const targets = collectTileTargets("r", [strip(1, paths("p", 6))]);
-  const half = MAX_RETAINED_PIXELS / 2;
-  // Newest two decoded to half the budget each; the third would overflow, so it and everything older release
-  const decoded = new Map<string, number>([
-    [tileKey("r", 1, "p5.png"), half],
-    [tileKey("r", 1, "p4.png"), half],
-    [tileKey("r", 1, "p3.png"), 1],
-  ]);
-  const kept = retainedKeys(targets, (key) => decoded.get(key) ?? 0);
-  assert.deepEqual([...kept].sort(), [tileKey("r", 1, "p4.png"), tileKey("r", 1, "p5.png")]);
-  // Undecoded tiles cost nothing until their probe reports a size
-  assert.equal(retainedKeys(targets).size, 6);
-  assert.equal(retainedKeys(targets, () => 1).size, 6);
 });
 
 void test("a target carries the tile's mtime beside its bytes so the panel can refuse another revision", () => {

@@ -1,8 +1,8 @@
 // Path: app/src/lib/stream/stream_tile_pixels.ts
-// Description: Pure pixel-acceptance rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, and the decoded-size gate
+// Description: Pure pixel rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, the decode gate, and the thumbnail fit
 
 import { AgentResponseError } from "../agent/error_codes.js";
-import { MAX_TILE_PIXELS } from "./stream_bounds.js";
+import { MAX_TILE_PIXELS, STRIP_THUMB_MAX_PX } from "./stream_bounds.js";
 
 /** The revision a tile announced, and the revision a readImageFile result reports */
 export interface TileRevision {
@@ -19,9 +19,26 @@ export function sameRevision(tile: TileRevision, read: TileRevision): boolean {
   return tile.bytes === read.bytes && tile.mtimeMs === read.mtimeMs;
 }
 
-/** A decoded bitmap past MAX_TILE_PIXELS is released rather than held: its RGBA would dwarf the byte budget */
+/** A source past MAX_TILE_PIXELS is never decoded: even transiently its RGBA would dwarf the panel */
 export function exceedsTilePixels(width: number, height: number): boolean {
   return width * height > MAX_TILE_PIXELS;
+}
+
+export interface ThumbnailSize {
+  width: number;
+  height: number;
+}
+
+/**
+ * The size the tile retains for a source of `width`×`height`: scaled so its long edge is
+ * STRIP_THUMB_MAX_PX (never below one pixel a side), or null when the source already fits and is
+ * kept as-is, so an icon stays pixel-exact and a small GIF keeps its frames.
+ */
+export function thumbnailSize(width: number, height: number): ThumbnailSize | null {
+  const edge = Math.max(width, height);
+  if (edge <= STRIP_THUMB_MAX_PX) return null;
+  const scale = STRIP_THUMB_MAX_PX / edge;
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
 /**

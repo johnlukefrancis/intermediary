@@ -1,12 +1,12 @@
 // Path: app/src/hooks/stream/stream_tile_records.ts
-// Description: The panel's tile pixel records: statuses, Blob release, the decoded-pixel lookup, and the published projection
+// Description: The panel's tile pixel records: statuses, Blob release, and the published projection
 
 import { beforeKeys, type TileTarget } from "../../lib/stream/stream_tile_targets.js";
 
 /**
  * "dropped" is a tile released to stay inside the retention budgets; "superseded" a read that came
  * back for another revision than the card announced, or that the agent refused because the file was
- * rewritten under it; "tooLarge" a bitmap past MAX_TILE_PIXELS.
+ * rewritten under it; "tooLarge" a source past MAX_TILE_PIXELS, refused before any decode.
  * Each keeps its slot and never refetches until the tile is replaced in place.
  */
 export type StreamTileStatus = "idle" | "loading" | "ready" | "dropped" | "error" | "superseded" | "tooLarge";
@@ -16,8 +16,9 @@ export type StreamTileOutcome = Exclude<StreamTileStatus, "idle" | "loading" | "
 
 export interface StreamImageTile {
   status: StreamTileStatus;
-  /** This slot's own Blob URL, alive exactly as long as the tile is retained */
+  /** This slot's own thumbnail Blob URL, alive exactly as long as the tile is retained */
   url: string | null;
+  /** The SOURCE's size (the title, the icon cap), never the thumbnail's; a tooLarge slot names it */
   width: number;
   height: number;
   /** The pixels this path showed before its newest edit: the BEFORE half of an expanded pair */
@@ -35,7 +36,7 @@ export interface TileRecord {
   url: string | null;
   /** The Blob a replaced-in-place tile showed before its refetch; revoked with the record */
   previousUrl: string | null;
-  /** Decoded size; kept after a release so the pixel budget still charges the slot and never re-admits it */
+  /** The source's size from the probe; a released record keeps it for its title */
   width: number;
   height: number;
   /** The tile's updatedAtMs the pixels were read for; a newer stamp means a refetch */
@@ -55,14 +56,6 @@ export function release(record: TileRecord): void {
   revoke(record.previousUrl);
   record.url = null;
   record.previousUrl = null;
-}
-
-/** Bitmap pixels a record holds or held; the retention walk charges them against MAX_RETAINED_PIXELS */
-export function decodedPixelsOf(records: ReadonlyMap<string, TileRecord>): (key: string) => number {
-  return (key) => {
-    const record = records.get(key);
-    return record === undefined ? 0 : record.width * record.height;
-  };
 }
 
 function sameTile(a: StreamImageTile, b: StreamImageTile): boolean {

@@ -1,7 +1,7 @@
 // Path: app/src/lib/stream/stream_tile_targets.ts
 // Description: Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE
 
-import { IMAGE_TILE_BYTES_BUDGET, MAX_IMAGE_TILES, MAX_RETAINED_PIXELS } from "./stream_bounds.js";
+import { MAX_IMAGE_TILES } from "./stream_bounds.js";
 import { previewableImage } from "./stream_card_grammar.js";
 import type { StreamRingCard } from "./stream_types.js";
 
@@ -45,28 +45,18 @@ export function collectTileTargets(repoId: string, cards: readonly StreamRingCar
   return targets;
 }
 
-/** Decoded pixels a key holds (or held: a released tile keeps reporting its size so it never oscillates back in) */
-export type DecodedPixels = (key: string) => number;
-
-const NO_PIXELS: DecodedPixels = () => 0;
-
 /**
- * Newest first, fetchable only, until MAX_IMAGE_TILES are kept, the next tile would push the
- * summed source bytes past IMAGE_TILE_BYTES_BUDGET, or its decoded pixels would push the summed
- * bitmap past MAX_RETAINED_PIXELS. Everything older keeps its slot and loses its Blob.
+ * Newest first, fetchable only, until MAX_IMAGE_TILES are kept; everything older keeps its slot
+ * and loses its Blob. The count alone bounds memory: every retained Blob is a thumbnail within
+ * STRIP_THUMB_MAX_PX, whatever its source's size.
  */
-export function retainedKeys(targets: readonly TileTarget[], decodedPixels: DecodedPixels = NO_PIXELS): ReadonlySet<string> {
+export function retainedKeys(targets: readonly TileTarget[]): ReadonlySet<string> {
   const kept = new Set<string>();
-  let bytes = 0;
-  let pixels = 0;
   for (let index = targets.length - 1; index >= 0; index -= 1) {
     const target = targets[index];
     if (target === undefined || !target.fetchable) continue;
-    const decoded = decodedPixels(target.key);
-    if (kept.size >= MAX_IMAGE_TILES || bytes + target.bytes > IMAGE_TILE_BYTES_BUDGET || pixels + decoded > MAX_RETAINED_PIXELS) break;
+    if (kept.size >= MAX_IMAGE_TILES) break;
     kept.add(target.key);
-    bytes += target.bytes;
-    pixels += decoded;
   }
   return kept;
 }

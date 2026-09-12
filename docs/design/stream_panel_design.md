@@ -126,6 +126,7 @@ numeric literal outside the two bounds files.
 `INDEX_BLOB_LIMIT` = `MAX_DELTA_FILE_BYTES`. Ceilings: 16 MiB of baseline cache per repo, at most two
 reads in flight per agent process, bus worst case ≈ 9 MiB.
 
+- Amended 2026-09-12 (the strip lied `NO PREVIEW · 4.1 MB` about a screenshot the viewer opened fine): a tile retains a **thumbnail** within `STRIP_THUMB_MAX_PX`, never the source, so `IMAGE_CARD_MAX_BYTES` rose from 4 MiB to the agent's 25 MiB ceiling and `IMAGE_TILE_BYTES_BUDGET` / `MAX_RETAINED_PIXELS` were deleted — `MAX_IMAGE_TILES` alone bounds retained memory. The strip previews exactly the files the viewer opens; `NO PREVIEW` now names only a file the agent itself refuses, an extension with no mime, or a source past `MAX_TILE_PIXELS` (shown with its size).
 - Added at the 2026-09-06 adversarial-review closure: `BURST_REFILL_MAX_PENDING` = `DRAIN_BATCH` (the
   budget refills only while the queue is quiet or holds fewer pending marks than this, so one flood is
   charged once however long it runs), `GONE_BUDGET` 64 per `BURST_WINDOW` (deletes are budgeted on their
@@ -143,15 +144,16 @@ reads in flight per agent process, bus worst case ≈ 9 MiB.
 `LINE_CAP` 12 · `LINE_CAP_HANDSET` 6 · `EXPAND_CAP` 80 · `MAX_EXPANDED` 2 · `FLUSH_MS` 48 ·
 `CADENCE_BASE_MS` 260 · `CADENCE_MIN_MS` 70 · `LAG_BUDGET_MS` 1500 · `IDLE_WAKE_MS` 1000 ·
 `MERGE_WINDOW_MS` 1500 · `BURST_THRESHOLD` 22 · `BURST_WINDOW_MS` 1000 · `BURST_CLOSE_MS` 750 ·
-`STORE_MAX` 4 · `IMAGE_CARD_MAX_BYTES` 4 MiB · `IMAGE_FETCH_CONCURRENCY` 2 · `IMAGE_STRIP_MAX` 12 ·
-`MAX_IMAGE_TILES` 24 · `IMAGE_TILE_BYTES_BUDGET` 24 MiB · `STRIP_TILE_PX` 200 ·
+`STORE_MAX` 4 · `IMAGE_CARD_MAX_BYTES` 25 MiB (= the agent's `MAX_IMAGE_FILE_BYTES`) · `IMAGE_FETCH_CONCURRENCY` 2 · `IMAGE_STRIP_MAX` 12 ·
+`MAX_IMAGE_TILES` 24 · `STRIP_THUMB_MAX_PX` 1024 · `STRIP_TILE_PX` 200 ·
 `STRIP_TILE_HANDSET_PX` 96 · `STRIP_MIN_COLUMNS` 3 · `STRIP_SLOT_MAX_PX` 480 · `FOLLOW_EPSILON_PX` 24 · `STATIC_AFTER_MS` 1000 ·
 `DIGEST_THROTTLE_MS` 5000 · `STREAM_MIN_AGENT_VERSION` = the version the release flow assigns.
 Worst-case DOM: twenty cards ≈ 880 nodes, ≈ 1,520 with two expanded. `LINE_CAP` and the cadence numbers
 are taste defaults JL tunes at the first witness session.
 
 - Added at the first review closure: `READ_DEADLINE` 2 s (bounds a settled read or diff join, and now the image metadata read too), `RENAME_PAIR_WINDOW` 80 ms (strictly inside the settle window), `NOTICE_TTL_MS` 45 s and `NOTICE_MERGE_MS` 2 s (notice rows age out and same-key notices merge), `SETTLING_TTL_MS` 1.5 s / `SETTLING_MAX` 8 (the settling line), `BURST_TOP_DIRS` 3, `PRESSURE_BUSY_AT` 4 / `PRESSURE_FLOOD_AT` 12 (cadence bands), `DBLCLICK_GRACE_MS` 220 (a double-click never leaves a card expanded).
-- Added at the 2026-09-06 adversarial-review closure: `MAX_TILE_PIXELS` 24 MP (decoded pixels one tile may hold, so a small file that decodes huge cannot blow the panel's memory), `MAX_RETAINED_PIXELS` 64 MP (decoded pixels retained across the whole ring; older tiles release their Blob first), `BURST_ABSORB_GRACE_MS` 6 s (a closed burst keeps absorbing its member paths this long, so a late delta bumps `RESOLVED` instead of opening a card), `BURST_MEMBER_CAP` 256 (member paths one burst remembers), `BURST_TOP_DIRS_TRACKED` 32 (directories tracked to compute the top three), `INTAKE_CAP` 1024 (events the pre-flush intake buffer holds; the oldest `fileChanged` is dropped first and counted).
+- Amended 2026-09-12 (the strip lied `NO PREVIEW · 4.1 MB` about a screenshot the viewer opened fine): a tile retains a **thumbnail** within `STRIP_THUMB_MAX_PX`, never the source, so `IMAGE_CARD_MAX_BYTES` rose from 4 MiB to the agent's 25 MiB ceiling and `IMAGE_TILE_BYTES_BUDGET` / `MAX_RETAINED_PIXELS` were deleted — `MAX_IMAGE_TILES` alone bounds retained memory. The strip previews exactly the files the viewer opens; `NO PREVIEW` now names only a file the agent itself refuses, an extension with no mime, or a source past `MAX_TILE_PIXELS` (shown with its size).
+- Added at the 2026-09-06 adversarial-review closure: `MAX_TILE_PIXELS` (the most a tile decodes on its way to a thumbnail, refused from the probe before any decode; 24 MP then, 64 MP since 2026-09-12 so an 8K frame previews), `BURST_ABSORB_GRACE_MS` 6 s (a closed burst keeps absorbing its member paths this long, so a late delta bumps `RESOLVED` instead of opening a card), `BURST_MEMBER_CAP` 256 (member paths one burst remembers), `BURST_TOP_DIRS_TRACKED` 32 (directories tracked to compute the top three), `INTAKE_CAP` 1024 (events the pre-flush intake buffer holds; the oldest `fileChanged` is dropped first and counted).
 
 ## Motion governor amendment
 
@@ -202,8 +204,9 @@ steps on top of the global collapse. The LIVE dot sits outside the scroller and 
 | Image rewritten while its pixels were being read | The agent refuses the read (`UNSUPPORTED_IMAGE_FILE`, `Image changed while it was being read`) rather than returning bytes spanning two revisions; the tile shows `IMAGE CHANGED` at its slot size, never newer pixels under the older card. The path's next `fileDelta` brings its own tile. |
 | First sighting reads back empty while the index holds content | The empty read is the truncate half of a truncate-then-write, not an emptied file: on a `modify` it is held back and resettled, so there is no card and no baseline is cached. The next settled write prints `VS INDEX` against the index blob captured before it. An `add` landing empty is taken at face value. |
 | Image changed again before its pixels were fetched | The fetched bytes no longer match the payload's `bytes` and `mtimeMs`, so nothing is decoded: the tile keeps its slot and reads `IMAGE CHANGED`. The next `fileDelta` for that path prints the new revision with its own pixels. Stale pixels are never shown under an older card. |
-| Image whose decoded size exceeds `MAX_TILE_PIXELS`, or a strip past `MAX_RETAINED_PIXELS` | The oversized tile reads `NO PREVIEW · TOO LARGE` at the same slot size and never refetches; past the retained-pixel budget the oldest tiles release their Blobs and read `RELEASED`. Slot geometry is unchanged in both cases. |
-| Image > 4 MiB, or heic/heif/tiff/tif | The slot reads `NO PREVIEW` over the size or the extension and no bytes cross the wire (gated by `fileDelta.image.bytes`/`mimeType`); the slot is the same size as every other. |
+| Image whose source size exceeds `MAX_TILE_PIXELS` | Refused from the probe before any decode: the tile reads `NO PREVIEW · <w>×<h>` at the same slot size and never refetches. Slot geometry is unchanged. |
+| Image larger than `STRIP_THUMB_MAX_PX` on its long edge | The source is decoded once, downscaled to a WebP thumbnail on that edge, and only the thumbnail is retained; the title still carries the source's size. A source within the edge is kept as-is (pixel-exact icons, animated small GIFs). |
+| Image > 25 MiB (the agent's `MAX_IMAGE_FILE_BYTES`), or heic/heif/tiff/tif | The slot reads `NO PREVIEW` over the size or the extension and no bytes cross the wire (gated by `fileDelta.image.bytes`/`mimeType`); the viewer refuses the same file, so the strip never claims less than the viewer shows. |
 | Tile double-clicked / right-clicked / dragged | The image viewer, or the image diff for a modified tracked image / the shared file actions for that tile's path / drag-out of that tile's path. The strip itself opens nothing. |
 | Strip focused with the keyboard | Left and Right move the selected tile, Enter opens it, Space toggles the BEFORE/AFTER expansion; Up, Down, Home and End still move between cards. |
 | A checkout floods the repo with images | Unchanged: the burst detector opens first, the burst card absorbs the image paths, and no strip is created. A strip still waiting in the pending FIFO is folded into the burst, its tiles counted as resolved paths. |

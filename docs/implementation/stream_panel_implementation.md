@@ -32,7 +32,7 @@ left-panel mode), and the pointer-drag threshold (one shared hook).
   wire. Reads are budgeted (32 per 2 s per repo); withheld paths produce a counter, never an event.
 - The UI owns view state only: a per-repo store outside React (`app/src/lib/stream/`) with a twenty-card ring,
   a cadence conductor, click-expand, follow-scroll, and bounded image tiles fetched through the existing
-  `readImageFile` under a 4 MiB gate. Cards are created only from deltas that arrived; nothing can vanish or end
+  `readImageFile` under the agent's 25 MiB ceiling, retained as a thumbnail within `STRIP_THUMB_MAX_PX`. Cards are created only from deltas that arrived; nothing can vanish or end
   as a bare filename. The same file re-saved inside 1.5 s extends the newest card (`×N`).
 - `fileChanged` and `snapshot` are untouched. No new command, socket, port, CSP, or Tauri surface.
 - The stream keeps animating while the window is visible but unfocused (a scoped carve-out of the motion
@@ -95,7 +95,7 @@ scripts in `docs/commands/workflow/closeout_checks.md`.
 - Adversarial closure (2026-09-06): an external review found six P1 contract failures and one P2; two closure rounds landed (index-first baselines, revision-bound pixels with `maxBytes` at the byte owner and a re-stat, causal budget refill, lossless invalidation, two-lane bounded transport with `seq` on counters, owned permits with bounded waits, the zero-length first-sighting rule) — `docs/reports/stream_adversarial_review_20260906.md`. During the first round a lane restored non-owned files from the index and wiped two parallel lanes' edits; both were recovered by replaying their recorded write commands; lane briefs now forbid formatters and restores over non-owned files.
 - **Review round 5 (2026-09-06, external adversarial review of the staged 0.1.23 candidate — `docs/reports/stream_adversarial_review_20260906.md`): 0 P0, 6 P1, 1 P2, all accepted and all closed in this round** against one frozen wire contract (`mtimeMs` on the image payload, `seq` on `fileDeltaCounters`, optional `maxBytes` on `readImageFile`; no new event — drops are `seq` gaps):
   - P1-1 index baseline read before the worktree read and carried across re-settles; a zero-stat first sighting prints no card; `SINCE LAST` documented as *since the previous sighting*.
-  - P1-2 image pixels bound to the revision (`bytes` + `mtimeMs`, else `IMAGE CHANGED`); `maxBytes` enforced at the byte owner in both backends; `MAX_TILE_PIXELS` 24 MP and `MAX_RETAINED_PIXELS` 64 MP.
+  - P1-2 image pixels bound to the revision (`bytes` + `mtimeMs`, else `IMAGE CHANGED`); `maxBytes` enforced at the byte owner in both backends; `MAX_TILE_PIXELS` 24 MP and `MAX_RETAINED_PIXELS` 64 MP (superseded 2026-09-12: thumbnails made the source-byte and retained-pixel budgets moot; `MAX_TILE_PIXELS` is 64 MP and gates the probe).
   - P1-3 causal burst ownership: the agent's budget refills only when quiet or below `BURST_REFILL_MAX_PENDING`; the UI applies deltas before closing a burst and absorbs members for `BURST_ABSORB_GRACE_MS`, capped by `BURST_MEMBER_CAP` / `BURST_TOP_DIRS_TRACKED`.
   - P1-4 dropped paths deduped to `QUEUE_CAP`, whole-cache clear on overflow, both rename endpoints evicted.
   - P1-5 `EVENT_QUEUE_CAP` 1024 bounded per-connection queues with drop counters in both agents; `INTAKE_CAP` 1024 in the UI; `GONE_BUDGET` 64; counters on the shared sequence.

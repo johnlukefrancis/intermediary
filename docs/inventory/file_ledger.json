@@ -503,7 +503,11 @@
     },
     {
       "path": "app/src/hooks/stream/stream_tile_records.ts",
-      "summary": "The panel's tile pixel records: statuses, Blob release, the decoded-pixel lookup, and the published projection"
+      "summary": "The panel's tile pixel records: statuses, Blob release, and the published projection"
+    },
+    {
+      "path": "app/src/hooks/stream/stream_tile_thumbnail.ts",
+      "summary": "Decodes one tile's fetched bytes into the thumbnail Blob the strip retains: probe the source, gate it, downscale past..."
     },
     {
       "path": "app/src/hooks/stream/use_deferred_click.ts",
@@ -523,7 +527,7 @@
     },
     {
       "path": "app/src/hooks/stream/use_stream_images.ts",
-      "summary": "Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, decoded Blob tiles, bounded retent..."
+      "summary": "Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, thumbnail Blob tiles, bounded rete..."
     },
     {
       "path": "app/src/hooks/terminal/use_terminal_group.ts",
@@ -855,15 +859,15 @@
     },
     {
       "path": "app/src/lib/stream/stream_tile_pixels_test.ts",
-      "summary": "Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decoded-size gate; the mid-read..."
+      "summary": "Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit;..."
     },
     {
       "path": "app/src/lib/stream/stream_tile_pixels.ts",
-      "summary": "Pure pixel-acceptance rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, and the d..."
+      "summary": "Pure pixel rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, the decode gate, and..."
     },
     {
       "path": "app/src/lib/stream/stream_tile_targets_test.ts",
-      "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, the byte and pixel budgets, unfetc..."
+      "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, unfetchable tiles, BEFORE keys"
     },
     {
       "path": "app/src/lib/stream/stream_tile_targets.ts",

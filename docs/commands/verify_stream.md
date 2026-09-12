@@ -74,8 +74,8 @@ keyframe and is spliced on the next admit by design.
    again: it collapses back.
 4. Delete a PNG. Expect the tile greyed with a rule struck through its slot, or a `DELETED` ghost in the same-sized
    slot when no pixels were retained; the strip's height does not change.
-5. Drop a `.heic` and a PNG over 4 MiB. Expect `NO PREVIEW · HEIC` and `NO PREVIEW · <size>` tiles at the same slot
-   size as every other and **no** `readImageFile` request (DevTools → Network → WS → frames).
+5. Drop a `.heic`, a PNG over 4 MiB (a full-screen screenshot), and a PNG over 25 MiB. Expect `NO PREVIEW · HEIC`, a real thumbnail for the screenshot, and `NO PREVIEW · <size>` for the 25 MiB file, all at the same slot
+   size as every other; only the screenshot issues a `readImageFile` request (DevTools → Network → WS → frames).
 6. Drop more than 24 images across several strips (each strip holds at most 12; only a text card printed after a
    strip opens a new one — save a text file between batches; a quiet gap of any length never does). Expect the
    oldest fetchable tiles to read `RELEASED` at exactly their previous size — no strip changes height and the

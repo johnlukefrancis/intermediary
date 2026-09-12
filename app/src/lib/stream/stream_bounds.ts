@@ -64,8 +64,12 @@ export const BURST_TOP_DIRS_TRACKED = 32;
 /** Per-repo stores retained (LRU, the visible repo pinned) */
 export const STORE_MAX = 4;
 
-/** Largest image a card fetches pixels for; above this the card shows a NO PREVIEW ghost (4 MiB) */
-export const IMAGE_CARD_MAX_BYTES = 4 * 1024 * 1024;
+/**
+ * Largest image a tile fetches, sent as the read's `maxBytes`: the agent's own `MAX_IMAGE_FILE_BYTES`
+ * (25 MiB), so the strip previews exactly the files the workspace viewer opens. A file over it reads
+ * NO PREVIEW at its size. Source bytes are transient: the tile retains a thumbnail, never the source.
+ */
+export const IMAGE_CARD_MAX_BYTES = 25 * 1024 * 1024;
 
 /** Image reads in flight at once from the panel */
 export const IMAGE_FETCH_CONCURRENCY = 2;
@@ -73,17 +77,14 @@ export const IMAGE_FETCH_CONCURRENCY = 2;
 /** Tiles one strip accepts: three rows of four at the standard panel width; no time window, only a card printed after the strip closes it */
 export const IMAGE_STRIP_MAX = 12;
 
-/** Decoded thumbnails retained across the whole ring; older tiles keep their slot and lose their Blob */
+/** Thumbnails retained across the whole ring; older tiles keep their slot and lose their Blob (≤ ~100 MB of RGBA at STRIP_THUMB_MAX_PX) */
 export const MAX_IMAGE_TILES = 24;
 
-/** Summed source bytes of retained tiles; bounds decoded bitmap memory when tiles sit near the 4 MiB gate (24 MiB) */
-export const IMAGE_TILE_BYTES_BUDGET = 24 * 1024 * 1024;
+/** Long edge of a retained thumbnail: crisp in a 768×480 slot at HiDPI, ~4 MB of RGBA at most; a source within it is kept as-is */
+export const STRIP_THUMB_MAX_PX = 1024;
 
-/** Most decoded pixels one tile may hold: a 4 MiB PNG can decode to hundreds of MB, so the probe's size is gated too */
-export const MAX_TILE_PIXELS = 24_000_000;
-
-/** Summed decoded pixels of retained tiles, beside the byte budget; oldest tiles release first (~256 MB of RGBA) */
-export const MAX_RETAINED_PIXELS = 64_000_000;
+/** Most pixels one tile decodes on its way to a thumbnail (an 8K frame fits): the transient bitmap of a small file that decodes huge is refused from the probe, before any decode */
+export const MAX_TILE_PIXELS = 64_000_000;
 
 /** Narrowest tile column on the standard deck: one tile spans the row, two halve it, three third it, about four seat per ~850 px row, then wrap */
 export const STRIP_TILE_PX = 200;

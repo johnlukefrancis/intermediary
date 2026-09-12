@@ -1,11 +1,11 @@
 // Path: app/src/lib/stream/stream_tile_pixels_test.ts
-// Description: Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decoded-size gate; the mid-read rewrite refusal
+// Description: Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit; the mid-read rewrite refusal
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AgentResponseError } from "../agent/error_codes.js";
-import { MAX_TILE_PIXELS } from "./stream_bounds.js";
-import { exceedsTilePixels, readRefusedAsChanged, sameRevision } from "./stream_tile_pixels.js";
+import { MAX_TILE_PIXELS, STRIP_THUMB_MAX_PX } from "./stream_bounds.js";
+import { exceedsTilePixels, readRefusedAsChanged, sameRevision, thumbnailSize } from "./stream_tile_pixels.js";
 
 void test("pixels are accepted only when both the byte count and the mtime match the tile's revision", () => {
   const tile = { bytes: 4096, mtimeMs: 1_700_000_000_000 };
@@ -15,12 +15,21 @@ void test("pixels are accepted only when both the byte count and the mtime match
   assert.equal(sameRevision(tile, { bytes: 0, mtimeMs: 0 }), false);
 });
 
-void test("the decoded-size gate trips strictly past MAX_TILE_PIXELS", () => {
+void test("the decode gate trips strictly past MAX_TILE_PIXELS: an 8K frame decodes, a bomb does not", () => {
   assert.equal(exceedsTilePixels(0, 0), false);
-  assert.equal(exceedsTilePixels(4000, 6000), false);
+  assert.equal(exceedsTilePixels(7680, 4320), false);
   assert.equal(exceedsTilePixels(MAX_TILE_PIXELS, 1), false);
   assert.equal(exceedsTilePixels(MAX_TILE_PIXELS + 1, 1), true);
-  assert.equal(exceedsTilePixels(6000, 5000), true);
+  assert.equal(exceedsTilePixels(10000, 8000), true);
+});
+
+void test("a source within STRIP_THUMB_MAX_PX is kept as-is; a larger one scales to that long edge, aspect kept, never below a pixel", () => {
+  assert.equal(thumbnailSize(16, 16), null);
+  assert.equal(thumbnailSize(STRIP_THUMB_MAX_PX, 10), null);
+  assert.deepEqual(thumbnailSize(STRIP_THUMB_MAX_PX * 2, STRIP_THUMB_MAX_PX), { width: STRIP_THUMB_MAX_PX, height: STRIP_THUMB_MAX_PX / 2 });
+  assert.deepEqual(thumbnailSize(3840, 2160), { width: 1024, height: 576 });
+  assert.deepEqual(thumbnailSize(1080, 1920), { width: 576, height: 1024 });
+  assert.deepEqual(thumbnailSize(100000, 1), { width: STRIP_THUMB_MAX_PX, height: 1 });
 });
 
 void test("only an UNSUPPORTED_IMAGE_FILE refusal naming a mid-read change reads as IMAGE CHANGED", () => {

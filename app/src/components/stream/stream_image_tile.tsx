@@ -28,7 +28,7 @@ export interface StreamImageTileProps {
   onContextMenu: (event: React.MouseEvent, path: string) => void;
 }
 
-/** Why no pixels were ever requested: the size that failed the gate, or the extension with no mime */
+/** Why no pixels were ever requested: a file past the agent's ceiling (the viewer refuses it too), or an extension with no mime */
 function noPreviewReason(path: string, bytes: number): string {
   if (bytes > IMAGE_CARD_MAX_BYTES) return formatBytes(bytes);
   return getExtension(path)?.toUpperCase() ?? "UNSUPPORTED";
@@ -48,8 +48,9 @@ function slotNote(tile: StreamStripTile, pixels: TilePixels | undefined): string
     // The file moved on past the revision this card announced; its next delta brings its own tile
     case "superseded":
       return "IMAGE CHANGED";
+    // Refused before any decode: the note names the size that failed the pixel gate
     case "tooLarge":
-      return "NO PREVIEW · TOO LARGE";
+      return `NO PREVIEW · ${String(pixels.width)}×${String(pixels.height)}`;
     default:
       return "";
   }
@@ -88,8 +89,8 @@ export function StreamImageTile({ tile, chain, pixels, expanded, fresh, selected
   const beforeUrl = pixels?.beforeUrl ?? null;
   const pair = expanded && tile.op === "modify" && beforeUrl !== null && !deleted;
   const note = slotNote(tile, pixels);
-  // The record's size belongs to its own url; a BEFORE shown in a deleted slot has no known size
-  const decoded = pixels !== undefined && pixels.width > 0 && afterUrl === pixels.url ? { width: pixels.width, height: pixels.height } : null;
+  // The record's SOURCE size belongs to its own url (the thumb is capped at twice it, so an icon is never blown up); a BEFORE shown in a deleted slot has no known size
+  const decoded = pixels !== undefined && pixels.width > 0 && afterUrl !== null && afterUrl === pixels.url ? { width: pixels.width, height: pixels.height } : null;
   const size = pixels !== undefined && pixels.width > 0 ? `${String(pixels.width)}×${String(pixels.height)}` : "";
   const handleDrag = useCallback(() => { onDrag(tile.path); }, [onDrag, tile.path]);
   const pointer = useDragOutPointer({ onDragStart: handleDrag, enabled: !deleted });

@@ -1,16 +1,14 @@
 // Path: app/src/hooks/stream/use_stream_images.ts
-// Description: Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, decoded Blob tiles, bounded retention and revocation
+// Description: Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, thumbnail Blob tiles, bounded retention and revocation
 
 import { useEffect, useRef, useState } from "react";
 import { sendReadImageFile } from "../../lib/agent/messages.js";
 import { IMAGE_CARD_MAX_BYTES, IMAGE_FETCH_CONCURRENCY } from "../../lib/stream/stream_bounds.js";
-import { exceedsTilePixels, readRefusedAsChanged, sameRevision } from "../../lib/stream/stream_tile_pixels.js";
+import { readRefusedAsChanged, sameRevision } from "../../lib/stream/stream_tile_pixels.js";
 import { collectTileTargets, retainedKeys, type TileTarget } from "../../lib/stream/stream_tile_targets.js";
 import type { StreamSnapshot } from "../../lib/stream/stream_types.js";
 import { useAgent } from "../use_agent.js";
-import { base64ToBlob } from "../use_image_blob_url.js";
 import {
-  decodedPixelsOf,
   emptyTiles,
   projectTiles,
   release,
@@ -19,6 +17,7 @@ import {
   type StreamTileOutcome,
   type TileRecord,
 } from "./stream_tile_records.js";
+import { decodeTile } from "./stream_tile_thumbnail.js";
 
 export type { StreamImageTile, StreamImageTiles, StreamTileStatus } from "./stream_tile_records.js";
 
@@ -27,9 +26,11 @@ export type { StreamImageTile, StreamImageTiles, StreamTileStatus } from "./stre
  * previewable tiles while the stream is visible and the document showing, at most
  * IMAGE_FETCH_CONCURRENCY in flight, under IMAGE_CARD_MAX_BYTES on the agent side, and are
  * accepted only for the exact revision (bytes + mtime) the tile announced — a mismatch, and the
- * agent's own refusal of a file rewritten under its read, both leave the slot reading IMAGE CHANGED;
- * a decoded bitmap past MAX_TILE_PIXELS is released at once. Every tile outside `retainedKeys` keeps its slot and loses
- * its Blob. A tile replaced in place keeps its old Blob as BEFORE while the AFTER is refetched.
+ * agent's own refusal of a file rewritten under its read, both leave the slot reading IMAGE CHANGED.
+ * What a tile retains is a thumbnail within STRIP_THUMB_MAX_PX (`decodeTile`), so memory follows
+ * MAX_IMAGE_TILES alone, never the source's size; a source past MAX_TILE_PIXELS is refused from its
+ * probe. Every tile outside `retainedKeys` keeps its slot and loses its Blob. A tile replaced in
+ * place keeps its old Blob as BEFORE while the AFTER is refetched.
  */
 export function useStreamImages(repoId: string, snapshot: StreamSnapshot): StreamImageTiles {
   const { client, helloState } = useAgent();
@@ -69,40 +70,19 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
       pumpRef.current();
     };
 
-    const decode = (target: TileTarget, epoch: number, dataBase64: string, mimeType: string): void => {
-      let url: string;
-      try {
-        url = URL.createObjectURL(base64ToBlob(dataBase64, mimeType));
-      } catch {
-        settle(target, epoch, "error", null, 0, 0);
-        return;
-      }
-      const probe = new Image();
-      probe.onload = () => {
-        const { naturalWidth: width, naturalHeight: height } = probe;
-        // The gate runs on the probe's reported size: the bitmap is let go before any slot shows it
-        if (exceedsTilePixels(width, height)) {
-          URL.revokeObjectURL(url);
-          settle(target, epoch, "tooLarge", null, 0, 0);
-          return;
-        }
-        settle(target, epoch, "ready", url, width, height);
-      };
-      probe.onerror = () => { URL.revokeObjectURL(url); settle(target, epoch, "error", null, 0, 0); };
-      probe.src = url;
-    };
-
     const start = (target: TileTarget): void => {
       if (client === null) return;
       const epoch = epochRef.current;
       void sendReadImageFile(client, repoId, target.path, IMAGE_CARD_MAX_BYTES)
-        .then((result) => {
+        .then(async (result) => {
           // Never newer pixels under an older card: any other revision than the tile's is refused
           if (!sameRevision(target, result)) {
             settle(target, epoch, "superseded", null, 0, 0);
             return;
           }
-          decode(target, epoch, result.dataBase64, result.mimeType);
+          const decoded = await decodeTile(result.dataBase64, result.mimeType);
+          if (decoded.outcome === "error") settle(target, epoch, "error", null, 0, 0);
+          else settle(target, epoch, decoded.outcome, decoded.outcome === "ready" ? decoded.url : null, decoded.width, decoded.height);
         })
         // A read the agent refused because the file moved under it is IMAGE CHANGED, not a failure
         .catch((error: unknown) => {
@@ -119,7 +99,7 @@ export function useStreamImages(repoId: string, snapshot: StreamSnapshot): Strea
         release(record);
         records.delete(key);
       }
-      const retained = retainedKeys(targets, decodedPixelsOf(records));
+      const retained = retainedKeys(targets);
       let inFlight = 0;
       for (const [key, record] of records) {
         if (retained.has(key)) {
