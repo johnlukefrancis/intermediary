@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": [
+      "resources/agent_bundle/im_host_agent",
+      "resources/agent_bundle/version.json"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  }
+}

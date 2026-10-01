@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/terminal/shell.rs
-// Description: Profile-faithful PowerShell command and exact inherited environment for terminal spawn
+// Description: Native profile-loaded shell command and terminal environment
 
 use super::start_dir::StartDir;
 #[cfg(not(windows))]
@@ -35,7 +35,7 @@ impl TerminalCommand {
 }
 
 #[cfg(windows)]
-pub fn resolve_pwsh() -> Result<PathBuf, String> {
+pub fn resolve_shell() -> Result<PathBuf, String> {
     let default = PathBuf::from(PWSH_DEFAULT);
     if default.is_file() {
         return Ok(default);
@@ -49,12 +49,51 @@ pub fn resolve_pwsh() -> Result<PathBuf, String> {
         })
 }
 
-#[cfg(not(windows))]
-pub fn resolve_pwsh() -> Result<PathBuf, String> {
+#[cfg(target_os = "macos")]
+pub fn resolve_shell() -> Result<PathBuf, String> {
+    use std::ffi::CStr;
+    let mut entry = std::mem::MaybeUninit::<libc::passwd>::uninit();
+    let mut buffer = vec![0u8; 16384];
+    let mut result = std::ptr::null_mut();
+    // SAFETY: the output struct and backing buffer remain live until the shell is copied.
+    let status = unsafe {
+        libc::getpwuid_r(
+            libc::getuid(),
+            entry.as_mut_ptr(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+            &mut result,
+        )
+    };
+    if status != 0 || result.is_null() {
+        return Err(format!(
+            "Could not resolve the macOS account login shell (status {status})"
+        ));
+    }
+    // SAFETY: getpwuid_r succeeded and returned an entry backed by buffer.
+    let entry = unsafe { entry.assume_init() };
+    if entry.pw_shell.is_null() {
+        return Err("The macOS account has no login shell".to_string());
+    }
+    // SAFETY: pw_shell is a NUL-terminated field of the successful account lookup.
+    let shell = unsafe { CStr::from_ptr(entry.pw_shell) }.to_string_lossy();
+    let path = PathBuf::from(shell.as_ref());
+    if !path.is_absolute() || !path.is_file() {
+        return Err(format!(
+            "The macOS login shell does not exist: {}",
+            path.display()
+        ));
+    }
+    Ok(path)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+pub fn resolve_shell() -> Result<PathBuf, String> {
     Err("The integrated terminal is available on Windows hosts only".to_string())
 }
 
 /// Builds `pwsh -NoLogo [-NoExit -Command <entry>]` without `-NoProfile`.
+#[cfg(not(target_os = "macos"))]
 pub fn build_command(pwsh: &Path, start: &StartDir) -> TerminalCommand {
     let mut args = vec![OsString::from("-NoLogo")];
     if let Some(entry) = &start.initial_command {
@@ -69,6 +108,20 @@ pub fn build_command(pwsh: &Path, start: &StartDir) -> TerminalCommand {
         args,
         cwd: start.cwd.clone(),
         env: terminal_environment(std::env::vars_os()),
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn build_command(shell: &Path, start: &StartDir) -> TerminalCommand {
+    let mut env = terminal_environment(std::env::vars_os());
+    env.retain(|(key, _)| key != "TERM" && key != "SHELL");
+    env.push(("TERM".into(), "xterm-256color".into()));
+    env.push(("SHELL".into(), shell.as_os_str().to_owned()));
+    TerminalCommand {
+        program: shell.to_path_buf(),
+        args: vec!["-l".into(), "-i".into()],
+        cwd: start.cwd.clone(),
+        env,
     }
 }
 
@@ -103,6 +156,7 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     #[test]
+    #[cfg(not(target_os = "macos"))]
     fn host_start_preserves_profile_and_directory() {
         let command = build_command(
             Path::new("/opt/pwsh"),
@@ -117,6 +171,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "macos"))]
     fn wsl_start_runs_the_guarded_entry_after_the_profile() {
         let command = build_command(
             Path::new("/opt/pwsh"),
@@ -152,5 +207,25 @@ mod tests {
         assert!(env
             .iter()
             .any(|(key, value)| key == "TERM_PROGRAM" && value == "Intermediary"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn native_shell_loads_login_profile_in_the_requested_directory() {
+        let shell = super::resolve_shell().expect("account shell");
+        let command = build_command(
+            &shell,
+            &StartDir {
+                cwd: PathBuf::from("/tmp/repo"),
+                initial_command: None,
+            },
+        );
+        assert!(shell.is_absolute());
+        assert_eq!(command.args, [OsString::from("-l"), OsString::from("-i")]);
+        assert_eq!(command.cwd, Path::new("/tmp/repo"));
+        assert!(command
+            .env
+            .iter()
+            .any(|(key, value)| key == "TERM" && value == "xterm-256color"));
     }
 }

@@ -6,10 +6,8 @@ use crate::protocol::ImportConflictPolicy::{Refuse, Replace};
 use super::move_entries::move_failure;
 use super::tests_support::{act, move_action, read, worktree, write};
 
-/// The move twin of the import's authorization rule. The user authorized
-/// replacing `docs/a.txt`; `docs/b.txt` filled up while the dialog was open
-/// and was in no list anyone answered, so the whole move is refused and the
-/// fresh collision set — both paths — comes back for the next answer.
+/// A new collision invalidates the earlier replacement authorization.
+/// The fresh collision list includes both destinations before any move.
 #[tokio::test]
 async fn a_replace_that_did_not_authorize_a_new_collision_is_refused_with_the_fresh_list() {
     let repo = worktree();
@@ -41,38 +39,43 @@ async fn a_replace_that_did_not_authorize_a_new_collision_is_refused_with_the_fr
     assert_eq!(read(repo.path(), "app/b.txt"), "new b");
 }
 
-/// Two entries that differ only by case are two destinations on a
-/// case-sensitive volume, and this test pins that: both land, and nothing here
-/// probes the filesystem to find out which kind it is. On a case-insensitive
-/// volume they are one destination reached by two spellings; the second rename
-/// then meets the first and the no-replace primitive refuses it as an
-/// `ENTRY_CONFLICT` instead of overwriting it.
+/// Separate source directories keep both inputs intact on either volume type.
+/// Destination aliases must conflict without overwriting the first moved file.
 #[cfg(unix)]
 #[tokio::test]
-async fn two_entries_differing_only_by_case_both_land_on_a_case_sensitive_volume() {
+async fn case_alias_destinations_never_overwrite_each_other() {
     let repo = worktree();
-    write(repo.path(), "app/A.txt", "upper");
-    write(repo.path(), "app/a.txt", "lower");
+    write(repo.path(), "app/upper/A.txt", "upper");
+    write(repo.path(), "app/lower/a.txt", "lower");
+    let case_insensitive = repo.path().join("app/upper/a.txt").exists();
 
-    let entries = act(
+    let result = act(
         repo.path(),
-        move_action(&["app/A.txt", "app/a.txt"], "docs", Refuse),
+        move_action(&["app/upper/A.txt", "app/lower/a.txt"], "docs", Refuse),
     )
-    .await
-    .expect("move");
+    .await;
 
-    assert_eq!(
-        entries,
-        vec!["docs/A.txt".to_string(), "docs/a.txt".to_string()]
-    );
     assert_eq!(read(repo.path(), "docs/A.txt"), "upper");
-    assert_eq!(read(repo.path(), "docs/a.txt"), "lower");
+    if case_insensitive {
+        let error = result.expect_err("aliased destination must refuse replacement");
+        assert_eq!(error.code(), "ENTRY_CONFLICT");
+        assert_eq!(error.effect(), Some("unknown"));
+        assert_eq!(
+            error.details().and_then(|details| details.get("applied")),
+            Some(&serde_json::json!(["docs/A.txt"]))
+        );
+        assert_eq!(read(repo.path(), "app/lower/a.txt"), "lower");
+    } else {
+        assert_eq!(
+            result.expect("distinct destinations"),
+            vec!["docs/A.txt".to_string(), "docs/a.txt".to_string()]
+        );
+        assert_eq!(read(repo.path(), "docs/a.txt"), "lower");
+    }
 }
 
-/// What the filesystem answered, turned into what the UI is told. An occupied
-/// destination the no-replace rename lost to is a conflict naming that path,
-/// and once an earlier entry has landed the action is half-applied, so the
-/// effect is unknown and `details.applied` says what did move.
+/// A lost no-replace race names its conflict and any entries already moved.
+/// Partial application has an unknown effect; zero writes are notApplied.
 #[test]
 fn the_rename_failures_are_classified_by_what_the_filesystem_answered() {
     use std::io::{Error, ErrorKind};

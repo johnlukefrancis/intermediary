@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-09-06
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -22,7 +22,11 @@ Depends on: ADR-000, ADR-007
 
 Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with no default repos.
 
-**Next:** Maintenance and enhancements based on real-world usage.
+**Completed 2026-09-29:** Native Apple Silicon macOS core workflow, owned by
+`docs/implementation/macos_port_implementation.md`. The locally installed app
+passed repository, watcher, context ZIP, native terminal and Finder drag
+verification; JL confirmed it works. Windows runtime regression verification
+requires a Windows host; distribution notarization remains separate.
 
 ---
 

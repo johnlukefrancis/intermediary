@@ -5,10 +5,10 @@ import type React from "react";
 import type { TerminalTabSnapshot } from "../../lib/terminal/terminal_types.js";
 import {
   CLOSE_LABEL,
-  PWSH_FAILED_TO_START,
+  SHELL_FAILED_TO_START,
   RESTART_LABEL,
   RETRY_LABEL,
-  STARTING_PWSH,
+  STARTING_SHELL,
   processExitedHeading,
 } from "./terminal_copy.js";
 
@@ -30,7 +30,7 @@ export function TerminalExitNotice({
   if (tab.status === "starting") {
     return (
       <div className="terminal-column__notice" role="status">
-        <p className="empty-state empty-state--waiting">{STARTING_PWSH}</p>
+        <p className="empty-state empty-state--waiting">{STARTING_SHELL}</p>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export function TerminalExitNotice({
     <div className="terminal-column__notice" role={failed ? "alert" : "status"}>
       <div className="terminal-column__card" data-tone={failed ? "error" : undefined}>
         <p className="empty-state">
-          {failed ? PWSH_FAILED_TO_START : processExitedHeading(tab.exitCode)}
+          {failed ? SHELL_FAILED_TO_START : processExitedHeading(tab.exitCode)}
         </p>
         {failed && tab.error !== null && tab.error.length > 0 && (
           <div className="build-error terminal-column__message">{tab.error}</div>

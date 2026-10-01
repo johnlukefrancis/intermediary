@@ -62,28 +62,35 @@ impl TerminalRegistry {
                 }
             }
         }
-        let retry_deadline = Instant::now() + APP_EXIT_UNRESOLVED_RETRY;
         let mut receipts = Vec::with_capacity(transactions.len());
         let mut receipt_errors = Vec::new();
+        let mut unresolved = Vec::new();
         for transaction in &transactions {
             match transaction.wait_receipt() {
                 Ok(receipt) => {
                     if matches!(receipt.outcome, Some(CloseOutcome::StillAlive)) {
-                        let remaining = retry_deadline.saturating_duration_since(Instant::now());
-                        if let Err(err) = self.retry_unresolved(transaction, remaining) {
-                            logging::log("error", "terminal", "shutdown_all", &err);
-                        }
-                    }
-                    match transaction.wait_receipt() {
-                        Ok(receipt) => receipts.push(receipt),
-                        Err(err) => receipt_errors
-                            .push(format!("id={} receipt_error=\"{err}\"", transaction.id)),
+                        unresolved.push(transaction);
+                    } else {
+                        receipts.push(receipt);
                     }
                 }
                 Err(err) => {
                     let detail = format!("id={} receipt_error=\"{err}\"", transaction.id);
                     logging::log("error", "terminal", "shutdown_all", &detail);
                     receipt_errors.push(detail);
+                }
+            }
+        }
+        let retry_deadline = Instant::now() + APP_EXIT_UNRESOLVED_RETRY;
+        for transaction in unresolved {
+            let remaining = retry_deadline.saturating_duration_since(Instant::now());
+            if let Err(err) = self.retry_unresolved(transaction, remaining) {
+                logging::log("error", "terminal", "shutdown_all", &err);
+            }
+            match transaction.wait_receipt() {
+                Ok(receipt) => receipts.push(receipt),
+                Err(err) => {
+                    receipt_errors.push(format!("id={} receipt_error=\"{err}\"", transaction.id))
                 }
             }
         }

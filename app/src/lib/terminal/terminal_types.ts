@@ -7,6 +7,9 @@ import type { TerminalCloseReason } from "./terminal_ipc.js";
 /** Sessions the app will hold at once; mirrors the backend cap */
 export const MAX_TERMINAL_SESSIONS = 12;
 
+export const TERMINAL_SHELL_LABEL =
+  typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent) ? "PWSH" : "SHELL";
+
 export type TerminalTabStatus = "starting" | "running" | "exited" | "failed";
 
 /** Immutable view of one tab; a new object is produced on every change */
@@ -39,10 +42,7 @@ export const EMPTY_TERMINAL_GROUP: TerminalGroupSnapshot = Object.freeze({
   autoOpened: false,
 });
 
-/**
- * The module-level registry: owns every xterm instance and its DOM element outside React.
- * React components only read snapshots and adopt/park the active element.
- */
+/** The registry owns xterm and DOM outside React; components only read snapshots and adopt/park. */
 export interface TerminalRegistryApi {
   subscribe(listener: () => void): () => void;
   /** Stable reference between changes (safe for `useSyncExternalStore`) */

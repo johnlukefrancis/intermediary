@@ -408,6 +408,7 @@ crates/im_agent/src/repos/image_file_reader.rs - Repo-relative image file reader
 crates/im_agent/src/repos/import/copy.rs - The import conflict pre-pass and the policy-specific copy that writes into the worktree
 crates/im_agent/src/repos/import/mod.rs - Copying external OS files and folders into one directory of a repo worktree
 crates/im_agent/src/repos/import/sources.rs - Source translation, per-source validation, and the bounded walk that plans an import
+crates/im_agent/src/repos/import/tests_git_control.rs - Real linked-worktree imports refuse Git pointer files before every write policy
 crates/im_agent/src/repos/import/tests_refusals.rs - Import refusal tests: every error the wire contract names, and the proof nothing was written
 crates/im_agent/src/repos/import/tests_support.rs - Shared fixtures for the import tests: a worktree, an external source, and one call
 crates/im_agent/src/repos/import/tests.rs - Import behaviour tests: what lands in the worktree under each conflict policy
@@ -514,7 +515,7 @@ crates/im_bundle/src/bin/im_bundle_cli.rs - CLI entry point for im_bundle - scan
 crates/im_bundle/src/cancel.rs - Cooperative cancellation token for bundle scan and zip operations
 crates/im_bundle/src/compression_policy.rs - Compression policy for bundle entries based on extension and size
 crates/im_bundle/src/error.rs - Error types for bundle scanning and zip writing
-crates/im_bundle/src/fs_atomic.rs - Rename that refuses to replace an existing destination, on the two platforms the product runs on
+crates/im_bundle/src/fs_atomic.rs - Atomic no-replace rename for Windows, Linux and macOS
 crates/im_bundle/src/git_capture/command_child.rs - Stream worker threads, bounded pipe readers, and exit-status helpers for the Git runner
 crates/im_bundle/src/git_capture/command_drain.rs - Bounded pipe drain for the Git runner: grace after exit, then termination of the whole process tree
 crates/im_bundle/src/git_capture/command_failure.rs - Why a Git command produced no usable output, and the bounded streams it failed with
@@ -547,6 +548,7 @@ crates/im_bundle/src/git.rs - Public Git primitives shared by bundle evidence ca
 crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
+crates/im_bundle/src/macos_process_session.rs - macOS process-session ownership for native terminals and supervised agents
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
 crates/im_bundle/src/omission.rs - Why a changed repository path fell outside the bundle selection
 crates/im_bundle/src/plan.rs - Bundle plan schema and loader for im_bundle_cli
@@ -615,6 +617,7 @@ scripts/test/run_ts_tests.mjs - Bundles every app/src/**/*_test.ts(x) with esbui
 scripts/zip/zip_bundles.mjs - Builds timestamped Intermediary zip bundles for ChatGPT context.
 src-tauri/build.rs - Tauri build script
 src-tauri/src/bin/intermediary.rs - Binary entry point for Tauri app
+src-tauri/src/lib/agent/bundle_resources.rs - Resolves packaged agent resources and their version metadata
 src-tauri/src/lib/agent/host_process_control.rs - Windows host-agent process detection and stale-port termination helpers
 src-tauri/src/lib/agent/install_host_binary.rs - Resolve and copy the correct host-agent binary into an install bundle staging directory
 src-tauri/src/lib/agent/install_runtime.rs - Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup
@@ -690,6 +693,7 @@ src-tauri/src/lib/config/types/model.rs - Supporting persisted configuration mod
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/ui_state.rs - Remembered UI state: rail section, left files mode, rail width, and window bounds
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
+src-tauri/src/lib/macos_instance.rs - Mac application exclusivity before mutable startup and native activation
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt
 src-tauri/src/lib/obs/mod.rs - Observability module exports
@@ -710,12 +714,15 @@ src-tauri/src/lib/terminal/registry_tests.rs - Atomic admission and Opening-tran
 src-tauri/src/lib/terminal/registry.rs - Atomic admission and lifecycle registry retaining every terminal transaction through its joined receipt
 src-tauri/src/lib/terminal/session_close.rs - The one close routine of a session: console-first pty drop, bounded wait, Job Object escalation, last-resort kill
 src-tauri/src/lib/terminal/session_open.rs - Opens a pwsh session for a repo root: validation, shell and start-dir resolution, spawn, and the open/open-failed log...
+src-tauri/src/lib/terminal/session_recovery_tests.rs - Failed-open ownership and slow-first-pass shutdown recovery regressions
 src-tauri/src/lib/terminal/session_spawn_cleanup.rs - Complete process-tree and PTY cleanup for terminal opens that fail after spawn
-src-tauri/src/lib/terminal/session_spawn_tests.rs - Lifecycle oracle of a spawned session on the Linux toolchain: bytes then exit frame, and the console-first close
+src-tauri/src/lib/terminal/session_spawn_tests.rs - Unix PTY lifecycle checks for output, joined exit, and attached process cleanup
 src-tauri/src/lib/terminal/session_spawn.rs - Resource-symmetric terminal spawn into an already-admitted transaction
 src-tauri/src/lib/terminal/session.rs - One live terminal session: pty ends, child killer and Job Object, flow gate, exit record, phase and output channel
-src-tauri/src/lib/terminal/shell.rs - Profile-faithful PowerShell command and exact inherited environment for terminal spawn
+src-tauri/src/lib/terminal/shell.rs - Native profile-loaded shell command and terminal environment
+src-tauri/src/lib/terminal/spawn_faults.rs - Test-only one-shot worker and cleanup failures scoped to the spawning test thread
 src-tauri/src/lib/terminal/start_dir.rs - Maps a repo root to the directory pwsh starts in and the WSL entry command it runs for a native WSL root
+src-tauri/src/lib/terminal/transaction_receipts.rs - Final and unresolved terminal receipts retaining process ownership through recovery
 src-tauri/src/lib/terminal/transaction.rs - One admitted terminal transaction from Opening through joined Terminal receipt
 src-tauri/src/lib/terminal/waiter_thread.rs - Retained child waiter that records exit and requests the single external reaper
 src-tauri/src/lib/terminal/windows_build.rs - Reads the host's CurrentBuildNumber so xterm can enable ConPTY-aware reflow; None wherever it cannot be known

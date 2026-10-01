@@ -5,13 +5,14 @@ use super::reader_thread::spawn_reader;
 use super::registry::TerminalRegistry;
 use super::session::{SessionParts, TerminalSession};
 use super::session_spawn_cleanup::{
-    cleanup_detail, close_unstarted_pty, discard_spawned, FAILED_OPEN_JOB_WAIT,
+    cleanup_detail, close_unstarted_pty, discard_spawned, failed_open_detail,
+    terminate_failed_open, FAILED_OPEN_JOB_WAIT,
 };
 use super::shell::TerminalCommand;
 use super::transaction::{TerminalTransaction, WorkerHandles};
 use super::waiter_thread::{spawn_waiter, terminate_and_observe, PtyChild};
 use super::worker_start::WorkerStart;
-use im_bundle::process_job::JobHandle;
+use super::TerminalTree;
 use portable_pty::{MasterPty, PtySize};
 use std::io::{Read, Write};
 use std::sync::Arc;
@@ -52,7 +53,7 @@ pub fn spawn_session(
     transaction: &Arc<TerminalTransaction>,
     spec: SpawnSpec,
 ) -> Result<Arc<TerminalSession>, SpawnError> {
-    let job = JobHandle::create().map_err(|err| {
+    let job = TerminalTree::create().map_err(|err| {
         SpawnError::new(
             "job_create",
             format!("Failed to create the terminal's process tree owner: {err}"),
@@ -92,17 +93,14 @@ pub fn spawn_session(
     ) {
         Ok(waiter) => waiter,
         Err(mut err) => {
-            let cleanup = session
-                .job
-                .terminate_and_observe(FAILED_OPEN_JOB_WAIT)
-                .err();
+            let cleanup = terminate_failed_open(&session);
             if let Some(mut child) = err.child.take() {
                 terminate_and_observe(&mut child);
             }
             close_unstarted_pty(&session, Some(spawned.reader));
             return Err(SpawnError::new(
                 "waiter_thread",
-                cleanup_detail(&err.message, cleanup),
+                failed_open_detail(transaction, session, &err.message, cleanup),
             ));
         }
     };
@@ -116,16 +114,13 @@ pub fn spawn_session(
         Ok(reader) => reader,
         Err(err) => {
             start.abort();
-            let cleanup = session
-                .job
-                .terminate_and_observe(FAILED_OPEN_JOB_WAIT)
-                .err();
+            let cleanup = terminate_failed_open(&session);
             let _ = session.kill_child();
             let _ = waiter.join();
             close_unstarted_pty(&session, err.reader);
             return Err(SpawnError::new(
                 "reader_thread",
-                cleanup_detail(&err.message, cleanup),
+                failed_open_detail(transaction, session, &err.message, cleanup),
             ));
         }
     };
@@ -169,7 +164,7 @@ pub fn spawn_session(
 fn spawn_platform(
     command: TerminalCommand,
     size: PtySize,
-    _job: &JobHandle,
+    _job: &TerminalTree,
 ) -> Result<SpawnedPty, SpawnError> {
     use portable_pty::{native_pty_system, PtyPair};
     let PtyPair { master, slave } = native_pty_system().openpty(size).map_err(|err| {
@@ -178,7 +173,7 @@ fn spawn_platform(
             format!("Failed to open a pseudoconsole: {err:#}"),
         )
     })?;
-    let writer = master.take_writer().map_err(|err| {
+    let writer = unix_input_writer(master.as_ref()).map_err(|err| {
         SpawnError::new(
             "take_writer",
             format!("Failed to open terminal input: {err:#}"),
@@ -190,10 +185,19 @@ fn spawn_platform(
             format!("Failed to open terminal output: {err:#}"),
         )
     })?;
-    let child = slave
+    let mut child = slave
         .spawn_command(command.into_portable())
         .map_err(|err| SpawnError::new("spawn", format!("Failed to start the shell: {err:#}")))?;
     drop(slave);
+    #[cfg(target_os = "macos")]
+    if let Err(error) = child
+        .process_id()
+        .ok_or_else(|| std::io::Error::other("PTY child has no process id"))
+        .and_then(|pid| _job.bind(pid))
+    {
+        terminate_and_observe(&mut child);
+        return Err(SpawnError::new("session_owner", error.to_string()));
+    }
     Ok(SpawnedPty {
         master,
         writer,
@@ -202,11 +206,22 @@ fn spawn_platform(
     })
 }
 
+#[cfg(unix)]
+fn unix_input_writer(master: &dyn MasterPty) -> std::io::Result<Box<dyn Write + Send>> {
+    use std::os::fd::BorrowedFd;
+    let fd = master
+        .as_raw_fd()
+        .ok_or_else(|| std::io::Error::other("Native PTY has no input descriptor"))?;
+    // The master owns fd during duplication. File closes without injecting newline/EOF.
+    let owned = unsafe { BorrowedFd::borrow_raw(fd) }.try_clone_to_owned()?;
+    Ok(Box::new(std::fs::File::from(owned)))
+}
+
 #[cfg(windows)]
 fn spawn_platform(
     command: TerminalCommand,
     size: PtySize,
-    job: &JobHandle,
+    job: &TerminalTree,
 ) -> Result<SpawnedPty, SpawnError> {
     super::windows_pty::spawn(command, size, job)
 }

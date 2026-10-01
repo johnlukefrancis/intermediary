@@ -9,6 +9,8 @@ pub mod git;
 pub mod git_capture;
 pub mod global_excludes;
 pub mod global_excludes_summary;
+#[cfg(target_os = "macos")]
+mod macos_process_session;
 pub mod manifest;
 pub(crate) mod omission;
 pub mod plan;

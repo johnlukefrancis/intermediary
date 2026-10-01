@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Terminal close no longer injects newline/EOF into unsubmitted Unix input.
+  Failed worker creation retains unresolved process-tree ownership and its
+  capacity slot; app-exit retries receive a fresh shared observation interval.
+  Folder imports refuse regular `.git` pointer files at every depth, including
+  under Replace, before writing any entries.
+
+- Repo selector and connection bar now share one continuous header texture.
+  macOS startup excludes duplicate app processes and reopens the existing window.
+
+- Native macOS port candidate: Apple Silicon app and host-agent build, macOS
+  exclusive file moves, profile-loaded native terminal, AppKit clipboard,
+  Command-C/V and session-owned teardown. Local signing and packaged-helper
+  execution preserve the Windows installer route. Desktop acceptance remains
+  tracked in `docs/implementation/macos_port_implementation.md`.
+
 - Stream image strips no longer refuse a screenshot the viewer opens fine: a tile retains a thumbnail (long edge `STRIP_THUMB_MAX_PX` 1024, WebP via `createImageBitmap`) instead of the source file, so the 4 MiB source gate is gone — `IMAGE_CARD_MAX_BYTES` is now the agent's own 25 MiB ceiling, `MAX_TILE_PIXELS` is 64 MP (an 8K frame previews) and gates the probe before any decode, and the source-byte and retained-pixel budgets are deleted because `MAX_IMAGE_TILES` alone bounds memory. A tile past the pixel gate names its size (`NO PREVIEW · 12000×9000`) instead of `TOO LARGE`.
 - Stream image tiles outside the active ZIP selection no longer render at half opacity, which read as a dark filter over every picture compared with the opened image; the pixels stay at full brightness and the outside-selection state moves to the tile's chrome (muted badge, edit counter, and name, plus a dashed slot border, matching the dashed `OUTSIDE SELECTION` chip on file cards).
 - The ZIPS tree now shows what the bundle will actually contain: a file that a global exclude rule drops at build time (an excluded extension such as `.blend`, an excluded file name, or an excluded path segment) renders greyed with a disabled toggle and an "excluded by a global rule" hint, instead of appearing included and silently vanishing from the zip. The frontend matcher in `app/src/shared/global_exclude_rules.ts` mirrors the Rust scanner and is now the single owner of exclude normalization (the options editor and config migrations use it too); the Stream selection filter and the bundle-visible recent files honour the same rules.

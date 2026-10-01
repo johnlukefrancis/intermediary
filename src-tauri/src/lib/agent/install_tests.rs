@@ -9,6 +9,7 @@ use std::fs;
 use std::path::Path;
 
 #[test]
+#[cfg(not(target_os = "macos"))]
 fn prefer_installed_reinstalls_when_app_local_binary_is_stale() {
     let temp = tempfile::tempdir().expect("tempdir");
     let resource_dir = temp.path().join("resources");
@@ -37,6 +38,7 @@ fn prefer_installed_reinstalls_when_app_local_binary_is_stale() {
 }
 
 #[test]
+#[cfg(not(target_os = "macos"))]
 fn prefer_installed_reports_current_when_app_local_bundle_matches() {
     let temp = tempfile::tempdir().expect("tempdir");
     let resource_dir = temp.path().join("resources");
@@ -53,6 +55,29 @@ fn prefer_installed_reports_current_when_app_local_bundle_matches() {
 
     assert_eq!(resolved.install_state, AgentBundleInstallState::Current);
     assert_eq!(resolved.bundle.agent_dir_host, first.bundle.agent_dir_host);
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn macos_executes_the_packaged_helper_without_replacing_app_data() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let resource_dir = temp.path().join("resources");
+    let app_local_data = temp.path().join("app_local");
+    let bundle_dir = resource_dir.join(AGENT_BUNDLE_DIR);
+    let old_install = app_local_data.join(AGENT_INSTALL_DIR);
+    write_agent_bundle(&bundle_dir, "packaged-host", "unused-wsl");
+    write_installed_agent_bundle(&old_install, "preserved-host", "preserved-wsl");
+    let resolved = resolve_launch_bundle(&resource_dir, &app_local_data, true).expect("resolve");
+    assert_eq!(
+        resolved.bundle.host_agent_binary_host,
+        bundle_dir.join(HOST_AGENT_BINARY_FILE)
+    );
+    assert!(resolved.bundle.wsl_agent_binary_host.is_none());
+    assert_eq!(resolved.install_state, AgentBundleInstallState::Current);
+    assert_eq!(
+        fs::read(old_install.join(HOST_AGENT_BINARY_FILE)).expect("old helper"),
+        b"preserved-host"
+    );
 }
 
 fn write_agent_bundle(bundle_dir: &Path, host_binary: &str, wsl_binary: &str) {

@@ -20,21 +20,14 @@ use std::os::windows::process::CommandExt;
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
 const READY_POLL: Duration = Duration::from_millis(250);
 
-/// The host agent we started, together with the owner of every process it goes
-/// on to start. They are returned as one value because they have one lifetime:
-/// the supervisor records both or ends both.
+/// The spawned child and process-tree owner travel together through supervision.
 pub struct SpawnedHostAgent {
     pub child: Child,
     pub job: JobHandle,
 }
 
-/// Starts the host agent inside a process-tree owner created *before* the spawn
-/// and joined to the child immediately after it, so a later stop reaches
-/// everything the agent started and not just the agent.
-///
-/// There is no unowned path: an agent we cannot own is an agent we cannot
-/// reliably stop, and it is not started. Off Windows the owner is inert (see
-/// `im_bundle::process_job`), so this is one code path on every platform.
+/// Spawns the agent with a Windows Job or an isolated macOS session.
+/// Failure to establish ownership ends the unrecorded child before returning.
 pub fn spawn_host_agent_process(
     bundle: &AgentBundlePaths,
     host_port: u16,
@@ -78,16 +71,26 @@ pub fn spawn_host_agent_process(
             path_to_string(&bundle.log_dir_host)?,
         )
         .env("INTERMEDIARY_AGENT_STDIO_LOGGING", "0")
-        // Explicitly *not* a supervisor pipe. The WSL backend is given a piped
-        // stdin on purpose, because closing it is the only way to ask an agent
-        // inside the distro to drain when this process dies
-        // (`im_agent::server::stdin_eof`). The host agent needs no such owner —
-        // it dies with its Job Object — and inheriting this process's stdin
-        // would let an unrelated pipe closing read as a shutdown request.
+        // Windows has no stdin EOF owner; macOS installs a retained supervisor pipe below.
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
 
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::unix::process::CommandExt;
+        command.stdin(Stdio::piped());
+        // SAFETY: setsid is async-signal-safe and creates the session before agent code runs.
+        unsafe {
+            command.pre_exec(|| {
+                if libc::setsid() < 0 {
+                    Err(std::io::Error::last_os_error())
+                } else {
+                    Ok(())
+                }
+            });
+        }
+    }
     let mut child = command
         .spawn()
         .map_err(|err| format_host_spawn_error(&bundle.host_agent_binary_host, err))?;

@@ -95,11 +95,6 @@ async function ensureHostBinary() {
     return;
   }
 
-  const existingHostBinary = await tryReadFileInfo(hostBinaryPath);
-  if (existingHostBinary && existingHostBinary.isFile() && existingHostBinary.size > 0) {
-    return;
-  }
-
   throw new Error(
     `Agent bundle is missing ${hostBinaryName}. See docs/commands/agent_bundle.md.`
   );

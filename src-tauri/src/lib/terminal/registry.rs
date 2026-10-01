@@ -145,6 +145,8 @@ impl TerminalRegistry {
         let Some(session) = transaction.unresolved_session()? else {
             return Ok(());
         };
+        #[cfg(test)]
+        super::spawn_faults::record_retry(timeout);
         session.job.terminate_and_observe(timeout).map_err(|err| {
             format!(
                 "Terminal session {} process tree remains unresolved: {err}",
@@ -152,6 +154,15 @@ impl TerminalRegistry {
             )
         })?;
         let code = session.exit.get()?.and_then(|record| record.code);
+        if let Some(bundle) = transaction.take_retained_reap()? {
+            reaper::finish(
+                self.clone(),
+                transaction.clone(),
+                bundle,
+                Some(CloseOutcome::Escalated { code }),
+            );
+            return Ok(());
+        }
         if transaction.resolve_still_alive(CloseOutcome::Escalated { code })? {
             let mut sessions = self.lock()?;
             remove_exact(&mut sessions, transaction);
@@ -184,10 +195,7 @@ impl TerminalRegistry {
         }
         let registry = self.clone();
         let owned = transaction.clone();
-        // The runtime blocking pool is the external joiner. Scheduling has no
-        // fallible per-session OS-thread creation seam, so a reader or waiter
-        // cannot be stranded holding its own JoinHandle after such a failure.
-        // The transaction receipt, not this task handle, is authoritative.
+        // The blocking pool joins workers externally; the transaction owns the receipt.
         drop(tauri::async_runtime::spawn_blocking(move || {
             reaper::run(registry, owned)
         }));

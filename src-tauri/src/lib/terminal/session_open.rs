@@ -76,10 +76,10 @@ fn open_inner(
         .admit(&request.session_id, page_generation)
         .map_err(|err| SpawnError::new("admission", err))?;
     let result = (|| {
-        let pwsh = shell::resolve_pwsh().map_err(|err| SpawnError::new("resolve_pwsh", err))?;
+        let shell = shell::resolve_shell().map_err(|err| SpawnError::new("resolve_shell", err))?;
         let start = start_dir::resolve(&request.repo_root, distro)
             .map_err(|err| SpawnError::new("start_dir", err))?;
-        let command = shell::build_command(&pwsh, &start);
+        let command = shell::build_command(&shell, &start);
         let session = spawn_session(
             registry,
             &transaction,
@@ -138,7 +138,7 @@ mod tests {
 
     /// Off Windows the open is refused before anything is spawned, with the
     /// reason a user can act on; it never pretends to succeed.
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, target_os = "macos")))]
     #[test]
     fn off_windows_the_open_is_an_honest_error() {
         use super::open_session;

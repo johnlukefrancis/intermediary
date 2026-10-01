@@ -8,6 +8,9 @@ use super::session_close::CloseBudget;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 
+#[path = "transaction_receipts.rs"]
+mod receipts;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransactionPhase {
     Opening,
@@ -43,6 +46,7 @@ pub struct ReapBundle {
     pub workers: WorkerHandles,
     pub close_reason: Option<CloseReason>,
     pub close_budget: Option<CloseBudget>,
+    pub pty_close: Option<JoinHandle<()>>,
 }
 
 struct TransactionState {
@@ -53,6 +57,7 @@ struct TransactionState {
     close_budget: Option<CloseBudget>,
     reaper_started: bool,
     receipt: Option<TerminalReceipt>,
+    retained_reap: Option<ReapBundle>,
 }
 
 pub struct TerminalTransaction {
@@ -73,6 +78,7 @@ impl TerminalTransaction {
                 close_budget: None,
                 reaper_started: false,
                 receipt: None,
+                retained_reap: None,
             }),
             settled: Condvar::new(),
         }
@@ -181,77 +187,8 @@ impl TerminalTransaction {
             workers,
             close_reason: state.close_reason,
             close_budget: state.close_budget,
+            pty_close: None,
         })
-    }
-
-    pub fn complete(&self, receipt: TerminalReceipt) -> Result<(), String> {
-        let mut state = self.lock()?;
-        state.phase = if matches!(receipt.outcome, Some(CloseOutcome::StillAlive)) {
-            TransactionPhase::Reaping
-        } else {
-            TransactionPhase::Terminal
-        };
-        state.receipt = Some(receipt);
-        self.settled.notify_all();
-        Ok(())
-    }
-
-    /// A failed Job escalation keeps the session owner resident. App exit may
-    /// retry that one remaining process-tree receipt without recreating worker
-    /// or PTY ownership that has already joined.
-    pub fn unresolved_session(&self) -> Result<Option<Arc<TerminalSession>>, String> {
-        let state = self.lock()?;
-        Ok(matches!(
-            state.receipt.and_then(|receipt| receipt.outcome),
-            Some(CloseOutcome::StillAlive)
-        )
-        .then(|| state.session.clone())
-        .flatten())
-    }
-
-    pub fn resolve_still_alive(&self, outcome: CloseOutcome) -> Result<bool, String> {
-        let mut state = self.lock()?;
-        let Some(mut receipt) = state.receipt else {
-            return Ok(false);
-        };
-        if !matches!(receipt.outcome, Some(CloseOutcome::StillAlive)) {
-            return Ok(false);
-        }
-        receipt.outcome = Some(outcome);
-        state.receipt = Some(receipt);
-        state.phase = TransactionPhase::Terminal;
-        self.settled.notify_all();
-        Ok(true)
-    }
-
-    /// Settles an admitted open only while no runtime has been installed.
-    /// A concurrent close reason wins over the generic open-failure label.
-    pub fn complete_open_failure(&self) -> Result<Option<TerminalReceipt>, String> {
-        let mut state = self.lock()?;
-        if state.session.is_some() || state.receipt.is_some() {
-            return Ok(None);
-        }
-        let receipt = TerminalReceipt {
-            reason: state.close_reason.unwrap_or(CloseReason::OpenFailed),
-            outcome: None,
-        };
-        state.phase = TransactionPhase::Terminal;
-        state.receipt = Some(receipt);
-        self.settled.notify_all();
-        Ok(Some(receipt))
-    }
-
-    pub fn wait_receipt(&self) -> Result<TerminalReceipt, String> {
-        let mut state = self.lock()?;
-        loop {
-            if let Some(receipt) = state.receipt {
-                return Ok(receipt);
-            }
-            state = self
-                .settled
-                .wait(state)
-                .unwrap_or_else(|poison| poison.into_inner());
-        }
     }
 
     #[cfg(test)]

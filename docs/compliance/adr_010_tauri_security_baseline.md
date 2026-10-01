@@ -40,6 +40,11 @@ Intermediary ships as a local desktop app. The webview must be locked down for p
 - Tauri widens a runtime filesystem scope for each dropped path; no `fs` plugin or asset protocol is registered, so that scope is inert. Registering an `fs` plugin or asset protocol later must revisit this decision.
 
 7) **Integrated terminal is a Tauri IPC surface** (2026-09-04)
+- Native macOS extension (2026-09-29): the same six commands own a PTY and the
+  account's login shell; AppKit NSPasteboard supplies clipboard text. Native
+  session teardown replaces Windows Job/ConPTY teardown on Mac. The app sets
+  `SHELL` and `TERM=xterm-256color` for the native shell alongside its terminal
+  identity. No plugin, socket, capability or CSP expansion is introduced.
 - Pseudoconsole sessions (Job Object, ConPTY, the pwsh child, its reader and waiter threads) are owned by the Tauri process (`src-tauri/src/lib/terminal/`) and reachable only through app commands over Tauri IPC — `terminal_open`, `terminal_write`, `terminal_resize`, `terminal_ack`, `terminal_close`, `terminal_clipboard_text` — with output on a per-session raw-byte `Channel`. Neither agent socket carries terminal bytes.
 - No shell plugin (`tauri-plugin-shell` has no PTY) and no clipboard plugin (`tauri-plugin-clipboard-manager` would widen capabilities). No CSP change and no capability change: the raw channel's large-frame path fetches from `http://ipc.localhost`, which `connect-src` already allows.
 - The clipboard is read in Rust (`CF_UNICODETEXT`) for paste, because WebView2 blocks `navigator.clipboard.readText` without a permission prompt the app cannot grant from its window config; copy keeps using `navigator.clipboard.writeText`.

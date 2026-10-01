@@ -5,12 +5,12 @@ use super::frames::{CloseOutcome, CloseReason};
 use super::reader_thread::ReaderResult;
 use super::registry::TerminalRegistry;
 use super::session_close::{close_session, fault, reason_label};
-use super::transaction::{TerminalReceipt, TerminalTransaction};
+use super::transaction::{ReapBundle, TerminalReceipt, TerminalTransaction};
 use crate::obs::logging;
 use std::sync::Arc;
 
 pub fn run(registry: TerminalRegistry, transaction: Arc<TerminalTransaction>) {
-    let bundle = match transaction.take_reap_bundle() {
+    let mut bundle = match transaction.take_reap_bundle() {
         Ok(bundle) => bundle,
         Err(err) => {
             logging::log("error", "terminal", "session_fault", &err);
@@ -25,7 +25,45 @@ pub fn run(registry: TerminalRegistry, transaction: Arc<TerminalTransaction>) {
         Some(execution) => (Some(execution.outcome), execution.pty_close),
         None => (None, None),
     };
+    bundle.pty_close = pty_close;
+    bundle.session.gate.release();
+    #[cfg(target_os = "macos")]
+    let outcome = if outcome.is_none() {
+        match bundle
+            .session
+            .job
+            .terminate_and_observe(std::time::Duration::from_millis(500))
+        {
+            Ok(()) => None,
+            Err(err) => {
+                fault(&bundle.session, "session_cleanup", &err.to_string());
+                Some(CloseOutcome::StillAlive)
+            }
+        }
+    } else {
+        outcome
+    };
+    if matches!(outcome, Some(CloseOutcome::StillAlive)) {
+        if let Err(err) = bundle
+            .session
+            .begin_close(bundle.close_reason.unwrap_or(CloseReason::ChildExit))
+        {
+            fault(&bundle.session, "begin_close", &err);
+        }
+        if let Err(err) = transaction.retain_reap(bundle) {
+            logging::log("error", "terminal", "retain_reap", &err);
+        }
+        return;
+    }
+    finish(registry, transaction, bundle, outcome);
+}
 
+pub(super) fn finish(
+    registry: TerminalRegistry,
+    transaction: Arc<TerminalTransaction>,
+    bundle: ReapBundle,
+    outcome: Option<CloseOutcome>,
+) {
     let waiter_ok = bundle.workers.waiter.join().is_ok();
     if !waiter_ok {
         fault(&bundle.session, "waiter_join", "terminal waiter panicked");
@@ -40,7 +78,7 @@ pub fn run(registry: TerminalRegistry, transaction: Arc<TerminalTransaction>) {
             }
         }
     };
-    if let Some(handle) = pty_close {
+    if let Some(handle) = bundle.pty_close {
         if handle.join().is_err() {
             fault(
                 &bundle.session,

@@ -9,6 +9,8 @@ target/
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+src-tauri/resources/agent_bundle/im_host_agent
+src-tauri/resources/agent_bundle/im_host_agent.exe
 
 # pnpm
 .pnpm-debug.log

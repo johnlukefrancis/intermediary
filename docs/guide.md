@@ -56,6 +56,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 
 | Document | Purpose |
 |----------|---------|
+| [docs/implementation/macos_port_implementation.md](implementation/macos_port_implementation.md) | Active Quest for native Apple Silicon tooling, port implementation, packaging and desktop witness |
 | [docs/implementation/terminal_hardening_implementation.md](implementation/terminal_hardening_implementation.md) | Active execution owner for the terminal lifecycle, WSL-entry, bounded-output, Job-at-creation, cap, and flow-credit hardening |
 | [docs/implementation/stream_panel_implementation.md](implementation/stream_panel_implementation.md) | Active execution owner for the Stream panel: agent delta pipeline, fileDelta protocol, store, cards, motion |
 
@@ -103,6 +104,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | Document | Purpose |
 |----------|---------|
 | [docs/commands/dev_windows.md](commands/dev_windows.md) | Windows development workflow with WSL sync |
+| [docs/commands/dev_macos.md](commands/dev_macos.md) | Native Apple Silicon toolchain activation, checks and app build |
 | [docs/commands/dev_wsl_agent.md](commands/dev_wsl_agent.md) | Start the Rust WSL agent for local development |
 | [docs/commands/agent.md](commands/agent.md) | WSL agent development and testing commands |
 | [docs/commands/kill_agent_ports_windows.md](commands/kill_agent_ports_windows.md) | Clear stale Windows or WSL listeners from the Intermediary agent port |

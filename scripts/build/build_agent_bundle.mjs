@@ -1,9 +1,10 @@
 // Path: scripts/build/build_agent_bundle.mjs
-// Description: Build the bundled WSL agent binary and sync it into Tauri resources.
+// Description: Build the native agent bundle on macOS or the Linux agent bundle for WSL.
 
 import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
+import { ensureAgentBundle } from "./ensure_agent_bundle.mjs";
 
 function ensureLinux() {
   if (process.platform !== "linux") {
@@ -28,6 +29,10 @@ function runCommand(command, args, options = {}) {
 }
 
 async function main() {
+  if (process.platform === "darwin") {
+    await ensureAgentBundle();
+    return;
+  }
   ensureLinux();
   const repoRoot = process.cwd();
   const scriptPath = path.join(

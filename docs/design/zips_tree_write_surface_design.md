@@ -1,5 +1,5 @@
 # ZIPS Tree Write Surface — Design
-Updated on: 2026-09-04
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-008, ADR-009, ADR-010
 
@@ -29,7 +29,7 @@ design owns the discard quarantine the delete reuses.
 
 | Situation | Behaviour |
 |---|---|
-| OS files or folders dropped on the tree | Copied into the targeted directory (`importFiles`); folders recurse (symlinks skipped, 10,000-entry bound). A dropped folder that contains a `.git` directory at any depth is refused whole with `INVALID_PATH` naming it — never a silent skip. |
+| OS files or folders dropped on the tree | Copied into the targeted directory (`importFiles`); folders recurse (ordinary symlinks skipped, 10,000-entry bound). A dropped folder containing any `.git` entry at any depth is refused whole with `INVALID_PATH` naming it, before file-type dispatch or any write. This includes regular Git pointer files used by linked worktrees/submodules, and Replace cannot authorize them. |
 | Any action whose source or destination has a `.git` path component (case-insensitive) | `INVALID_PATH` before anything resolves. `.git` is never listed as a directory and cannot be expanded or listed. |
 | A destination file already exists (import, copy, move) | Refused with `ENTRY_CONFLICT` and the full list of colliding paths; nothing written. The Replace modal shows up to 8 and the true count. |
 | Replace confirmed | The request carries `onConflict: { replace: [paths] }` — exactly the reviewed list. The agent recomputes the live collisions; any collision not in that list is refused again with the fresh full list (a new modal). Only authorized destinations use a replacing write (temp + rename over, or plain rename); every other destination uses a non-replacing primitive (`create_new`, `rename_no_replace`), so a file that appears during the dialog is refused by the filesystem, never overwritten. |

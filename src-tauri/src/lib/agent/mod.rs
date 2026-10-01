@@ -1,9 +1,12 @@
 // Path: src-tauri/src/lib/agent/mod.rs
 // Description: Host-agent supervisor module exports (with optional Windows WSL backend)
 
+mod bundle_resources;
 mod host_process_control;
 pub mod install;
+#[cfg(not(target_os = "macos"))]
 mod install_host_binary;
+#[cfg(not(target_os = "macos"))]
 mod install_runtime;
 mod process_control;
 mod runtime_identity;

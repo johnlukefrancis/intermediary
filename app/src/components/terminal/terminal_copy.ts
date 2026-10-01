@@ -1,11 +1,11 @@
 // Path: app/src/components/terminal/terminal_copy.ts
 // Description: Console-prompt copy, button labels, and tooltips for the terminal column
 
-import { MAX_TERMINAL_SESSIONS } from "../../lib/terminal/terminal_types.js";
+import { MAX_TERMINAL_SESSIONS, TERMINAL_SHELL_LABEL } from "../../lib/terminal/terminal_types.js";
 
-export const STARTING_PWSH = "STARTING PWSH";
+export const STARTING_SHELL = `STARTING ${TERMINAL_SHELL_LABEL}`;
 export const NO_TERMINAL = "NO TERMINAL";
-export const PWSH_FAILED_TO_START = "PWSH FAILED TO START";
+export const SHELL_FAILED_TO_START = `${TERMINAL_SHELL_LABEL} FAILED TO START`;
 
 export const NEW_TAB_LABEL = "+ New";
 export const RESTART_LABEL = "Restart";

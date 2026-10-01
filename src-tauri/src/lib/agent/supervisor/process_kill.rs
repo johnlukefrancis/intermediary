@@ -18,14 +18,21 @@ pub(super) enum KillAndWaitOutcome {
     Failed(SupervisedChild, String),
 }
 
-/// Ends the whole tree, then the child. The tree owner goes first because it is
-/// the only thing that reaches the agent's descendants; `Child::kill` reaches
-/// the agent alone, and anything it started would outlive the app that spawned
-/// it. A process we adopted rather than started has no owner, and the kill of
-/// the direct child is then the whole story — logged, never silent.
+/// Tree failure retains both owners even if the direct child has exited.
 pub(super) fn kill_and_wait(process: SupervisedChild) -> KillAndWaitOutcome {
+    kill_with_tree_cleanup(process, terminate_tree)
+}
+
+fn kill_with_tree_cleanup(
+    process: SupervisedChild,
+    cleanup: impl FnOnce(Option<&JobHandle>, u32) -> std::io::Result<()>,
+) -> KillAndWaitOutcome {
     let SupervisedChild { mut child, job } = process;
-    terminate_tree(job.as_ref(), child.id());
+    if let Err(err) = cleanup(job.as_ref(), child.id()) {
+        let _ = child.kill();
+        let _ = child.try_wait();
+        return failed(child, job, format!("process tree cleanup failed: {err}"));
+    }
 
     if let Err(err) = child.kill() {
         match child.try_wait() {
@@ -65,11 +72,8 @@ pub(super) fn kill_and_wait(process: SupervisedChild) -> KillAndWaitOutcome {
     }
 }
 
-/// Kills everything the recorded process started. Called for its own sake when
-/// the child has already exited on its own: the owner outlives the process it
-/// was created for, and dropping it releases the tree instead of ending it (the
-/// job carries no kill-on-close limit, by decision).
-pub(super) fn terminate_tree(job: Option<&JobHandle>, pid: u32) {
+/// The tree owner remains authoritative after the direct child exits.
+fn terminate_tree(job: Option<&JobHandle>, pid: u32) -> std::io::Result<()> {
     let Some(job) = job else {
         logging::log(
             "info",
@@ -77,9 +81,10 @@ pub(super) fn terminate_tree(job: Option<&JobHandle>, pid: u32) {
             "kill_tree",
             &format!("pid={pid} outcome=no_tree_owner detail=\"no tree owner (adopted agent)\""),
         );
-        return;
+        return Ok(());
     };
-    match job.terminate() {
+    let result = job.terminate_and_observe(KILL_WAIT_TIMEOUT);
+    match &result {
         Ok(()) => logging::log(
             "info",
             "agent",
@@ -93,13 +98,14 @@ pub(super) fn terminate_tree(job: Option<&JobHandle>, pid: u32) {
             &format!("pid={pid} outcome=failed error={err}"),
         ),
     }
+    result
 }
 
 /// Ends a process the supervisor cannot record — the tree first, then the child
 /// — so nothing is dropped while still running.
 pub(super) fn discard_process(process: SupervisedChild) {
     let SupervisedChild { mut child, job } = process;
-    terminate_tree(job.as_ref(), child.id());
+    let _ = terminate_tree(job.as_ref(), child.id());
     let _ = child.kill();
     let _ = child.wait();
 }
@@ -110,7 +116,7 @@ fn failed(child: Child, job: Option<JobHandle>, message: String) -> KillAndWaitO
 
 #[cfg(test)]
 mod tests {
-    use super::{kill_and_wait, KillAndWaitOutcome};
+    use super::{kill_and_wait, kill_with_tree_cleanup, KillAndWaitOutcome};
     use crate::agent::supervisor::state::{spawn_test_sleeper, SupervisedChild};
     use im_bundle::process_job::JobHandle;
 
@@ -125,14 +131,34 @@ mod tests {
         ));
     }
 
-    /// The owner is spent before the child is killed. Off Windows it owns
-    /// nothing, so this proves the call path, not the kill.
+    /// An empty owner still follows the same termination route.
     #[test]
     fn a_process_with_a_tree_owner_is_killed_after_its_tree() {
         let job = JobHandle::create().expect("job");
         let process = SupervisedChild::owned(spawn_test_sleeper(), job);
         assert!(matches!(
             kill_and_wait(process),
+            KillAndWaitOutcome::Exited(_)
+        ));
+    }
+
+    #[test]
+    fn failed_tree_cleanup_retains_the_owner_after_child_exit() {
+        let mut child = spawn_test_sleeper();
+        child.kill().expect("end child");
+        child.wait().expect("reap child");
+        let process = SupervisedChild::owned(child, JobHandle::create().expect("job"));
+        let result = kill_with_tree_cleanup(process, |_, _| {
+            Err(std::io::Error::other("tree sweep failed"))
+        });
+        let KillAndWaitOutcome::Failed(mut retained, message) = result else {
+            panic!("a direct child exit cannot prove tree cleanup");
+        };
+        assert!(retained.job.is_some());
+        assert!(retained.child.try_wait().expect("poll").is_some());
+        assert!(message.contains("tree sweep failed"));
+        assert!(matches!(
+            kill_and_wait(retained),
             KillAndWaitOutcome::Exited(_)
         ));
     }

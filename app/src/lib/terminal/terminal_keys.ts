@@ -14,8 +14,14 @@ export interface TerminalKeyPolicyHandle {
 type Chord = "copy" | "paste" | "interruptOrCopy" | "shiftEnter";
 
 function chordOf(event: KeyboardEvent): Chord | null {
-  if (event.altKey || event.metaKey) return null;
+  if (event.altKey) return null;
   const key = event.key.toLowerCase();
+  if (event.metaKey) {
+    if (event.ctrlKey || event.shiftKey) return null;
+    if (key === "c") return "copy";
+    if (key === "v") return "paste";
+    return null;
+  }
   if (event.ctrlKey && event.shiftKey) {
     if (key === "c") return "copy";
     if (key === "v") return "paste";
@@ -51,11 +57,7 @@ function pasteClipboard(terminal: Terminal): void {
   );
 }
 
-/**
- * Installs the policy on the terminal and its wrapper. Returning `false` from xterm's custom
- * key handler only skips xterm's own handling, so consumed chords call `preventDefault`
- * themselves; every other key goes to xterm untouched.
- */
+/** Consumed chords must prevent the browser default as well as bypass xterm's handler. */
 export function attachTerminalKeyPolicy(
   terminal: Terminal,
   surface: HTMLElement,

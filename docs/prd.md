@@ -1,12 +1,12 @@
 # PRD + Implementation Spec: **Intermediary**
-Updated on: 2026-09-04
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006, ADR-007
 
 ## 1. Product overview
 
 **Product name:** Intermediary
-**Platform:** Maintainer-validated runtime is Windows 10/11. WSL2 is the recommended path for the full WSL-backed workflow, while host-native Windows repo workflows are also validated. The architecture includes host-native paths for other platforms, but macOS and Linux are not yet validated to the same standard.
+**Platform:** Windows 10/11 supports host-native and WSL2 repositories. The native Apple Silicon macOS candidate supports host repositories and the account's login shell; its desktop evidence and outstanding acceptance are tracked in `docs/implementation/macos_port_implementation.md`. Linux desktop parity remains unverified.
 **Problem:** High-friction context handoff between local repos and ChatGPT/browser-based workflows, especially when users need both trustworthy full-repo bundles and fast access to the latest changed files or screenshots.
 **Outcome:** A single-window “handoff console” that surfaces recently changed files, stages drag-and-drop-safe handoff copies, and generates standardized zip bundles with reliable latest-bundle semantics.
 

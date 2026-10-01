@@ -42,11 +42,7 @@ function tokenRoot(): Element {
 
 let probe: HTMLSpanElement | null = null;
 
-/**
- * A zero-size element inside the deck root whose `color` resolves a token the way the browser
- * does. xterm's parser takes only hex and comma-form `rgb()`/`rgba()`, while the deck tokens are
- * space-separated with a `calc()` alpha; the computed `color` of the probe is the comma form.
- */
+/** Resolve CSS tokens through the browser into the rgb/rgba syntax xterm accepts. */
 function colorProbe(root: Element): HTMLSpanElement {
   if (probe === null || probe.parentElement !== root) {
     probe?.remove();
@@ -80,12 +76,13 @@ export function readTerminalFontFamily(): string | null {
 }
 
 /** ConPTY reflow hint; the build number is only known once the pty has opened */
-export function buildWindowsPty(buildNumber: number | null): IWindowsPty {
-  return { backend: "conpty", ...(buildNumber === null ? {} : { buildNumber }) };
+export function buildWindowsPty(buildNumber: number | null): IWindowsPty | undefined {
+  return buildNumber === null ? undefined : { backend: "conpty", buildNumber };
 }
 
 export function buildTerminalOptions(buildNumber: number | null): ITerminalOptions {
   const fontFamily = readTerminalFontFamily();
+  const windowsPty = buildWindowsPty(buildNumber);
   return {
     // The unicode11 addon registers through `terminal.unicode`, which is proposed API
     allowProposedApi: true,
@@ -99,6 +96,6 @@ export function buildTerminalOptions(buildNumber: number | null): ITerminalOptio
     fontSize: TERMINAL_FONT_SIZE_PX,
     scrollback: TERMINAL_SCROLLBACK,
     theme: readTerminalTheme(),
-    windowsPty: buildWindowsPty(buildNumber),
+    ...(windowsPty === undefined ? {} : { windowsPty }),
   };
 }

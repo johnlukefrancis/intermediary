@@ -3,9 +3,7 @@
 
 use super::graceful_stop::GracefulStopPath;
 use super::{AgentSupervisor, SPAWN_BACKOFF};
-use crate::agent::supervisor::process_kill::{
-    discard_process, kill_and_wait, terminate_tree, KillAndWaitOutcome,
-};
+use crate::agent::supervisor::process_kill::{discard_process, kill_and_wait, KillAndWaitOutcome};
 use crate::agent::supervisor::state::{
     process_state, process_state_mut, ProcessKind, SupervisedChild,
 };
@@ -16,11 +14,7 @@ impl AgentSupervisor {
     pub(super) async fn stop_process(&self, kind: ProcessKind) -> Result<(), String> {
         let mut errors: Vec<String> = Vec::new();
 
-        // The host agent is asked to drain before anything kills it: a killed
-        // `git commit` leaves `.git/index.lock` behind, and the host agent is
-        // also the only route that can drain the WSL agent behind it. The kill
-        // path below stays exactly as it was — it is the emergency bound — and
-        // the reason it records names the route that actually ran.
+        // Drain mutations before killing the host and its WSL backend.
         let mut reason = "stop";
         if matches!(kind, ProcessKind::Host) {
             let path = self.stop_host_gracefully("stop").await;
@@ -89,10 +83,7 @@ impl AgentSupervisor {
         Ok(())
     }
 
-    /// Records a freshly started process, after the one it replaces has been
-    /// reconciled: that reconciliation is what terminates and drops the stale
-    /// tree owner, so two owners are never recorded and none is ever dropped
-    /// while the processes inside it are still running.
+    /// Reconcile the old tree before transferring the new process into its slot.
     pub(super) async fn replace_child(
         &self,
         kind: ProcessKind,
@@ -107,72 +98,46 @@ impl AgentSupervisor {
         kind: ProcessKind,
         reason: &str,
     ) -> Result<(), String> {
-        let Some(mut process) = self.take_child(kind)? else {
+        let Some(process) = self.take_child(kind)? else {
             return Ok(());
         };
 
         let pid = process.child.id();
-        match process
-            .child
-            .try_wait()
-            .map_err(|err| format!("Failed to poll {} process: {err}", kind.label()))?
-        {
-            Some(status) => {
-                // The process is gone but whatever it started is not: the tree
-                // owner outlives it and kills nothing when dropped, so it is
-                // spent here rather than released.
-                terminate_tree(process.job.as_ref(), pid);
+        logging::log(
+            "info",
+            "agent",
+            "kill_start",
+            &format!("kind={} pid={pid} reason={reason}", kind.log_key()),
+        );
+        let result = tauri::async_runtime::spawn_blocking(move || kill_and_wait(process))
+            .await
+            .map_err(|err| format!("{} kill task failed: {err}", kind.label()))?;
+        match result {
+            KillAndWaitOutcome::Exited(status) => {
                 logging::log(
                     "info",
                     "agent",
                     "kill_done",
                     &format!(
-                        "kind={} pid={pid} reason={reason} outcome=already_exited status={status}",
+                        "kind={} pid={pid} reason={reason} outcome=exited status={status}",
                         kind.log_key()
                     ),
                 );
                 Ok(())
             }
-            None => {
+            KillAndWaitOutcome::Failed(process, err) => {
+                self.restore_child(kind, process)?;
+                let message = format!("Failed to terminate {} process: {err}", kind.log_key());
                 logging::log(
-                    "info",
+                    "error",
                     "agent",
-                    "kill_start",
-                    &format!("kind={} pid={pid} reason={reason}", kind.log_key()),
+                    "kill_done",
+                    &format!(
+                        "kind={} pid={pid} reason={reason} outcome=failed error={err}",
+                        kind.log_key()
+                    ),
                 );
-                let result = tauri::async_runtime::spawn_blocking(move || kill_and_wait(process))
-                    .await
-                    .map_err(|err| format!("{} kill task failed: {err}", kind.label()))?;
-
-                match result {
-                    KillAndWaitOutcome::Exited(status) => {
-                        logging::log(
-                            "info",
-                            "agent",
-                            "kill_done",
-                            &format!(
-                                "kind={} pid={pid} reason={reason} outcome=killed status={status}",
-                                kind.log_key()
-                            ),
-                        );
-                        Ok(())
-                    }
-                    KillAndWaitOutcome::Failed(process, err) => {
-                        self.restore_child(kind, process)?;
-                        let message =
-                            format!("Failed to terminate {} process: {err}", kind.log_key());
-                        logging::log(
-                            "error",
-                            "agent",
-                            "kill_done",
-                            &format!(
-                                "kind={} pid={pid} reason={reason} outcome=failed error={err}",
-                                kind.log_key()
-                            ),
-                        );
-                        Err(message)
-                    }
-                }
+                Err(message)
             }
         }
     }

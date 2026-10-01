@@ -26,6 +26,13 @@ pub fn spawn_waiter(
     child: PtyChild,
     start: Arc<WorkerStart>,
 ) -> Result<JoinHandle<()>, WaiterSpawnError> {
+    #[cfg(test)]
+    if super::spawn_faults::take("waiter") {
+        return Err(WaiterSpawnError {
+            message: "Injected waiter creation failure".to_string(),
+            child: Some(child),
+        });
+    }
     let child_slot = Arc::new(Mutex::new(Some(child)));
     let worker_slot = child_slot.clone();
     match thread::Builder::new()

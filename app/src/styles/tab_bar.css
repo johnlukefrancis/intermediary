@@ -1,7 +1,5 @@
-/*
- * Path: app/src/styles/tab_bar.css
- * Description: Tab bar navigation with ASCII-instrument bracketed labels
- */
+/* Path: app/src/styles/tab_bar.css
+ * Description: Tab bar navigation with ASCII-instrument bracketed labels */
 
 .tab-bar {
   --tab-bar-bg: var(--color-bg-elevated);
@@ -111,26 +109,6 @@
   top: auto;
   right: auto;
   margin-top: var(--space-1);
-}
-
-/* Vintage console: dither grain + scanline overlay */
-.tab-bar::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      var(--color-scanline) 0px,
-      var(--color-scanline) 1px,
-      transparent 1px,
-      transparent 4px
-    ),
-    var(--deck-texture-url);
-  background-size: auto, 128px 128px;
-  opacity: calc(var(--glass-vintage-dither) * var(--window-opacity-alpha));
 }
 
 .tab-button {

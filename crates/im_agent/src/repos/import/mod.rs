@@ -1,29 +1,20 @@
 // Path: crates/im_agent/src/repos/import/mod.rs
 // Description: Copying external OS files and folders into one directory of a repo worktree
 
-//! An import is a repo mutation that never speaks to Git: it writes files into
-//! the worktree and lets the watcher and the next status read describe what
-//! changed. It therefore owes the same guarantees a Git mutation does, and the
-//! caller holds the same per-worktree lock (`SourceControlLocks::acquire`)
-//! before calling in — this module never takes it, so one owner decides both
-//! admission and serialization.
-//!
-//! The order below is the contract: normalize the destination and prove it
-//! does not name the repository's own Git directory, prove the replace
-//! authorization, resolve the destination, validate and expand every source,
-//! refuse the whole drop, and only then write. Any error raised before
-//! `write_planned` proves the worktree is untouched; from there on the error
-//! carries what landed.
+//! The caller owns the per-worktree mutation lock. Validate the entire plan before
+//! writing; later failures report landed files for watcher/status reconciliation.
 
 mod copy;
 mod sources;
-mod translate;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_git_control;
 #[cfg(test)]
 mod tests_refusals;
 #[cfg(test)]
 mod tests_support;
+mod translate;
 
 use std::path::{Path, PathBuf};
 
@@ -38,15 +29,8 @@ use crate::staging::{StageFileCancelToken, StagingRootKind};
 
 pub use sources::MAX_IMPORT_ENTRIES;
 
-/// Copies `sources` into `<repo_root>/<directory>`.
-///
-/// `directory` is a repo-relative slash path (`""` or `"."` is the worktree
-/// root) and `sources` are absolute OS paths in the host's namespace;
-/// `staging_kind` says which namespace this agent lives in, and therefore how
-/// those paths translate. The returned list names every file that landed, in
-/// the order it was written.
-///
-/// The caller must already hold this worktree's mutation lock.
+/// Copies absolute host paths into a repo-relative directory in the agent's namespace.
+/// The caller must hold the worktree's mutation lock; results list landed files in order.
 pub async fn import_files(
     repo_root: &Path,
     directory: &str,
@@ -61,10 +45,7 @@ pub async fn import_files(
     }
 }
 
-/// The same copy, given sources already resolved in this agent's own
-/// namespace. This is what an in-repo copy hands over: its sources are
-/// worktree entries the caller has already validated, so there is nothing left
-/// to translate and no host path form to interpret.
+/// Imports sources already resolved in the agent's namespace, including in-repo copies.
 pub(crate) async fn import_resolved(
     repo_root: &Path,
     directory: &str,
@@ -103,10 +84,7 @@ fn unsupported_source(source: impl std::fmt::Display, reason: &str) -> AgentErro
     )
 }
 
-/// Cancellation is reported as an internal failure rather than its own code:
-/// the wire contract has no cancelled outcome for an import, and what the UI
-/// needs is the same thing every other interruption gives it — the files that
-/// landed, and an effect that makes it re-read.
+/// The wire has no cancelled variant; report landed files and their reconciliation effect.
 fn cancelled_error(imported: &[ImportedFile]) -> AgentError {
     AgentError::internal("Import cancelled before it finished")
         .with_details(serde_json::json!({ "imported": imported }))

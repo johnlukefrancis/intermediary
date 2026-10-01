@@ -4,8 +4,9 @@
 use super::frames::CloseReason;
 use super::session::TerminalSession;
 use super::session_spawn::SpawnedPty;
+use super::transaction::TerminalTransaction;
 use super::waiter_thread::terminate_and_observe;
-use im_bundle::process_job::JobHandle;
+use super::TerminalTree;
 use portable_pty::MasterPty;
 use std::io::Read;
 use std::sync::{Arc, Mutex};
@@ -14,9 +15,28 @@ use std::time::Duration;
 
 pub const FAILED_OPEN_JOB_WAIT: Duration = Duration::from_millis(500);
 
+pub fn terminate_failed_open(session: &TerminalSession) -> Option<std::io::Error> {
+    #[cfg(test)]
+    if super::spawn_faults::take("tree") {
+        return Some(std::io::Error::other(
+            "Injected process-tree cleanup failure",
+        ));
+    }
+    session
+        .job
+        .terminate_and_observe(FAILED_OPEN_JOB_WAIT)
+        .err()
+}
+
 pub fn close_unstarted_pty(session: &TerminalSession, reader: Option<Box<dyn Read + Send>>) {
     let _ = session.begin_close(CloseReason::OpenFailed);
     session.gate.release();
+    #[cfg(unix)]
+    let reader = {
+        // A PTY reader keeps a master FD alive; draining it can wait on unresolved descendants forever.
+        drop(reader);
+        None
+    };
     let (closer, retained_master) = match session.take_master().ok().flatten() {
         Some(master) => spawn_pty_drop(master, format!("terminal-open-pty-close-{}", session.id)),
         None => (None, None),
@@ -24,7 +44,21 @@ pub fn close_unstarted_pty(session: &TerminalSession, reader: Option<Box<dyn Rea
     finish_pty_close(reader, closer, retained_master);
 }
 
-pub fn discard_spawned(spawned: SpawnedPty, job: &JobHandle) -> Option<std::io::Error> {
+pub fn failed_open_detail(
+    transaction: &TerminalTransaction,
+    session: Arc<TerminalSession>,
+    message: &str,
+    cleanup: Option<std::io::Error>,
+) -> String {
+    if cleanup.is_some() {
+        if let Err(err) = transaction.retain_failed_open(session) {
+            return format!("{}; {err}", cleanup_detail(message, cleanup));
+        }
+    }
+    cleanup_detail(message, cleanup)
+}
+
+pub fn discard_spawned(spawned: SpawnedPty, job: &TerminalTree) -> Option<std::io::Error> {
     let SpawnedPty {
         master,
         writer,

@@ -1,20 +1,22 @@
 // Path: src-tauri/src/lib/agent/install.rs
 // Description: Install bundled agent runtimes into app local data with platform-specific requirements
 
+use super::bundle_resources::{read_version, resolve_bundle_dir};
+#[cfg(not(target_os = "macos"))]
 use super::install_runtime::{
     build_bundle_paths, install_bundle, installed_bundle_matches, read_installed_version,
-    read_version,
 };
 use std::path::{Path, PathBuf};
 
-const AGENT_BUNDLE_DIR: &str = "agent_bundle";
+pub(super) const AGENT_BUNDLE_DIR: &str = "agent_bundle";
+#[cfg(any(not(target_os = "macos"), test))]
 const AGENT_INSTALL_DIR: &str = "agent";
-const WSL_AGENT_BINARY_FILE: &str = "im_agent";
+pub(super) const WSL_AGENT_BINARY_FILE: &str = "im_agent";
 #[cfg(target_os = "windows")]
 const HOST_AGENT_BINARY_FILE: &str = "im_host_agent.exe";
 #[cfg(not(target_os = "windows"))]
 const HOST_AGENT_BINARY_FILE: &str = "im_host_agent";
-const AGENT_VERSION_FILE: &str = "version.json";
+pub(super) const AGENT_VERSION_FILE: &str = "version.json";
 
 #[derive(Debug, Clone)]
 pub struct AgentBundlePaths {
@@ -39,6 +41,7 @@ pub struct AgentBundleResolution {
     pub install_state: AgentBundleInstallState,
 }
 
+#[cfg(not(target_os = "macos"))]
 pub fn ensure_agent_bundle(
     resource_dir: &Path,
     app_local_data: &Path,
@@ -94,6 +97,7 @@ pub fn ensure_agent_bundle(
     })
 }
 
+#[cfg(not(target_os = "macos"))]
 pub fn resolve_installed_agent_bundle(app_local_data: &Path) -> Result<AgentBundlePaths, String> {
     let agent_dir_host = app_local_data.join(AGENT_INSTALL_DIR);
     let version = read_version(&agent_dir_host.join(AGENT_VERSION_FILE))?;
@@ -122,21 +126,47 @@ pub fn resolve_installed_agent_bundle(app_local_data: &Path) -> Result<AgentBund
 pub fn resolve_launch_bundle(
     resource_dir: &Path,
     app_local_data: &Path,
-    prefer_installed: bool,
+    _prefer_installed: bool,
 ) -> Result<AgentBundleResolution, String> {
-    if prefer_installed {
-        if let Some(bundle) = resolve_current_installed_agent_bundle(resource_dir, app_local_data)?
-        {
-            return Ok(AgentBundleResolution {
-                bundle,
-                install_state: AgentBundleInstallState::Current,
-            });
-        }
+    #[cfg(target_os = "macos")]
+    {
+        let bundle_dir = resolve_bundle_dir(resource_dir)?;
+        let binary = bundle_dir.join(HOST_AGENT_BINARY_FILE);
+        let version = read_version(&bundle_dir.join(AGENT_VERSION_FILE))?;
+        let log_dir_host = app_local_data.join("logs");
+        std::fs::create_dir_all(&log_dir_host)
+            .map_err(|err| format!("Failed to create agent logs: {err}"))?;
+        return Ok(AgentBundleResolution {
+            bundle: AgentBundlePaths {
+                host_agent_sha256: super::runtime_identity::executable_sha256(&binary)?,
+                host_agent_binary_host: binary,
+                agent_dir_host: bundle_dir,
+                log_dir_host,
+                wsl_agent_binary_host: None,
+                wsl_agent_sha256: None,
+                version,
+            },
+            install_state: AgentBundleInstallState::Current,
+        });
     }
+    #[cfg(not(target_os = "macos"))]
+    {
+        if _prefer_installed {
+            if let Some(bundle) =
+                resolve_current_installed_agent_bundle(resource_dir, app_local_data)?
+            {
+                return Ok(AgentBundleResolution {
+                    bundle,
+                    install_state: AgentBundleInstallState::Current,
+                });
+            }
+        }
 
-    ensure_agent_bundle(resource_dir, app_local_data)
+        ensure_agent_bundle(resource_dir, app_local_data)
+    }
 }
 
+#[cfg(not(target_os = "macos"))]
 fn resolve_current_installed_agent_bundle(
     resource_dir: &Path,
     app_local_data: &Path,
@@ -160,65 +190,7 @@ fn resolve_current_installed_agent_bundle(
     Ok(None)
 }
 
-fn resolve_bundle_dir(resource_dir: &Path) -> Result<PathBuf, String> {
-    let mut tried: Vec<PathBuf> = Vec::new();
-    let mut candidates: Vec<PathBuf> = Vec::new();
-
-    candidates.push(resource_dir.join(AGENT_BUNDLE_DIR));
-    candidates.push(resource_dir.join("resources").join(AGENT_BUNDLE_DIR));
-
-    if let Ok(cwd) = std::env::current_dir() {
-        candidates.push(cwd.join("resources").join(AGENT_BUNDLE_DIR));
-        candidates.push(
-            cwd.join("src-tauri")
-                .join("resources")
-                .join(AGENT_BUNDLE_DIR),
-        );
-    }
-
-    if let Ok(win_root) = std::env::var("INTERMEDIARY_WIN_PATH") {
-        if !win_root.trim().is_empty() {
-            candidates.push(
-                PathBuf::from(win_root)
-                    .join("src-tauri")
-                    .join("resources")
-                    .join(AGENT_BUNDLE_DIR),
-            );
-        }
-    }
-
-    for candidate in candidates {
-        tried.push(candidate.clone());
-        if !candidate.is_dir() {
-            continue;
-        }
-        if bundle_has_core_files(&candidate) {
-            return Ok(candidate);
-        }
-    }
-
-    let attempted = tried
-        .iter()
-        .map(|path| path.display().to_string())
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    Err(format!(
-        "Agent bundle resources missing required files for this platform. Tried: {attempted}"
-    ))
-}
-
-fn bundle_has_core_files(bundle_dir: &Path) -> bool {
-    if !bundle_dir.join(AGENT_VERSION_FILE).is_file() {
-        return false;
-    }
-    if requires_wsl_binary() && !bundle_dir.join(WSL_AGENT_BINARY_FILE).is_file() {
-        return false;
-    }
-    true
-}
-
-fn requires_wsl_binary() -> bool {
+pub(super) fn requires_wsl_binary() -> bool {
     cfg!(target_os = "windows")
 }
 

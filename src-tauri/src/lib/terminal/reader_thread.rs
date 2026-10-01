@@ -35,6 +35,13 @@ pub fn spawn_reader(
     reader: Box<dyn Read + Send>,
     start: Arc<WorkerStart>,
 ) -> Result<JoinHandle<ReaderResult>, ReaderSpawnError> {
+    #[cfg(test)]
+    if super::spawn_faults::take("reader") {
+        return Err(ReaderSpawnError {
+            message: "Injected reader creation failure".to_string(),
+            reader: Some(reader),
+        });
+    }
     let reader_slot = Arc::new(Mutex::new(Some(reader)));
     let worker_slot = reader_slot.clone();
     match thread::Builder::new()

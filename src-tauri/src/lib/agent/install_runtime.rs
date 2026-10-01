@@ -1,13 +1,13 @@
 // Path: src-tauri/src/lib/agent/install_runtime.rs
 // Description: Agent bundle install/runtime helpers for version checks, file copying, and stale-host cleanup
 
+use super::bundle_resources::read_version;
 use super::host_process_control::{terminate_host_agent_process, HostTerminateOutcome};
 use super::install::AgentBundlePaths;
 use super::install_host_binary::{
     copy_host_binary, ensure_host_agent_permissions, resolve_host_binary_source,
 };
 use super::runtime_identity::executable_sha256;
-use serde::Deserialize;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -15,11 +15,6 @@ use std::time::Duration;
 
 const HOST_TERMINATE_GRACE: Duration = Duration::from_secs(5);
 const HOST_TERMINATE_POLL: Duration = Duration::from_millis(50);
-
-#[derive(Debug, Deserialize)]
-struct AgentBundleVersion {
-    version: String,
-}
 
 pub(super) fn installed_bundle_matches(
     bundle_dir: &Path,
@@ -121,18 +116,6 @@ pub(super) fn read_installed_version(path: &Path) -> Option<String> {
         return None;
     }
     read_version(path).ok()
-}
-
-pub(super) fn read_version(path: &Path) -> Result<String, String> {
-    let contents = fs::read_to_string(path)
-        .map_err(|err| format!("Failed to read agent bundle version: {err}"))?;
-    let parsed: AgentBundleVersion = serde_json::from_str(&contents)
-        .map_err(|err| format!("Failed to parse agent bundle version: {err}"))?;
-    let trimmed = parsed.version.trim();
-    if trimmed.is_empty() {
-        return Err("Agent bundle version is empty".to_string());
-    }
-    Ok(trimmed.to_string())
 }
 
 pub(super) fn build_bundle_paths(

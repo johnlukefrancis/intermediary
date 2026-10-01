@@ -24,10 +24,13 @@ enum Target {
     WslEntry(String),
 }
 
-/// A host root, or a WSL root on a mounted Windows drive, starts the shell in
-/// that directory. A native WSL root starts pwsh in the user profile (so the
-/// profile loads as it always does) and enters the distro at the repo path.
+/// Host paths start in place; Windows native WSL roots enter the pinned distro after the profile.
 pub fn resolve(root: &RepoRoot, distro: Option<&str>) -> Result<StartDir, String> {
+    if !cfg!(windows) && matches!(root, RepoRoot::Wsl { .. }) {
+        return Err(
+            "WSL repository roots require Windows; select a native host repository".to_string(),
+        );
+    }
     match target(root) {
         Target::Host(path) => Ok(StartDir {
             cwd: existing_dir(Path::new(&path))?,
@@ -69,9 +72,7 @@ fn existing_dir(path: &Path) -> Result<PathBuf, String> {
     }
 }
 
-/// The preflight's exact distro is always pinned. A later entry failure exits
-/// pwsh instead of presenting a misleading prompt in the profile directory;
-/// a successful interactive bash exit still returns to pwsh.
+/// Failed initial WSL entry exits pwsh; successful bash exit returns to pwsh.
 pub fn wsl_entry_command(path: &str, distro: &str) -> String {
     format!(
         "wsl.exe -d {} --cd {}; if ($LASTEXITCODE -ne 0) {{ exit $LASTEXITCODE }}",

@@ -1,7 +1,5 @@
-/*
- * Path: app/src/styles/chrome.css
- * Description: Unified header chrome styles for tab bar, status bar, and banners
- */
+/* Path: app/src/styles/chrome.css
+ * Description: Unified header chrome styles for tab bar, status bar, and banners */
 
 /* ===== HEADER STACK ===== */
 .header-stack {
@@ -10,6 +8,26 @@
   flex-shrink: 0;
   position: relative;
   z-index: 500;
+}
+
+/* The repo selector and status bar share one continuous texture origin. */
+.header-stack::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      var(--color-scanline) 0px,
+      var(--color-scanline) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    var(--deck-texture-url);
+  background-size: auto, 128px 128px;
+  opacity: calc(var(--glass-vintage-dither) * var(--window-opacity-alpha));
 }
 
 /* ===== CHROME SEPARATOR ===== */

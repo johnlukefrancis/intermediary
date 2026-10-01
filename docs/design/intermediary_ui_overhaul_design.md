@@ -1,6 +1,6 @@
 # Intermediary UI Design System
 
-Updated on: 2026-09-06 (Stream panel card grammar and arrival choreography; motion governor carve-out for the stream scroller; deliberate `--ease-spring` arrivals)
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-006
 
@@ -74,6 +74,10 @@ Intermediary also exposes a global substrate texture-intensity control in Option
   - `--texture-intensity-alpha` (`percent / 100`)
 
 Texture intensity is independent from window opacity. The substrate breathe keyframes now compute opacity directly from `--texture-intensity-alpha` so the slider is always authoritative.
+
+The repo selector and connection/status bar share the header stack's single
+grain/scanline overlay, with one texture origin across both rows. Individual
+bars keep their separators and controls without restarting the texture.
 
 ---
 

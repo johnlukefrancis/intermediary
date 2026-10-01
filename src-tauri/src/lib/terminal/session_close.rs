@@ -48,10 +48,7 @@ impl CloseBudget {
     }
 }
 
-/// Ends a session the way Windows Terminal does (I2): drop the pty so every
-/// attached client receives CTRL_CLOSE, wait, then terminate the Job Object,
-/// then kill the direct child. GUI apps the shell launched detach from the
-/// console and survive the first stage. Safe to run more than once.
+/// Close the console/session, wait within budget, then escalate through the process-tree owner.
 pub fn close_session(
     session: &Arc<TerminalSession>,
     reason: CloseReason,
@@ -64,9 +61,13 @@ pub fn close_session(
     // I3: the reader must never sit on the gate while the console shuts down;
     // conhost only finishes once its output pipe is drained.
     session.gate.release();
+    #[cfg(target_os = "macos")]
+    if let Err(err) = session.job.hangup() {
+        fault(session, "session_hangup", &err.to_string());
+    }
     let pty_close = drop_pty_detached(session);
 
-    let outcome = match session.exit.wait_until(budget.exit_deadline) {
+    let mut outcome = match session.exit.wait_until(budget.exit_deadline) {
         Ok(Some(record)) => CloseOutcome::Exited { code: record.code },
         Ok(None) => escalate(session, reason, budget),
         Err(err) => {
@@ -74,6 +75,11 @@ pub fn close_session(
             escalate(session, reason, budget)
         }
     };
+    #[cfg(target_os = "macos")]
+    if let Err(err) = session.job.terminate_and_observe(budget.after_terminate) {
+        fault(session, "session_cleanup", &err.to_string());
+        outcome = CloseOutcome::StillAlive;
+    }
     logging::log(
         "info",
         "terminal",
@@ -109,9 +115,7 @@ fn escalate(session: &TerminalSession, reason: CloseReason, budget: CloseBudget)
     if job_result.is_ok() {
         let first = session.exit.wait_timeout(LAST_RESORT_WAIT).ok().flatten();
         if first.is_none() {
-            // The Windows Job is already observed empty; this also keeps the
-            // inert non-Windows lifecycle oracle honest by ending its direct
-            // child rather than waiting for the test process to exit itself.
+            // A final direct-child receipt is still required after tree termination.
             if let Err(err) = session.kill_child() {
                 fault(session, "kill_child", &err);
             }

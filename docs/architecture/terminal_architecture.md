@@ -1,5 +1,5 @@
 # Integrated Terminal Architecture
-Updated on: 2026-09-04
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010, ADR-013
 
@@ -8,6 +8,46 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010, ADR-013
 The terminal is a Tauri IPC surface. A terminal transaction lives in the Tauri process from admission
 until its process, pseudoconsole, reader, waiter, and close worker have all produced one final receipt.
 The webview owns presentation; neither agent owns a terminal session.
+
+## Native macOS
+
+The same transaction table, flow-credit gate, reader/waiter, and reaper own the
+Mac terminal. `shell.rs` resolves the account login shell through `getpwuid_r`
+and starts it with login and interactive flags in the validated host repo.
+It sets `SHELL` and `TERM=xterm-256color`; the shell loads the user's profiles.
+WSL roots are refused on this host. AppKit's pasteboard supplies text through
+the existing Rust clipboard command. Command-C/V join the copy/paste chords.
+xterm receives ConPTY hints only when a Windows build number is available.
+
+`portable-pty` establishes a new session before shell code executes.
+`im_bundle::macos_process_session` owns that session, including separate job
+control groups. Explicit close sends SIGHUP, then kills and observes remaining
+session members within the close budget. Natural shell exit also retires
+remaining attached jobs before the reader and waiter receipts are joined.
+Processes that deliberately detach into a different session are outside this
+terminal's ownership. Session discovery occurs only during teardown.
+
+Native Unix input owns a duplicated master descriptor as a plain `File`; closing
+it sends no bytes. The portable-pty writer's newline/EOF-on-drop route is not used.
+Close admission refuses input without manufacturing an Enter, and a queued write
+rechecks the closing phase after acquiring the writer lock.
+
+The host-agent supervisor uses the same macOS session owner, establishes its
+session before exec, and retains a stdin pipe so app death requests the
+agent's existing bounded drain. Windows Job/ConPTY behavior remains separate.
+Failed terminal tree cleanup retains the session and its unjoined workers in
+the transaction, reports StillAlive, and permits an explicit app-exit retry.
+Natural shell exit uses that same finality rule before joining the PTY reader.
+If reader/waiter creation fails after spawn, direct-child and PTY resources are
+settled, but any unproved process tree remains in the admitted transaction with
+StillAlive and its capacity reservation, owned by `transaction_receipts.rs`.
+Unix unstarted readers close without draining, since their master descriptor
+could otherwise wait on live descendants. The shared 300 ms app-exit retry
+deadline starts after all first-pass receipts have arrived; their waits cannot
+consume the recovery observation interval.
+The agent supervisor also retains the child/tree owner after cleanup failure,
+including when the direct child has already exited.
+The remainder of this document details the shared lifecycle and Windows adapter.
 
 ## Ownership
 

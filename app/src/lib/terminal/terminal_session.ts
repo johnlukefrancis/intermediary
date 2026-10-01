@@ -7,6 +7,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type { RepoRoot } from "../../shared/config.js";
 import type { TerminalCloseReason, TerminalExitFrame, TerminalOpened } from "./terminal_ipc.js";
 import type { TerminalTabSnapshot, TerminalTabStatus } from "./terminal_types.js";
+import { TERMINAL_SHELL_LABEL } from "./terminal_types.js";
 import { attachTerminalKeyPolicy, type TerminalKeyPolicyHandle } from "./terminal_keys.js";
 import { parkElement } from "./terminal_parking.js";
 import { attachWebglRenderer, type RendererHandle } from "./terminal_renderer.js";
@@ -68,7 +69,7 @@ export class TerminalSession {
     this.ordinal = init.ordinal;
     this.repoRoot = init.repoRoot;
     this.onChange = init.onChange;
-    this.label = `PWSH ${init.ordinal}`;
+    this.label = `${TERMINAL_SHELL_LABEL} ${init.ordinal}`;
     this.title = this.label;
     this.element = document.createElement("div");
     this.element.className = "terminal-session";
@@ -112,12 +113,7 @@ export class TerminalSession {
     return this.snapshot;
   }
 
-  /**
-   * Moves into the visible host, applies the deck theme, fits (opening the pty if owed) and attaches
-   * WebGL on the first adopt. The renderer stays attached while parked: the addon cannot release its
-   * GL context on dispose (the canvas lingers until GC), so re-creating it per switch would leak
-   * contexts and rebuild the glyph atlas, while an off-screen renderer is paused and costs nothing.
-   */
+  /** Retain WebGL while parked: recreating it per switch leaks contexts until the old canvas is collected. */
   adopt(host: HTMLElement): void {
     if (this.disposed) return;
     if (this.element.parentElement !== host) host.appendChild(this.element);
@@ -231,7 +227,8 @@ export class TerminalSession {
 
   private handleOpened(io: TerminalSessionIo, opened: TerminalOpened): void {
     if (io !== this.io) return;
-    this.terminal.options.windowsPty = buildWindowsPty(opened.windowsBuildNumber);
+    const windowsPty = buildWindowsPty(opened.windowsBuildNumber);
+    if (windowsPty !== undefined) this.terminal.options.windowsPty = windowsPty;
   }
 
   private handleOpenFailed(io: TerminalSessionIo, message: string): void {

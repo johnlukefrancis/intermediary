@@ -1622,6 +1622,10 @@
       "summary": "Source translation, per-source validation, and the bounded walk that plans an import"
     },
     {
+      "path": "crates/im_agent/src/repos/import/tests_git_control.rs",
+      "summary": "Real linked-worktree imports refuse Git pointer files before every write policy"
+    },
+    {
       "path": "crates/im_agent/src/repos/import/tests_refusals.rs",
       "summary": "Import refusal tests: every error the wire contract names, and the proof nothing was written"
     },
@@ -2047,7 +2051,7 @@
     },
     {
       "path": "crates/im_bundle/src/fs_atomic.rs",
-      "summary": "Rename that refuses to replace an existing destination, on the two platforms the product runs on"
+      "summary": "Atomic no-replace rename for Windows, Linux and macOS"
     },
     {
       "path": "crates/im_bundle/src/git_capture/command_child.rs",
@@ -2176,6 +2180,10 @@
     {
       "path": "crates/im_bundle/src/lib.rs",
       "summary": "Library root for bundle scanning and zip creation"
+    },
+    {
+      "path": "crates/im_bundle/src/macos_process_session.rs",
+      "summary": "macOS process-session ownership for native terminals and supervised agents"
     },
     {
       "path": "crates/im_bundle/src/manifest.rs",
@@ -2448,6 +2456,10 @@
     {
       "path": "src-tauri/src/bin/intermediary.rs",
       "summary": "Binary entry point for Tauri app"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/bundle_resources.rs",
+      "summary": "Resolves packaged agent resources and their version metadata"
     },
     {
       "path": "src-tauri/src/lib/agent/host_process_control.rs",
@@ -2750,6 +2762,10 @@
       "summary": "Persisted configuration validation rules and invariants"
     },
     {
+      "path": "src-tauri/src/lib/macos_instance.rs",
+      "summary": "Mac application exclusivity before mutable startup and native activation"
+    },
+    {
       "path": "src-tauri/src/lib/mod.rs",
       "summary": "Library root - Tauri setup and plugin registration"
     },
@@ -2830,12 +2846,16 @@
       "summary": "Opens a pwsh session for a repo root: validation, shell and start-dir resolution, spawn, and the open/open-failed log..."
     },
     {
+      "path": "src-tauri/src/lib/terminal/session_recovery_tests.rs",
+      "summary": "Failed-open ownership and slow-first-pass shutdown recovery regressions"
+    },
+    {
       "path": "src-tauri/src/lib/terminal/session_spawn_cleanup.rs",
       "summary": "Complete process-tree and PTY cleanup for terminal opens that fail after spawn"
     },
     {
       "path": "src-tauri/src/lib/terminal/session_spawn_tests.rs",
-      "summary": "Lifecycle oracle of a spawned session on the Linux toolchain: bytes then exit frame, and the console-first close"
+      "summary": "Unix PTY lifecycle checks for output, joined exit, and attached process cleanup"
     },
     {
       "path": "src-tauri/src/lib/terminal/session_spawn.rs",
@@ -2847,11 +2867,19 @@
     },
     {
       "path": "src-tauri/src/lib/terminal/shell.rs",
-      "summary": "Profile-faithful PowerShell command and exact inherited environment for terminal spawn"
+      "summary": "Native profile-loaded shell command and terminal environment"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/spawn_faults.rs",
+      "summary": "Test-only one-shot worker and cleanup failures scoped to the spawning test thread"
     },
     {
       "path": "src-tauri/src/lib/terminal/start_dir.rs",
       "summary": "Maps a repo root to the directory pwsh starts in and the WSL entry command it runs for a native WSL root"
+    },
+    {
+      "path": "src-tauri/src/lib/terminal/transaction_receipts.rs",
+      "summary": "Final and unresolved terminal receipts retaining process ownership through recovery"
     },
     {
       "path": "src-tauri/src/lib/terminal/transaction.rs",

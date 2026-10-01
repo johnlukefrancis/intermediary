@@ -5,7 +5,7 @@ use super::exit_cell::ExitCell;
 use super::flow_gate::FlowGate;
 use super::frames::{CloseReason, TerminalExitFrame};
 use super::output_sink::{OutputSink, PublishOutcome};
-use im_bundle::process_job::JobHandle;
+use super::TerminalTree;
 use portable_pty::{ChildKiller, MasterPty, PtySize};
 use std::io::Write;
 use std::sync::Mutex;
@@ -25,7 +25,7 @@ pub enum SessionPhase {
 pub struct SessionParts {
     pub id: String,
     pub pid: u32,
-    pub job: JobHandle,
+    pub job: TerminalTree,
     pub master: Box<dyn MasterPty + Send>,
     pub writer: Box<dyn Write + Send>,
     pub killer: Box<dyn ChildKiller + Send + Sync>,
@@ -36,7 +36,7 @@ pub struct TerminalSession {
     pub id: String,
     pub pid: u32,
     /// Owner of the child's process tree; `terminate` is the escalation of a close
-    pub job: JobHandle,
+    pub job: TerminalTree,
     pub gate: FlowGate,
     pub exit: ExitCell,
     pub sink: OutputSink,
@@ -64,14 +64,15 @@ impl TerminalSession {
         }
     }
 
-    /// Writes keyboard input; the writer lock serialises concurrent writes. The
-    /// phase is checked first so a closing session refuses input without
-    /// touching the writer lock, which a wedged write may be holding.
+    /// Check closing before the writer lock: a blocked write must not stall shutdown admission.
     pub fn write(&self, bytes: &[u8]) -> Result<(), String> {
         if self.closing_reason()?.is_some() {
             return Err(self.closing_err());
         }
         let mut writer = self.writer.lock().map_err(|_| self.lock_err("writer"))?;
+        if self.closing_reason()?.is_some() {
+            return Err(self.closing_err());
+        }
         let Some(writer) = writer.as_mut() else {
             return Err(self.closing_err());
         };
@@ -101,11 +102,8 @@ impl TerminalSession {
         self.gate.ack(consumed_total)
     }
 
-    /// Moves the session into `Closing(reason)`, after which writes are
-    /// refused, and drops the input end when it is free. A write wedged in the
-    /// pipe holds the writer lock; the close must not wait behind it, because
-    /// only the pseudoconsole drop that follows can unstick that write. Returns
-    /// `false` when a close was already under way; the earlier reason stands.
+    /// Refuse new input and detach output without waiting behind a blocked writer.
+    /// The first close reason remains authoritative.
     pub fn begin_close(&self, reason: CloseReason) -> Result<bool, String> {
         let first = {
             let mut phase = self.phase.lock().map_err(|_| self.lock_err("phase"))?;
@@ -135,9 +133,7 @@ impl TerminalSession {
         Ok(self.master.lock().map_err(|_| self.lock_err("pty"))?.take())
     }
 
-    /// Last resort of a close: ends the direct child alone. The kill's own
-    /// result is not reported: portable-pty 0.9.0 inverts `TerminateProcess`'s
-    /// result on Windows, so the exit record the caller waits on is the truth.
+    /// The exit receipt is authoritative; portable-pty can misreport the kill result.
     pub fn kill_child(&self) -> Result<(), String> {
         let mut killer = self.killer.lock().map_err(|_| self.lock_err("killer"))?;
         let _ = killer.kill();

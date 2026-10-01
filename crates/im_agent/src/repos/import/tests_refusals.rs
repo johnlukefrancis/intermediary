@@ -40,7 +40,11 @@ async fn two_sources_with_one_basename_are_refused_under_either_policy() {
 async fn a_missing_source_is_reported_as_missing() {
     let repo = worktree();
     let source_dir = tempdir().expect("source dir");
-    let missing = source_dir.path().join("gone.txt").to_string_lossy().to_string();
+    let missing = source_dir
+        .path()
+        .join("gone.txt")
+        .to_string_lossy()
+        .to_string();
 
     let error = import(repo.path(), "app", &[missing], ImportConflictPolicy::Refuse)
         .await
@@ -80,7 +84,12 @@ async fn unsupported_sources_are_refused_before_anything_is_written() {
         )
         .await
         .expect_err("unsupported");
-        assert_eq!(error.code(), "IMPORT_UNSUPPORTED_SOURCE", "{source}");
+        let expected = if source == git_dir.to_string_lossy() {
+            "INVALID_PATH"
+        } else {
+            "IMPORT_UNSUPPORTED_SOURCE"
+        };
+        assert_eq!(error.code(), expected, "{source}");
         assert_eq!(error.effect(), Some("notApplied"), "{source}");
     }
 }
@@ -93,7 +102,11 @@ async fn a_source_already_at_the_destination_is_refused() {
     let error = import(
         repo.path(),
         "app",
-        &[repo.path().join("app/here.txt").to_string_lossy().to_string()],
+        &[repo
+            .path()
+            .join("app/here.txt")
+            .to_string_lossy()
+            .to_string()],
         ImportConflictPolicy::Replace(Vec::new()),
     )
     .await
@@ -155,9 +168,7 @@ async fn a_drop_past_the_entry_cap_is_refused_whole() {
     assert!(!repo.path().join("app/huge").exists());
 }
 
-/// The repository's own Git directory is never a destination, at any depth and
-/// whichever case the filesystem spells it in. Every one of these is refused
-/// before the destination is even resolved, so nothing lands anywhere.
+/// Git control paths are refused before destination resolution, at any depth or case.
 #[tokio::test]
 async fn the_git_directory_is_never_a_destination() {
     let repo = worktree();
@@ -184,10 +195,7 @@ async fn the_git_directory_is_never_a_destination() {
     }
 }
 
-/// A dropped folder carrying a Git directory would plant a second repository
-/// inside this worktree. The walk that finds it is still planning, so the
-/// whole drop is refused with nothing written — and the message names the
-/// folder the user dropped and where inside it the problem is.
+/// Nested Git control metadata refuses the whole drop and names the source location.
 #[tokio::test]
 async fn a_dropped_folder_carrying_a_git_directory_is_refused_whole() {
     let repo = worktree();

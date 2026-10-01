@@ -4,6 +4,8 @@
 mod agent;
 mod commands;
 pub mod config;
+#[cfg(target_os = "macos")]
+mod macos_instance;
 pub mod obs;
 pub mod paths;
 mod terminal;
@@ -39,6 +41,18 @@ use terminal::TerminalRegistry;
 /// Run the Tauri application
 pub fn run() {
     let context = tauri::generate_context!();
+    #[cfg(target_os = "macos")]
+    let _instance = match macos_instance::Instance::acquire(&context.config().identifier) {
+        Ok(Some(instance)) => instance,
+        Ok(None) => {
+            macos_instance::activate_existing(&context.config().identifier);
+            return;
+        }
+        Err(err) => {
+            eprintln!("{err}");
+            return;
+        }
+    };
     logging::init_before_tauri(&context.config().identifier);
     logging::install_panic_hook();
     logging::log(
@@ -83,9 +97,8 @@ pub fn run() {
             logging::log("info", "app", "setup_entered", "Tauri setup entered");
             Ok(())
         })
-        // A navigation or reload of the main page orphans every terminal channel:
-        // the sessions opened for the old page are closed (I1), detached from
-        // this main-thread hook.
+        // Navigation or reload orphans the old page's terminal channels (I1).
+        // Close those sessions off the main thread.
         .on_page_load(|webview, payload| {
             if webview.label() != "main" || payload.event() != PageLoadEvent::Started {
                 return;
@@ -144,6 +157,10 @@ pub fn run() {
     app.run(move |app_handle, event| {
         if matches!(event, RunEvent::Ready) {
             apply_launch_window_bounds(app_handle);
+        }
+        #[cfg(target_os = "macos")]
+        if matches!(event, RunEvent::Reopen { .. }) {
+            commands::startup::reopen_main_window(app_handle);
         }
 
         if let RunEvent::WindowEvent { label, event, .. } = &event {

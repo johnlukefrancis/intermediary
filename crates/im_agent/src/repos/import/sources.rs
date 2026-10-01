@@ -9,18 +9,15 @@ use tokio::fs;
 
 use crate::error::AgentError;
 use crate::repos::worktree::join_relative;
+use crate::source_control::ensure_no_git_component;
 use crate::staging::StageFileCancelToken;
 
 use super::{cancelled_error, unsupported_source};
 
-/// The ceiling on one drop, counted in files *and* directories across every
-/// source. It bounds the plan before a single byte moves, so a folder dropped
-/// by mistake is refused rather than half-copied.
+/// Bounds files and directories across the entire drop before any write.
 pub const MAX_IMPORT_ENTRIES: usize = 10_000;
 
-/// One thing the import will write, in the order it must be written: a
-/// directory always appears before anything inside it, so the copy never has
-/// to create a parent it was not told about.
+/// Planned directories precede their descendants, so writes need no unplanned parents.
 pub(super) enum PlannedEntry {
     Dir { dest_rel: String },
     File { source: PathBuf, dest_rel: String },
@@ -34,9 +31,7 @@ impl PlannedEntry {
     }
 }
 
-/// One dropped source, resolved. `dest_rel` is the single repo-relative path
-/// the source claims — `<directory>/<basename>` — and is the unit both the
-/// conflict pre-pass and duplicate detection compare.
+/// The repo-relative root claimed by one source and its ordered descendants.
 pub(super) struct PlannedSource {
     pub(super) dest_rel: String,
     pub(super) entries: Vec<PlannedEntry>,
@@ -78,10 +73,7 @@ pub(super) async fn plan_sources(
     Ok(planned)
 }
 
-/// This module's refusals name the source by its resolved path: by the time
-/// anything here speaks, the delivered string has already been translated into
-/// this agent's namespace, and quoting the untranslated form would name a path
-/// that does not exist here.
+/// Source paths have already been translated into the owning agent's namespace.
 fn refuse(source: &Path, reason: &str) -> AgentError {
     unsupported_source(source.display(), reason)
 }
@@ -97,9 +89,7 @@ fn source_basename(source: &Path) -> Result<String, AgentError> {
     if name.contains('/') || name.contains('\\') || name.contains('\0') {
         return Err(refuse(source, "has a name a repo path cannot carry"));
     }
-    if name.eq_ignore_ascii_case(".git") {
-        return Err(refuse(source, "is a Git directory"));
-    }
+    ensure_no_git_component(&name)?;
     Ok(name)
 }
 
@@ -141,9 +131,7 @@ async fn classify_source(source: &Path) -> Result<ClassifiedSource, AgentError> 
     })
 }
 
-/// Refuses a source that would import itself: the destination directory is the
-/// source, sits inside it, or the source is exactly the file the copy would
-/// write. Each of those either loops forever or destroys the source.
+/// Refuses self-import and sources containing the destination before expansion.
 fn ensure_not_a_container_of_the_destination(
     source: &ClassifiedSource,
     canonical_dest_dir: &Path,
@@ -161,15 +149,7 @@ fn ensure_not_a_container_of_the_destination(
     Ok(())
 }
 
-/// Breadth-first expansion of one directory source. Symlinked entries inside
-/// are skipped exactly as the directory listing skips them, so an import never
-/// follows a link out of the tree the user dropped.
-///
-/// A Git directory anywhere inside refuses the whole drop. Copying one into a
-/// worktree plants a second repository the user never asked for, and this is
-/// still planning, so the refusal proves nothing was written — the same proof
-/// the top-level basename refusal gives, extended to every depth the walk can
-/// reach.
+/// Refuses Git control entries before type dispatch; ordinary symlinks are skipped.
 async fn walk_directory(
     source_root: &Path,
     dest_root_rel: &str,
@@ -192,18 +172,17 @@ async fn walk_directory(
         while let Some(entry) = read_dir.next_entry().await.map_err(|error| {
             AgentError::internal(format!("Failed to read {}: {error}", dir.display()))
         })? {
+            let name = entry.file_name().to_string_lossy().to_string();
+            let dest_rel = join_relative(&dir_dest_rel, &name);
+            ensure_no_git_component(&dest_rel)
+                .map_err(|_| git_inside_drop(source_root, dest_root_rel, &dest_rel))?;
             let file_type = entry.file_type().await.map_err(|error| {
                 AgentError::internal(format!("Failed to read {}: {error}", dir.display()))
             })?;
             if file_type.is_symlink() {
                 continue;
             }
-            let name = entry.file_name().to_string_lossy().to_string();
-            let dest_rel = join_relative(&dir_dest_rel, &name);
             if file_type.is_dir() {
-                if name.eq_ignore_ascii_case(".git") {
-                    return Err(git_inside_drop(source_root, dest_root_rel, &dest_rel));
-                }
                 *used = charge_entry(*used)?;
                 entries.push(PlannedEntry::Dir {
                     dest_rel: dest_rel.clone(),
@@ -222,9 +201,7 @@ async fn walk_directory(
     Ok(entries)
 }
 
-/// Names the folder the user dropped and where inside it the Git directory
-/// sits, because that folder is what they have to fix; `dest_rel` is stripped
-/// back to its path within the drop, which is the only part they can act on.
+/// Names the dropped root and the Git control entry relative to that root.
 fn git_inside_drop(source_root: &Path, dest_root_rel: &str, dest_rel: &str) -> AgentError {
     let inside = dest_rel
         .strip_prefix(dest_root_rel)
@@ -232,7 +209,7 @@ fn git_inside_drop(source_root: &Path, dest_root_rel: &str, dest_rel: &str) -> A
     AgentError::new(
         "INVALID_PATH",
         format!(
-            "Refusing {}: it contains a Git directory at {inside}",
+            "Refusing {}: it contains Git control metadata at {inside}",
             source_root.display()
         ),
     )

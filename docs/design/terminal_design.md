@@ -1,5 +1,5 @@
 # Integrated Terminal Design
-Updated on: 2026-09-04
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010, ADR-013
 
@@ -15,6 +15,12 @@ interactive TUIs, not a command box. This design brings that terminal into the d
 section, TERMINAL, beside ZIPS and SOURCE.
 
 ## Goals
+
+The native macOS extension uses the configured account login shell with its
+profiles, a native PTY, Command-C/V, and session-scoped process cleanup. Tabs
+are labelled SHELL; Windows retains PWSH, ConPTY and WSL entry. The Windows
+shell-specific goals and non-goals below apply to Windows hosts. The shared
+session, output, switching, capacity and close contracts apply on both hosts.
 
 - A ConPTY-backed PowerShell 7 session per tab, started in the active repo/worktree, with JL's profile
   loaded (`-NoLogo`, never `-NoProfile`), so `claude`, `codex`, `wsl`, and `wb-code` resolve exactly as they

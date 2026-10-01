@@ -1,6 +1,6 @@
 # Intermediary System Overview
 
-Updated on: 2026-09-06
+Updated on: 2026-09-29
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-010
 
@@ -8,7 +8,7 @@ Depends on: ADR-000, ADR-007, ADR-010
 
 Reduce friction when sharing trustworthy local repo context with browser-based LLM interfaces like ChatGPT. Intermediary is a single-window "handoff console" that surfaces recently changed files, stages drag-and-drop-safe copies, and generates standardized timestamped bundles so users can hand off either broad repo context or the latest incremental files without Explorer and `\\wsl$` friction.
 
-Maintainer-validated runtime today is Windows 10/11. WSL2 is the recommended path for the full WSL-backed workflow, while host-native Windows repo workflows are also validated. The codebase includes host-native paths beyond that target, but macOS and Linux are not yet validated to the same standard.
+Windows 10/11 supports host-native and WSL2 repositories. The native Apple Silicon macOS candidate uses host roots, the packaged host agent, native watching and staging, and a Tauri-owned account-shell PTY. Desktop evidence and remaining acceptance live in `docs/implementation/macos_port_implementation.md`; macOS distribution notarization and Linux desktop parity remain unverified.
 
 ## Architecture
 
@@ -64,6 +64,12 @@ Intermediary uses a **host-routed architecture**:
 - **Stack:** Tauri + React/TypeScript
 - **Purpose:** Single-window "handoff console" with repo tabs
 - **Key features:**
+  - On macOS, `macos_instance.rs` takes an exclusive kernel file lock before
+    logging, authentication state or WebView creation. Its retained file handle
+    owns the app lifetime; the persistent `instance.lock` is never unlinked.
+    Duplicate launches activate the existing app and exit without starting a
+    second host or terminal runtime. macOS reopen restores the ready main window.
+    Lock errors refuse startup; a normal exit or crash releases the kernel lock
   - Two-window startup handshake: all command-visible Rust state is registered on the Tauri Builder
     before either configured WebView can load or invoke a command; user setup performs no window RPC;
     one runtime-owned state machine serializes `RunEvent::Ready` and frontend readiness in either

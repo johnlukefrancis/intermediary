@@ -90,6 +90,11 @@ fn ensure_main_window_ready(app: &AppHandle) -> Result<(), String> {
         .get_webview_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
 
+    #[cfg(target_os = "macos")]
+    main_window
+        .unminimize()
+        .map_err(|err| format!("Failed to restore main window: {err}"))?;
+
     if let Err(err) = main_window.show() {
         return Err(format!("Failed to show main window: {err}"));
     }
@@ -99,6 +104,27 @@ fn ensure_main_window_ready(app: &AppHandle) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+pub fn reopen_main_window(app: &AppHandle) {
+    let Some(state) = app.try_state::<StartupWindowState>() else {
+        return;
+    };
+    let Ok(phase) = state.phase.lock() else {
+        logging::log(
+            "error",
+            "startup",
+            "reopen_failed",
+            "Startup phase lock was poisoned",
+        );
+        return;
+    };
+    if *phase == StartupPhase::Complete {
+        if let Err(err) = ensure_main_window_ready(app) {
+            logging::log("error", "startup", "reopen_failed", &err);
+        }
+    }
 }
 
 pub fn retire_splashscreen(app: &AppHandle) {

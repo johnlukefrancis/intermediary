@@ -43,9 +43,7 @@ fn read_unicode_text() -> Result<String, String> {
     if handle.is_null() {
         return Ok(String::new());
     }
-    // SAFETY: `handle` is a global memory object the clipboard owns while it is
-    // open. `GlobalLock` pins it for the reads below and `GlobalUnlock` releases
-    // that pin before the function returns.
+    // SAFETY: the open clipboard owns handle; GlobalUnlock releases this pin below.
     let data = unsafe { GlobalLock(handle) } as *const u16;
     if data.is_null() {
         return Err(format!(
@@ -72,8 +70,18 @@ fn read_unicode_text() -> Result<String, String> {
     Ok(String::from_utf16_lossy(&units))
 }
 
-/// The paste route exists for the Windows product; elsewhere it is refused.
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+pub fn read_text() -> Result<String, String> {
+    use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
+    objc2::rc::autoreleasepool(|_| {
+        let board = NSPasteboard::generalPasteboard();
+        // SAFETY: the AppKit constant is valid for the lifetime of this process.
+        let text = unsafe { board.stringForType(NSPasteboardTypeString) };
+        Ok(text.map(|text| text.to_string()).unwrap_or_default())
+    })
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 pub fn read_text() -> Result<String, String> {
     Err("Clipboard text is available on Windows hosts only".to_string())
 }
