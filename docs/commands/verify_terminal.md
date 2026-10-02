@@ -18,7 +18,7 @@ After the WSL source has been synced to the Windows mirror, run the Windows-only
 ConPTY adapter the app uses:
 
 ```powershell
-Set-Location 'D:\code\intermediary'
+Set-Location 'E:\Code\intermediary'
 cargo test -p intermediary child_belongs_to_the_job_at_create_process_return --lib
 ```
 

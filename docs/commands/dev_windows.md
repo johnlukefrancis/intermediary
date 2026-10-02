@@ -71,7 +71,7 @@ From WSL, sync source files to the Windows mirror directory:
 
 ### 2. Install dependencies (Windows)
 
-From the Windows mirror directory (for example `D:\code\intermediary`):
+From the Windows mirror directory (for example `E:\Code\intermediary`):
 
 ```powershell
 pnpm install
@@ -111,7 +111,7 @@ The VS Code tasks set these automatically:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `INTERMEDIARY_WIN_PATH` | Windows mirror directory | `D:\code\intermediary` |
+| `INTERMEDIARY_WIN_PATH` | Windows mirror directory | `E:\Code\intermediary` |
 | `INTERMEDIARY_WSL_PATH` | WSL source directory | `/home/<you>/code/intermediary` |
 | `INTERMEDIARY_WSL_DISTRO` | WSL distro for VS Code tasks (sync scripts) | `Ubuntu` |
 | `INTERMEDIARY_WSL_BACKEND_MODE` | WSL backend ownership mode in app runtime (`external` in Windows dev tasks) | `external` |

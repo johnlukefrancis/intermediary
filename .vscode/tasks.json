@@ -282,7 +282,7 @@
       "id": "intermediaryWindowsMirrorPath",
       "type": "promptString",
       "description": "Windows mirror directory used by sync and Tauri Windows tasks",
-      "default": "D:\\code\\intermediary"
+      "default": "E:\\Code\\intermediary"
     },
     {
       "id": "intermediaryWslDistro",

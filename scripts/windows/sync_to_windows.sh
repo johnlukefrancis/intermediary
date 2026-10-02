@@ -4,10 +4,8 @@ set -euo pipefail
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 if [[ -n "${INTERMEDIARY_WIN_PATH:-}" ]]; then
   DEST_DIR="${INTERMEDIARY_WIN_PATH}"
-elif [[ -d "/mnt/d" ]]; then
-  DEST_DIR="/mnt/d/code/intermediary"
 else
-  DEST_DIR="/mnt/c/code/intermediary"
+  DEST_DIR="/mnt/e/Code/intermediary"
 fi
 
 if ! command -v rsync >/dev/null 2>&1; then

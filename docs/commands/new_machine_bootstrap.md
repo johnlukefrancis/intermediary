@@ -133,7 +133,7 @@ claude-mcp-config apply
 `jl-agent-sync` copies the Windows authority into WSL, installs the shell
 aliases, and creates the shared Claude skill links on Windows. External skill
 links whose target is absent on this machine (currently
-`C:\Code\SpriteAuthoring`) are skipped and reported by `--check`; that is the
+`E:\Code\SpriteAuthoring`) are skipped and reported by `--check`; that is the
 expected state on the laptop.
 
 ```bash
