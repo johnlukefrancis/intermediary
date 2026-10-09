@@ -3,7 +3,7 @@
 
 import type { AgentEvent } from "../../shared/protocol.js";
 import { isVisibleFileKind } from "../files/file_feed.js";
-import { streamSupport } from "./stream_agent_support.js";
+import { activitySupport } from "../agent/activity_support.js";
 import { pressureBand } from "./stream_cadence.js";
 import { seedHistory } from "./stream_ring.js";
 import type {
@@ -31,10 +31,8 @@ export function browserStoreDeps(): StreamStoreDeps {
   };
 }
 
-/**
- * Over INTAKE_CAP the oldest fileChanged goes first (it only feeds burst detection and the settling
- * line), then the oldest of whatever remains; the caller counts the drop for the next flush's notice.
- */
+/** Drop the oldest fileChanged first, then the oldest remaining event.
+ * The caller counts the loss for the next flush's notice. */
 export function dropOldestIntake(intake: AgentEvent[]): void {
   const index = intake.findIndex((event) => event.type === "fileChanged");
   intake.splice(index === -1 ? 0 : index, 1);
@@ -42,10 +40,8 @@ export function dropOldestIntake(intake: AgentEvent[]): void {
 
 type SnapshotEvent = Extract<AgentEvent, { type: "snapshot" }>;
 
-/**
- * The only seed route: the repo's own snapshot (flush drops every foreign event), and only while
- * the ring holds no card — a repeat snapshot, a reconnect, or a late arrival never rewrites live cards.
- */
+/** Only the repo's own snapshot can seed an empty ring.
+ * Repeated snapshots never rewrite retained live cards. */
 export function seedFromSnapshot(state: StreamReduceState, event: SnapshotEvent): StreamReduceState {
   const seeds = event.recent.flatMap((file): StreamHistorySeed[] =>
     isVisibleFileKind(file.kind)
@@ -101,7 +97,7 @@ export function buildSnapshot(input: SnapshotInput): StreamSnapshot {
     documentHidden,
     offline: !transport.connected || !transport.helloOk,
     held: isHeld(transport),
-    support: streamSupport(transport.agentVersion),
+    support: activitySupport(transport.agentVersion),
     admittedWhileAway,
     // Already capped at SETTLING_MAX by the reducer; the projection only drops the timestamps
     settling: state.settling.map((entry) => entry.path),

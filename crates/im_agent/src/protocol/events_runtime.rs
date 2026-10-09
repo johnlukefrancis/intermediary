@@ -21,6 +21,8 @@ pub struct AgentErrorDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repo_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub root_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_message: Option<String>,

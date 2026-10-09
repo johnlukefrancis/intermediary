@@ -1,0 +1,37 @@
+/* Path: app/src/styles/overview/overview_detail.css
+ * Description: Stream-family file head, uppercase meta chips, relative clock and the shared diff-row density */
+
+/* Tracks match .stream-card__head: badge, icon, name (≥8ch), shrinkable meta, clock */
+.overview-file { display: grid; grid-template-columns: 22px 14px minmax(8ch, 1fr) minmax(0, auto) 52px; align-items: center; column-gap: var(--space-2); min-height: 36px; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1); }
+.overview-file[data-history="true"] { grid-template-columns: 14px minmax(8ch, 1fr) minmax(0, auto) 52px; padding-left: var(--space-2); }
+.overview-file > .badge { padding: 0; justify-content: center; }
+.overview-file__icon { display: flex; align-items: center; justify-content: center; }
+.overview-file__icon .file-icon { width: 12px; height: 12px; }
+.overview-panel .overview-file__path { display: flex; flex-direction: column; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; }
+.overview-file__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-primary); font: var(--weight-semibold) var(--text-base) / 1.35 var(--font-sans); transition: color var(--duration-normal) var(--ease-out); }
+.overview-panel .overview-file__path:hover .overview-file__name { color: var(--color-accent); }
+.overview-file__from { color: var(--color-text-secondary); font-weight: var(--weight-normal); }
+/* Head-truncated like .stream-card__dir: the deepest directory survives, the root end elides */
+.overview-file__dir { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; color: var(--color-text-secondary); font: var(--text-xs) / 1.45 var(--font-mono); }
+.overview-feed-entry[data-kind="signal"] .overview-file__name { color: var(--color-text-secondary); font-weight: var(--weight-medium); }
+.overview-file__meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--space-2); min-width: 0; overflow: hidden; font: var(--text-xs) / 1.4 var(--font-mono); white-space: nowrap; }
+.overview-edit__stats { display: inline-flex; gap: var(--space-1); font-variant-numeric: tabular-nums; }
+.overview-edit__stats [data-stat="add"] { color: var(--color-success); }
+.overview-edit__stats [data-stat="del"] { color: var(--color-error); }
+.overview-edit__chip { padding: 0 var(--space-1); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-deck-xs); color: var(--color-text-muted); letter-spacing: 0.06em; text-transform: uppercase; }
+.overview-edit__chip[data-chip="history"] { border-style: dashed; }
+.overview-entry-age { color: var(--color-text-muted); font: var(--text-xs) / 1 var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+/* Density override of the shared .diff-line grammar, as .stream-card .diff-line; no line numbers here */
+.overview-edit__lines { overflow: hidden; padding-bottom: var(--space-1); color: var(--color-editor-text); font-family: var(--font-mono); tab-size: 4; }
+.overview-edit__lines .diff-line { grid-template-columns: minmax(0, 1fr); min-height: 1.45em; padding: 0 var(--space-2); font-size: var(--text-sm); line-height: 1.45; }
+.overview-edit__lines .diff-line__no { display: none; }
+.overview-edit__lines .diff-line__text { overflow: hidden; text-overflow: ellipsis; }
+.overview-edit__detail { margin: 0; padding: 0 var(--space-2) var(--space-2); color: var(--color-text-muted); font: var(--text-xs) / 1.5 var(--font-mono); letter-spacing: 0.04em; overflow-wrap: anywhere; }
+
+@container overview (max-width: 450px) {
+  .overview-file { grid-template-columns: 22px 14px minmax(8ch, 1fr) minmax(0, auto); padding-right: var(--space-1); }
+  .overview-file[data-history="true"] { grid-template-columns: 14px minmax(8ch, 1fr) minmax(0, auto); }
+  .overview-file > .overview-entry-age { display: none; }
+  .overview-edit__chip:not([data-chip="history"]) { display: none; }
+}

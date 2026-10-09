@@ -3,13 +3,14 @@
 
 import type React from "react";
 import { useCallback } from "react";
-import type { StreamImageTile as TilePixels } from "../../hooks/stream/use_stream_images.js";
+import type { ImageTile as TilePixels } from "../../hooks/images/use_image_tiles.js";
 import { getExtension } from "../../hooks/repo_workspace_types.js";
 import { useDragOutPointer } from "../../hooks/use_drag_out_pointer.js";
 import { baseName } from "../../lib/bundles/bundle_selection_visibility.js";
 import { CHANGE_BADGES } from "../../lib/source_control/change_badges.js";
-import { IMAGE_CARD_MAX_BYTES } from "../../lib/stream/stream_bounds.js";
-import { badgeFor, formatBytes, previewableImage } from "../../lib/stream/stream_card_grammar.js";
+import { IMAGE_TILE_MAX_BYTES } from "../../lib/images/image_tile_bounds.js";
+import { previewableImage } from "../../lib/images/image_tile_pixels.js";
+import { badgeFor, formatBytes } from "../../lib/stream/stream_card_grammar.js";
 import type { StreamStripTile } from "../../lib/stream/stream_types.js";
 
 export interface StreamImageTileProps {
@@ -30,7 +31,7 @@ export interface StreamImageTileProps {
 
 /** Why no pixels were ever requested: a file past the agent's ceiling (the viewer refuses it too), or an extension with no mime */
 function noPreviewReason(path: string, bytes: number): string {
-  if (bytes > IMAGE_CARD_MAX_BYTES) return formatBytes(bytes);
+  if (bytes > IMAGE_TILE_MAX_BYTES) return formatBytes(bytes);
   return getExtension(path)?.toUpperCase() ?? "UNSUPPORTED";
 }
 

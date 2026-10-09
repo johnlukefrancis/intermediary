@@ -83,9 +83,7 @@ export const StarredFilesSchema = z.record(z.string(), StarredFilesEntrySchema);
 
 export type StarredFiles = z.infer<typeof StarredFilesSchema>;
 
-/**
- * Full persisted configuration (saved to disk)
- */
+/** Full persisted configuration saved to disk. */
 export const PersistedConfigSchema = z.object({
   /** Schema version for migrations */
   configVersion: z.number().int().min(1).default(CONFIG_VERSION),
@@ -167,9 +165,7 @@ export interface LoadConfigResult {
   migrationApplied: boolean;
 }
 
-/**
- * Parse persisted config, applying migrations if needed
- */
+/** Parse persisted config, applying migrations if needed. */
 export function parsePersistedConfig(input: unknown): PersistedConfig {
   const normalizedRoots = normalizeLegacyRepoRoots(input);
   const normalizedCodeGlobs = normalizeLegacyCodeGlobs(normalizedRoots);
@@ -179,14 +175,13 @@ export function parsePersistedConfig(input: unknown): PersistedConfig {
   return migrateConfig(parsed);
 }
 
-/**
- * Get default persisted config
- */
+/** Get default persisted config. */
 export function getDefaultPersistedConfig(): PersistedConfig {
   return {
     configVersion: CONFIG_VERSION,
     ...DEFAULT_APP_CONFIG,
     uiState: {
+      mainView: "repository",
       lastActiveTabId: null,
       lastActiveGroupRepoIds: {},
       windowBoundsByMode: {},

@@ -77,9 +77,10 @@ async fn counters_consume_the_shared_sequence() {
     let event_bus = EventBus::new(256);
     let mut events = event_bus.subscribe();
     let (_stop_tx, stop) = watch::channel(false);
+    let configured_root = format!("{}/", root.display());
     let mut worker = DeltaWorker::new(
         "repo-1".to_string(),
-        root.clone(),
+        configured_root.clone(),
         event_bus,
         logger,
         TrackedPathSet::empty(),
@@ -108,6 +109,10 @@ async fn counters_consume_the_shared_sequence() {
         seen.push(text);
     }
     assert_eq!(seen.len() as u32, BURST_BUDGET + 1, "{seen:?}");
+    for event in &seen {
+        let wire: serde_json::Value = serde_json::from_str(&event.text).expect("activity wire");
+        assert_eq!(wire["payload"]["rootPath"], configured_root);
+    }
     let last = seen.last().expect("the counters event");
     assert!(last.contains("\"type\":\"fileDeltaCounters\""), "{last}");
     assert!(last.contains("\"withheld\":1"), "{last}");
@@ -121,10 +126,8 @@ async fn counters_consume_the_shared_sequence() {
     );
 }
 
-/// Counters go out on their own when the queue is quiet, when a denying
-/// window closed, or - independent of the refill rule - once `BURST_WINDOW`
-/// has passed since counters last left on any carrier. Zero counters are
-/// never due, and a take resets the clock.
+/// Nonzero counters go out on quiet, a denying window close, or after
+/// `BURST_WINDOW` since the last carrier; taking them resets the clock.
 #[test]
 fn standalone_counters_are_due_on_a_time_bound_of_their_own() {
     let start = Instant::now();

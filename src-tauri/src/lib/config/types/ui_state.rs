@@ -8,6 +8,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UiState {
+    #[serde(default = "default_main_view")]
+    pub main_view: String,
     /// Last active repo (by repoId)
     pub last_active_tab_id: Option<String>,
     /// Last active repo per group (groupId -> repoId)
@@ -16,14 +18,10 @@ pub struct UiState {
     /// Remembered window bounds by mode key (standard/handset)
     #[serde(default)]
     pub window_bounds_by_mode: HashMap<String, UiWindowBounds>,
-    /// Right-rail section shown in the deck: `zips`, `source`, or `terminal`.
-    /// Mirrors the frontend `ActiveRailSchema`; without this field a save
-    /// round-trip dropped the choice and the rail always reloaded on ZIPS.
+    /// Right-rail section, mirrored by the frontend ActiveRailSchema.
     #[serde(default = "default_active_rail")]
     pub active_rail: String,
-    /// Left file panel mode: `stream`, `auto`, `latest`, or `active`.
-    /// Mirrors the frontend `FilesModeSchema`; defaulted, so an older config
-    /// loads on STREAM without a schema migration.
+    /// Left file panel mode, mirrored by the frontend FilesModeSchema.
     #[serde(default = "default_files_mode")]
     pub files_mode: String,
     /// Rail share of the deck width in standard layout (20-70), set by the drag divider
@@ -33,6 +31,11 @@ pub struct UiState {
 
 pub const RAIL_WIDTH_PERCENT_MIN: u8 = 20;
 pub const RAIL_WIDTH_PERCENT_MAX: u8 = 70;
+pub const MAIN_VIEWS: [&str; 2] = ["repository", "overview"];
+
+fn default_main_view() -> String {
+    "repository".to_string()
+}
 
 fn default_rail_width_percent() -> u8 {
     35
@@ -55,6 +58,7 @@ fn default_files_mode() -> String {
 impl Default for UiState {
     fn default() -> Self {
         Self {
+            main_view: default_main_view(),
             last_active_tab_id: None,
             last_active_group_repo_ids: HashMap::new(),
             window_bounds_by_mode: HashMap::new(),
@@ -71,4 +75,26 @@ impl Default for UiState {
 pub struct UiWindowBounds {
     pub width: u32,
     pub height: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::UiState;
+
+    #[test]
+    fn overview_round_trip_preserves_the_selected_repository() {
+        let state = UiState {
+            main_view: "overview".to_string(),
+            last_active_tab_id: Some("worktree".to_string()),
+            ..UiState::default()
+        };
+        let value = serde_json::to_value(state).expect("serialize ui state");
+        assert_eq!(value["mainView"], "overview");
+        let restored: UiState = serde_json::from_value(value).expect("restore ui state");
+        assert_eq!(restored.last_active_tab_id.as_deref(), Some("worktree"));
+        assert_eq!(restored.main_view, "overview");
+        let old: UiState = serde_json::from_str("{\"lastActiveTabId\":null}")
+            .expect("load existing config");
+        assert_eq!(old.main_view, "repository");
+    }
 }

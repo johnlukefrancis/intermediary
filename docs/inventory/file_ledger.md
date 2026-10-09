@@ -34,6 +34,7 @@ app/src/components/diff_workspace.tsx - Read-only unified/combined diff viewer i
 app/src/components/diff/diff_line_rows.tsx - The one renderer of parsed diff lines as `.diff-line` rows, shared by the workspace and the stream
 app/src/components/drag_error_notice.tsx - Small inline error notice for drag failures
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
+app/src/components/empty_state_panel.tsx - Shared centered glass empty-state surface with optional details and an action
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_diff_pane.tsx - One side of an image diff: Git-labelled header, checkerboard image slot, size footer
@@ -60,6 +61,17 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
+app/src/components/overview_view.tsx - Connects the Overview presentation to configured roots and its live projection
+app/src/components/overview/overview_feed_entries.ts - Bounded chronological Overview edit, observation and coverage entries
+app/src/components/overview/overview_feed_entry.tsx - One repository-bound feed entry with file opening, context menu and drag-out interactions
+app/src/components/overview/overview_feed.tsx - One chronological repository-labelled Overview feed with tail-follow
+app/src/components/overview/overview_file_head.tsx - Shared Overview filename-over-directory typography, icon and operation badge
+app/src/components/overview/overview_image_preview.tsx - Fixed-height real image preview that opens the full file workspace
+app/src/components/overview/overview_panel.tsx - Full-width chronological work feed with active repository chips and watch-health awareness
+app/src/components/overview/overview_presentation.ts - Overview watch-health summaries and relative edit ages
+app/src/components/overview/overview_settled_edit.tsx - Observed edit with Stream-family file identity and a six-line excerpt
+app/src/components/overview/overview_workspace.tsx - Overview's full-pane file workspace using the shared repository viewers and actions
+app/src/components/overview/use_overview_follow.ts - Overview tail-follow with a bounded unread set and no private timer
 app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text buffers, image previews, and text/image diffs
 app/src/components/source_control/source_control_body.tsx - Phase-dependent body of the Source Control column: empty states or the three sections
 app/src/components/source_control/source_control_column.tsx - Source Control column frame: status line, warnings, commit box, notices, body, menus, confirms
@@ -76,17 +88,17 @@ app/src/components/stream/stream_burst_card.tsx - Fixed-height card standing in 
 app/src/components/stream/stream_card_head.tsx - The one-line card head: badge, file icon, name over dir, +N M, baseline chip, edit count, clock
 app/src/components/stream/stream_card.tsx - Memoized file card chassis: spine, head, body dispatch, click / double-click / drag / right-click / keys
 app/src/components/stream/stream_follow_pill.tsx - Sticky "N NEW" button shown while the reader has scrolled away from the live tail
-app/src/components/stream/stream_header_live.tsx - The Stream header's LIVE indicator: one dot plus a mono state label
+app/src/components/stream/stream_header_status.tsx - Stream header status when observation is interrupted or unavailable
 app/src/components/stream/stream_history_row.tsx - Compact scrollback row seeding the Stream panel from the existing recent list
-app/src/components/stream/stream_host.tsx - Renders nothing; keeps the Stream store registry fed for the life of the app
 app/src/components/stream/stream_icons.tsx - Stroke glyphs owned by the Stream panel, drawn in the Auto files header idiom
 app/src/components/stream/stream_image_strip.tsx - The image strip card: head with count and op tally, the growing-then-wrapping tile grid, clock-span footer, tile sele...
 app/src/components/stream/stream_image_tile.tsx - One tile of an image strip: a 16:10 checkerboard slot sized by its column, badge, edit counter, name, the BEFORE/AFTE...
 app/src/components/stream/stream_notice_row.tsx - Console-prompt notice row: honesty counters and transport state printed inline in the stream
-app/src/components/stream/stream_panel.tsx - The Stream panel shell: mode rocker with the LIVE slot, support states, and the live scroller
+app/src/components/stream/stream_panel.tsx - Stream panel shell with mode controls, support states, and the live scroller
 app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
 app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
+app/src/components/tab_bar/overview_tab.tsx - Global activity destination using the repository navigation grammar
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -118,6 +130,13 @@ app/src/hooks/bundles/use_tree_drop_import.ts - Owns the OS drag gesture over th
 app/src/hooks/bundles/use_tree_keyboard.ts - Keyboard command map for the focused ZIPS tree list (navigation, expand/collapse, clipboard, rename, delete)
 app/src/hooks/bundles/use_tree_row_drag.ts - In-tree pointer-drag of a row (or the whole selection) onto a folder row or the root
 app/src/hooks/bundles/use_tree_selection.ts - Row selection state for the ZIPS tree - click/ctrl/shift semantics, pruned as rows disappear
+app/src/hooks/images/image_tile_records.ts - Shared image tile records, Blob ownership and stable published pixel projections
+app/src/hooks/images/image_tile_thumbnail.ts - Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob
+app/src/hooks/images/use_image_tiles.ts - Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency
+app/src/hooks/overview/use_overview_file_actions.ts - Repository-bound Overview context menus and user-triggered drag-out actions
+app/src/hooks/overview/use_overview_history.ts - Serial initial and reconnect history refresh across connected roots, with host roots first
+app/src/hooks/overview/use_overview_images.ts - Visible Overview image metadata projected into the shared revision-bound tile loader
+app/src/hooks/overview/use_overview.ts - Overview subscription and visible-only age clock
 app/src/hooks/repo_workspace_diff_loaders.ts - Diff loaders for the repo workspace hook: text patches and two-sided image snapshots
 app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff, image diff) and path helpers for the workspace hook
 app/src/hooks/source_control/source_control_commands.ts - Public stage/unstage/discard/commit/push/pull command surface over the serialized action runner
@@ -128,17 +147,16 @@ app/src/hooks/source_control/source_control_refresh.ts - Status refresh timing o
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
 app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
 app/src/hooks/source_control/use_tree_decorations.tsx - Context delivering the built tree decorations to the recursive bundle explorer rows
-app/src/hooks/stream/stream_tile_records.ts - The panel's tile pixel records: statuses, Blob release, and the published projection
-app/src/hooks/stream/stream_tile_thumbnail.ts - Decodes one tile's fetched bytes into the thumbnail Blob the strip retains: probe the source, gate it, downscale past...
 app/src/hooks/stream/use_deferred_click.ts - A single click that fires only once the double-click grace has passed; shared by file cards and image strips
 app/src/hooks/stream/use_repo_stream.ts - Binds the active repo's Stream store to React: visibility, selection filter, card and tile actions
 app/src/hooks/stream/use_stream_follow.ts - Follow-scroll for the Stream scroller: tail pin, unread count while unpinned, freeze, resume
-app/src/hooks/stream/use_stream_host.ts - Mounted once: the one agent subscription and host facts pushed into every Stream store
-app/src/hooks/stream/use_stream_images.ts - Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, thumbnail Blob tiles, bounded rete...
+app/src/hooks/stream/use_stream_images.ts - Projects Stream cards and host visibility to the shared bounded image tile owner
 app/src/hooks/terminal/use_terminal_group.ts - Subscribes a component to one repo's terminal group snapshot from the module-level registry
 app/src/hooks/terminal/use_terminal_host.ts - Adopts the active terminal tab into a host element for its mount, parks on cleanup, and keeps it fitted, themed and f...
 app/src/hooks/terminal/use_terminal_lifecycle.ts - App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every...
+app/src/hooks/use_activity_host.ts - One app-lifetime dispatcher for Stream and all-repository Overview activity
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
+app/src/hooks/use_app_navigation.ts - App view selection and remembered repository navigation
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
@@ -164,6 +182,7 @@ app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main w
 app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
+app/src/lib/agent/activity_support.ts - Shared minimum agent contract for root-identified activity in Stream and Overview
 app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope normalization for older agent payloads
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
@@ -187,10 +206,24 @@ app/src/lib/icons/file_family.ts - Extension-to-language-family mapping for file
 app/src/lib/icons/file_icon.css - Per-family colors and base styling for file-type icons
 app/src/lib/icons/file_icons.tsx - Devicon-derived SVG path data and FileIcon component for file-type icons
 app/src/lib/icons/index.ts - Barrel export for file-type icon system
+app/src/lib/images/image_tile_bounds.ts - Shared image tile byte, decode, concurrency and thumbnail retention bounds
+app/src/lib/images/image_tile_pixels_test.ts - Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit;...
+app/src/lib/images/image_tile_pixels.ts - Shared image preview eligibility, exact revision acceptance, source pixel gate and thumbnail fit
+app/src/lib/images/image_tile_targets_test.ts - Cross-repository/root BEFORE isolation and one thumbnail budget across all source identities
+app/src/lib/images/image_tile_targets.ts - Image tile source identities, newest-thumbnail retention and source-scoped BEFORE pairing
+app/src/lib/overview/overview_activity.ts - Bounded live observations, historical paths and settled-detail sequence accounting
+app/src/lib/overview/overview_backend_test.ts - Root-scoped watcher failure and backend-version recovery regression oracles
+app/src/lib/overview/overview_edit.ts - Metadata-only settled edits with bounded excerpts from the shared patch parser
+app/src/lib/overview/overview_edits_test.ts - Independent feed-entry retention, global identity and immutable publication oracles
+app/src/lib/overview/overview_focus_test.ts - Active-work selection rejects idle roots and file mtimes, ages out, and re-enters on work
+app/src/lib/overview/overview_focus.ts - Recent-work membership from observed edits, independent of watch health and open tabs
+app/src/lib/overview/overview_history_test.ts - Reconnect history orders recent paths by observed time without inventing live activity
+app/src/lib/overview/overview_store_test.ts - Independent oracles for all-root retention, activity identity, bounds and watcher recovery
+app/src/lib/overview/overview_store.ts - App-lifetime all-repository observations with event-triggered immutable publication
+app/src/lib/overview/overview_types.ts - Bounded repository activity projections for the all-repository Overview
 app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
 app/src/lib/source_control/conflict_count.ts - Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root
 app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
-app/src/lib/stream/stream_agent_support.ts - Whether the connected agent build publishes fileDelta events the Stream panel can render
 app/src/lib/stream/stream_bounds.ts - Every numeric bound the Stream panel obeys; the only stream module with literals
 app/src/lib/stream/stream_burst_card.ts - Pure burst card arithmetic: counts per op and kind, top directories, elapsed time
 app/src/lib/stream/stream_burst_detect_test.ts - Distinct-path rate detection over fileChanged arrivals: open at the threshold, close on quiet
@@ -217,10 +250,8 @@ app/src/lib/stream/stream_store_test.ts - Conductor rules under injected timers:
 app/src/lib/stream/stream_store.ts - Per-repo Stream store outside React: intake buffer, reducers, the cadence conductor, and the snapshot
 app/src/lib/stream/stream_strip_types.ts - Ring member contracts for an image strip: the tiles one card holds and the body each tile carries
 app/src/lib/stream/stream_strip_view.ts - How an image strip's head, rail, and footer read: count label, shared directory, op tally, clock span, bytes
-app/src/lib/stream/stream_tile_pixels_test.ts - Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit;...
-app/src/lib/stream/stream_tile_pixels.ts - Pure pixel rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, the decode gate, and...
 app/src/lib/stream/stream_tile_targets_test.ts - Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, unfetchable tiles, BEFORE keys
-app/src/lib/stream/stream_tile_targets.ts - Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE
+app/src/lib/stream/stream_tile_targets.ts - Projects Stream strip slots and repository-scoped source identities into shared image targets
 app/src/lib/stream/stream_types.ts - Card, ring, snapshot, transport, and store contracts for the per-repo Stream store
 app/src/lib/stream/testing/stream_fixtures.ts - Event and card builders shared by the Stream unit tests; never imported by app code
 app/src/lib/tabs/tab_items.ts - Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs
@@ -297,7 +328,7 @@ app/src/styles/deck_splitter.css - The drag divider between the left deck panel 
 app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the workspace editor shell
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
-app/src/styles/empty_repo_state.css - Empty state display when no repositories are configured
+app/src/styles/empty_state_panel.css - Centered glass empty-state surface, subdued typography and repository action context
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout
 app/src/styles/image_diff_workspace.css - Side-by-side image diff panes, checkerboard slots, and handset stacking
@@ -308,6 +339,13 @@ app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and 
 app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
 app/src/styles/options_overlay.css - Overlay backdrop, panel shell, and keyframe animations
 app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
+app/src/styles/overview_navigation.css - Global Overview destination beside the repository tab track
+app/src/styles/overview/overview_detail.css - Stream-family file identity, compact baseline metadata and six-line excerpts
+app/src/styles/overview/overview_feed.css - Singular chronological feed, repository transition labels and tail jump
+app/src/styles/overview/overview_image.css - Fixed-height image workspace launcher with a transparency checkerboard
+app/src/styles/overview/overview_panel.css - Compact full-width Overview shell, active-repository chips and monitoring states
+app/src/styles/overview/overview_view.css - Full-pane Overview feed and file workspace without remounting the reading surface
+app/src/styles/overview/overview_workspace.css - Full-width Overview file workspace sizing without repository rails
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/repo_rail.css - Right-rail panel with a slim section-switch header above the zips or source body
 app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
@@ -319,8 +357,9 @@ app/src/styles/stream/stream_card_body.css - Stream card bodies: the diff densit
 app/src/styles/stream/stream_card_image.css - Stream image strips: the growing-then-wrapping tile grid, width-sized checkerboard slots, badges, names, the BEFORE/A...
 app/src/styles/stream/stream_card.css - Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules
 app/src/styles/stream/stream_motion.css - Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion
-app/src/styles/stream/stream_panel.css - Stream panel shell: the flat scroller surface, the LIVE slot, and compact history rows
+app/src/styles/stream/stream_panel.css - Stream scroller, exceptional status, follow control and compact history rows
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
+app/src/styles/tab_bar_items.css - Repository navigation actions, group menus and add/remove controls
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/terminal_column.css - Terminal rail body: tab strip, xterm host and session element, console-prompt notices
 app/src/styles/text_workspace_semantics.css - Semantic Markdown rendering layer for workspace text editors
@@ -369,10 +408,15 @@ crates/im_agent/src/protocol/responses_source_control.rs - Agent-to-UI source-co
 crates/im_agent/src/protocol/responses_tr_fleet.rs - TR fleet response payload types for host-agent build-server control
 crates/im_agent/src/protocol/responses_worktree.rs - Agent-to-UI response payload naming the entries one worktree action produced
 crates/im_agent/src/protocol/responses.rs - Agent-to-UI response payloads for the WebSocket protocol
+crates/im_agent/src/protocol/tests_bootstrap.rs - Client hello staging and repository root wire contracts
+crates/im_agent/src/protocol/tests_bundles.rs - Bundle build and listing paths on command result and event wires
 crates/im_agent/src/protocol/tests_delta.rs - Wire-shape tests for the fileDelta event and its payload union
+crates/im_agent/src/protocol/tests_envelopes.rs - Protocol request, response and cancellation envelope roundtrips
+crates/im_agent/src/protocol/tests_events.rs - Activity event root identity and staged path wire contracts
+crates/im_agent/src/protocol/tests_file_access.rs - File staging, reading and directory listing wire contracts
+crates/im_agent/src/protocol/tests_runtime_events.rs - Backend status, repository topology and watcher error event wires
 crates/im_agent/src/protocol/tests_shutdown.rs - Wire-shape tests for the shutdown command and its result
 crates/im_agent/src/protocol/tests_source_control.rs - Wire-shape tests for the source-control command and status payloads
-crates/im_agent/src/protocol/tests.rs - Protocol envelope serialization and backward-compat tests
 crates/im_agent/src/protocol/tr_fleet_tests.rs - TR fleet protocol command/response serialization tests
 crates/im_agent/src/repos/categorizer.rs - File kind classification based on globs and fallback heuristics
 crates/im_agent/src/repos/delta/baseline_cache.rs - Byte-bounded LRU of the text last served per path, per repo
@@ -449,6 +493,7 @@ crates/im_agent/src/repos/worktree/tests_support.rs - Shared fixtures for the wo
 crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
 crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
+crates/im_agent/src/runtime/state_refresh_tests.rs - Refresh rejects stopped watchers without publishing retained history
 crates/im_agent/src/runtime/state_watchers.rs - Watcher lifecycle helpers for agent runtime state
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/runtime/watcher_reconciliation.rs - Concurrent repository watcher reconciliation for agent clientHello bootstrap

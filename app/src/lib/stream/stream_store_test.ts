@@ -42,7 +42,7 @@ function fakeClock(): FakeClock {
   };
 }
 
-const ONLINE: StreamTransport = { connected: true, helloOk: true, agentVersion: "0.1.23", repoRootKind: "host", wslOnline: true };
+const ONLINE: StreamTransport = { connected: true, helloOk: true, agentVersion: "0.1.24", repoRootKind: "host", wslOnline: true };
 
 function cardsOf(store: StreamStore): number {
   return store.getSnapshot().ring.cards.length;
@@ -189,7 +189,7 @@ void test("a counters event prints the withheld notice, which expires after NOTI
   const clock = fakeClock();
   const store = createStreamStore("r", clock);
   store.setVisible(true);
-  store.intake({ type: "fileDeltaCounters", repoId: "r", seq: 1, withheld: 7, dropped: 0 });
+  store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/repo/r", seq: 1, withheld: 7, dropped: 0 });
   clock.advance(FLUSH_MS);
   assert.equal(store.getSnapshot().ring.notices[0]?.text, "7 EDITS WITHHELD · BURST");
   assert.equal(cardsOf(store), 0);
@@ -253,7 +253,7 @@ void test("a notice or the settling line counts as an entry while the ring holds
   const store = createStreamStore("r", clock);
   store.setVisible(true);
   assert.equal(snapshotHasEntries(store.getSnapshot()), false);
-  store.intake({ type: "fileDeltaCounters", repoId: "r", seq: 1, withheld: 5, dropped: 0 });
+  store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/repo/r", seq: 1, withheld: 5, dropped: 0 });
   clock.advance(FLUSH_MS);
   const withNotice = store.getSnapshot();
   assert.equal(withNotice.ring.cards.length, 0);

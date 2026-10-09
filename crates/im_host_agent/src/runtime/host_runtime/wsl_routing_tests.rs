@@ -10,6 +10,28 @@ use im_agent::server::BusMessage;
 
 use super::*;
 
+#[test]
+fn backend_version_must_support_root_identity() {
+    for version in ["0.1.24", "0.1.25", "0.2.0", "1.0.0", "10.1.0"] {
+        require_root_identity_version(version).expect("supported release");
+    }
+    for version in [
+        "0.1.23",
+        "0.0.99",
+        "",
+        "unknown",
+        "0.1",
+        "0.1.24.1",
+        "0.1.+24",
+        "0.1.24-dev",
+    ] {
+        let error = require_root_identity_version(version).expect_err("unsupported build");
+        assert_eq!(error.code(), WSL_BACKEND_VERSION_MISMATCH);
+        assert!(error.message().contains(ROOT_IDENTITY_MIN_AGENT_VERSION));
+        assert!(error.message().contains(version));
+    }
+}
+
 async fn host_runtime_for_test() -> HostRuntime {
     let logger = Logger::init(LogConfig {
         log_dir: unique_log_dir(),

@@ -1,0 +1,15 @@
+/* Path: app/src/styles/overview/overview_workspace.css
+ * Description: Full-width Overview file workspace sizing without repository rails */
+
+.overview-workspace {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.overview-workspace > .text-workspace-panel {
+  flex: 1;
+  min-height: 0;
+}

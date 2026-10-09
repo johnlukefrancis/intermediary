@@ -1,7 +1,7 @@
-// Path: app/src/hooks/stream/stream_tile_thumbnail.ts
-// Description: Decodes one tile's fetched bytes into the thumbnail Blob the strip retains: probe the source, gate it, downscale past STRIP_THUMB_MAX_PX, else keep it
+// Path: app/src/hooks/images/image_tile_thumbnail.ts
+// Description: Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob
 
-import { exceedsTilePixels, thumbnailSize } from "../../lib/stream/stream_tile_pixels.js";
+import { exceedsTilePixels, thumbnailSize } from "../../lib/images/image_tile_pixels.js";
 import { base64ToBlob } from "../use_image_blob_url.js";
 
 /** How a decode ended: `ready` carries the Blob URL the slot shows; `tooLarge` still names the size the probe saw */
@@ -20,11 +20,7 @@ function probe(url: string): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * Paints the source at thumbnail size and encodes it. The full bitmap exists only inside this
- * call and is closed before the encode. WebP keeps alpha; a WebView without a WebP encoder
- * falls back to PNG by the canvas contract.
- */
+/** The resized bitmap is closed after encoding; the canvas can fall back from WebP to PNG. */
 async function downscale(source: HTMLImageElement, width: number, height: number): Promise<Blob> {
   const bitmap = await createImageBitmap(source, { resizeWidth: width, resizeHeight: height, resizeQuality: "high" });
   try {
@@ -38,11 +34,7 @@ async function downscale(source: HTMLImageElement, width: number, height: number
   }
 }
 
-/**
- * The one route from fetched bytes to a retained tile. The source Blob URL lives only for the
- * probe and the downscale unless the source already fits STRIP_THUMB_MAX_PX, in which case it IS
- * the tile (pixel-exact icons, animated small GIFs). `width`/`height` are always the source's.
- */
+/** Source URLs survive only for small images; returned dimensions always describe the source. */
 export async function decodeTile(dataBase64: string, mimeType: string): Promise<DecodedTile> {
   let sourceUrl: string;
   try {

@@ -21,12 +21,11 @@ use tokio::sync::RwLock;
 use crate::repos::repo_watcher_delta_marks::handle_rename_event;
 pub(crate) use crate::repos::repo_watcher_delta_marks::{DeltaIntent, PendingRename};
 
-/// Everything one watcher task needs to interpret a raw `notify` event. Built
-/// once per watcher and reused for every event, so new signals ride here
-/// instead of lengthening `handle_event`.
+/// State borrowed once by a watcher task to interpret every `notify` event.
 pub(crate) struct EventContext<'a> {
     pub(crate) repo_id: &'a str,
     pub(crate) root_path: &'a Path,
+    pub(crate) root_identity: &'a str,
     pub(crate) categorizer: &'a Categorizer,
     pub(crate) ignore_matcher: &'a IgnoreMatcher,
     pub(crate) mru: &'a RwLock<MruIndex>,
@@ -82,9 +81,8 @@ impl<'a> EventContext<'a> {
         Some((relative_str, kind))
     }
 
-    /// Publishes one `fileChanged` and, for `DeltaIntent::Note`, marks the
-    /// delta queue. Returns what was published so a rename arm can mark its
-    /// single delta after both halves went out.
+    /// Publishes `fileChanged` and optionally marks the delta queue;
+    /// the return value lets rename arms mark one delta after both halves.
     pub(super) async fn apply_change(
         &self,
         path: &Path,
@@ -131,13 +129,14 @@ impl<'a> EventContext<'a> {
         self.recent_store
             .schedule_save(
                 self.repo_id.to_string(),
-                self.root_path.to_string_lossy().to_string(),
+                self.root_identity.to_string(),
                 entries,
             )
             .await;
 
         let event_payload = FileChangedEvent::new(
             self.repo_id.to_string(),
+            self.root_identity.to_string(),
             relative_str.clone(),
             kind,
             change_type,
@@ -157,14 +156,12 @@ impl<'a> EventContext<'a> {
 pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
     context.maybe_broadcast_topology_changed(&event).await;
 
-    // Before the rename branch and before `map_event_kind` drops unhandled
-    // kinds: `git status` moves for paths `apply_change` never sees (ignored
-    // globs, `FileKind::Other`, git metadata).
+    // Git status also moves for ignored paths, other kinds and git metadata;
+    // note them before the file event filters and rename branch.
     context.source_control.note_event(&event);
 
-    // An event from an external git-dir watch (a linked worktree's git dir or
-    // common dir) has no path under the root; the detector above was its only
-    // consumer, so it yields no file event and no log.
+    // External git-dir events only feed the source control detector;
+    // paths outside the root produce no file event or log.
     if !event
         .paths
         .iter()

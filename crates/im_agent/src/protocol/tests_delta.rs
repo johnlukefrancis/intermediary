@@ -12,6 +12,7 @@ use super::events_delta::{
 fn event(op: DeltaOp, payload: DeltaPayload) -> FileDeltaEvent {
     FileDeltaEvent {
         repo_id: "repo".to_string(),
+        root_path: "/repo/root/".to_string(),
         seq: 7,
         path: "src/main.ts".to_string(),
         from_path: None,
@@ -31,6 +32,12 @@ fn envelope(event: FileDeltaEvent) -> serde_json::Value {
 }
 
 fn round_trip(event: FileDeltaEvent) -> FileDeltaEvent {
+    let mut without_root = envelope(event.clone());
+    without_root
+        .as_object_mut()
+        .expect("event object")
+        .remove("rootPath");
+    assert!(serde_json::from_value::<AgentEvent>(without_root).is_err());
     let wire = serde_json::to_string(&AgentEvent::FileDelta(event)).expect("serialize");
     match serde_json::from_str::<AgentEvent>(&wire).expect("deserialize") {
         AgentEvent::FileDelta(back) => back,
@@ -59,6 +66,7 @@ fn file_delta_round_trips() {
         json!({
             "type": "fileDelta",
             "repoId": "repo",
+            "rootPath": "/repo/root/",
             "seq": 7,
             "path": "src/main.ts",
             "kind": "code",
@@ -145,6 +153,7 @@ fn baseline_and_reason_wire_names_are_camel_case() {
 fn file_delta_counters_round_trips() {
     let counters = FileDeltaCountersEvent {
         repo_id: "repo".to_string(),
+        root_path: "/repo/root/".to_string(),
         seq: 8,
         withheld: 468,
         dropped: 12,
@@ -156,11 +165,19 @@ fn file_delta_counters_round_trips() {
         json!({
             "type": "fileDeltaCounters",
             "repoId": "repo",
+            "rootPath": "/repo/root/",
             "seq": 8,
             "withheld": 468,
             "dropped": 12,
         }),
     );
+
+    let mut without_root = wire;
+    without_root
+        .as_object_mut()
+        .expect("event object")
+        .remove("rootPath");
+    assert!(serde_json::from_value::<AgentEvent>(without_root).is_err());
 
     let text =
         serde_json::to_string(&AgentEvent::FileDeltaCounters(counters.clone())).expect("serialize");

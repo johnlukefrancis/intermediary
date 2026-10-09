@@ -100,6 +100,7 @@ impl RecentFilesStore {
                 "Repo root changed for recent files",
                 Some(serde_json::json!({"repoId": repo_id, "stored": data.repo_root, "current": repo_root})),
             );
+            return Vec::new();
         }
 
         let normalized = normalize_persisted_entries(

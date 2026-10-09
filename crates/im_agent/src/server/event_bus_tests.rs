@@ -18,6 +18,7 @@ fn control(message: &str) -> AgentEvent {
 fn stream(seq: u64) -> AgentEvent {
     AgentEvent::FileDeltaCounters(FileDeltaCountersEvent {
         repo_id: "repo-1".to_string(),
+        root_path: "/repo/one".to_string(),
         seq,
         withheld: 1,
         dropped: 0,
@@ -57,9 +58,8 @@ async fn the_lane_is_tagged_at_broadcast() {
     );
 }
 
-/// With the writer stalled, a flood past `EVENT_QUEUE_CAP` drops stream
-/// events - and only stream events: every control event broadcast before,
-/// during and after the flood arrives, in order.
+/// A flood past `EVENT_QUEUE_CAP` drops only stream events while the writer
+/// stalls; every control event arrives in order.
 #[tokio::test]
 async fn a_stream_flood_against_a_stalled_writer_never_drops_a_control_event() {
     let (_temp, logger) = logger().await;

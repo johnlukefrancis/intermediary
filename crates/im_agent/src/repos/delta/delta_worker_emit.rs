@@ -9,6 +9,7 @@ use super::{PendingChange, PendingOp};
 /// counters arrive already taken, so the worker owns exactly when they reset.
 pub(super) struct DeltaStamp {
     pub(super) repo_id: String,
+    pub(super) root_path: String,
     pub(super) seq: u64,
     pub(super) tracked: bool,
     pub(super) withheld: u32,
@@ -30,6 +31,7 @@ pub(super) fn file_delta_event(
     };
     FileDeltaEvent {
         repo_id: stamp.repo_id,
+        root_path: stamp.root_path,
         seq: stamp.seq,
         tracked: Some(stamp.tracked),
         path: change.path,

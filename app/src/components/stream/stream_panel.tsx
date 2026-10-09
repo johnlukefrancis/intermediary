@@ -1,12 +1,12 @@
 // Path: app/src/components/stream/stream_panel.tsx
-// Description: The Stream panel shell: mode rocker with the LIVE slot, support states, and the live scroller
+// Description: Stream panel shell with mode controls, support states, and the live scroller
 
 import type React from "react";
 import { useCallback, useState } from "react";
 import { AutoFilesHeader } from "../auto_files_header.js";
 import { ContextMenu } from "../context_menu.js";
 import { buildSingleFileContextMenuItems } from "../file_context_menu_items.js";
-import { StreamHeaderLive, type StreamLiveState } from "./stream_header_live.js";
+import { StreamHeaderStatus, type StreamStatus } from "./stream_header_status.js";
 import { StreamScroller } from "./stream_scroller.js";
 import type { RepoStream } from "../../hooks/stream/use_repo_stream.js";
 import { useStreamImages } from "../../hooks/stream/use_stream_images.js";
@@ -14,7 +14,7 @@ import { useConfig } from "../../hooks/use_config.js";
 import { useFileActions } from "../../hooks/use_file_actions.js";
 import type { FileTypeFilter } from "../../lib/files/file_feed.js";
 import type { FilesMode } from "../../lib/files/files_mode.js";
-import { STREAM_MIN_AGENT_VERSION } from "../../lib/stream/stream_agent_support.js";
+import { ACTIVITY_MIN_AGENT_VERSION } from "../../lib/agent/activity_support.js";
 import { snapshotHasEntries } from "../../lib/stream/stream_store_support.js";
 
 interface StreamPanelProps {
@@ -52,16 +52,16 @@ export function StreamPanel({
 
   const { snapshot } = stream;
   // One tile owner per panel: it fetches only while this snapshot says the stream is visible
-  const tiles = useStreamImages(repoId, snapshot);
+  const tiles = useStreamImages(repoId, snapshot, repoRoot);
   // Notices and the settling line render on the scroller even before the first card lands
   const ringEmpty = !snapshotHasEntries(snapshot);
-  const liveState: StreamLiveState = snapshot.offline
+  const status: StreamStatus | null = snapshot.offline
     ? "offline"
     : snapshot.support === "update-required"
       ? "update"
       : snapshot.held
         ? "held"
-        : "live";
+        : null;
 
   return (
     <section className="panel stream-panel" data-panel="stream">
@@ -70,7 +70,7 @@ export function StreamPanel({
           filter={filter}
           mode={mode}
           prefix={headerPrefix}
-          liveSlot={<StreamHeaderLive state={liveState} />}
+          statusSlot={status === null ? null : <StreamHeaderStatus state={status} />}
           onFilterChange={onFilterChange}
           onModeChange={onModeChange}
         />
@@ -80,7 +80,7 @@ export function StreamPanel({
           <p className="empty-state empty-state--waiting">Waiting for agent</p>
         ) : snapshot.support === "update-required" ? (
           <p className="empty-state empty-state--waiting">
-            {`Agent update required · ${STREAM_MIN_AGENT_VERSION}+`}
+            {`Agent update required · ${ACTIVITY_MIN_AGENT_VERSION}+`}
           </p>
         ) : snapshot.held && ringEmpty ? (
           <p className="empty-state empty-state--waiting">WSL backend offline — stream held</p>

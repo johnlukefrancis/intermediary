@@ -3,8 +3,9 @@
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { isPreviewImagePath } from "../repo_workspace_types.js";
+import { useConfig } from "../use_config.js";
 import { isFileIncluded } from "../../lib/bundles/bundle_selection_visibility.js";
-import { streamStoreRegistry } from "../../lib/stream/stream_store_registry.js";
+import { streamRootIdentity, streamStoreRegistry } from "../../lib/stream/stream_store_registry.js";
 import type { StreamRingCard, StreamSnapshot, StreamStripTile } from "../../lib/stream/stream_types.js";
 import type { BundleSelection, SourceControlChange, SourceControlEntry } from "../../shared/protocol.js";
 import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
@@ -43,7 +44,9 @@ function changeFor(op: "modify" | "remove" | "rename"): SourceControlChange {
 
 export function useRepoStream(repoId: string, options: RepoStreamOptions): RepoStream {
   const { visible, bundleSelection, globalExcludes, openFile, openDiff, onDragStart } = options;
-  const store = useMemo(() => streamStoreRegistry.getOrCreate(repoId), [repoId]);
+  const { config } = useConfig();
+  const rootIdentity = streamRootIdentity(repoId, config.repos.find((repo) => repo.repoId === repoId)?.root);
+  const store = useMemo(() => streamStoreRegistry.getOrCreate(repoId, rootIdentity), [repoId, rootIdentity]);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
 
   useEffect(() => {

@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Overview consolidates active repositories into one feed with repository
+  labels, short edit previews, image thumbnails, history and direct navigation to
+  each repository's Stream. Repositories appear on activity and leave after
+  fifteen minutes of quiet. The selected destination persists across launches.
+- Overview and Stream share bounded, revision-checked thumbnails. Images from
+  different roots never share a captured comparison; replacing a configured root
+  also replaces the mounted Stream's binding. Compact navigation and a single
+  repository-filter toolbar leave more space for work.
+- File and image clicks open the shared full-pane workspace; closing returns to
+  Overview. Connecting and quiet states use the established glass empty panel.
+- Repository headers open their Stream across the full row, including the name
+  and fixed-size navigation arrow, with keyboard activation.
+- Overview updates continuously without a Pause control. Overview and Stream
+  omit routine Live indicators; actual monitoring problems remain visible.
+- Activity events carry their configured root identity, preventing delayed
+  events from appearing under a replacement root. App and agents require 0.1.24.
+
 - Terminal close no longer injects newline/EOF into unsubmitted Unix input.
   Failed worker creation retains unresolved process-tree ownership and its
   capacity slot; app-exit retries receive a fresh shared observation interval.

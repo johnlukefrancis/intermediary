@@ -36,14 +36,17 @@ export interface ImageDiffWorkspaceBase {
 export type RepoWorkspace =
   | { kind: "none" }
   | { kind: "note"; repoId: string }
+  | { kind: "textFile"; repoId: string; path: string; status: "loading" }
   | {
       kind: "textFile";
       repoId: string;
       path: string;
+      status: "ready";
       content: string;
       bytes: number;
       mtimeMs: number;
     }
+  | { kind: "textFile"; repoId: string; path: string; status: "error"; error: string }
   | { kind: "imageFile"; repoId: string; path: string; status: "loading" }
   | {
       kind: "imageFile";

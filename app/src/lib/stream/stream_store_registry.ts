@@ -2,6 +2,7 @@
 // Description: The per-repo store registry: LRU-bounded, visible store pinned, one event router for every store
 
 import type { AgentEvent } from "../../shared/protocol.js";
+import type { RepoRoot } from "../../shared/config.js";
 import { STORE_MAX } from "./stream_bounds.js";
 import { createStreamStore } from "./stream_store.js";
 import type { StreamRepoRootKind, StreamStore, StreamTransport } from "./stream_types.js";
@@ -24,24 +25,24 @@ const INITIAL_HOST_STATE: StreamHostState = {
 };
 
 export interface StreamStoreRegistry {
-  getOrCreate(repoId: string): StreamStore;
+  getOrCreate(repoId: string, rootIdentity: string): StreamStore;
   get(repoId: string): StreamStore | undefined;
-  /**
-   * fileDelta / fileDeltaCounters / fileChanged / snapshot route by the event's own repoId to the store
-   * that exists for it; nothing is created and no store ever receives another repo's event (a snapshot
-   * seeds history rows, so a cross-repo route would print one repo's files in another's feed)
-   */
+  /** Routing never creates stores or delivers another repository's activity. */
   routeAgentEvent(event: AgentEvent): void;
   setVisibleRepo(repoId: string | null): void;
   setHostState(state: StreamHostState): void;
   markRehydrated(): void;
-  disposeRepo(repoId: string): void;
+  setRepositories(repos: readonly { repoId: string; root: RepoRoot }[]): void;
   disposeAll(): void;
+}
+
+export function streamRootIdentity(repoId: string, root: RepoRoot | undefined): string {
+  return JSON.stringify([repoId, root?.kind, root?.path]);
 }
 
 export function createStreamStoreRegistry(makeStore: (repoId: string) => StreamStore = createStreamStore): StreamStoreRegistry {
   /** Insertion order is LRU order: the most recently viewed store is last */
-  const stores = new Map<string, StreamStore>();
+  const stores = new Map<string, { rootIdentity: string; store: StreamStore }>();
   let visibleRepoId: string | null = null;
   let host = INITIAL_HOST_STATE;
 
@@ -59,34 +60,36 @@ export function createStreamStoreRegistry(makeStore: (repoId: string) => StreamS
   }
 
   function evict(): void {
-    for (const [repoId, store] of stores) {
+    for (const [repoId, entry] of stores) {
       if (stores.size <= STORE_MAX) return;
       if (repoId === visibleRepoId) continue;
-      store.dispose();
+      entry.store.dispose();
       stores.delete(repoId);
     }
   }
 
   return {
-    getOrCreate(repoId) {
+    getOrCreate(repoId, rootIdentity) {
       const existing = stores.get(repoId);
-      if (existing !== undefined) {
+      if (existing?.rootIdentity === rootIdentity) {
         touch(repoId);
-        return existing;
+        return existing.store;
       }
+      existing?.store.dispose();
+      stores.delete(repoId);
       const store = makeStore(repoId);
-      stores.set(repoId, store);
+      stores.set(repoId, { rootIdentity, store });
       push(store);
       evict();
       return store;
     },
-    get: (repoId) => stores.get(repoId),
+    get: (repoId) => stores.get(repoId)?.store,
     routeAgentEvent(event) {
       if (
         event.type === "fileDelta" || event.type === "fileDeltaCounters" ||
         event.type === "fileChanged" || event.type === "snapshot"
       ) {
-        stores.get(event.repoId)?.intake(event);
+        stores.get(event.repoId)?.store.intake(event);
       }
     },
     setVisibleRepo(repoId) {
@@ -95,17 +98,21 @@ export function createStreamStoreRegistry(makeStore: (repoId: string) => StreamS
     },
     setHostState(next) {
       host = next;
-      for (const store of stores.values()) push(store);
+      for (const entry of stores.values()) push(entry.store);
     },
     markRehydrated() {
-      for (const store of stores.values()) store.markRehydrated();
+      for (const entry of stores.values()) entry.store.markRehydrated();
     },
-    disposeRepo(repoId) {
-      stores.get(repoId)?.dispose();
-      stores.delete(repoId);
+    setRepositories(repos) {
+      const current = new Map(repos.map((repo) => [repo.repoId, streamRootIdentity(repo.repoId, repo.root)] as const));
+      for (const [repoId, entry] of stores) {
+        if (entry.rootIdentity === current.get(repoId)) continue;
+        entry.store.dispose();
+        stores.delete(repoId);
+      }
     },
     disposeAll() {
-      for (const store of stores.values()) store.dispose();
+      for (const entry of stores.values()) entry.store.dispose();
       stores.clear();
     },
   };

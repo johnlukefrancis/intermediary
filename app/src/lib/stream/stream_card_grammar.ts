@@ -2,9 +2,8 @@
 // Description: The one authority for how a Stream card reads: badge, rail, baseline chip, line selection, clock
 
 import type { DiffLine } from "../diff/diff_lines.js";
-import { isPreviewImagePath } from "../../hooks/repo_workspace_types.js";
 import type { DeltaBaseline, DeltaOp, SourceControlChange } from "../../shared/protocol.js";
-import { EXPAND_CAP, IMAGE_CARD_MAX_BYTES, LINE_CAP, LINE_CAP_HANDSET } from "./stream_bounds.js";
+import { EXPAND_CAP, LINE_CAP, LINE_CAP_HANDSET } from "./stream_bounds.js";
 import type { StreamFileCard, StreamRingCard } from "./stream_types.js";
 
 export type StreamCardKind =
@@ -46,8 +45,7 @@ export function cardKind(card: StreamRingCard): StreamCardKind {
   return "text-modified";
 }
 
-/** Colour of the 3 px spine; the badge letter and chip carry the same fact without colour.
- *  A strip's rail follows its tiles (stream_strip_view.ts); "images" here is the mixed default. */
+/** Strip rails follow their tiles; "images" here is the mixed default. */
 export function railVariant(kind: StreamCardKind): StreamRailVariant {
   switch (kind) {
     case "text-added":
@@ -115,11 +113,7 @@ function printable(lines: readonly DiffLine[]): DiffLine[] {
   });
 }
 
-/**
- * Collapsed, one segment: the FIRST `cap` printable lines (the head of the change). Collapsed,
- * several segments: the LAST `cap` lines across all of them, so the newest edit is on screen
- * and older lines fill the cap above it. Expanded: every segment oldest first, up to EXPAND_CAP.
- */
+/** Collapse to the first single-segment rows or the newest multi-segment rows; expand oldest first. */
 export function selectLines(
   segments: readonly (readonly DiffLine[])[],
   expanded: boolean,
@@ -142,11 +136,6 @@ export function formatClock(ms: number): string {
   const date = new Date(ms);
   const pad = (value: number): string => String(value).padStart(2, "0");
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
-/** Only a whitelisted extension with a wire mime type under the size gate ever fetches pixels */
-export function previewableImage(path: string, mimeType: string | null, bytes: number): boolean {
-  return mimeType !== null && bytes <= IMAGE_CARD_MAX_BYTES && isPreviewImagePath(path);
 }
 
 export function formatBytes(bytes: number): string {

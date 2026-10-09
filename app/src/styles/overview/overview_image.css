@@ -1,0 +1,28 @@
+/* Path: app/src/styles/overview/overview_image.css
+ * Description: Width-sized image workspace launcher on the Stream strip's slot and checkerboard */
+
+.overview-image { min-width: 0; padding: 0 var(--space-2) var(--space-2); }
+
+/* Mirrors .stream-strip__slot: 16:10 of the column, capped, so the row never depends on pixel status */
+.overview-panel .overview-image__canvas {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-height: 280px;
+  aspect-ratio: 16 / 10;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-deck-xs);
+  background-color: var(--color-bg-elevated);
+  background-image: conic-gradient(var(--color-bg-hover) 0deg 90deg, transparent 90deg 180deg, var(--color-bg-hover) 180deg 270deg, transparent 270deg 360deg);
+  background-size: 16px 16px;
+  cursor: zoom-in;
+  transition: border-color var(--duration-normal) var(--ease-out);
+}
+
+.overview-panel .overview-image__canvas:hover { border-color: var(--color-accent); }
+.overview-image__canvas img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-drag: none; }
+.overview-image__waiting { padding: 0 var(--space-1); color: var(--color-text-muted); font: var(--text-xs) var(--font-mono); letter-spacing: 0.06em; text-align: center; text-transform: uppercase; }

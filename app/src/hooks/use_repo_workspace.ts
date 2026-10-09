@@ -27,9 +27,17 @@ interface RepoWorkspaceState {
 }
 
 export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
-  const { client, helloState } = useAgent();
-  const [workspace, setWorkspace] = useState<RepoWorkspace>({ kind: "none" });
+  const { client, helloState, config } = useAgent();
+  const root = config.repos.find((repo) => repo.repoId === repoId)?.root;
+  const rootIdentity = JSON.stringify([repoId, root?.kind, root?.path]);
+  const [state, setState] = useState<{ rootIdentity: string; workspace: RepoWorkspace }>({
+    rootIdentity,
+    workspace: { kind: "none" },
+  });
   const requestTokenRef = useRef(0);
+  const setWorkspace = useCallback((workspace: RepoWorkspace) => {
+    setState({ rootIdentity, workspace });
+  }, [rootIdentity]);
 
   const nextRequestToken = useCallback((): number => {
     requestTokenRef.current += 1;
@@ -39,17 +47,22 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
   const closeWorkspace = useCallback(() => {
     nextRequestToken();
     setWorkspace({ kind: "none" });
-  }, [nextRequestToken]);
+  }, [nextRequestToken, setWorkspace]);
 
   const openNote = useCallback(() => {
     nextRequestToken();
     setWorkspace({ kind: "note", repoId });
-  }, [nextRequestToken, repoId]);
+  }, [nextRequestToken, repoId, setWorkspace]);
 
   const openTextFile = useCallback(
     (path: string) => {
       const requestToken = nextRequestToken();
-      if (!client || helloState.status !== "ok") return;
+      if (!client || helloState.status !== "ok") {
+        setWorkspace({ kind: "textFile", repoId, path, status: "error", error: AGENT_INITIALIZING });
+        return;
+      }
+
+      setWorkspace({ kind: "textFile", repoId, path, status: "loading" });
 
       void sendReadTextFile(client, repoId, path)
         .then((result) => {
@@ -58,6 +71,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
             kind: "textFile",
             repoId: result.repoId,
             path: result.path,
+            status: "ready",
             content: result.content,
             bytes: result.bytes,
             mtimeMs: result.mtimeMs,
@@ -65,10 +79,16 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
         })
         .catch((err: unknown) => {
           if (requestTokenRef.current !== requestToken) return;
-          console.info("[useRepoWorkspace] readTextFile skipped:", err);
+          setWorkspace({
+            kind: "textFile",
+            repoId,
+            path,
+            status: "error",
+            error: errorMessage(err, "Unable to load text file"),
+          });
         });
     },
-    [client, helloState.status, nextRequestToken, repoId]
+    [client, helloState.status, nextRequestToken, repoId, setWorkspace]
   );
 
   const openImageFile = useCallback(
@@ -107,7 +127,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
           });
         });
     },
-    [client, helloState.status, nextRequestToken, repoId]
+    [client, helloState.status, nextRequestToken, repoId, setWorkspace]
   );
 
   const openFile = useCallback(
@@ -131,7 +151,7 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
 
       openTextFile(path);
     },
-    [nextRequestToken, openImageFile, openTextFile, repoId]
+    [nextRequestToken, openImageFile, openTextFile, repoId, setWorkspace]
   );
 
   /** Index diff for STAGED rows, worktree diff for CHANGES/MERGE rows (untracked shows as all-added) */
@@ -165,25 +185,29 @@ export function useRepoWorkspace(repoId: string): RepoWorkspaceState {
       }
       loadTextDiff(context, base);
     },
-    [client, helloState.status, nextRequestToken, repoId]
+    [client, helloState.status, nextRequestToken, repoId, setWorkspace]
   );
 
   const updateTextScratch = useCallback((content: string) => {
-    setWorkspace((current) => {
-      if (current.kind !== "textFile" || current.repoId !== repoId) return current;
-      return { ...current, content };
+    setState((current) => {
+      const workspace = current.workspace;
+      if (current.rootIdentity !== rootIdentity || workspace.kind !== "textFile"
+        || workspace.status !== "ready" || workspace.repoId !== repoId) return current;
+      return { ...current, workspace: { ...workspace, content } };
     });
-  }, [repoId]);
+  }, [repoId, rootIdentity]);
 
   useEffect(() => {
     requestTokenRef.current += 1;
     setWorkspace({ kind: "none" });
-  }, [repoId]);
+    return () => { requestTokenRef.current += 1; };
+  }, [setWorkspace]);
 
   const effectiveWorkspace: RepoWorkspace =
-    workspace.kind !== "none" && workspace.repoId !== repoId
+    state.rootIdentity !== rootIdentity
+      || (state.workspace.kind !== "none" && state.workspace.repoId !== repoId)
       ? { kind: "none" }
-      : workspace;
+      : state.workspace;
 
   return {
     workspace: effectiveWorkspace,

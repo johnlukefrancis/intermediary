@@ -5,9 +5,7 @@ import { z } from "zod";
 import { FileChangeTypeSchema, FileKindSchema } from "./protocol_file_meta.js";
 import { FileDeltaCountersEventSchema, FileDeltaEventSchema } from "./protocol_events_delta.js";
 
-// -----------------------------------------------------------------------------
-// File metadata
-// -----------------------------------------------------------------------------
+// File metadata.
 
 export {
   FileChangeTypeSchema,
@@ -47,9 +45,7 @@ export const FileEntrySchema = z.object({
 });
 export type FileEntry = z.infer<typeof FileEntrySchema>;
 
-// -----------------------------------------------------------------------------
-// Agent -> UI events (payloads)
-// -----------------------------------------------------------------------------
+// Agent -> UI event payloads.
 
 export const HelloEventSchema = z.object({
   type: z.literal("hello"),
@@ -70,6 +66,7 @@ export type StagedInfo = z.infer<typeof StagedInfoSchema>;
 export const FileChangedEventSchema = z.object({
   type: z.literal("fileChanged"),
   repoId: z.string(),
+  rootPath: z.string(),
   path: z.string(),
   kind: FileKindSchema,
   changeType: FileChangeTypeSchema,
@@ -84,6 +81,7 @@ export type FileChangedEvent = z.infer<typeof FileChangedEventSchema>;
 export const SnapshotEventSchema = z.object({
   type: z.literal("snapshot"),
   repoId: z.string(),
+  rootPath: z.string(),
   recent: z.array(FileEntrySchema),
 });
 
@@ -138,6 +136,7 @@ export const ErrorEventSchema = z.object({
       code: AgentErrorCodeSchema.optional(),
       docPath: z.string().optional(),
       repoId: z.string().optional(),
+      rootPath: z.string().optional(),
       rawCode: z.string().optional(),
       rawMessage: z.string().optional(),
     })

@@ -10,8 +10,7 @@ interface AutoFilesHeaderProps {
   filter: FileTypeFilter;
   mode: FilesMode;
   prefix?: React.ReactNode;
-  /** Rendered immediately right of the rocker; the Stream panel puts its LIVE indicator here */
-  liveSlot?: React.ReactNode;
+  statusSlot?: React.ReactNode;
   onFilterChange: (filter: FileTypeFilter) => void;
   onModeChange: (mode: FilesMode) => void;
 }
@@ -35,7 +34,7 @@ export function AutoFilesHeader({
   filter,
   mode,
   prefix,
-  liveSlot,
+  statusSlot,
   onFilterChange,
   onModeChange,
 }: AutoFilesHeaderProps): React.JSX.Element {
@@ -59,7 +58,7 @@ export function AutoFilesHeader({
           </button>
         ))}
       </div>
-      {liveSlot}
+      {statusSlot}
       <div className="auto-files-filter" role="toolbar" aria-label="File type filters">
         {FILTERS.map((entry) => {
           const isIconOnly = entry.value !== "all";

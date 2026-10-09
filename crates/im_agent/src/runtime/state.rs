@@ -174,6 +174,12 @@ impl AgentRuntime {
         let watcher = self.watchers.get(repo_id).ok_or_else(|| {
             AgentError::new("UNKNOWN_REPO", format!("Repo not watched: {repo_id}"))
         })?;
+        if watcher.is_task_finished() {
+            return Err(AgentError::new(
+                "WATCHER_STOPPED",
+                format!("Repo watcher stopped; restart monitoring before refreshing: {repo_id}"),
+            ));
+        }
         watcher.broadcast_snapshot();
         Ok(RefreshResult {
             repo_id: repo_id.to_string(),
@@ -209,6 +215,10 @@ fn parse_app_config(config: &Value) -> Result<AppConfig, AgentError> {
     serde_json::from_value(config.clone())
         .map_err(|err| AgentError::new("INVALID_CONFIG", err.to_string()))
 }
+
+#[cfg(test)]
+#[path = "state_refresh_tests.rs"]
+mod refresh_tests;
 
 #[cfg(test)]
 mod tests {

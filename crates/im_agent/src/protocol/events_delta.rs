@@ -81,16 +81,14 @@ pub enum DeltaPayload {
     Gone,
 }
 
-/// One bounded fact: what changed inside one file since the agent's previous
-/// sighting of it (or since the index, or nothing at all - `payload.baseline`
-/// names which). Additive; `fileChanged` semantics are untouched.
+/// One file's change against the baseline named by `payload.baseline`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileDeltaEvent {
     pub repo_id: String,
-    /// Strictly increasing per repo per agent process, shared with
-    /// `fileDeltaCounters`; a gap means the bus or a connection queue dropped an
-    /// event, and a restart at 1 means a new stream.
+    pub root_path: String,
+    /// Increasing within one watcher, shared with `fileDeltaCounters`;
+    /// a gap means transport loss, and a restart at 1 starts a new stream.
     pub seq: u64,
     pub path: String,
     /// The previous path of a rename; absent otherwise.
@@ -111,16 +109,13 @@ pub struct FileDeltaEvent {
     pub payload: DeltaPayload,
 }
 
-/// The withheld/dropped counters on their own, published when the delta queue
-/// goes quiet or a burst window closes with nothing left to carry them: without
-/// this event the counters would sit stranded in the worker until the next
-/// delta happened to be emitted. `FileDeltaEvent` carries the same numbers when
-/// a delta comes first - whichever carrier arrives first delivers, and both
-/// reset the counters, so the UI can add them up without double counting.
+/// Counters published when no delta can carry them. Both carriers reset the
+/// counters when published, so the UI can add them without double counting.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileDeltaCountersEvent {
     pub repo_id: String,
+    pub root_path: String,
     /// Consumed from the same per-repo sequence as `fileDelta`, so a counters
     /// event the transport drops is a visible gap like any other.
     pub seq: u64,

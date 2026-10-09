@@ -6,7 +6,7 @@ use regex::Regex;
 use std::collections::HashSet;
 
 use super::ui_state::{
-    ACTIVE_RAILS, FILES_MODES, RAIL_WIDTH_PERCENT_MAX, RAIL_WIDTH_PERCENT_MIN,
+    ACTIVE_RAILS, FILES_MODES, MAIN_VIEWS, RAIL_WIDTH_PERCENT_MAX, RAIL_WIDTH_PERCENT_MIN,
 };
 use super::{
     PersistedConfig, CONFIG_VERSION, MAX_WINDOW_HEIGHT, MAX_WINDOW_WIDTH, MIN_WINDOW_HEIGHT,
@@ -82,6 +82,10 @@ pub fn validate_config(config: &PersistedConfig) -> Result<(), String> {
                 ));
             }
         }
+    }
+
+    if !MAIN_VIEWS.contains(&config.ui_state.main_view.as_str()) {
+        return Err(format!("ui_state.main_view must be one of {MAIN_VIEWS:?}"));
     }
 
     if !ACTIVE_RAILS.contains(&config.ui_state.active_rail.as_str()) {

@@ -45,6 +45,7 @@ fn test_filter_initial_entries_applies_ignore_globs() {
 struct EventHarness {
     _temp: tempfile::TempDir,
     root: PathBuf,
+    root_identity: String,
     logger: Logger,
     event_bus: EventBus,
     categorizer: Categorizer,
@@ -52,9 +53,7 @@ struct EventHarness {
     mru: RwLock<MruIndex>,
     recent_store: RecentFilesStore,
     source_control: SourceControlWatch,
-    /// Queue only, deliberately: with a worker running, whether a mark is still
-    /// on the queue when the test looks would depend on `SETTLE_WINDOW` against
-    /// the wall clock, and a stalled runner could drain it first.
+    /// Queue only, so no worker races assertions against `SETTLE_WINDOW`.
     delta: DeltaService,
 }
 
@@ -91,6 +90,7 @@ impl EventHarness {
             recent_store: RecentFilesStore::new(temp.path().join("state"), logger.clone()),
             logger,
             event_bus,
+            root_identity: format!("{}/", root.display()),
             root,
             _temp: temp,
         }
@@ -100,6 +100,7 @@ impl EventHarness {
         EventContext {
             repo_id: "repo-1",
             root_path: &self.root,
+            root_identity: &self.root_identity,
             categorizer: &self.categorizer,
             ignore_matcher: &self.ignore_matcher,
             mru: &self.mru,
@@ -132,7 +133,7 @@ fn assert_renamed(pending: &[PendingChange], from: &str, to: &str) {
 
 /// `fileChanged` is untouched by the delta marks: unlink for the source, then
 /// add for the destination, exactly as Auto Files has always received them.
-fn assert_unlink_then_add(events: &mut broadcast::Receiver<BusMessage>) {
+fn assert_unlink_then_add(events: &mut broadcast::Receiver<BusMessage>, root_identity: &str) {
     let mut seen = Vec::new();
     while let Ok(text) = events.try_recv() {
         if text.contains("\"fileChanged\"") {
@@ -140,15 +141,16 @@ fn assert_unlink_then_add(events: &mut broadcast::Receiver<BusMessage>) {
         }
     }
     assert_eq!(seen.len(), 2, "{seen:?}");
+    for event in &seen {
+        let wire: serde_json::Value = serde_json::from_str(&event.text).expect("activity wire");
+        assert_eq!(wire["payload"]["rootPath"], root_identity);
+    }
     assert!(seen[0].contains("\"unlink\"") && seen[0].contains("src/a.rs"));
     assert!(seen[1].contains("\"add\"") && seen[1].contains("src/b.rs"));
 }
 
-/// Every rename arm through the real `handle_event` marks exactly one delta:
-/// the two-path `Both` arm, the Windows `From`-then-`To` pair (the
-/// ReadDirectoryChangesW backend splits one rename across two events, and the
-/// pending Remove must fold into the Rename), and a lone `From`, which stays
-/// the plain delete it has always been.
+/// Both and Windows' split From/To rename arms mark one delta;
+/// a lone From remains a plain delete.
 #[tokio::test]
 async fn rename_arms_mark_exactly_one_delta() {
     let harness = EventHarness::new().await;
@@ -160,12 +162,12 @@ async fn rename_arms_mark_exactly_one_delta() {
     let (from, to) = (&["src/a.rs"][..], &["src/b.rs"][..]);
     harness.rename(&context, RenameMode::Both, both).await;
     assert_renamed(&harness.delta.take_pending(), "src/a.rs", "src/b.rs");
-    assert_unlink_then_add(&mut events);
+    assert_unlink_then_add(&mut events, &harness.root_identity);
 
     harness.rename(&context, RenameMode::From, from).await;
     harness.rename(&context, RenameMode::To, to).await;
     assert_renamed(&harness.delta.take_pending(), "src/a.rs", "src/b.rs");
-    assert_unlink_then_add(&mut events);
+    assert_unlink_then_add(&mut events, &harness.root_identity);
 
     harness.rename(&context, RenameMode::From, from).await;
     let lone = harness.delta.take_pending();
@@ -173,9 +175,8 @@ async fn rename_arms_mark_exactly_one_delta() {
     assert_eq!(lone[0].op, PendingOp::Remove);
 }
 
-/// End to end through a real watcher: one settled write to a tracked file
-/// publishes exactly one `fileDelta`, measured against the index on the first
-/// sighting, with the modified lines in the patch.
+/// A settled tracked write publishes one delta against the index,
+/// retaining the watcher's configured root spelling on every carrier.
 #[tokio::test]
 async fn settled_write_publishes_one_file_delta() {
     let temp = tempfile::tempdir().expect("tempdir");
@@ -201,9 +202,10 @@ async fn settled_write_publishes_one_file_delta() {
     .expect("logger");
     let event_bus = EventBus::new(64);
     let mut events = event_bus.subscribe();
+    let configured_root = format!("{}/", root.display());
     let watcher = crate::repos::RepoWatcher::start(crate::repos::RepoWatcherConfig {
         repo_id: "repo-1".to_string(),
-        root_path: root.to_string_lossy().to_string(),
+        root_path: configured_root.clone(),
         docs_globs: vec!["**/*.md".to_string()],
         code_globs: vec!["**/*.rs".to_string()],
         ignore_globs: Vec::new(),
@@ -217,11 +219,25 @@ async fn settled_write_publishes_one_file_delta() {
     .await
     .expect("watcher starts");
 
+    watcher.broadcast_snapshot();
+    let snapshot = tokio::time::timeout(std::time::Duration::from_secs(1), events.recv())
+        .await
+        .expect("snapshot timely")
+        .expect("snapshot received");
+    let snapshot_wire: serde_json::Value =
+        serde_json::from_str(&snapshot.text).expect("snapshot wire");
+    assert_eq!(snapshot_wire["payload"]["type"], "snapshot");
+    assert_eq!(snapshot_wire["payload"]["rootPath"], configured_root);
+
     std::fs::write(root.join("src/a.rs"), "fn a() {}\nfn c() {}\n").expect("modify");
 
     let mut deltas = Vec::new();
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(1500);
     while let Ok(Ok(text)) = tokio::time::timeout_at(deadline, events.recv()).await {
+        if text.contains("\"fileChanged\"") || text.contains("\"fileDelta\"") {
+            let wire: serde_json::Value = serde_json::from_str(&text.text).expect("activity wire");
+            assert_eq!(wire["payload"]["rootPath"], configured_root);
+        }
         if text.contains("\"fileDelta\"") {
             deltas.push(text);
         }

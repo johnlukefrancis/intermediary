@@ -76,10 +76,6 @@ pub(crate) fn normalize_activity_history(
     true
 }
 
-pub(crate) fn observed_at_from_mtime(mtime: &str) -> DateTime<Utc> {
-    parse_iso(mtime).unwrap_or_else(Utc::now)
-}
-
 fn record_history(
     previous_history: &[FileActivityBucket],
     observed_at: DateTime<Utc>,

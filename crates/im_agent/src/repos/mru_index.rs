@@ -1,10 +1,10 @@
 // Path: crates/im_agent/src/repos/mru_index.rs
 // Description: MRU index for recent file changes
 
+use chrono::{DateTime, Utc};
+
 use crate::protocol::FileEntry;
-use crate::repos::{
-    activity_from_mtime, normalize_activity_history, observed_at_from_mtime, update_activity,
-};
+use crate::repos::{activity_from_mtime, normalize_activity_history, update_activity};
 
 #[derive(Debug)]
 pub struct MruIndex {
@@ -23,13 +23,20 @@ impl MruIndex {
         })
     }
 
-    pub fn upsert(&mut self, mut entry: FileEntry) -> FileEntry {
+    pub fn upsert(&mut self, entry: FileEntry) -> FileEntry {
+        self.upsert_at(entry, Utc::now())
+    }
+
+    pub(crate) fn upsert_at(
+        &mut self,
+        mut entry: FileEntry,
+        observed_at: DateTime<Utc>,
+    ) -> FileEntry {
         let previous_activity = self
             .entries
             .iter()
             .find(|item| item.path == entry.path)
             .and_then(|item| item.activity.as_ref());
-        let observed_at = observed_at_from_mtime(&entry.mtime);
         entry.activity = Some(update_activity(previous_activity, observed_at));
 
         self.entries.retain(|item| item.path != entry.path);
@@ -79,5 +86,40 @@ impl MruIndex {
 
     pub fn size(&self) -> usize {
         self.entries.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::{FileChangeType, FileKind};
+
+    #[test]
+    fn timestamp_preserving_edits_update_activity_at_observation_time() {
+        let mut index = MruIndex::new(8).expect("index");
+        let entry = FileEntry {
+            path: "src/main.rs".into(),
+            kind: FileKind::Code,
+            change_type: FileChangeType::Change,
+            mtime: "2001-01-01T00:00:00Z".into(),
+            size_bytes: None,
+            activity: None,
+        };
+        let first = DateTime::parse_from_rfc3339("2026-10-09T12:00:00Z")
+            .expect("first time")
+            .with_timezone(&Utc);
+        let later = first + chrono::Duration::minutes(5);
+        index.upsert_at(entry.clone(), first);
+        let updated = index.upsert_at(entry, later);
+        assert_eq!(updated.mtime, "2001-01-01T00:00:00Z");
+        let activity = updated.activity.expect("activity");
+        assert_eq!(activity.first_seen_at_iso, first.to_rfc3339());
+        assert_eq!(activity.last_seen_at_iso, later.to_rfc3339());
+        assert_eq!(activity.update_count, 2);
+        assert_eq!(activity.burst_count, 2);
+        assert_eq!(activity.history.len(), 1);
+        assert_eq!(activity.history[0].bucket_start_iso, first.to_rfc3339());
+        assert_eq!(activity.history[0].count, 2);
+        assert_eq!(index.size(), 1);
     }
 }

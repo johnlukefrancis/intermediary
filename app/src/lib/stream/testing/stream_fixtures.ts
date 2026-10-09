@@ -22,6 +22,7 @@ export function textDelta(path: string, overrides: Partial<FileDeltaEvent> = {},
   return {
     type: "fileDelta",
     repoId: "r",
+    rootPath: "/repo/r",
     seq,
     path,
     kind: "code",
@@ -50,6 +51,7 @@ export function imageDelta(path: string, overrides: Partial<FileDeltaEvent> = {}
   return {
     type: "fileDelta",
     repoId: "r",
+    rootPath: "/repo/r",
     seq,
     path,
     kind: "image",
@@ -64,7 +66,7 @@ export function imageDelta(path: string, overrides: Partial<FileDeltaEvent> = {}
 }
 
 export function changed(path: string, changeType: FileChangedEvent["changeType"] = "change"): FileChangedEvent {
-  return { type: "fileChanged", repoId: "r", path, kind: "code", changeType, mtime: "2026-09-06T00:00:00Z" };
+  return { type: "fileChanged", repoId: "r", rootPath: "/repo/r", path, kind: "code", changeType, mtime: "2026-09-06T00:00:00Z" };
 }
 
 export function fileCard(id: number, path: string, now: number, overrides: Partial<StreamFileCard> = {}): StreamFileCard {

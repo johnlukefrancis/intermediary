@@ -206,8 +206,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const workspace = repoWorkspace.workspace;
   const workspacePanel = workspace.kind === "none" ? null : (
     <RepoWorkspacePanel
-      workspace={workspace}
-      noteState={noteState}
+      workspace={workspace.kind === "note" ? { ...workspace, noteState } : workspace}
       isHandset={isHandset}
       onClose={repoWorkspace.closeWorkspace}
       onTextChange={repoWorkspace.updateTextScratch}

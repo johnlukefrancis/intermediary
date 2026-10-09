@@ -1,0 +1,40 @@
+/* Path: app/src/styles/overview/overview_panel.css
+ * Description: Overview glass panel, active-repository filter chips and the monitoring badge */
+
+.overview-panel {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font: var(--text-base) / 1.5 var(--font-sans);
+  container: overview / inline-size;
+}
+
+/* Quiet states hand the whole pane to the centered glass empty panel; no panel behind a panel */
+.overview-panel[data-empty="true"] { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.overview-panel button { font: inherit; cursor: pointer; }
+.overview-panel button:focus { outline: none; }
+.overview-panel button:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+.overview-toolbar { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--space-3); flex: 0 0 auto; min-height: 44px; padding: 0 var(--space-3); border-bottom: 1px solid var(--color-border-subtle); background: var(--glass-vintage-header); box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.2); }
+.overview-panel[data-empty="true"] .overview-toolbar { border: 1px solid var(--glass-border); border-radius: var(--radius-deck-md); }
+.overview-repositories { display: flex; flex: 1; min-width: 0; align-items: center; gap: var(--space-1); padding: var(--space-1) 0; overflow-x: auto; scrollbar-width: none; }
+.overview-repositories::-webkit-scrollbar { display: none; }
+
+/* Same latch as the Stream header's filter buttons; each chip latches in its own repository accent */
+.overview-panel .overview-repo-chip { display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 0 auto; max-width: 200px; height: 26px; padding: 0 var(--space-3); border: 1px solid transparent; border-radius: var(--radius-deck-sm); background: transparent; color: var(--color-text-secondary); font: var(--weight-semibold) var(--text-xs) / 1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; transition: color var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out); }
+.overview-repo-chip__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.overview-panel .overview-repo-chip:hover { color: var(--color-accent); background: var(--color-bg-hover-subtle); }
+.overview-panel .overview-repo-chip[aria-pressed="true"] { border-color: color-mix(in srgb, var(--color-accent) 70%, transparent); background: var(--color-accent-soft); color: var(--color-accent); box-shadow: 0 0 8px 0 var(--color-accent-glow); }
+.overview-repo-chip__dot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
+.overview-monitoring.badge { flex: 0 0 auto; cursor: help; }
+
+@container overview (max-width: 450px) {
+  .overview-toolbar { gap: var(--space-2); padding: 0 var(--space-2); }
+  .overview-panel .overview-repo-chip { padding: 0 var(--space-2); }
+}

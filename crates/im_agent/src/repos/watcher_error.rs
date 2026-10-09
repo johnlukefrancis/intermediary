@@ -8,6 +8,7 @@ const MOUNTED_WINDOWS_DOC_PATH: &str = "docs/usage/agent_wsl_bruised_states.md";
 
 pub fn build_watcher_error_event(
     repo_id: &str,
+    root_path: &str,
     raw_message: String,
     raw_code: Option<String>,
 ) -> AgentErrorEvent {
@@ -42,6 +43,7 @@ pub fn build_watcher_error_event(
             code: info.code,
             doc_path: info.doc_path,
             repo_id: Some(repo_id.to_string()),
+            root_path: Some(root_path.to_string()),
             raw_code: info.raw_code,
             raw_message: Some(info.raw_message),
         }),
@@ -58,6 +60,7 @@ pub fn build_mounted_windows_path_warning_event(repo_id: &str, repo_root: &str) 
             code: Some(AgentErrorCode::WatcherMountedWindowsPathRisk),
             doc_path: Some(MOUNTED_WINDOWS_DOC_PATH.to_string()),
             repo_id: Some(repo_id.to_string()),
+            root_path: Some(repo_root.to_string()),
             raw_code: Some("MOUNTED_WINDOWS_PATH_RISK".to_string()),
             raw_message: Some(format!("Mounted Windows path: {repo_root}")),
         }),
@@ -74,7 +77,7 @@ struct WatcherErrorInfo {
 
 #[cfg(test)]
 mod tests {
-    use super::build_mounted_windows_path_warning_event;
+    use super::{build_mounted_windows_path_warning_event, build_watcher_error_event};
     use crate::protocol::AgentErrorCode;
 
     #[test]
@@ -93,8 +96,23 @@ mod tests {
         );
         assert_eq!(details.repo_id.as_deref(), Some("screenshots"));
         assert_eq!(
+            details.root_path.as_deref(),
+            Some("/mnt/c/Users/john/Pictures")
+        );
+        assert_eq!(
             details.raw_code.as_deref(),
             Some("MOUNTED_WINDOWS_PATH_RISK")
         );
+    }
+
+    #[test]
+    fn watcher_errors_retain_exact_root_identity() {
+        let root = "/repo/old/";
+        for code in [Some("ENOSPC"), Some("EMFILE"), None] {
+            let event =
+                build_watcher_error_event("repo", root, "failed".into(), code.map(str::to_string));
+            let wire = serde_json::to_value(event).expect("error wire");
+            assert_eq!(wire["details"]["rootPath"], root);
+        }
     }
 }

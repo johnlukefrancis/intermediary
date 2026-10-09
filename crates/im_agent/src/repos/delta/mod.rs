@@ -55,9 +55,8 @@ pub(crate) use settle_change::{PendingChange, PendingOp};
 pub(crate) use settle_queue::SettleQueue;
 pub(crate) use unified_patch::{all_added_patch, all_removed_patch, compute_patch, PatchOutput};
 
-/// Quiet time a path must hold before its delta is read: long enough to swallow
-/// an editor's write-truncate-rename dance, short enough to stay under the
-/// 150-300 ms card budget.
+/// Quiet period that absorbs an editor's write-truncate-rename dance
+/// within the 150-300 ms card budget.
 pub(crate) const SETTLE_WINDOW: Duration = Duration::from_millis(120);
 
 /// A path that keeps being written can never starve: the deadline never moves
@@ -103,22 +102,16 @@ pub(crate) const BURST_BUDGET: u32 = 32;
 /// The window `BURST_BUDGET` refills over.
 pub(crate) const BURST_WINDOW: Duration = Duration::from_secs(2);
 
-/// The bucket refills only while fewer than this many marks are pending: one
-/// drain's worth. A checkout's run holds the queue above it for its whole
-/// life, so the run costs `BURST_BUDGET` reads however long it takes, while a
-/// hot loop over a few files still refills every window.
+/// Refill below one drain's worth of pending marks; a checkout stays above
+/// this threshold and costs at most `BURST_BUDGET` reads across windows.
 pub(crate) const BURST_REFILL_MAX_PENDING: usize = DRAIN_BATCH;
 
-/// Bare `gone` events allowed per `BURST_WINDOW` once the read budget is
-/// spent. Each is a handful of bytes, but a 10k-file delete must not become
-/// 10k bus slots; past this a delete is withheld like any other change.
+/// Bare `gone` events per `BURST_WINDOW` after the read budget is spent;
+/// further deletions are withheld to bound bus slots.
 pub(crate) const GONE_BUDGET: u32 = 64;
 
-/// Wall clock a single settled read or diff may take on the blocking pool -
-/// and, separately, the wait for a read permit - before the delta is
-/// abandoned as `Opaque(unreadable)`. A stalled network share or a frozen
-/// filesystem must never park one of the two process-wide read permits for
-/// the life of the watcher, nor park every other repo's worker behind them.
+/// Separate bounds for a blocking read/diff and waiting for a read permit;
+/// exceeding either produces `Opaque(unreadable)` without parking a worker.
 pub(crate) const READ_DEADLINE: Duration = Duration::from_secs(2);
 
 /// Ceiling on `git show :0:./<path>` when fetching an index baseline.
@@ -128,16 +121,14 @@ pub(crate) const INDEX_BLOB_TIMEOUT: Duration = Duration::from_secs(5);
 /// one blocking read or diff at most, so a watcher restart never waits on a burst.
 pub(crate) const STOP_GRACE: Duration = Duration::from_millis(250);
 
-/// One repo's delta pipeline: the settle queue the watcher marks inline and the
-/// worker task that resolves settled changes into `fileDelta` events. `note_*`
-/// never block on IO and never await (ADR-009): lock, mutate, nudge.
+/// One watcher marks this queue; its worker resolves settled changes.
+/// `note_*` only lock, mutate and nudge, without IO or awaits.
 pub(crate) struct DeltaService {
     queue: Arc<Mutex<SettleQueue>>,
     nudge: Arc<Notify>,
     stop: watch::Sender<bool>,
-    /// Kills whatever `git show` the worker has in flight; cancelled before the
-    /// join is even attempted, so `STOP_GRACE` is spent waiting on the loop
-    /// rather than on a child process.
+    /// Cancel in-flight `git show` before joining, so `STOP_GRACE` waits
+    /// for the worker loop rather than a child process.
     cancel: BundleCancelToken,
     worker: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
@@ -145,7 +136,7 @@ pub(crate) struct DeltaService {
 impl DeltaService {
     pub(crate) fn new(
         repo_id: String,
-        root: PathBuf,
+        root: String,
         event_bus: EventBus,
         logger: Logger,
         tracked: TrackedPathSet,

@@ -24,6 +24,8 @@ mod cancel_bundle_tests;
 #[cfg(test)]
 mod tests_delta;
 #[cfg(test)]
+mod tests_events;
+#[cfg(test)]
 mod tests_shutdown;
 #[cfg(test)]
 mod tests_source_control;
@@ -82,6 +84,14 @@ pub use responses_tr_fleet::{
 pub use responses_worktree::WorktreeActionResult;
 
 #[cfg(test)]
-mod tests;
+mod tests_bootstrap;
+#[cfg(test)]
+mod tests_bundles;
+#[cfg(test)]
+mod tests_envelopes;
+#[cfg(test)]
+mod tests_file_access;
+#[cfg(test)]
+mod tests_runtime_events;
 #[cfg(test)]
 mod tr_fleet_tests;

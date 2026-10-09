@@ -1,5 +1,5 @@
 # Verify the Stream Panel End-to-End
-Updated on: 2026-09-06
+Updated on: 2026-10-09
 Owners: JL · Agents
 Depends on: ADR-010, ADR-012
 
@@ -16,7 +16,7 @@ Each step names what to do and what proves it. The acceptance list and behavior 
 ## 0. Baseline
 
 Open one **host-rooted** and one **WSL-rooted** repo tab. Expect the left panel to open in STREAM (the first
-rocker cell lit), a `LIVE` dot beside the rocker, and either compact history rows from the recent list or
+rocker cell lit), no routine Live indicator, and either compact history rows from the recent list or
 `> WATCHING <REPO> — WAITING FOR EDITS`. Open DevTools (`Ctrl+Shift+I`) and keep the Console visible.
 
 ## A. Text cards and the store
@@ -35,7 +35,7 @@ rocker cell lit), a `LIVE` dot beside the rocker, and either compact history row
    a modified-file card. Expect the worktree diff to open in the shared workspace; close it. Expect the ring back,
    older cards static, and `> N CHANGES WHILE AWAY` if edits landed meanwhile. Drag a card past 6 px: the OS drag
    starts with the staged copy. Right-click: the file actions menu.
-8. Repeat step 1 in the WSL repo. Same result; the `LIVE` dot stays lit.
+8. Repeat step 1 in the WSL repo. Same result; normal streaming needs no header status.
 9. Switch to Latest and back to STREAM, then switch repo tabs and back. Expect the ring intact each time.
 10. Fill the ring: let an agent (or a loop of saves) land 30 or more edits so the ring is full and the cards are
     taller than the panel. Expect **every** card to keep its natural height — full head, full hunk body, footer —
@@ -88,7 +88,7 @@ keyframe and is spliced on the next admit by design.
 ## C. Motion, governor, DevTools
 
 1. With an agent editing, click into another window while the app stays visible. Expect cards to keep arriving
-   **and animating** (the Stream is exempt from the pause); the substrate and the LIVE pulse stop as before.
+   **and animating** (the Stream is exempt from the pause); substrate animation stops as before.
 2. Minimize the app, let a few edits land, restore. Expect the cards already in place (no animation) followed by a
    cascade, or one burst card if many landed.
 3. Enable OS reduced motion. Expect cards to appear instantly with no stagger.

@@ -3,7 +3,7 @@
 
 import type React from "react";
 import { AddRepoButton } from "./add_repo_button.js";
-import "../styles/empty_repo_state.css";
+import { EmptyStatePanel } from "./empty_state_panel.js";
 
 interface EmptyRepoStateProps {
   onRepoAdded?: (repoId: string) => void;
@@ -17,41 +17,11 @@ export function EmptyRepoState({
   persistenceLockReason = null,
 }: EmptyRepoStateProps): React.JSX.Element {
   if (persistenceLocked) {
-    return (
-      <div className="empty-repo-state">
-        <div className="empty-repo-state__panel glass-surface">
-          <div className="empty-repo-state__content">
-            <p className="empty-repo-state__title">Configuration load failed</p>
-            <p className="empty-repo-state__subtitle">
-              Config persistence is locked for this session to prevent overwriting your saved
-              repositories.
-            </p>
-            {persistenceLockReason ? (
-              <p className="empty-repo-state__subtitle">
-                Details: {persistenceLockReason}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    );
+    return <EmptyStatePanel title="Configuration load failed"
+      description="Config persistence is locked for this session to prevent overwriting your saved repositories."
+      details={persistenceLockReason ? `Details: ${persistenceLockReason}` : null} />;
   }
 
-  return (
-    <div className="empty-repo-state">
-      <div className="empty-repo-state__panel glass-surface">
-        <div className="empty-repo-state__content">
-          <p className="empty-repo-state__title">No repositories configured</p>
-          <p className="empty-repo-state__subtitle">
-            Add a repository to begin.
-          </p>
-          <AddRepoButton
-            {...(onRepoAdded ? { onRepoAdded } : {})}
-            className="empty-repo-state__button"
-            variant="empty_state"
-          />
-        </div>
-      </div>
-    </div>
-  );
+  return <EmptyStatePanel title="No repositories configured" description="Add a repository to begin."
+    action={<AddRepoButton {...(onRepoAdded ? { onRepoAdded } : {})} variant="empty_state" />} />;
 }

@@ -1,30 +1,16 @@
 // Path: app/src/lib/stream/stream_tile_targets.ts
-// Description: Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE
+// Description: Projects Stream strip slots and repository-scoped source identities into shared image targets
 
-import { MAX_IMAGE_TILES } from "./stream_bounds.js";
-import { previewableImage } from "./stream_card_grammar.js";
+import { previewableImage } from "../images/image_tile_pixels.js";
+import type { TileTarget } from "../images/image_tile_targets.js";
 import type { StreamRingCard } from "./stream_types.js";
-
-export interface TileTarget {
-  /** `${repoId}:${cardId}:${path}`: one pixel record per tile slot, never shared across repos */
-  key: string;
-  cardId: number;
-  path: string;
-  bytes: number;
-  /** The revision the tile announced beside `bytes`; a read reporting any other revision is refused */
-  mtimeMs: number;
-  /** Whitelisted extension, wire mime, under the size gate, and not deleted: pixels may be requested */
-  fetchable: boolean;
-  /** The tile's updatedAtMs; a replaced-in-place tile changes it, so its stale pixels are refetched */
-  stamp: number;
-}
 
 export function tileKey(repoId: string, cardId: number, path: string): string {
   return `${repoId}:${String(cardId)}:${path}`;
 }
 
 /** Ring order, then tile order: the reading order of every tile slot the panel shows */
-export function collectTileTargets(repoId: string, cards: readonly StreamRingCard[]): TileTarget[] {
+export function collectTileTargets(repoId: string, cards: readonly StreamRingCard[], sourceKeyPrefix: string): TileTarget[] {
   const targets: TileTarget[] = [];
   for (const card of cards) {
     if (card.kind !== "images") continue;
@@ -33,7 +19,8 @@ export function collectTileTargets(repoId: string, cards: readonly StreamRingCar
       const live = body.status === "image" && tile.op !== "remove";
       targets.push({
         key: tileKey(repoId, card.id, tile.path),
-        cardId: card.id,
+        sourceKey: JSON.stringify([sourceKeyPrefix, tile.path]),
+        repoId,
         path: tile.path,
         bytes: body.status === "image" ? body.bytes : 0,
         mtimeMs: body.status === "image" ? body.mtimeMs : 0,
@@ -43,30 +30,4 @@ export function collectTileTargets(repoId: string, cards: readonly StreamRingCar
     }
   }
   return targets;
-}
-
-/**
- * Newest first, fetchable only, until MAX_IMAGE_TILES are kept; everything older keeps its slot
- * and loses its Blob. The count alone bounds memory: every retained Blob is a thumbnail within
- * STRIP_THUMB_MAX_PX, whatever its source's size.
- */
-export function retainedKeys(targets: readonly TileTarget[]): ReadonlySet<string> {
-  const kept = new Set<string>();
-  for (let index = targets.length - 1; index >= 0; index -= 1) {
-    const target = targets[index];
-    if (target === undefined || !target.fetchable) continue;
-    if (kept.size >= MAX_IMAGE_TILES) break;
-    kept.add(target.key);
-  }
-  return kept;
-}
-
-/** For each target, the key of the nearest EARLIER target with the same path (its BEFORE), or null */
-export function beforeKeys(targets: readonly TileTarget[]): readonly (string | null)[] {
-  const lastByPath = new Map<string, string>();
-  return targets.map((target) => {
-    const before = lastByPath.get(target.path) ?? null;
-    lastByPath.set(target.path, target.key);
-    return before;
-  });
 }

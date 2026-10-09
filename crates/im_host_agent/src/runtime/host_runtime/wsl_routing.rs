@@ -10,10 +10,14 @@ use im_agent::protocol::{
 };
 use im_agent::server::EventBus;
 
-use crate::error_codes::{WSL_BACKEND_TIMEOUT, WSL_BACKEND_UNAVAILABLE};
+use crate::error_codes::{
+    WSL_BACKEND_TIMEOUT, WSL_BACKEND_UNAVAILABLE, WSL_BACKEND_VERSION_MISMATCH,
+};
 use crate::wsl::WslBackendClient;
 
 use super::HostRuntime;
+
+const ROOT_IDENTITY_MIN_AGENT_VERSION: &str = "0.1.24";
 
 impl HostRuntime {
     pub(super) async fn replay_cached_wsl_client_hello_if_needed(
@@ -47,6 +51,7 @@ impl HostRuntime {
         match forwarded {
             Ok(forwarded) => match forwarded.response {
                 UiResponse::ClientHelloResult(result) => {
+                    require_root_identity_version(&result.agent_version)?;
                     self.mark_wsl_transport_success_for_generation(event_bus, forwarded.generation);
                     self.logger.info(
                         "WSL backend clientHello applied",
@@ -196,6 +201,7 @@ impl HostRuntime {
                 code: None,
                 doc_path: None,
                 repo_id,
+                root_path: None,
                 raw_code: Some(raw_code.to_string()),
                 raw_message: Some(message),
             }),
@@ -207,6 +213,36 @@ impl HostRuntime {
 
 fn is_wsl_transport_error(err: &AgentError) -> bool {
     err.code() == WSL_BACKEND_UNAVAILABLE || err.code() == WSL_BACKEND_TIMEOUT
+}
+
+fn require_root_identity_version(actual: &str) -> Result<(), AgentError> {
+    if numeric_version(actual)
+        .zip(numeric_version(ROOT_IDENTITY_MIN_AGENT_VERSION))
+        .is_some_and(|(actual, required)| actual >= required)
+    {
+        return Ok(());
+    }
+    Err(AgentError::new(
+        WSL_BACKEND_VERSION_MISMATCH,
+        format!("WSL backend requires agent version {ROOT_IDENTITY_MIN_AGENT_VERSION} or newer for root identity; received {actual}"),
+    ))
+}
+
+fn numeric_version(version: &str) -> Option<(u64, u64, u64)> {
+    let mut parts = version.split('.');
+    let mut number = || {
+        let part = parts.next()?;
+        if part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        part.parse::<u64>().ok()
+    };
+    let triple = (number()?, number()?, number()?);
+    if parts.next().is_some() {
+        None
+    } else {
+        Some(triple)
+    }
 }
 
 #[cfg(test)]

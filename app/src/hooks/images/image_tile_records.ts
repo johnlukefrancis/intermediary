@@ -1,21 +1,16 @@
-// Path: app/src/hooks/stream/stream_tile_records.ts
-// Description: The panel's tile pixel records: statuses, Blob release, and the published projection
+// Path: app/src/hooks/images/image_tile_records.ts
+// Description: Shared image tile records, Blob ownership and stable published pixel projections
 
-import { beforeKeys, type TileTarget } from "../../lib/stream/stream_tile_targets.js";
+import { beforeKeys, type TileTarget } from "../../lib/images/image_tile_targets.js";
 
-/**
- * "dropped" is a tile released to stay inside the retention budgets; "superseded" a read that came
- * back for another revision than the card announced, or that the agent refused because the file was
- * rewritten under it; "tooLarge" a source past MAX_TILE_PIXELS, refused before any decode.
- * Each keeps its slot and never refetches until the tile is replaced in place.
- */
-export type StreamTileStatus = "idle" | "loading" | "ready" | "dropped" | "error" | "superseded" | "tooLarge";
+/** Terminal outcomes keep their slot without retry until its announced revision changes. */
+export type ImageTileStatus = "idle" | "loading" | "ready" | "dropped" | "error" | "superseded" | "tooLarge";
 
 /** How a read ended; `ready` is the only outcome that keeps a Blob */
-export type StreamTileOutcome = Exclude<StreamTileStatus, "idle" | "loading" | "dropped">;
+export type ImageTileOutcome = Exclude<ImageTileStatus, "idle" | "loading" | "dropped">;
 
-export interface StreamImageTile {
-  status: StreamTileStatus;
+export interface ImageTile {
+  status: ImageTileStatus;
   /** This slot's own thumbnail Blob URL, alive exactly as long as the tile is retained */
   url: string | null;
   /** The SOURCE's size (the title, the icon cap), never the thumbnail's; a tooLarge slot names it */
@@ -25,26 +20,23 @@ export interface StreamImageTile {
   beforeUrl: string | null;
 }
 
-/** The panel's tile set: `byKey` is keyed by `tileKey(repoId, cardId, path)` (stream_tile_targets.ts) */
-export interface StreamImageTiles {
-  readonly repoId: string;
-  readonly byKey: ReadonlyMap<string, StreamImageTile>;
+export interface ImageTiles {
+  readonly byKey: ReadonlyMap<string, ImageTile>;
 }
 
 export interface TileRecord {
-  status: StreamTileStatus;
+  status: ImageTileStatus;
   url: string | null;
   /** The Blob a replaced-in-place tile showed before its refetch; revoked with the record */
   previousUrl: string | null;
   /** The source's size from the probe; a released record keeps it for its title */
   width: number;
   height: number;
-  /** The tile's updatedAtMs the pixels were read for; a newer stamp means a refetch */
-  stamp: number;
+  target: TileTarget;
 }
 
-export function emptyTiles(repoId: string): StreamImageTiles {
-  return { repoId, byKey: new Map<string, StreamImageTile>() };
+export function emptyTiles(): ImageTiles {
+  return { byKey: new Map<string, ImageTile>() };
 }
 
 export function revoke(url: string | null): void {
@@ -58,7 +50,7 @@ export function release(record: TileRecord): void {
   record.previousUrl = null;
 }
 
-function sameTile(a: StreamImageTile, b: StreamImageTile): boolean {
+function sameTile(a: ImageTile, b: ImageTile): boolean {
   return (
     a.status === b.status &&
     a.url === b.url &&
@@ -70,19 +62,18 @@ function sameTile(a: StreamImageTile, b: StreamImageTile): boolean {
 
 /** The next published set over `targets`, reusing `carried` entries that did not move; null when nothing changed */
 export function projectTiles(
-  repoId: string,
   targets: readonly TileTarget[],
   records: ReadonlyMap<string, TileRecord>,
-  carried: StreamImageTiles
-): StreamImageTiles | null {
-  const next = new Map<string, StreamImageTile>();
+  carried: ImageTiles
+): ImageTiles | null {
+  const next = new Map<string, ImageTile>();
   const befores = beforeKeys(targets);
   let changed = false;
   for (const [index, target] of targets.entries()) {
     const record = records.get(target.key);
     const beforeKey = befores[index] ?? null;
     const before = beforeKey === null ? undefined : records.get(beforeKey);
-    const candidate: StreamImageTile = {
+    const candidate: ImageTile = {
       status: record?.status ?? "idle",
       url: record?.url ?? null,
       width: record?.width ?? 0,
@@ -97,6 +88,6 @@ export function projectTiles(
       changed = true;
     }
   }
-  if (!changed && carried.repoId === repoId && next.size === carried.byKey.size) return null;
-  return { repoId, byKey: next };
+  if (!changed && next.size === carried.byKey.size) return null;
+  return { byKey: next };
 }

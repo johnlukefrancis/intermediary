@@ -10,7 +10,7 @@ import type {
   DeltaStats,
   OpaqueReason,
 } from "../../shared/protocol.js";
-import type { StreamSupport } from "./stream_agent_support.js";
+import type { ActivitySupport } from "../agent/activity_support.js";
 import type { BurstDetectState } from "./stream_burst_detect.js";
 import type { StreamImageStripCard } from "./stream_strip_types.js";
 
@@ -148,7 +148,7 @@ export interface StreamSnapshot {
   documentHidden: boolean;
   offline: boolean;
   held: boolean;
-  support: StreamSupport;
+  support: ActivitySupport;
   admittedWhileAway: number;
   /** Text paths whose fileChanged arrived and whose delta has not, bounded for display */
   settling: readonly string[];

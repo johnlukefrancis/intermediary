@@ -71,6 +71,7 @@ pub struct StagedInfo {
 #[serde(rename_all = "camelCase")]
 pub struct FileChangedEvent {
     pub repo_id: String,
+    pub root_path: String,
     pub path: String,
     pub kind: FileKind,
     pub change_type: FileChangeType,
@@ -85,6 +86,7 @@ pub struct FileChangedEvent {
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotEvent {
     pub repo_id: String,
+    pub root_path: String,
     pub recent: Vec<FileEntry>,
 }
 
@@ -176,6 +178,7 @@ pub enum AgentEvent {
 impl FileChangedEvent {
     pub fn new(
         repo_id: String,
+        root_path: String,
         path: String,
         kind: FileKind,
         change_type: FileChangeType,
@@ -184,6 +187,7 @@ impl FileChangedEvent {
     ) -> Self {
         Self {
             repo_id,
+            root_path,
             path,
             kind,
             change_type,
@@ -195,7 +199,11 @@ impl FileChangedEvent {
 }
 
 impl SnapshotEvent {
-    pub fn new(repo_id: String, recent: Vec<FileEntry>) -> Self {
-        Self { repo_id, recent }
+    pub fn new(repo_id: String, root_path: String, recent: Vec<FileEntry>) -> Self {
+        Self {
+            repo_id,
+            root_path,
+            recent,
+        }
     }
 }

@@ -3,8 +3,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { IMAGE_CARD_MAX_BYTES, MAX_IMAGE_TILES } from "./stream_bounds.js";
-import { beforeKeys, collectTileTargets, retainedKeys, tileKey } from "./stream_tile_targets.js";
+import { IMAGE_TILE_MAX_BYTES, MAX_IMAGE_TILES } from "../images/image_tile_bounds.js";
+import { beforeKeys, retainedKeys } from "../images/image_tile_targets.js";
+import { collectTileTargets, tileKey } from "./stream_tile_targets.js";
 import type { StreamImageStripCard, StreamStripTile } from "./stream_types.js";
 
 interface TileSpec {
@@ -37,7 +38,7 @@ function paths(prefix: string, count: number): TileSpec[] {
 
 void test("retention keeps the newest MAX_IMAGE_TILES fetchable tiles across strips; the rest keep their slot", () => {
   const cards = [strip(1, paths("old/", MAX_IMAGE_TILES), 1000), strip(2, paths("new/", 4), 2000)];
-  const targets = collectTileTargets("r", cards);
+  const targets = collectTileTargets("r", cards, "root-a");
   assert.equal(targets.length, MAX_IMAGE_TILES + 4);
   const kept = retainedKeys(targets);
   assert.equal(kept.size, MAX_IMAGE_TILES);
@@ -48,27 +49,34 @@ void test("retention keeps the newest MAX_IMAGE_TILES fetchable tiles across str
 
 void test("unfetchable tiles never take a retention slot: no mime, over the gate, or deleted", () => {
   const cards = [
-    strip(1, [{ path: "a.heic", mimeType: null }, { path: "big.png", bytes: IMAGE_CARD_MAX_BYTES + 1 }, { path: "gone.png", gone: true }, { path: "ok.png" }]),
+    strip(1, [{ path: "a.heic", mimeType: null }, { path: "big.png", bytes: IMAGE_TILE_MAX_BYTES + 1 }, { path: "gone.png", gone: true }, { path: "ok.png" }]),
   ];
-  const targets = collectTileTargets("r", cards);
+  const targets = collectTileTargets("r", cards, "root-a");
   assert.deepEqual(targets.map((target) => target.fetchable), [false, false, false, true]);
   assert.deepEqual([...retainedKeys(targets)], [tileKey("r", 1, "ok.png")]);
 });
 
 void test("a target carries the tile's mtime beside its bytes so the panel can refuse another revision", () => {
-  const targets = collectTileTargets("r", [strip(1, [{ path: "a.png", bytes: 7 }], 5000)]);
+  const targets = collectTileTargets("r", [strip(1, [{ path: "a.png", bytes: 7 }], 5000)], "root-a");
   assert.deepEqual(targets.map((target) => [target.bytes, target.mtimeMs]), [[7, 5000]]);
 });
 
 void test("a before key resolves to the previous tile of the same path, across strips and for a deleted tile", () => {
   const cards = [strip(1, [{ path: "a.png" }, { path: "b.png" }], 1000), strip(2, [{ path: "a.png" }, { path: "b.png", gone: true }], 2000)];
-  const targets = collectTileTargets("r", cards);
+  const targets = collectTileTargets("r", cards, "root-a");
   assert.deepEqual(beforeKeys(targets), [null, null, tileKey("r", 1, "a.png"), tileKey("r", 1, "b.png")]);
 });
 
 void test("a tile key names its repo: the same strip id and path in another repo never share a pixel record", () => {
   assert.equal(tileKey("a", 1, "x.png"), "a:1:x.png");
   assert.notEqual(tileKey("a", 1, "x.png"), tileKey("b", 1, "x.png"));
-  const targets = collectTileTargets("b", [strip(1, [{ path: "x.png" }])]);
+  const targets = collectTileTargets("b", [strip(1, [{ path: "x.png" }])], "root-b");
   assert.deepEqual(targets.map((target) => target.key), [tileKey("b", 1, "x.png")]);
+});
+
+void test("Stream source identities separate a replaced repository root even for the same path", () => {
+  const oldRoot = collectTileTargets("r", [strip(1, [{ path: "x.png" }])], JSON.stringify(["r", "host", "/old"]));
+  const newRoot = collectTileTargets("r", [strip(2, [{ path: "x.png" }])], JSON.stringify(["r", "host", "/new"]));
+  assert.notEqual(oldRoot[0]?.sourceKey, newRoot[0]?.sourceKey);
+  assert.deepEqual(beforeKeys([...oldRoot, ...newRoot]), [null, null]);
 });

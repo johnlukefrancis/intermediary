@@ -13,18 +13,20 @@ import { TextWorkspaceEditor } from "./text_workspace.js";
 import { WorkspaceLayout } from "./layout/workspace_layout.js";
 import { useConfig } from "../hooks/use_config.js";
 import { useFileActions } from "../hooks/use_file_actions.js";
-import { getFileName, type RepoWorkspace } from "../hooks/use_repo_workspace.js";
+import { getExtension, getFileName, type RepoWorkspace } from "../hooks/repo_workspace_types.js";
 import type { NoteState } from "../hooks/use_notes.js";
 import type { TextWorkspaceSemanticMode } from "./text_workspace_semantics.js";
 
 const MAX_NOTE_LENGTH = 100_000;
 const MAX_SCRATCH_LENGTH = 1_000_000;
 
-type ActiveRepoWorkspace = Exclude<RepoWorkspace, { kind: "none" }>;
+type ActiveRepoWorkspace =
+  | (Extract<RepoWorkspace, { kind: "note" }> & { noteState: NoteState })
+  | Exclude<RepoWorkspace, { kind: "none" | "note" }>;
 
 interface RepoWorkspacePanelProps {
   workspace: ActiveRepoWorkspace;
-  noteState: NoteState;
+  repoLabel?: string;
   isHandset: boolean;
   onClose: () => void;
   onTextChange: (content: string) => void;
@@ -59,19 +61,12 @@ function workspaceSubtitle(workspace: ActiveRepoWorkspace): string {
   return workspace.path;
 }
 
-/** Path whose title offers drag-out and file actions: text buffers, and diffs of files still on disk */
+/** Existing files offer title drag-out and file actions. */
 function titleFilePath(workspace: ActiveRepoWorkspace): string | null {
-  if (workspace.kind === "textFile") return workspace.path;
+  if (workspace.kind === "textFile" || workspace.kind === "imageFile") return workspace.path;
   if (workspace.kind === "diff" && workspace.fileExists) return workspace.path;
   if (workspace.kind === "imageDiff" && workspace.fileExists) return workspace.path;
   return null;
-}
-
-function getExtension(path: string): string | null {
-  const fileName = getFileName(path);
-  const dotIndex = fileName.lastIndexOf(".");
-  if (dotIndex === -1 || dotIndex === fileName.length - 1) return null;
-  return fileName.slice(dotIndex + 1).toLowerCase();
 }
 
 function semanticMode(workspace: ActiveRepoWorkspace): TextWorkspaceSemanticMode {
@@ -83,7 +78,7 @@ function semanticMode(workspace: ActiveRepoWorkspace): TextWorkspaceSemanticMode
 
 export function RepoWorkspacePanel({
   workspace,
-  noteState,
+  repoLabel,
   isHandset,
   onClose,
   onTextChange,
@@ -120,24 +115,30 @@ export function RepoWorkspacePanel({
   const content =
     workspace.kind === "note" ? (
       <TextWorkspaceEditor
-        value={noteState.content}
-        onChange={noteState.onChange}
+        value={workspace.noteState.content}
+        onChange={workspace.noteState.onChange}
         semanticMode={semanticMode(workspace)}
-        isLoading={noteState.isLoading}
-        error={noteState.error}
+        isLoading={workspace.noteState.isLoading}
+        error={workspace.noteState.error}
         maxLength={MAX_NOTE_LENGTH}
         placeholder="Type notes here..."
         ariaLabel="Repository notes"
       />
     ) : workspace.kind === "textFile" ? (
-      <TextWorkspaceEditor
-        value={workspace.content}
-        onChange={onTextChange}
-        semanticMode={semanticMode(workspace)}
-        maxLength={MAX_SCRATCH_LENGTH}
-        placeholder="Empty file"
-        ariaLabel={`Scratch text buffer for ${workspace.path}`}
-      />
+      workspace.status === "loading" ? (
+        <p className="empty-state empty-state--waiting">Loading text</p>
+      ) : workspace.status === "error" ? (
+        <p className="text-workspace-error text-workspace-error--inline">{workspace.error}</p>
+      ) : (
+        <TextWorkspaceEditor
+          value={workspace.content}
+          onChange={onTextChange}
+          semanticMode={semanticMode(workspace)}
+          maxLength={MAX_SCRATCH_LENGTH}
+          placeholder="Empty file"
+          ariaLabel={`Scratch text buffer for ${workspace.path}`}
+        />
+      )
     ) : workspace.kind === "diff" ? (
       <DiffWorkspaceViewer
         path={workspace.path}
@@ -173,7 +174,7 @@ export function RepoWorkspacePanel({
   return (
     <>
       <WorkspaceLayout
-        title={workspaceTitle(workspace)}
+        title={repoLabel ? `${repoLabel} · ${workspaceTitle(workspace)}` : workspaceTitle(workspace)}
         subtitle={workspaceSubtitle(workspace)}
         subtitleTone={
           (workspace.kind === "diff" || workspace.kind === "imageDiff") && workspace.conflict
@@ -185,7 +186,8 @@ export function RepoWorkspacePanel({
         onTitleDragStart={
           filePath !== null
             ? () => {
-              void onTextFileDragStart(filePath);
+              if (workspace.kind === "imageFile") onImageDragStart(filePath);
+              else void onTextFileDragStart(filePath);
             }
             : undefined
         }

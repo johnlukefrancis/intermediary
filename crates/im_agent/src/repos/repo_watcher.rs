@@ -42,6 +42,7 @@ pub struct RepoWatcherConfig {
 pub struct RepoWatcher {
     repo_id: String,
     root_path: PathBuf,
+    root_identity: String,
     mru: Arc<RwLock<MruIndex>>,
     recent_store: RecentFilesStore,
     logger: Logger,
@@ -101,6 +102,7 @@ impl RepoWatcher {
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
         let repo_id = config.repo_id.clone();
+        let root_identity = config.root_path.clone();
         let logger = config.logger.clone();
         let event_bus = config.event_bus.clone();
         let recent_store = config.recent_store.clone();
@@ -109,7 +111,7 @@ impl RepoWatcher {
         // the worker starts here and is stopped in `stop` before the task.
         let delta = Arc::new(DeltaService::new(
             repo_id.clone(),
-            root_path.clone(),
+            root_identity.clone(),
             event_bus.clone(),
             logger.clone(),
             tracked.clone(),
@@ -131,6 +133,7 @@ impl RepoWatcher {
             let context = EventContext {
                 repo_id: &repo_id,
                 root_path: &root_path,
+                root_identity: &root_identity,
                 categorizer: &categorizer,
                 ignore_matcher: &ignore_matcher,
                 mru: &mru_clone,
@@ -176,7 +179,7 @@ impl RepoWatcher {
                             Err(err) => {
                                 let raw_code = raw_os_code(&err);
                                 let raw_message = err.to_string();
-                                let event = build_watcher_error_event(&repo_id, raw_message, raw_code);
+                                let event = build_watcher_error_event(&repo_id, &root_identity, raw_message, raw_code);
                                 event_bus.broadcast_event(AgentEvent::Error(event));
                             }
                         }
@@ -189,7 +192,8 @@ impl RepoWatcher {
 
         Ok(Self {
             repo_id: config.repo_id,
-            root_path: PathBuf::from(config.root_path),
+            root_path: PathBuf::from(&config.root_path),
+            root_identity: config.root_path,
             mru: mru_lock,
             recent_store: config.recent_store,
             logger: config.logger,
@@ -240,11 +244,12 @@ impl RepoWatcher {
 
     pub fn broadcast_snapshot(&self) {
         let repo_id = self.repo_id.clone();
+        let root_identity = self.root_identity.clone();
         let event_bus = self.event_bus.clone();
         let mru = Arc::clone(&self.mru);
         tokio::spawn(async move {
             let entries = { mru.read().await.entries() };
-            let snapshot = SnapshotEvent::new(repo_id, entries);
+            let snapshot = SnapshotEvent::new(repo_id, root_identity, entries);
             event_bus.broadcast_event(AgentEvent::Snapshot(snapshot));
         });
     }

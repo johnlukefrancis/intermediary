@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import type { AgentEvent, FileEntry } from "../../shared/protocol.js";
 import { FLUSH_MS } from "./stream_bounds.js";
 import { createStreamStore } from "./stream_store.js";
-import { createStreamStoreRegistry } from "./stream_store_registry.js";
+import { createStreamStoreRegistry, streamRootIdentity } from "./stream_store_registry.js";
 import { resetSeq, textDelta } from "./testing/stream_fixtures.js";
 import type { StreamStore, StreamStoreDeps } from "./stream_types.js";
 
@@ -31,8 +31,8 @@ function entry(path: string, lastSeenAtIso: string): FileEntry {
   return { path, kind: "code", changeType: "change", mtime: lastSeenAtIso };
 }
 
-function snapshot(repoId: string, paths: readonly string[]): AgentEvent {
-  return { type: "snapshot", repoId, recent: paths.map((path, index) => entry(path, `2026-09-06T00:00:0${String(index)}Z`)) };
+function snapshot(repoId: string, paths: readonly string[]): Extract<AgentEvent, { type: "snapshot" }> {
+  return { type: "snapshot", repoId, rootPath: `/repo/${repoId}`, recent: paths.map((path, index) => entry(path, `2026-09-06T00:00:0${String(index)}Z`)) };
 }
 
 function historyPaths(store: StreamStore): string[] {
@@ -92,8 +92,8 @@ void test("a snapshot never reseeds a ring that already holds a card", () => {
 void test("the registry routes a snapshot to the store whose repoId matches and to no other", () => {
   const timers = fakeTimers();
   const registry = createStreamStoreRegistry((repoId) => createStreamStore(repoId, timers));
-  const a = registry.getOrCreate("a");
-  const b = registry.getOrCreate("b");
+  const a = registry.getOrCreate("a", streamRootIdentity("a", { kind: "host", path: "/repo/a" }));
+  const b = registry.getOrCreate("b", streamRootIdentity("b", { kind: "host", path: "/repo/b" }));
   registry.routeAgentEvent(snapshot("a", ROWS_A));
   timers.run();
   assert.deepEqual(historyPaths(a), ["a/stream_store_test.ts", "a/stream_panel_design.md"]);
@@ -102,5 +102,37 @@ void test("the registry routes a snapshot to the store whose repoId matches and 
   timers.run();
   assert.equal(registry.get("c"), undefined);
   assert.deepEqual(historyPaths(b), []);
+  registry.disposeAll();
+});
+
+void test("a replacement store survives later configuration reconciliation while labels preserve identity", () => {
+  const timers = fakeTimers();
+  const disposed = new Set<StreamStore>();
+  const registry = createStreamStoreRegistry((repoId) => {
+    const store = createStreamStore(repoId, timers);
+    const dispose = store.dispose;
+    store.dispose = () => { disposed.add(store); dispose(); };
+    return store;
+  });
+  const original = { repoId: "a", root: { kind: "host" as const, path: "/repo/a" }, label: "Original" };
+  registry.setRepositories([original]);
+  const old = registry.getOrCreate("a", streamRootIdentity("a", original.root));
+  const replacement = { ...original, root: { ...original.root, path: "/repo/replacement" } };
+  const next = registry.getOrCreate("a", streamRootIdentity("a", replacement.root));
+  assert.notEqual(next, old);
+  assert.equal(disposed.has(old), true);
+  registry.setRepositories([replacement]);
+  assert.equal(registry.get("a"), next);
+  assert.equal(disposed.has(next), false);
+  const renamed = { ...replacement, label: "Renamed" };
+  registry.setRepositories([renamed]);
+  assert.equal(registry.getOrCreate("a", streamRootIdentity("a", renamed.root)), next);
+  assert.equal(disposed.has(next), false);
+  registry.routeAgentEvent({ ...snapshot("a", ROWS_A), rootPath: replacement.root.path });
+  timers.run();
+  assert.deepEqual(historyPaths(next), ROWS_A);
+  registry.setRepositories([]);
+  assert.equal(registry.get("a"), undefined);
+  assert.equal(disposed.has(next), true);
   registry.disposeAll();
 });

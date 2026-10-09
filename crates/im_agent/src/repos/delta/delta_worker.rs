@@ -35,6 +35,7 @@ pub(super) struct WorkerLinks {
 pub(super) struct DeltaWorker {
     repo_id: String,
     root: PathBuf,
+    root_path: String,
     event_bus: EventBus,
     logger: Logger,
     tracked: TrackedPathSet,
@@ -53,7 +54,7 @@ pub(super) struct DeltaWorker {
 impl DeltaWorker {
     pub(super) fn new(
         repo_id: String,
-        root: PathBuf,
+        root_path: String,
         event_bus: EventBus,
         logger: Logger,
         tracked: TrackedPathSet,
@@ -62,7 +63,8 @@ impl DeltaWorker {
     ) -> Self {
         Self {
             repo_id,
-            root,
+            root: PathBuf::from(&root_path),
+            root_path,
             event_bus,
             logger,
             tracked,
@@ -121,9 +123,8 @@ impl DeltaWorker {
                 &self.repo_id,
             );
             if !self.event_bus.has_receivers() {
-                // Idle daemon: nobody is listening, so a sighting only evicts
-                // the baseline; the next sighting after a subscriber arrives
-                // says `VS INDEX`.
+                // With no subscribers, evict the baseline so the next
+                // sighting after subscription measures against the index.
                 for change in &batch {
                     self.cache.remove(&change.path);
                 }
@@ -145,9 +146,8 @@ impl DeltaWorker {
         }
     }
 
-    /// Publishes the counters on their own (`DeltaCounters::standalone_due`
-    /// says when). Whichever carrier goes first delivers, and both take the
-    /// counters, so the UI never sees the same withheld path twice.
+    /// Publishes counters without a delta. Taking them here prevents the
+    /// next delta from reporting the same withheld paths again.
     pub(super) fn flush_counters(&mut self) {
         if self.counters.is_zero() {
             return;
@@ -156,6 +156,7 @@ impl DeltaWorker {
         self.event_bus
             .broadcast_event(AgentEvent::FileDeltaCounters(FileDeltaCountersEvent {
                 repo_id: self.repo_id.clone(),
+                root_path: self.root_path.clone(),
                 seq: taken.seq,
                 withheld: taken.withheld,
                 dropped: taken.dropped,
@@ -217,6 +218,7 @@ impl DeltaWorker {
         let taken = self.counters.take(Instant::now());
         let stamp = DeltaStamp {
             repo_id: self.repo_id.clone(),
+            root_path: self.root_path.clone(),
             seq: taken.seq,
             tracked: self.tracked.contains(&change.path),
             withheld: taken.withheld,

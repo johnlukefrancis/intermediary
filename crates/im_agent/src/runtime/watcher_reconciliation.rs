@@ -106,6 +106,7 @@ impl AgentRuntime {
                     code: None,
                     doc_path: None,
                     repo_id: Some(repo.repo_id.clone()),
+                    root_path: Some(repo.root.path().to_string()),
                     raw_code: Some("UNSUPPORTED_REPO_ROOT".to_string()),
                     raw_message: None,
                 }),

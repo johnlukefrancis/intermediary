@@ -1,6 +1,6 @@
 # Intermediary — Roadmap
 
-Updated on: 2026-09-29
+Updated on: 2026-10-09
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007
 
@@ -21,6 +21,11 @@ Depends on: ADR-000, ADR-007
 **Status:** Core functionality complete. Host-routed dual-backend rollout is in progress.
 
 Repos are user-configured via the UI (add/remove buttons in tab bar). Ships with no default repos.
+
+**Current candidate, 0.1.24:** active-repository Overview, owned by
+`docs/implementation/overview_implementation.md`. One consolidated activity feed,
+repository labels, edit excerpts, images and file workspaces, truthful availability and pause/resume;
+The Windows candidate is installed and open for JL's visual acceptance.
 
 **Completed 2026-09-29:** Native Apple Silicon macOS core workflow, owned by
 `docs/implementation/macos_port_implementation.md`. The locally installed app

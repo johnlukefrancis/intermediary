@@ -1,0 +1,9 @@
+/* Path: app/src/styles/overview/overview_view.css
+ * Description: Full-pane Overview feed and file workspace without remounting the reading surface */
+
+.overview-view { position: relative; height: 100%; min-width: 0; min-height: 0; }
+
+/* The feed sits in the same deck inset as the file workspace (.tab), so opening a file never jumps */
+.overview-view__feed { display: flex; height: 100%; min-width: 0; min-height: 0; padding: var(--space-3); }
+.overview-view__feed[hidden] { display: none; }
+.app[data-ui-mode="handset"] .overview-view__feed { padding: var(--space-2); }

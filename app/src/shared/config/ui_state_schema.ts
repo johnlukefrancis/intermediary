@@ -19,9 +19,7 @@ export const UiWindowBoundsByModeSchema = z.object({
 
 export type UiWindowBoundsByMode = z.infer<typeof UiWindowBoundsByModeSchema>;
 
-/** Right-rail instrument selection: zip bundles, source control, or the terminal.
- *  An unknown value (a config written by a newer build) falls back to ZIPS instead of locking
- *  persistence for the session, like `UiModeSchema`. */
+/** Right-rail instrument selection; unknown values use ZIPS. */
 export const ActiveRailSchema = z.enum(["zips", "source", "terminal"]).catch("zips");
 
 export type ActiveRail = z.infer<typeof ActiveRailSchema>;
@@ -29,14 +27,17 @@ export type ActiveRail = z.infer<typeof ActiveRailSchema>;
 /** Left file panel modes in rocker order; STREAM is first and is the default */
 export const FILES_MODES = ["stream", "auto", "latest", "active"] as const;
 
-/** Left file panel mode: the live Stream or one of the three table sorts.
- *  Unknown values fall back to STREAM, so a config from a newer build never locks persistence. */
+/** Left file panel mode; unknown values use STREAM. */
 export const FilesModeSchema = z.enum(FILES_MODES).catch("stream");
 
 export type FilesMode = z.infer<typeof FilesModeSchema>;
 
+export const MainViewSchema = z.enum(["repository", "overview"]).catch("repository");
+export type MainView = z.infer<typeof MainViewSchema>;
+
 /** Remembered UI state */
 export const UiStateSchema = z.object({
+  mainView: MainViewSchema.default("repository"),
   /** Last active repo (by repoId) */
   lastActiveTabId: z.string().nullable().default(null),
   /** Last active repo per group (groupId -> repoId) */

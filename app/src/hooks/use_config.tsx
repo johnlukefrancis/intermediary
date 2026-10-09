@@ -12,7 +12,7 @@ import {
   type UiMode,
   type UiWindowBounds,
 } from "../shared/config.js";
-import type { FilesMode } from "../shared/config/ui_state_schema.js";
+import type { FilesMode, MainView } from "../shared/config/ui_state_schema.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
   useSetAutoStageGlobal,
@@ -45,11 +45,13 @@ import {
 } from "./use_config_actions_extended.js";
 import {
   useSetActiveRail,
+  useSetMainView,
   useSetFilesMode,
   useSetRailWidthPercent,
 } from "./use_config_actions_rail.js";
 
 interface ConfigContextValue {
+  setMainView: (view: MainView) => void;
   /** Current config (always available, defaults if load failed) */
   config: PersistedConfig;
   /** Whether initial load has completed */
@@ -163,6 +165,7 @@ export function ConfigProvider({
     saveConfig
   );
   const setActiveRail = useSetActiveRail(setConfig, saveConfig);
+  const setMainView = useSetMainView(setConfig, saveConfig);
   const setRailWidthPercent = useSetRailWidthPercent(setConfig, saveConfig);
   const setFilesMode = useSetFilesMode(setConfig, saveConfig);
   const setBundleSelection = useSetBundleSelection(setConfig, saveConfigNow);
@@ -201,6 +204,7 @@ export function ConfigProvider({
   );
 
   const value: ConfigContextValue = {
+    setMainView,
     config,
     isLoaded,
     loadError,

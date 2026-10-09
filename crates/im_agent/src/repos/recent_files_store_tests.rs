@@ -5,10 +5,101 @@ use serde_json::json;
 use tempfile::tempdir;
 
 use crate::logging::{LogConfig, LogLevel, Logger};
-use crate::protocol::FileKind;
-use crate::repos::{Categorizer, RecentFilesStore};
+use crate::protocol::{FileChangeType, FileEntry, FileKind};
+use crate::repos::{Categorizer, MruIndex, RecentFilesStore};
 
 use super::ignore_matcher::IgnoreMatcher;
+
+#[tokio::test]
+async fn load_rejects_changed_root_without_relabelling_stored_entries() {
+    for version in [1, 2, 3] {
+        let temp = tempdir().expect("temp dir");
+        let state_dir = temp.path().join("state");
+        let cache_dir = state_dir.join("recent_files");
+        tokio::fs::create_dir_all(&cache_dir)
+            .await
+            .expect("cache dir");
+        let cache_path = cache_dir.join("repo.json");
+        let original = stale_image_cache(version, "repo");
+        tokio::fs::write(&cache_path, &original)
+            .await
+            .expect("write cache");
+        let logger = Logger::init(LogConfig {
+            log_dir: temp.path().join("logs"),
+            min_level: LogLevel::Error,
+            emit_stdio: false,
+        })
+        .await
+        .expect("logger");
+        let store = RecentFilesStore::new(state_dir, logger);
+        let categorizer = test_categorizer();
+        for current_root in ["/new_repo", "/repo/"] {
+            assert!(store
+                .load("repo", current_root, Some(&categorizer), None)
+                .await
+                .is_empty());
+            store.flush_repo("repo").await;
+            assert_eq!(
+                tokio::fs::read_to_string(&cache_path).await.expect("cache"),
+                original
+            );
+        }
+        assert_eq!(
+            store
+                .load("repo", "/repo", Some(&categorizer), None)
+                .await
+                .len(),
+            1
+        );
+        store.flush_repo("repo").await;
+    }
+}
+
+#[tokio::test]
+async fn timestamp_preserving_observation_survives_persistence_and_mru_reload() {
+    let temp = tempdir().expect("temp dir");
+    let logger = Logger::init(LogConfig {
+        log_dir: temp.path().join("logs"),
+        min_level: LogLevel::Error,
+        emit_stdio: false,
+    })
+    .await
+    .expect("logger");
+    let store = RecentFilesStore::new(temp.path().join("state"), logger);
+    let observed = chrono::DateTime::parse_from_rfc3339("2026-10-09T12:05:00Z")
+        .expect("observation time")
+        .with_timezone(&chrono::Utc);
+    let mut index = MruIndex::new(8).expect("index");
+    let saved = index.upsert_at(
+        FileEntry {
+            path: "app/main.rs".into(),
+            kind: FileKind::Code,
+            change_type: FileChangeType::Change,
+            mtime: "2001-01-01T00:00:00Z".into(),
+            size_bytes: None,
+            activity: None,
+        },
+        observed,
+    );
+    store
+        .schedule_save("repo".into(), "/repo".into(), index.entries())
+        .await;
+    store.flush_repo("repo").await;
+    let categorizer = test_categorizer();
+    let entries = store.load("repo", "/repo", Some(&categorizer), None).await;
+    let mut restarted = MruIndex::new(8).expect("restarted index");
+    restarted.load_from(entries);
+    let restored = restarted.entries().remove(0);
+    assert_eq!(restored.mtime, saved.mtime);
+    assert_eq!(restored.activity, saved.activity);
+    let later = observed + chrono::Duration::minutes(5);
+    let next = restarted.upsert_at(restored, later);
+    let activity = next.activity.expect("activity");
+    assert_eq!(activity.last_seen_at_iso, later.to_rfc3339());
+    assert_eq!(activity.update_count, 2);
+    assert_eq!(activity.burst_count, 2);
+    assert_eq!(next.mtime, "2001-01-01T00:00:00Z");
+}
 
 #[tokio::test]
 async fn load_reclassifies_stale_image_entries_for_supported_schemas() {

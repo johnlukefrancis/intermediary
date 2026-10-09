@@ -1,0 +1,42 @@
+/* Path: app/src/styles/overview/overview_feed.css
+ * Description: Singular chronological feed, repository section rules and Stream-family entry chassis */
+
+/* Same inset and flat editor scroller as .stream-content > .stream-scroller */
+.overview-feed-shell { position: relative; z-index: 1; display: flex; flex: 1; min-height: 0; min-width: 0; padding: var(--space-2); background: var(--glass-vintage-content); }
+.overview-feed { flex: 1; min-width: 0; min-height: 0; padding: 0 var(--space-2) var(--space-6); overflow-y: auto; overflow-x: hidden; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-deck-sm); background: var(--color-editor-bg); }
+.overview-feed:focus { outline: none; }
+.overview-feed:focus-visible { outline: 1px solid var(--color-accent); outline-offset: -1px; }
+.overview-feed-group + .overview-feed-group { margin-top: var(--space-2); }
+
+/* Sticky section rule in the repository tab's own lettering and accent; opaque so cards pass beneath */
+.overview-repo-label { position: sticky; top: 0; z-index: 2; margin: 0 calc(var(--space-2) * -1) var(--space-1); padding: 0 var(--space-2); background: var(--color-editor-bg); }
+.overview-panel .overview-repo-link { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; height: 32px; padding: 0 var(--space-1); border: 0; border-radius: var(--radius-deck-xs); background: transparent; color: var(--color-accent); font: var(--weight-semibold) var(--text-sm) / 1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; text-align: left; }
+.overview-repo-label__dot { flex: 0 0 auto; width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); box-shadow: 0 0 6px 0 var(--color-accent-glow); }
+.overview-repo-label strong { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: inherit; }
+.overview-repo-label__group { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-muted); font-weight: var(--weight-normal); }
+.overview-repo-link__rule { flex: 1 1 var(--space-4); min-width: var(--space-4); height: 1px; background: linear-gradient(to right, var(--color-accent-soft), var(--color-border-subtle)); }
+.overview-repo-link__go { display: inline-flex; align-items: center; gap: var(--space-1); flex: 0 0 auto; color: var(--color-text-muted); font-size: var(--text-xs); transition: color var(--duration-normal) var(--ease-out); }
+.overview-repo-link__arrow { flex: 0 0 14px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--duration-normal) var(--ease-out); }
+.overview-panel .overview-repo-link:hover .overview-repo-link__go,
+.overview-panel .overview-repo-link:focus-visible .overview-repo-link__go { color: var(--color-accent); }
+.overview-panel .overview-repo-link:hover .overview-repo-link__arrow { transform: translateX(2px); }
+
+/* Card chassis from stream_card.css; the 3 px spine carries the repository accent instead of the op */
+.overview-feed-entry { position: relative; min-width: 0; margin-bottom: var(--space-1); padding-left: 3px; overflow: hidden; border: 1px solid var(--color-border-subtle); border-radius: var(--radius-deck-sm); background: var(--color-editor-bg); transition: background var(--duration-normal) var(--ease-out); }
+.overview-feed-entry::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--color-accent); }
+.overview-feed-entry:hover { background: var(--color-bg-hover-subtle); }
+.overview-feed-entry[data-kind="signal"] { border-style: dashed; background: transparent; }
+.overview-feed-entry[data-kind="signal"]::before { background: var(--color-accent-soft); }
+.overview-feed-entry[data-kind="notice"] { border-color: transparent; background: transparent; }
+.overview-feed-entry[data-kind="notice"]::before { background: var(--color-warning); }
+.overview-feed-entry .stream-notice { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overview-entry-run[data-images="true"] { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); align-items: start; column-gap: var(--space-2); }
+
+.overview-feed-shell > .stream-follow-pill { position: absolute; bottom: var(--space-4); left: 50%; z-index: 3; margin: 0; transform: translateX(-50%); }
+
+@container overview (max-width: 450px) {
+  .overview-feed-shell { padding: var(--space-1); }
+  .overview-feed { padding-right: var(--space-1); padding-left: var(--space-1); }
+  .overview-repo-label { margin-right: calc(var(--space-1) * -1); margin-left: calc(var(--space-1) * -1); padding: 0 var(--space-1); }
+  .overview-repo-link__go > span { display: none; }
+}

@@ -126,6 +126,10 @@
       "summary": "Empty state UI when no repos are configured"
     },
     {
+      "path": "app/src/components/empty_state_panel.tsx",
+      "summary": "Shared centered glass empty-state surface with optional details and an action"
+    },
+    {
       "path": "app/src/components/file_context_menu_items.ts",
       "summary": "Shared context-menu item builders for repo-relative file actions"
     },
@@ -230,6 +234,50 @@
       "summary": "Options panel theme controls (warm mode toggle + texture/accent per tab)"
     },
     {
+      "path": "app/src/components/overview_view.tsx",
+      "summary": "Connects the Overview presentation to configured roots and its live projection"
+    },
+    {
+      "path": "app/src/components/overview/overview_feed_entries.ts",
+      "summary": "Bounded chronological Overview edit, observation and coverage entries"
+    },
+    {
+      "path": "app/src/components/overview/overview_feed_entry.tsx",
+      "summary": "One repository-bound feed entry with file opening, context menu and drag-out interactions"
+    },
+    {
+      "path": "app/src/components/overview/overview_feed.tsx",
+      "summary": "One chronological repository-labelled Overview feed with tail-follow"
+    },
+    {
+      "path": "app/src/components/overview/overview_file_head.tsx",
+      "summary": "Shared Overview filename-over-directory typography, icon and operation badge"
+    },
+    {
+      "path": "app/src/components/overview/overview_image_preview.tsx",
+      "summary": "Fixed-height real image preview that opens the full file workspace"
+    },
+    {
+      "path": "app/src/components/overview/overview_panel.tsx",
+      "summary": "Full-width chronological work feed with active repository chips and watch-health awareness"
+    },
+    {
+      "path": "app/src/components/overview/overview_presentation.ts",
+      "summary": "Overview watch-health summaries and relative edit ages"
+    },
+    {
+      "path": "app/src/components/overview/overview_settled_edit.tsx",
+      "summary": "Observed edit with Stream-family file identity and a six-line excerpt"
+    },
+    {
+      "path": "app/src/components/overview/overview_workspace.tsx",
+      "summary": "Overview's full-pane file workspace using the shared repository viewers and actions"
+    },
+    {
+      "path": "app/src/components/overview/use_overview_follow.ts",
+      "summary": "Overview tail-follow with a bounded unread set and no private timer"
+    },
+    {
       "path": "app/src/components/repo_workspace_panel.tsx",
       "summary": "Repo workspace renderer for notes, text buffers, image previews, and text/image diffs"
     },
@@ -294,16 +342,12 @@
       "summary": "Sticky \"N NEW\" button shown while the reader has scrolled away from the live tail"
     },
     {
-      "path": "app/src/components/stream/stream_header_live.tsx",
-      "summary": "The Stream header's LIVE indicator: one dot plus a mono state label"
+      "path": "app/src/components/stream/stream_header_status.tsx",
+      "summary": "Stream header status when observation is interrupted or unavailable"
     },
     {
       "path": "app/src/components/stream/stream_history_row.tsx",
       "summary": "Compact scrollback row seeding the Stream panel from the existing recent list"
-    },
-    {
-      "path": "app/src/components/stream/stream_host.tsx",
-      "summary": "Renders nothing; keeps the Stream store registry fed for the life of the app"
     },
     {
       "path": "app/src/components/stream/stream_icons.tsx",
@@ -323,7 +367,7 @@
     },
     {
       "path": "app/src/components/stream/stream_panel.tsx",
-      "summary": "The Stream panel shell: mode rocker with the LIVE slot, support states, and the live scroller"
+      "summary": "Stream panel shell with mode controls, support states, and the live scroller"
     },
     {
       "path": "app/src/components/stream/stream_scroller.tsx",
@@ -336,6 +380,10 @@
     {
       "path": "app/src/components/tab_bar.tsx",
       "summary": "Tab navigation with grouped repo dropdown support and scroll overflow arrows"
+    },
+    {
+      "path": "app/src/components/tab_bar/overview_tab.tsx",
+      "summary": "Global activity destination using the repository navigation grammar"
     },
     {
       "path": "app/src/components/tab_bar/tab_bar_dropdowns.tsx",
@@ -462,6 +510,34 @@
       "summary": "Row selection state for the ZIPS tree - click/ctrl/shift semantics, pruned as rows disappear"
     },
     {
+      "path": "app/src/hooks/images/image_tile_records.ts",
+      "summary": "Shared image tile records, Blob ownership and stable published pixel projections"
+    },
+    {
+      "path": "app/src/hooks/images/image_tile_thumbnail.ts",
+      "summary": "Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob"
+    },
+    {
+      "path": "app/src/hooks/images/use_image_tiles.ts",
+      "summary": "Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_file_actions.ts",
+      "summary": "Repository-bound Overview context menus and user-triggered drag-out actions"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_history.ts",
+      "summary": "Serial initial and reconnect history refresh across connected roots, with host roots first"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_images.ts",
+      "summary": "Visible Overview image metadata projected into the shared revision-bound tile loader"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview.ts",
+      "summary": "Overview subscription and visible-only age clock"
+    },
+    {
       "path": "app/src/hooks/repo_workspace_diff_loaders.ts",
       "summary": "Diff loaders for the repo workspace hook: text patches and two-sided image snapshots"
     },
@@ -502,14 +578,6 @@
       "summary": "Context delivering the built tree decorations to the recursive bundle explorer rows"
     },
     {
-      "path": "app/src/hooks/stream/stream_tile_records.ts",
-      "summary": "The panel's tile pixel records: statuses, Blob release, and the published projection"
-    },
-    {
-      "path": "app/src/hooks/stream/stream_tile_thumbnail.ts",
-      "summary": "Decodes one tile's fetched bytes into the thumbnail Blob the strip retains: probe the source, gate it, downscale past..."
-    },
-    {
       "path": "app/src/hooks/stream/use_deferred_click.ts",
       "summary": "A single click that fires only once the double-click grace has passed; shared by file cards and image strips"
     },
@@ -522,12 +590,8 @@
       "summary": "Follow-scroll for the Stream scroller: tail pin, unread count while unpinned, freeze, resume"
     },
     {
-      "path": "app/src/hooks/stream/use_stream_host.ts",
-      "summary": "Mounted once: the one agent subscription and host facts pushed into every Stream store"
-    },
-    {
       "path": "app/src/hooks/stream/use_stream_images.ts",
-      "summary": "Per-panel image tiles keyed by strip and path: revision-bound readImageFile reads, thumbnail Blob tiles, bounded rete..."
+      "summary": "Projects Stream cards and host visibility to the shared bounded image tile owner"
     },
     {
       "path": "app/src/hooks/terminal/use_terminal_group.ts",
@@ -542,8 +606,16 @@
       "summary": "App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every..."
     },
     {
+      "path": "app/src/hooks/use_activity_host.ts",
+      "summary": "One app-lifetime dispatcher for Stream and all-repository Overview activity"
+    },
+    {
       "path": "app/src/hooks/use_agent.tsx",
       "summary": "Agent context provider and connection management hook"
+    },
+    {
+      "path": "app/src/hooks/use_app_navigation.ts",
+      "summary": "App view selection and remembered repository navigation"
     },
     {
       "path": "app/src/hooks/use_bundle_state.ts",
@@ -646,6 +718,10 @@
       "summary": "Hook for adding worktrees to existing groups or single repos"
     },
     {
+      "path": "app/src/lib/agent/activity_support.ts",
+      "summary": "Shared minimum agent contract for root-identified activity in Stream and Overview"
+    },
+    {
       "path": "app/src/lib/agent/agent_client_legacy.ts",
       "summary": "Legacy hostPath/windowsPath envelope normalization for older agent payloads"
     },
@@ -738,6 +814,66 @@
       "summary": "Barrel export for file-type icon system"
     },
     {
+      "path": "app/src/lib/images/image_tile_bounds.ts",
+      "summary": "Shared image tile byte, decode, concurrency and thumbnail retention bounds"
+    },
+    {
+      "path": "app/src/lib/images/image_tile_pixels_test.ts",
+      "summary": "Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit;..."
+    },
+    {
+      "path": "app/src/lib/images/image_tile_pixels.ts",
+      "summary": "Shared image preview eligibility, exact revision acceptance, source pixel gate and thumbnail fit"
+    },
+    {
+      "path": "app/src/lib/images/image_tile_targets_test.ts",
+      "summary": "Cross-repository/root BEFORE isolation and one thumbnail budget across all source identities"
+    },
+    {
+      "path": "app/src/lib/images/image_tile_targets.ts",
+      "summary": "Image tile source identities, newest-thumbnail retention and source-scoped BEFORE pairing"
+    },
+    {
+      "path": "app/src/lib/overview/overview_activity.ts",
+      "summary": "Bounded live observations, historical paths and settled-detail sequence accounting"
+    },
+    {
+      "path": "app/src/lib/overview/overview_backend_test.ts",
+      "summary": "Root-scoped watcher failure and backend-version recovery regression oracles"
+    },
+    {
+      "path": "app/src/lib/overview/overview_edit.ts",
+      "summary": "Metadata-only settled edits with bounded excerpts from the shared patch parser"
+    },
+    {
+      "path": "app/src/lib/overview/overview_edits_test.ts",
+      "summary": "Independent feed-entry retention, global identity and immutable publication oracles"
+    },
+    {
+      "path": "app/src/lib/overview/overview_focus_test.ts",
+      "summary": "Active-work selection rejects idle roots and file mtimes, ages out, and re-enters on work"
+    },
+    {
+      "path": "app/src/lib/overview/overview_focus.ts",
+      "summary": "Recent-work membership from observed edits, independent of watch health and open tabs"
+    },
+    {
+      "path": "app/src/lib/overview/overview_history_test.ts",
+      "summary": "Reconnect history orders recent paths by observed time without inventing live activity"
+    },
+    {
+      "path": "app/src/lib/overview/overview_store_test.ts",
+      "summary": "Independent oracles for all-root retention, activity identity, bounds and watcher recovery"
+    },
+    {
+      "path": "app/src/lib/overview/overview_store.ts",
+      "summary": "App-lifetime all-repository observations with event-triggered immutable publication"
+    },
+    {
+      "path": "app/src/lib/overview/overview_types.ts",
+      "summary": "Bounded repository activity projections for the all-repository Overview"
+    },
+    {
       "path": "app/src/lib/source_control/change_badges.ts",
       "summary": "Single badge map (letter, variant, label) for every source-control change kind"
     },
@@ -748,10 +884,6 @@
     {
       "path": "app/src/lib/source_control/tree_decorations.ts",
       "summary": "Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations"
-    },
-    {
-      "path": "app/src/lib/stream/stream_agent_support.ts",
-      "summary": "Whether the connected agent build publishes fileDelta events the Stream panel can render"
     },
     {
       "path": "app/src/lib/stream/stream_bounds.ts",
@@ -858,20 +990,12 @@
       "summary": "How an image strip's head, rail, and footer read: count label, shared directory, op tally, clock span, bytes"
     },
     {
-      "path": "app/src/lib/stream/stream_tile_pixels_test.ts",
-      "summary": "Revision-bound pixels: a read is accepted only for the announced bytes and mtime; the decode gate; the thumbnail fit;..."
-    },
-    {
-      "path": "app/src/lib/stream/stream_tile_pixels.ts",
-      "summary": "Pure pixel rules for a strip tile: the revision a read must match, the mid-read rewrite refusal, the decode gate, and..."
-    },
-    {
       "path": "app/src/lib/stream/stream_tile_targets_test.ts",
       "summary": "Tile retention arithmetic: repo-scoped keys, newest MAX_IMAGE_TILES across strips, unfetchable tiles, BEFORE keys"
     },
     {
       "path": "app/src/lib/stream/stream_tile_targets.ts",
-      "summary": "Pure tile-retention arithmetic: the flat fetch list over every strip, which keys keep pixels, and each tile's BEFORE"
+      "summary": "Projects Stream strip slots and repository-scoped source identities into shared image targets"
     },
     {
       "path": "app/src/lib/stream/stream_types.ts",
@@ -1178,8 +1302,8 @@
       "summary": "Deck chassis frame, substrate (grid + grain), vignette, and glass utilities"
     },
     {
-      "path": "app/src/styles/empty_repo_state.css",
-      "summary": "Empty state display when no repositories are configured"
+      "path": "app/src/styles/empty_state_panel.css",
+      "summary": "Centered glass empty-state surface, subdued typography and repository action context"
     },
     {
       "path": "app/src/styles/handset_chassis.css",
@@ -1220,6 +1344,34 @@
     {
       "path": "app/src/styles/options_theme.css",
       "summary": "Theme section styles - color picker, texture picker, rename controls"
+    },
+    {
+      "path": "app/src/styles/overview_navigation.css",
+      "summary": "Global Overview destination beside the repository tab track"
+    },
+    {
+      "path": "app/src/styles/overview/overview_detail.css",
+      "summary": "Stream-family file identity, compact baseline metadata and six-line excerpts"
+    },
+    {
+      "path": "app/src/styles/overview/overview_feed.css",
+      "summary": "Singular chronological feed, repository transition labels and tail jump"
+    },
+    {
+      "path": "app/src/styles/overview/overview_image.css",
+      "summary": "Fixed-height image workspace launcher with a transparency checkerboard"
+    },
+    {
+      "path": "app/src/styles/overview/overview_panel.css",
+      "summary": "Compact full-width Overview shell, active-repository chips and monitoring states"
+    },
+    {
+      "path": "app/src/styles/overview/overview_view.css",
+      "summary": "Full-pane Overview feed and file workspace without remounting the reading surface"
+    },
+    {
+      "path": "app/src/styles/overview/overview_workspace.css",
+      "summary": "Full-width Overview file workspace sizing without repository rails"
     },
     {
       "path": "app/src/styles/panels.css",
@@ -1267,11 +1419,15 @@
     },
     {
       "path": "app/src/styles/stream/stream_panel.css",
-      "summary": "Stream panel shell: the flat scroller surface, the LIVE slot, and compact history rows"
+      "summary": "Stream scroller, exceptional status, follow control and compact history rows"
     },
     {
       "path": "app/src/styles/tab_bar_dropdown.css",
       "summary": "Dropdown-specific styles for tab bar worktree actions"
+    },
+    {
+      "path": "app/src/styles/tab_bar_items.css",
+      "summary": "Repository navigation actions, group menus and add/remove controls"
     },
     {
       "path": "app/src/styles/tab_bar.css",
@@ -1466,8 +1622,32 @@
       "summary": "Agent-to-UI response payloads for the WebSocket protocol"
     },
     {
+      "path": "crates/im_agent/src/protocol/tests_bootstrap.rs",
+      "summary": "Client hello staging and repository root wire contracts"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_bundles.rs",
+      "summary": "Bundle build and listing paths on command result and event wires"
+    },
+    {
       "path": "crates/im_agent/src/protocol/tests_delta.rs",
       "summary": "Wire-shape tests for the fileDelta event and its payload union"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_envelopes.rs",
+      "summary": "Protocol request, response and cancellation envelope roundtrips"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_events.rs",
+      "summary": "Activity event root identity and staged path wire contracts"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_file_access.rs",
+      "summary": "File staging, reading and directory listing wire contracts"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/tests_runtime_events.rs",
+      "summary": "Backend status, repository topology and watcher error event wires"
     },
     {
       "path": "crates/im_agent/src/protocol/tests_shutdown.rs",
@@ -1476,10 +1656,6 @@
     {
       "path": "crates/im_agent/src/protocol/tests_source_control.rs",
       "summary": "Wire-shape tests for the source-control command and status payloads"
-    },
-    {
-      "path": "crates/im_agent/src/protocol/tests.rs",
-      "summary": "Protocol envelope serialization and backward-compat tests"
     },
     {
       "path": "crates/im_agent/src/protocol/tr_fleet_tests.rs",
@@ -1784,6 +1960,10 @@
     {
       "path": "crates/im_agent/src/runtime/mod.rs",
       "summary": "Agent runtime exports"
+    },
+    {
+      "path": "crates/im_agent/src/runtime/state_refresh_tests.rs",
+      "summary": "Refresh rejects stopped watchers without publishing retained history"
     },
     {
       "path": "crates/im_agent/src/runtime/state_watchers.rs",

@@ -1,11 +1,10 @@
-/*
- * Path: app/src/styles/tab_bar_dropdown.css
- * Description: Dropdown-specific styles for tab bar worktree actions
- */
+/* Path: app/src/styles/tab_bar_dropdown.css
+ * Description: Dropdown-specific styles for tab bar worktree actions */
 
 /* ===== DROPDOWN ANCHOR ===== */
 .tab-bar-dropdown-anchor {
   position: absolute;
+  top: 100%;
   z-index: 600;
   pointer-events: none;
   right: auto;

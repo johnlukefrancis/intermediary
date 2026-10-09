@@ -1600,7 +1600,7 @@ dependencies = [
 
 [[package]]
 name = "im_agent"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -1622,7 +1622,7 @@ dependencies = [
 
 [[package]]
 name = "im_bundle"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "chrono",
  "libc",
@@ -1638,7 +1638,7 @@ dependencies = [
 
 [[package]]
 name = "im_host_agent"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "futures-util",
  "im_agent",
@@ -1702,7 +1702,7 @@ dependencies = [
 
 [[package]]
 name = "intermediary"
-version = "0.1.23"
+version = "0.1.24"
 dependencies = [
  "anyhow",
  "chrono",

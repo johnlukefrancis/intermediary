@@ -1,13 +1,15 @@
 // Path: app/src/app.tsx
 // Description: Root component with config-driven tab state management
 
-import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { StatusBar } from "./components/status_bar.js";
 import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
-import { StreamHost } from "./components/stream/stream_host.js";
+import { OverviewView } from "./components/overview_view.js";
+import { useActivityHost } from "./hooks/use_activity_host.js";
+import { useAppNavigation } from "./hooks/use_app_navigation.js";
 import { useConfig } from "./hooks/use_config.js";
 import { useEffectiveUiMode } from "./hooks/use_effective_ui_mode.js";
 import { useModeWindowSnap } from "./hooks/use_mode_window_snap.js";
@@ -29,12 +31,12 @@ export function App(): React.JSX.Element {
     isLoaded,
     persistenceLocked,
     persistenceLockReason,
-    setLastActiveTabId,
-    setLastActiveGroupRepoId,
     setWindowBoundsForMode,
   } = useConfig();
   const { motionPaused, documentHidden } = useMotionGovernor();
   const effectiveUiMode = useEffectiveUiMode(config.uiMode, isLoaded);
+  const { activeRepoId, overviewActive, selectRepo, openRepoStream, openOverview } = useAppNavigation();
+  useActivityHost(documentHidden);
 
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
   useModeWindowBoundsPersistence(effectiveUiMode, setWindowBoundsForMode);
@@ -83,88 +85,16 @@ export function App(): React.JSX.Element {
     [config.repos]
   );
 
-  // Get valid repoIds for validation
-  const validRepoIds = useMemo(
-    () => new Set(configuredRepoRoots.keys()),
-    [configuredRepoRoots]
-  );
-
-  // Terminal groups follow the configured repos (a removed repo closes its shells) and cursor
-  // blink follows the motion governor. `isLoaded` only ever flips to true, and no session can
-  // exist before a repo tab renders, so the pre-load empty set closes nothing.
+  // Terminal groups outlive view changes; removing a configured root closes its shells.
   useTerminalLifecycle(configuredRepoRoots, !motionPaused);
-
-  // Determine initial/default tab (first repo, or null if none)
-  const defaultRepoId = config.repos[0]?.repoId ?? null;
-
-  // Validate that a repoId exists in current config
-  const validateRepoId = useCallback(
-    (repoId: string | null): string | null => {
-      if (repoId && validRepoIds.has(repoId)) return repoId;
-      return defaultRepoId;
-    },
-    [validRepoIds, defaultRepoId]
-  );
-
-  // Initialize activeRepoId from persisted config with validation
-  const [activeRepoId, setActiveRepoIdState] = useState<string | null>(() => {
-    return validateRepoId(config.uiState.lastActiveTabId);
-  });
-
-  // Update local state when config loads or repos change
-  useEffect(() => {
-    if (isLoaded) {
-      // Validate current activeRepoId against current repos
-      const validRepoId = validateRepoId(activeRepoId ?? config.uiState.lastActiveTabId);
-      if (validRepoId !== activeRepoId) {
-        setActiveRepoIdState(validRepoId);
-        if (validRepoId) {
-          setLastActiveTabId(validRepoId);
-          const repo = config.repos.find((entry) => entry.repoId === validRepoId);
-          if (repo?.groupId) {
-            setLastActiveGroupRepoId(repo.groupId, validRepoId);
-          }
-        }
-      }
-    }
-  }, [
-    isLoaded,
-    config.repos,
-    activeRepoId,
-    config.uiState.lastActiveTabId,
-    validateRepoId,
-    setLastActiveTabId,
-    setLastActiveGroupRepoId,
-  ]);
-
-  // Wrap setter to also persist
-  const setActiveRepoId = useCallback(
-    (repoId: string) => {
-      setActiveRepoIdState(repoId);
-      setLastActiveTabId(repoId);
-      const repo = config.repos.find((entry) => entry.repoId === repoId);
-      if (repo?.groupId) {
-        setLastActiveGroupRepoId(repo.groupId, repoId);
-      }
-    },
-    [setLastActiveTabId, setLastActiveGroupRepoId, config.repos]
-  );
-
-  // Handle new repo added - auto-select it
-  const handleRepoAdded = useCallback(
-    (repoId: string) => {
-      setActiveRepoId(repoId);
-    },
-    [setActiveRepoId]
-  );
 
   // Compute theme key: groupId if repo is grouped, else repoId
   const activeThemeKey = useMemo((): string | null => {
-    if (!activeRepoId) return null;
+    if (overviewActive || !activeRepoId) return null;
     const activeRepo = config.repos.find((r) => r.repoId === activeRepoId);
     if (!activeRepo) return null;
     return activeRepo.groupId ?? activeRepoId;
-  }, [activeRepoId, config.repos]);
+  }, [activeRepoId, config.repos, overviewActive]);
 
   // Get accent color from config or use default
   const accentHex = useMemo((): string => {
@@ -228,7 +158,7 @@ export function App(): React.JSX.Element {
         </header>
         <main className="tab-content">
           <EmptyRepoState
-            onRepoAdded={handleRepoAdded}
+            onRepoAdded={selectRepo}
             persistenceLocked={persistenceLocked}
             persistenceLockReason={persistenceLockReason}
           />
@@ -242,6 +172,7 @@ export function App(): React.JSX.Element {
       ref={appRef}
       className="app"
       data-active-tab={activeRepoId}
+      data-main-view={overviewActive ? "overview" : "repository"}
       data-motion={motionPaused ? "paused" : undefined}
       data-visibility={documentHidden ? "hidden" : "visible"}
       data-theme-mode={config.themeMode}
@@ -251,18 +182,21 @@ export function App(): React.JSX.Element {
       <header ref={headerRef} className="header-stack glass-surface">
         <TabBar
           tabs={tabs}
-          activeRepoId={activeRepoId}
+          activeRepoId={overviewActive ? null : activeRepoId}
+          overviewActive={overviewActive}
+          onOverview={openOverview}
           tabThemes={config.tabThemes}
           lastActiveGroupRepoIds={config.uiState.lastActiveGroupRepoIds}
-          onRepoChange={setActiveRepoId}
-          onRepoAdded={handleRepoAdded}
+          onRepoChange={selectRepo}
+          onRepoAdded={selectRepo}
         />
         <AgentOfflineBanner />
         <StatusBar />
       </header>
-      <StreamHost documentHidden={documentHidden} />
       <main className="tab-content">
-        {activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} />}
+        {overviewActive
+          ? <OverviewView documentHidden={documentHidden} isHandset={effectiveUiMode === "handset"} onOpenRepo={openRepoStream} />
+          : activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} />}
       </main>
     </div>
   );

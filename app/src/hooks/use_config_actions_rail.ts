@@ -3,10 +3,21 @@
 
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { ActiveRail, PersistedConfig } from "../shared/config.js";
-import type { FilesMode } from "../shared/config/ui_state_schema.js";
+import type { FilesMode, MainView } from "../shared/config/ui_state_schema.js";
 
 type SetConfig = Dispatch<SetStateAction<PersistedConfig>>;
 type SaveConfig = (config: PersistedConfig) => void;
+
+export function useSetMainView(setConfig: SetConfig, saveConfig: SaveConfig): (view: MainView) => void {
+  return useCallback((view: MainView) => {
+    setConfig((prev) => {
+      if (prev.uiState.mainView === view) return prev;
+      const next = { ...prev, uiState: { ...prev.uiState, mainView: view } };
+      saveConfig(next);
+      return next;
+    });
+  }, [setConfig, saveConfig]);
+}
 
 export function useSetActiveRail(
   setConfig: SetConfig,
