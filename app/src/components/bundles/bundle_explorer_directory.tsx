@@ -10,6 +10,7 @@ import { BundleExplorerFileRow } from "./bundle_explorer_file_row.js";
 import {
   baseName,
   directoryHasExclusions,
+  directoryHasInclusions,
   isDirectoryEnabled,
   isDirectoryIncluded,
   isFileEnabled,
@@ -54,9 +55,10 @@ export function BundleExplorerDirectory({
 }: BundleExplorerDirectoryProps): React.JSX.Element {
   const isExpanded = expandedDirs.has(path);
   const listing = listings.get(path) ?? { status: "idle", dirs: [], files: [] };
-  const isEnabled = isDirectoryEnabled(path, selection);
-  const isIncluded = isDirectoryIncluded(path, selection);
-  const isIndeterminate = isIncluded && directoryHasExclusions(path, selection);
+  const isEnabled = isDirectoryEnabled(path, globalExcludes);
+  const isIncluded = isDirectoryIncluded(path, selection, globalExcludes);
+  const isIndeterminate = isIncluded ? directoryHasExclusions(path, selection)
+    : directoryHasInclusions(path, selection, globalExcludes);
   const id = checkboxId(path);
   const decoration = useDirectoryDecoration(path);
   const interaction = useRowInteraction(path, "dir");
@@ -89,6 +91,7 @@ export function BundleExplorerDirectory({
         </button>
         <IndeterminateCheckbox
           id={id}
+          label={`Include ${path}`}
           checked={isIncluded}
           indeterminate={isIndeterminate}
           disabled={!isEnabled}

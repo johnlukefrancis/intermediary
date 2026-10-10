@@ -37,6 +37,7 @@ fn caps_file_reads_to_initial_length() {
             include_root: true,
             top_level_dirs: vec![],
             included_subdirs: vec![],
+            included_files: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

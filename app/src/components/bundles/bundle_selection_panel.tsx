@@ -43,7 +43,8 @@ export function BundleSelectionPanel({
   onCancelBuild,
   onOpenFile,
 }: BundleSelectionPanelProps): React.JSX.Element {
-  const canBuild = selection.includeRoot || selection.topLevelDirs.length > 0;
+  const canBuild = selection.includeRoot || selection.topLevelDirs.length > 0 ||
+    selection.includedSubdirs.length > 0 || selection.includedFiles.length > 0;
 
   return (
     <div className="bundle-selection-panel">

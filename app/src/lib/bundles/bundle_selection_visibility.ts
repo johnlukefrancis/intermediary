@@ -3,6 +3,7 @@
 
 import type { BundleSelection } from "../../shared/protocol.js";
 import {
+  isGloballyExcludedDirName,
   isGloballyExcludedFileName,
   isGloballyExcludedPath,
   type NormalizedGlobalExcludes,
@@ -27,40 +28,30 @@ export function isSelfOrDescendant(path: string, ancestor: string): boolean {
   return path === ancestor || path.startsWith(`${ancestor}/`);
 }
 
-/**
- * The paths with no selected ancestor. A worktree action on a folder already covers everything
- * beneath it, so a selection of `app` plus `app/a.txt` is sent as `app` alone; sending both would
- * make the second entry fail after the first had moved it.
- */
+// Ancestor actions cover descendants; sending both would fail after moving the ancestor.
 export function topmostPaths(paths: Iterable<string>): string[] {
   const all = [...new Set(paths)];
   return all.filter((path) => !all.some((other) => other !== path && isSelfOrDescendant(path, other)));
 }
 
-function hasExcludedAncestor(path: string, excludedSubdirs: readonly string[]): boolean {
-  const parts = path.split("/").filter(Boolean);
-  for (let index = 1; index < parts.length; index += 1) {
-    const ancestor = parts.slice(0, index).join("/");
-    if (excludedSubdirs.includes(ancestor)) {
-      return true;
-    }
+export function isDirectoryEnabled(path: string, excludes: NormalizedGlobalExcludes): boolean {
+  return !isGloballyExcludedPath(path, excludes);
+}
+
+export function isDirectoryIncluded(
+  path: string, selection: BundleSelection, excludes: NormalizedGlobalExcludes
+): boolean {
+  if (!isDirectoryEnabled(path, excludes)) return false;
+  let included = false;
+  const parts = path.split("/");
+  for (let index = 0; index < parts.length; index += 1) {
+    const directory = parts.slice(0, index + 1).join("/");
+    if (selection.excludedSubdirs.includes(directory)) included = false;
+    else if (selection.includedSubdirs.includes(directory) ||
+      (index === 0 && selection.topLevelDirs.includes(directory))) included = true;
+    else if (isGloballyExcludedDirName(parts[index] ?? "", excludes)) included = false;
   }
-  return false;
-}
-
-export function isDirectoryEnabled(path: string, selection: BundleSelection): boolean {
-  if (isTopLevelPath(path)) return true;
-  const topLevel = path.split("/")[0] ?? path;
-  return (
-    selection.topLevelDirs.includes(topLevel) &&
-    !hasExcludedAncestor(path, selection.excludedSubdirs)
-  );
-}
-
-export function isDirectoryIncluded(path: string, selection: BundleSelection): boolean {
-  if (!isDirectoryEnabled(path, selection)) return false;
-  if (isTopLevelPath(path)) return selection.topLevelDirs.includes(path);
-  return !selection.excludedSubdirs.includes(path);
+  return included;
 }
 
 export function directoryHasExclusions(path: string, selection: BundleSelection): boolean {
@@ -71,6 +62,16 @@ export function directoryHasExclusions(path: string, selection: BundleSelection)
   );
 }
 
+export function directoryHasInclusions(
+  path: string, selection: BundleSelection, excludes: NormalizedGlobalExcludes
+): boolean {
+  const prefix = `${path}/`;
+  return selection.includedSubdirs.some((dir) =>
+    dir.startsWith(prefix) && isDirectoryIncluded(dir, selection, excludes)) ||
+    selection.includedFiles.some((file) =>
+      file.startsWith(prefix) && isFileIncluded(file, selection, excludes));
+}
+
 /** True when a global rule drops the file at build time whatever the selection says (`selection.rs`). */
 export function isFileGloballyExcluded(path: string, excludes: NormalizedGlobalExcludes): boolean {
   return isGloballyExcludedFileName(baseName(path), excludes) || isGloballyExcludedPath(path, excludes);
@@ -78,13 +79,10 @@ export function isFileGloballyExcluded(path: string, excludes: NormalizedGlobalE
 
 export function isFileEnabled(
   path: string,
-  selection: BundleSelection,
+  _selection: BundleSelection,
   excludes: NormalizedGlobalExcludes
 ): boolean {
-  if (isFileGloballyExcluded(path, excludes)) return false;
-  const parent = parentPath(path);
-  if (parent === "") return selection.includeRoot;
-  return isDirectoryIncluded(parent, selection);
+  return !isFileGloballyExcluded(path, excludes);
 }
 
 export function isFileIncluded(
@@ -92,11 +90,14 @@ export function isFileIncluded(
   selection: BundleSelection,
   excludes: NormalizedGlobalExcludes
 ): boolean {
-  return isFileEnabled(path, selection, excludes) && !selection.excludedFiles.includes(path);
+  if (!isFileEnabled(path, selection, excludes) || selection.excludedFiles.includes(path)) return false;
+  if (selection.includedFiles.includes(path)) return true;
+  const parent = parentPath(path);
+  return parent === "" ? selection.includeRoot : isDirectoryIncluded(parent, selection, excludes);
 }
 
 export function sortedWith(path: string, values: readonly string[]): string[] {
-  return [...values, path].sort();
+  return [...new Set([...values, path])].sort();
 }
 
 export function withoutPath(path: string, values: readonly string[]): string[] {

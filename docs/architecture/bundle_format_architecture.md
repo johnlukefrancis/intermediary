@@ -1,5 +1,5 @@
 # Bundle Format Architecture
-Updated on: 2026-07-15
+Updated on: 2026-10-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-007, ADR-008, ADR-009, ADR-012
 
@@ -65,7 +65,11 @@ When only one endpoint of a rename is selected, capture uses no-rename evidence 
 
 ## Selection and privacy boundary
 
-The bundle selection is authoritative for current files, deleted paths, rename endpoints, and Git artifact pathspecs. Explicit file/subdirectory exclusions and effective global excludes apply identically to the scanner and Git projection. Recommended directory-name excludes seed the selector state rather than becoming irreversible filters: an explicitly selected top-level directory or a path recorded in `includedSubdirs` overrides a matching directory-name exclude at that exact directory. Other excluded directory names beneath that subtree remain filtered. Path-pattern and file excludes are not weakened by a directory inclusion override.
+The bundle selection is authoritative for current files, deleted paths, rename endpoints, and Git artifact pathspecs. The closest explicit directory rule wins: `includedSubdirs` can reopen a subtree beneath an unselected top-level directory or an `excludedSubdirs` ancestor. `includedFiles` independently selects exact files, including root files with `includeRoot` off. An exact `excludedFiles` rule wins over inclusion. These fields persist per preset and travel through both agents into the manifest; older selections default `includedFiles` to empty.
+
+Directory-name defaults apply at each directory unless it is explicitly selected. A deeper explicit directory or file can cross those defaults without selecting siblings; fresh name exclusions deeper inside a selected subtree still apply. Global file-name, extension, and path-pattern exclusions remain hard filters. The UI keeps eligible descendant controls enabled and shows a mixed parent when descendants alone are selected.
+
+The scanner visits only selected directories and ancestors needed to reach explicit descendants, applying the same final-path predicate as Git capture. Traversal through an excluded parent never admits its sibling contents. The manifest's `topLevelDirsIncluded` lists fully selected roots; partial roots are represented by `includedSubdirs` and `includedFiles`. Symlinks remain outside ordinary-file traversal.
 
 Git may inspect whole-repository porcelain status and the whole-repository index listing locally to determine `repoDirty`, the omitted set, and `candidateIndexTreeSha`. Raw whole-repository output is never written to the archive. Excluded content is absent from every generated artifact and ordinary entry. Excluded names are absent from status, stat, name-status, and every patch; the one place they cross the boundary is `BUNDLE_GIT_OMITTED_PATHS.txt`, which names each changed-but-omitted path with its XY status and the exclusion rule that omitted it so a reviewer can adjudicate what the selection left out (decided 2026-09-02; before that only the count crossed). General selected deltas disable rename detection so Git cannot discover an excluded counterpart. Rename detection runs only over pairs whose endpoints both passed selection.
 

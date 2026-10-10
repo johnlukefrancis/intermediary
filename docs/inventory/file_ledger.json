@@ -762,6 +762,14 @@
       "summary": "Detect transient WSL transport/bootstrap failures and compute retry delays"
     },
     {
+      "path": "app/src/lib/bundles/bundle_selection_updates_test.ts",
+      "summary": "Regression coverage for selective inclusion beneath excluded bundle ancestors"
+    },
+    {
+      "path": "app/src/lib/bundles/bundle_selection_updates.ts",
+      "summary": "Explicit bundle inclusion changes without enumerating or enabling sibling paths"
+    },
+    {
       "path": "app/src/lib/bundles/bundle_selection_visibility_test.ts",
       "summary": "Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included"
     },
@@ -1351,19 +1359,19 @@
     },
     {
       "path": "app/src/styles/overview/overview_detail.css",
-      "summary": "Stream-family file identity, compact baseline metadata and six-line excerpts"
+      "summary": "Stream-family file head, uppercase meta chips, relative clock and the shared diff-row density"
     },
     {
       "path": "app/src/styles/overview/overview_feed.css",
-      "summary": "Singular chronological feed, repository transition labels and tail jump"
+      "summary": "Singular chronological feed, repository section rules and Stream-family entry chassis"
     },
     {
       "path": "app/src/styles/overview/overview_image.css",
-      "summary": "Fixed-height image workspace launcher with a transparency checkerboard"
+      "summary": "Width-sized image workspace launcher on the Stream strip's slot and checkerboard"
     },
     {
       "path": "app/src/styles/overview/overview_panel.css",
-      "summary": "Compact full-width Overview shell, active-repository chips and monitoring states"
+      "summary": "Overview glass panel, active-repository filter chips and the monitoring badge"
     },
     {
       "path": "app/src/styles/overview/overview_view.css",
@@ -2398,6 +2406,10 @@
       "summary": "Bundle scanning logic with ignore rules and exclusions"
     },
     {
+      "path": "crates/im_bundle/src/selection_tests.rs",
+      "summary": "Canonical selection predicate regression coverage for current and missing paths"
+    },
+    {
       "path": "crates/im_bundle/src/selection.rs",
       "summary": "Canonical bundle-selection predicate shared by scanning and Git capture"
     },
@@ -2412,6 +2424,10 @@
     {
       "path": "crates/im_bundle/src/zip_entry.rs",
       "summary": "Single file entry writer for bundle zip archives"
+    },
+    {
+      "path": "crates/im_bundle/tests/descendant_selection_test.rs",
+      "summary": "Archive and Git evidence stay bounded to explicit descendants of excluded folders"
     },
     {
       "path": "crates/im_bundle/tests/git_evidence_test.rs",

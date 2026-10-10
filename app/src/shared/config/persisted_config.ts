@@ -33,6 +33,7 @@ export {
 export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   topLevelDirs: z.array(z.string()),
+  includedFiles: z.array(z.string().min(1)).default([]),
   includedSubdirs: z.array(z.string()).default([]),
   excludedSubdirs: z.array(z.string()).default([]),
   excludedFiles: z.array(z.string()).default([]),

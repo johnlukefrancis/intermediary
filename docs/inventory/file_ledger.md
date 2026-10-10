@@ -193,6 +193,8 @@ app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-
 app/src/lib/agent/messages_worktree.ts - Typed helper for sending the ZIPS-tree worktree action command
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
 app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
+app/src/lib/bundles/bundle_selection_updates_test.ts - Regression coverage for selective inclusion beneath excluded bundle ancestors
+app/src/lib/bundles/bundle_selection_updates.ts - Explicit bundle inclusion changes without enumerating or enabling sibling paths
 app/src/lib/bundles/bundle_selection_visibility_test.ts - Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/bundles/flatten_visible_tree.ts - Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders
@@ -340,10 +342,10 @@ app/src/styles/options_layout.css - Two-column grid layout, sections, rows, foot
 app/src/styles/options_overlay.css - Overlay backdrop, panel shell, and keyframe animations
 app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
 app/src/styles/overview_navigation.css - Global Overview destination beside the repository tab track
-app/src/styles/overview/overview_detail.css - Stream-family file identity, compact baseline metadata and six-line excerpts
-app/src/styles/overview/overview_feed.css - Singular chronological feed, repository transition labels and tail jump
-app/src/styles/overview/overview_image.css - Fixed-height image workspace launcher with a transparency checkerboard
-app/src/styles/overview/overview_panel.css - Compact full-width Overview shell, active-repository chips and monitoring states
+app/src/styles/overview/overview_detail.css - Stream-family file head, uppercase meta chips, relative clock and the shared diff-row density
+app/src/styles/overview/overview_feed.css - Singular chronological feed, repository section rules and Stream-family entry chassis
+app/src/styles/overview/overview_image.css - Width-sized image workspace launcher on the Stream strip's slot and checkerboard
+app/src/styles/overview/overview_panel.css - Overview glass panel, active-repository filter chips and the monitoring badge
 app/src/styles/overview/overview_view.css - Full-pane Overview feed and file workspace without remounting the reading surface
 app/src/styles/overview/overview_workspace.css - Full-width Overview file workspace sizing without repository rails
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
@@ -602,10 +604,12 @@ crates/im_bundle/src/process_job.rs - Windows Job Object ownership of a spawned 
 crates/im_bundle/src/progress_sink.rs - Progress sink interfaces for bundle build reporting
 crates/im_bundle/src/progress.rs - Throttled NDJSON progress emitter for bundle scanning and zipping
 crates/im_bundle/src/scanner.rs - Bundle scanning logic with ignore rules and exclusions
+crates/im_bundle/src/selection_tests.rs - Canonical selection predicate regression coverage for current and missing paths
 crates/im_bundle/src/selection.rs - Canonical bundle-selection predicate shared by scanning and Git capture
 crates/im_bundle/src/writer_tests.rs - Tests for bundle writer behavior and progress ordering
 crates/im_bundle/src/writer.rs - Bundle zip writer with scanning, manifest, and progress
 crates/im_bundle/src/zip_entry.rs - Single file entry writer for bundle zip archives
+crates/im_bundle/tests/descendant_selection_test.rs - Archive and Git evidence stay bounded to explicit descendants of excluded folders
 crates/im_bundle/tests/git_evidence_test.rs - End-to-end witness tests for selection-bounded bundle Git evidence
 crates/im_bundle/tests/git_large_selection_test.rs - Windows-scale witness for host-safe selected Git diff path batching
 crates/im_bundle/tests/scanner_test.rs - Integration tests for bundle scanner behavior

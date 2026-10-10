@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 interface IndeterminateCheckboxProps {
   id: string;
+  label: string;
   checked: boolean;
   indeterminate: boolean;
   disabled?: boolean;
@@ -13,6 +14,7 @@ interface IndeterminateCheckboxProps {
 
 export function IndeterminateCheckbox({
   id,
+  label,
   checked,
   indeterminate,
   disabled = false,
@@ -31,6 +33,7 @@ export function IndeterminateCheckbox({
       <input
         ref={inputRef}
         id={id}
+        aria-label={label}
         type="checkbox"
         checked={checked}
         disabled={disabled}

@@ -56,7 +56,7 @@ export function BundleFileExplorer({
   const repoRoot = config.repos.find((repo) => repo.repoId === repoId)?.root;
   const globalExcludes = useMemo(() => normalizeGlobalExcludes(config.globalExcludes), [config.globalExcludes]);
   const listRef = useRef<HTMLDivElement>(null);
-  const inclusion = useBundleInclusion({ selection, topLevelDirs, onSelectionChange });
+  const inclusion = useBundleInclusion({ selection, topLevelDirs, globalExcludes, onSelectionChange });
 
   const visibleRows = useMemo(
     () => flattenVisibleTree(topLevelDirs, topLevelFiles, expandedDirs, listings),

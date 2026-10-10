@@ -24,6 +24,8 @@ pub(crate) struct BundleSelector {
     include_root: bool,
     top_level_dirs: HashSet<String>,
     included_subdirs: HashSet<String>,
+    included_files: HashSet<String>,
+    traversal_ancestors: HashSet<String>,
     excluded_subdirs: HashSet<String>,
     excluded_files: HashSet<String>,
     global_excludes: NormalizedGlobalExcludes,
@@ -34,6 +36,22 @@ impl BundleSelector {
         selection: &BundleSelection,
         global_excludes: &GlobalExcludes,
     ) -> Result<Self> {
+        let included_subdirs: HashSet<_> =
+            normalize_selection_paths(&selection.included_subdirs, "includedSubdirs")?
+                .into_iter()
+                .collect();
+        let included_files: HashSet<_> =
+            normalize_selection_paths(&selection.included_files, "includedFiles")?
+                .into_iter()
+                .collect();
+        let mut traversal_ancestors = HashSet::new();
+        for path in included_subdirs.iter().chain(included_files.iter()) {
+            let mut parent = path.as_str();
+            while let Some((ancestor, _)) = parent.rsplit_once('/') {
+                traversal_ancestors.insert(ancestor.to_string());
+                parent = ancestor;
+            }
+        }
         Ok(Self {
             include_root: selection.include_root,
             top_level_dirs: selection
@@ -42,12 +60,9 @@ impl BundleSelector {
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty())
                 .collect(),
-            included_subdirs: normalize_selection_paths(
-                &selection.included_subdirs,
-                "includedSubdirs",
-            )?
-            .into_iter()
-            .collect(),
+            included_subdirs,
+            included_files,
+            traversal_ancestors,
             excluded_subdirs: normalize_excluded_paths(
                 &selection.excluded_subdirs,
                 "excludedSubdirs",
@@ -67,6 +82,33 @@ impl BundleSelector {
 
     pub(crate) fn admits_directory(&self, relative_path: &Path) -> bool {
         self.admits(relative_path, SelectedPathKind::DirectoryLike)
+    }
+
+    pub(crate) fn traverses_directory(&self, path: &Path) -> bool {
+        let Some((_, archive_path)) = normalized_components(path) else {
+            return false;
+        };
+        if is_globally_excluded_path(&archive_path, &self.global_excludes) {
+            return false;
+        }
+        self.admits_directory(path) || self.traversal_ancestors.contains(&archive_path)
+    }
+
+    pub(crate) fn top_level_dirs(&self) -> Vec<String> {
+        let mut roots = self.top_level_dirs.clone();
+        for path in &self.included_subdirs {
+            roots.insert(path.split('/').next().unwrap_or(path).to_string());
+        }
+        for path in &self.included_files {
+            if let Some((root, _)) = path.split_once('/') {
+                roots.insert(root.to_string());
+            }
+        }
+        roots.into_iter().collect()
+    }
+
+    pub(crate) fn includes_root_files(&self) -> bool {
+        self.include_root || self.included_files.iter().any(|path| !path.contains('/'))
     }
 
     fn admits(&self, relative_path: &Path, kind: SelectedPathKind) -> bool {
@@ -89,21 +131,11 @@ impl BundleSelector {
             return Err(OmissionReason::UnrepresentablePath);
         };
 
-        let top_selected = self.top_level_dirs.contains(top);
-        if components.len() == 1 && !(self.include_root || top_selected) {
-            return Err(if kind == SelectedPathKind::DirectoryLike {
-                OmissionReason::TopLevelDirNotSelected(top.clone())
-            } else {
-                OmissionReason::RootFilesNotSelected
-            });
-        }
-        if components.len() > 1 && !top_selected {
-            return Err(OmissionReason::TopLevelDirNotSelected(top.clone()));
-        }
-        if self.excluded_files.contains(&archive_path) {
-            return Err(OmissionReason::ExcludedFile);
-        }
-
+        let mut omission = if components.len() == 1 && kind == SelectedPathKind::File {
+            (!self.include_root).then_some(OmissionReason::RootFilesNotSelected)
+        } else {
+            Some(OmissionReason::TopLevelDirNotSelected(top.clone()))
+        };
         let directory_count = if kind == SelectedPathKind::DirectoryLike {
             components.len()
         } else {
@@ -112,14 +144,20 @@ impl BundleSelector {
         for index in 0..directory_count {
             let directory_path = components[..=index].join("/");
             if self.excluded_subdirs.contains(&directory_path) {
-                return Err(OmissionReason::ExcludedSubdir(directory_path));
-            }
-            let explicitly_included = index == 0 || self.included_subdirs.contains(&directory_path);
-            if !explicitly_included
-                && is_globally_excluded_dir_name(&components[index], &self.global_excludes)
+                omission = Some(OmissionReason::ExcludedSubdir(directory_path));
+            } else if self.included_subdirs.contains(&directory_path)
+                || (index == 0 && self.top_level_dirs.contains(top))
             {
-                return Err(OmissionReason::GlobalDirName(components[index].clone()));
+                omission = None;
+            } else if is_globally_excluded_dir_name(&components[index], &self.global_excludes) {
+                omission = Some(OmissionReason::GlobalDirName(components[index].clone()));
             }
+        }
+        if kind == SelectedPathKind::File && self.included_files.contains(&archive_path) {
+            omission = None;
+        }
+        if self.excluded_files.contains(&archive_path) {
+            return Err(OmissionReason::ExcludedFile);
         }
 
         if kind == SelectedPathKind::File {
@@ -133,7 +171,7 @@ impl BundleSelector {
         if is_globally_excluded_path(&archive_path, &self.global_excludes) {
             return Err(OmissionReason::GlobalPathPattern);
         }
-        Ok(())
+        omission.map_or(Ok(()), Err)
     }
 }
 
@@ -181,92 +219,5 @@ fn normalize_excluded_paths(excluded: &[String], field_name: &str) -> Result<Vec
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn selector() -> BundleSelector {
-        BundleSelector::new(
-            &BundleSelection {
-                include_root: true,
-                top_level_dirs: vec!["src".to_string()],
-                included_subdirs: vec![],
-                excluded_subdirs: vec!["src/private".to_string()],
-                excluded_files: vec!["src/skip.rs".to_string()],
-            },
-            &GlobalExcludes {
-                dir_names: vec!["target".to_string()],
-                dir_suffixes: vec![],
-                file_names: vec![],
-                extensions: vec![".bin".to_string()],
-                patterns: vec![],
-            },
-        )
-        .expect("selector")
-    }
-
-    #[test]
-    fn applies_one_predicate_to_current_and_missing_paths() {
-        let selector = selector();
-        assert!(selector.admits_file(Path::new("README.md")));
-        assert!(selector.admits_file(Path::new("src/main.rs")));
-        assert!(selector.admits_file(Path::new("src/deleted.rs")));
-        assert!(!selector.admits_file(Path::new("src/private/key.rs")));
-        assert!(!selector.admits_file(Path::new("src/skip.rs")));
-        assert!(!selector.admits_file(Path::new("src/blob.bin")));
-        assert!(!selector.admits_file(Path::new("other/file.rs")));
-    }
-
-    #[test]
-    fn explicit_top_level_selection_overrides_directory_name_exclude() {
-        let selector = selector();
-        assert!(!selector.admits_file(Path::new("target/output.rs")));
-
-        let selector = BundleSelector::new(
-            &BundleSelection {
-                include_root: false,
-                top_level_dirs: vec!["target".to_string()],
-                included_subdirs: vec![],
-                excluded_subdirs: vec![],
-                excluded_files: vec![],
-            },
-            &GlobalExcludes {
-                dir_names: vec!["target".to_string()],
-                dir_suffixes: vec![],
-                file_names: vec![],
-                extensions: vec![],
-                patterns: vec![],
-            },
-        )
-        .expect("selector");
-
-        assert!(selector.admits_directory(Path::new("target")));
-        assert!(selector.admits_file(Path::new("target/output.rs")));
-    }
-
-    #[test]
-    fn explicit_nested_selection_overrides_only_its_directory_name_exclude() {
-        let selector = BundleSelector::new(
-            &BundleSelection {
-                include_root: false,
-                top_level_dirs: vec!["crates".to_string()],
-                included_subdirs: vec!["crates/wb_render_wgpu/src/target".to_string()],
-                excluded_subdirs: vec![],
-                excluded_files: vec![],
-            },
-            &GlobalExcludes {
-                dir_names: vec!["target".to_string(), "node_modules".to_string()],
-                dir_suffixes: vec![],
-                file_names: vec![],
-                extensions: vec![],
-                patterns: vec![],
-            },
-        )
-        .expect("selector");
-
-        assert!(selector.admits_file(Path::new("crates/wb_render_wgpu/src/target/mod.rs")));
-        assert!(!selector.admits_file(Path::new(
-            "crates/wb_render_wgpu/src/target/node_modules/noise.js"
-        )));
-        assert!(!selector.admits_file(Path::new("crates/other/target/output.rs")));
-    }
-}
+#[path = "selection_tests.rs"]
+mod tests;

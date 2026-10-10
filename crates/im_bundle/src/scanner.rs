@@ -45,7 +45,7 @@ pub fn scan_bundle_with_cancel(
     let mut entries = Vec::new();
     let mut files_scanned = 0u64;
 
-    if plan.selection.include_root {
+    if selector.includes_root_files() {
         let root_entries =
             std::fs::read_dir(repo_root).map_err(|source| BundleError::DirReadFailed {
                 path: repo_root.clone(),
@@ -84,16 +84,21 @@ pub fn scan_bundle_with_cancel(
         }
     }
 
-    let top_level_dirs = validate_top_level_dirs(repo_root, &plan.selection.top_level_dirs)?;
+    let top_level_dirs = validate_top_level_dirs(repo_root, &selector.top_level_dirs())?;
     let mut top_level_dirs_included = Vec::new();
     for dir in &top_level_dirs {
         check_cancelled(cancel_token)?;
         let relative_dir = PathBuf::from(dir);
-        if !selector.admits_directory(&relative_dir) {
+        if !selector.traverses_directory(&relative_dir) {
             continue;
         }
-        top_level_dirs_included.push(dir.to_string());
         let dir_path = repo_root.join(dir);
+        if dir_path.is_symlink() {
+            continue;
+        }
+        if selector.admits_directory(&relative_dir) {
+            top_level_dirs_included.push(dir.to_string());
+        }
         collect_dir_entries(
             &mut entries,
             &dir_path,
@@ -190,7 +195,7 @@ fn collect_dir_entries(
         let next_relative = relative_dir.join(&name);
         let next_archive = archive_path(&next_relative);
         if file_type.is_dir() {
-            if !selector.admits_directory(&next_relative) {
+            if !selector.traverses_directory(&next_relative) {
                 continue;
             }
             collect_dir_entries(

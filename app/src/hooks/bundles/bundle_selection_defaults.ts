@@ -26,9 +26,10 @@ export function buildSelectionKey(selections: Record<string, BundleSelection>): 
       }
       const dirs = selection.topLevelDirs.join(",");
       const included = selection.includedSubdirs.join(",");
+      const includedFiles = selection.includedFiles.join(",");
       const excluded = selection.excludedSubdirs.join(",");
       const excludedFiles = selection.excludedFiles.join(",");
-      return `${presetId}:${selection.includeRoot}:${dirs}:${included}:${excluded}:${excludedFiles}`;
+      return `${presetId}:${selection.includeRoot}:${dirs}:${included}:${includedFiles}:${excluded}:${excludedFiles}`;
     });
   return entries.join("|");
 }
@@ -140,6 +141,7 @@ export function createPresetState(
         includeRoot: savedSelection.includeRoot,
         topLevelDirs: selectedDirs,
         includedSubdirs: [...savedSelection.includedSubdirs].sort(),
+        includedFiles: [...savedSelection.includedFiles].sort(),
         excludedSubdirs: mergedExcluded.sort(),
         excludedFiles: [...savedSelection.excludedFiles].sort(),
       },
@@ -159,6 +161,7 @@ export function createPresetState(
         includeRoot: preset.includeRoot,
         topLevelDirs: selectedDirs,
         includedSubdirs: [],
+        includedFiles: [],
         excludedSubdirs: isTopologyReady
           ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
           : [],
@@ -178,6 +181,7 @@ export function createPresetState(
       includeRoot: preset.includeRoot,
       topLevelDirs: selectedDirs,
       includedSubdirs: [],
+      includedFiles: [],
       excludedSubdirs: isTopologyReady
         ? computeDefaultExcludedSubdirs(selectedDirs, topLevelSubdirs, activeDefaultExcluded)
         : [],

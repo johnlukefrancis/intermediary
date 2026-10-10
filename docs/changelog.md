@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Bundle selection allows individual files and subfolders inside excluded
+  folders. Parents show partial selection, sibling files remain excluded, and
+  the choices persist and apply to both archive contents and Git evidence.
+
 - Overview consolidates active repositories into one feed with repository
   labels, short edit previews, image thumbnails, history and direct navigation to
   each repository's Stream. Repositories appear on activity and leave after

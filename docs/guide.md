@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-10-09
+Updated on: 2026-10-10
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -58,6 +58,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 
 | Document | Purpose |
 |----------|---------|
+| [docs/implementation/bundle_selection_implementation.md](implementation/bundle_selection_implementation.md) | Descendant bundle selection implementation, regression evidence and Windows installation |
 | [docs/implementation/macos_port_implementation.md](implementation/macos_port_implementation.md) | Active Quest for native Apple Silicon tooling, port implementation, packaging and desktop witness |
 | [docs/implementation/terminal_hardening_implementation.md](implementation/terminal_hardening_implementation.md) | Active execution owner for the terminal lifecycle, WSL-entry, bounded-output, Job-at-creation, cap, and flow-credit hardening |
 | [docs/implementation/stream_panel_implementation.md](implementation/stream_panel_implementation.md) | Active execution owner for the Stream panel: agent delta pipeline, fileDelta protocol, store, cards, motion |

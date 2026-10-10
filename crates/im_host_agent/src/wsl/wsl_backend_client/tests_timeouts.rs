@@ -28,6 +28,7 @@ fn build_bundle_uses_extended_timeout_budget() {
             include_root: true,
             top_level_dirs: vec![],
             included_subdirs: vec![],
+            included_files: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

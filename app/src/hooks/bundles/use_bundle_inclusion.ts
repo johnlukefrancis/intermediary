@@ -4,15 +4,13 @@
 import type React from "react";
 import { useCallback } from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
-import {
-  isSelfOrDescendant,
-  sortedWith,
-  withoutPath,
-} from "../../lib/bundles/bundle_selection_visibility.js";
+import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
+import { toggleDirectory, toggleFile } from "../../lib/bundles/bundle_selection_updates.js";
 
 interface UseBundleInclusionOptions {
   selection: BundleSelection;
   topLevelDirs: string[];
+  globalExcludes: NormalizedGlobalExcludes;
   onSelectionChange: (selection: BundleSelection) => void;
 }
 
@@ -29,15 +27,20 @@ export interface BundleInclusion {
 export function useBundleInclusion({
   selection,
   topLevelDirs,
+  globalExcludes,
   onSelectionChange,
 }: UseBundleInclusionOptions): BundleInclusion {
   const allSelected =
     topLevelDirs.length > 0 && selection.topLevelDirs.length === topLevelDirs.length;
-  const noneSelected = selection.topLevelDirs.length === 0;
+  const noneSelected = selection.topLevelDirs.length === 0 && selection.includedSubdirs.length === 0 &&
+    !selection.includedFiles.some((path) => path.includes("/"));
 
   const handleIncludeRootChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      onSelectionChange({ ...selection, includeRoot: event.target.checked });
+      onSelectionChange({
+        ...selection, includeRoot: event.target.checked,
+        includedFiles: selection.includedFiles.filter((path) => path.includes("/")),
+      });
     },
     [onSelectionChange, selection]
   );
@@ -51,55 +54,20 @@ export function useBundleInclusion({
       ...selection,
       topLevelDirs: [],
       includedSubdirs: [],
+      includedFiles: selection.includedFiles.filter((path) => !path.includes("/")),
       excludedSubdirs: [],
       excludedFiles: selection.excludedFiles.filter((value) => !value.includes("/")),
     });
   }, [onSelectionChange, selection]);
 
   const handleToggleDirectory = useCallback(
-    (path: string) => {
-      if (!path.includes("/")) {
-        const selected = new Set(selection.topLevelDirs);
-        if (selected.has(path)) {
-          selected.delete(path);
-          onSelectionChange({
-            ...selection,
-            topLevelDirs: [...selected].sort(),
-            includedSubdirs: selection.includedSubdirs.filter(
-              (value) => !isSelfOrDescendant(value, path)
-            ),
-            excludedSubdirs: selection.excludedSubdirs.filter((value) => !isSelfOrDescendant(value, path)),
-            excludedFiles: selection.excludedFiles.filter((value) => !isSelfOrDescendant(value, path)),
-          });
-        } else {
-          selected.add(path);
-          onSelectionChange({ ...selection, topLevelDirs: [...selected].sort() });
-        }
-        return;
-      }
-
-      const isExcluded = selection.excludedSubdirs.includes(path);
-      const excludedSubdirs = isExcluded
-        ? withoutPath(path, selection.excludedSubdirs)
-        : sortedWith(path, selection.excludedSubdirs);
-      const includedSubdirs = isExcluded
-        ? sortedWith(path, selection.includedSubdirs)
-        : selection.includedSubdirs.filter(
-            (value) => !isSelfOrDescendant(value, path)
-          );
-      onSelectionChange({ ...selection, includedSubdirs, excludedSubdirs });
-    },
-    [onSelectionChange, selection]
+    (path: string) => { onSelectionChange(toggleDirectory(path, selection, globalExcludes)); },
+    [globalExcludes, onSelectionChange, selection]
   );
 
   const handleToggleFile = useCallback(
-    (path: string) => {
-      const excludedFiles = selection.excludedFiles.includes(path)
-        ? withoutPath(path, selection.excludedFiles)
-        : sortedWith(path, selection.excludedFiles);
-      onSelectionChange({ ...selection, excludedFiles });
-    },
-    [onSelectionChange, selection]
+    (path: string) => { onSelectionChange(toggleFile(path, selection, globalExcludes)); },
+    [globalExcludes, onSelectionChange, selection]
   );
 
   return {

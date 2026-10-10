@@ -9,7 +9,9 @@ export const BundleSelectionSchema = z.object({
   includeRoot: z.boolean(),
   /** Top-level directories to include */
   topLevelDirs: z.array(z.string().min(1)),
-  /** Repo-relative subdirectories explicitly included despite a default name exclude */
+  /** Repo-relative files explicitly included despite an excluded parent */
+  includedFiles: z.array(z.string().min(1)).default([]),
+  /** Repo-relative subdirectories overriding less specific exclusions and name defaults */
   includedSubdirs: z.array(z.string().min(1)).default([]),
   /** Repo-relative subdirectory paths to exclude (e.g. "TriangleRain/Assets") */
   excludedSubdirs: z.array(z.string().min(1)).default([]),

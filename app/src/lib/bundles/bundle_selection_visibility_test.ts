@@ -11,6 +11,7 @@ const selection: BundleSelection = {
   includeRoot: true,
   topLevelDirs: ["witness"],
   includedSubdirs: ["witness/blorb_creation/iterations/round_06"],
+  includedFiles: [],
   excludedSubdirs: [],
   excludedFiles: ["witness/blorb_creation/iterations/round_06/beach_ring.png"],
 };

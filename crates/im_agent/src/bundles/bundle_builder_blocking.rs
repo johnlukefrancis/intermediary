@@ -167,6 +167,7 @@ fn build_plan(
             include_root: options.selection.include_root,
             top_level_dirs: options.selection.top_level_dirs.clone(),
             included_subdirs: options.selection.included_subdirs.clone(),
+            included_files: options.selection.included_files.clone(),
             excluded_subdirs: options.selection.excluded_subdirs.clone(),
             excluded_files: options.selection.excluded_files.clone(),
         },

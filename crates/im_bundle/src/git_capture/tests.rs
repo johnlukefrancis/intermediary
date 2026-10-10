@@ -227,6 +227,7 @@ fn plan(repo: &Path, output: &Path) -> BundlePlan {
             include_root: false,
             top_level_dirs: vec!["src".to_string()],
             included_subdirs: vec![],
+            included_files: vec![],
             excluded_subdirs: vec![],
             excluded_files: vec![],
         },

@@ -220,6 +220,7 @@ export function useBundleState(
               includeRoot: preset.selection.includeRoot,
               topLevelDirs: selectedDirs,
               includedSubdirs: preset.selection.includedSubdirs,
+              includedFiles: preset.selection.includedFiles,
               excludedSubdirs: autoExcludedSubs,
               excludedFiles: preset.selection.excludedFiles,
             },
