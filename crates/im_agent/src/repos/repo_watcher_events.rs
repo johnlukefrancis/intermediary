@@ -7,6 +7,7 @@ use crate::protocol::{
 };
 use crate::repos::categorizer::Categorizer;
 use crate::repos::delta::DeltaService;
+use crate::repos::git_ignore::GitIgnoreFilter;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
@@ -28,6 +29,7 @@ pub(crate) struct EventContext<'a> {
     pub(crate) root_identity: &'a str,
     pub(crate) categorizer: &'a Categorizer,
     pub(crate) ignore_matcher: &'a IgnoreMatcher,
+    pub(crate) git_ignore: &'a GitIgnoreFilter,
     pub(crate) mru: &'a RwLock<MruIndex>,
     pub(crate) recent_store: &'a RecentFilesStore,
     pub(crate) event_bus: &'a EventBus,
@@ -71,7 +73,9 @@ impl<'a> EventContext<'a> {
             );
             return None;
         };
-        if self.ignore_matcher.should_ignore(&relative_str) {
+        if self.ignore_matcher.should_ignore(&relative_str)
+            || self.git_ignore.is_suppressed(&relative_str)
+        {
             return None;
         }
         let kind = self.categorizer.categorize(&relative_str);
@@ -159,6 +163,7 @@ pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
     // Git status also moves for ignored paths, other kinds and git metadata;
     // note them before the file event filters and rename branch.
     context.source_control.note_event(&event);
+    context.git_ignore.note_event(&event);
 
     // External git-dir events only feed the source control detector;
     // paths outside the root produce no file event or log.

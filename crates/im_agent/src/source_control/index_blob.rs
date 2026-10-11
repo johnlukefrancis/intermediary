@@ -6,7 +6,7 @@ use std::path::Path;
 use im_bundle::cancel::BundleCancelToken;
 
 use crate::error::AgentError;
-use crate::repos::delta::{INDEX_BLOB_TIMEOUT, MAX_DELTA_FILE_BYTES};
+use crate::repos::delta::INDEX_BLOB_TIMEOUT;
 
 use super::paths::normalize_path;
 use super::runner::{self, GitCall};
@@ -15,22 +15,18 @@ use super::runner::{self, GitCall};
 /// deleted from the index, or held only at conflict stages).
 const NOT_IN_INDEX_EXIT: i32 = 128;
 
-/// The index text for a repo-root-relative path, or `Ok(None)` when there is
-/// nothing usable: not in the index at stage 0, larger than the delta bound,
-/// or not text (a NUL byte or invalid UTF-8). The `./` prefix keeps the
-/// lookup relative to the configured root, which may sit below the repository
-/// top level. Errors are real Git failures (missing binary, timeout, moved
-/// root) and, when `cancel` fires, the killed child: the delta worker cancels
-/// its token on stop so no `git show` outlives the watcher that started it.
+/// Root-relative (`./`) stage-0 text, `Ok(None)` when absent, over `limit` bytes or not
+/// UTF-8 text; errors are Git failures, including the child killed when `cancel` fires.
 pub(crate) async fn read_index_blob(
     repo_root: &Path,
     rel: &str,
+    limit: u64,
     cancel: Option<BundleCancelToken>,
 ) -> Result<Option<String>, AgentError> {
     let path = normalize_path(rel)?;
     let call = GitCall::new(["show"])
         .arg(format!(":0:./{path}"))
-        .stdout_limit(MAX_DELTA_FILE_BYTES as usize)
+        .stdout_limit(usize::try_from(limit).unwrap_or(usize::MAX))
         .timeout(INDEX_BLOB_TIMEOUT)
         .accept_exit_codes(&[NOT_IN_INDEX_EXIT]);
     let output = runner::run_read(repo_root, call, cancel).await?;
@@ -66,7 +62,7 @@ mod tests {
         git(root, &["add", "src/a.rs", "src/bin.dat"]);
         std::fs::write(root.join("src/a.rs"), "changed\n").expect("overwrite worktree");
 
-        let staged = read_index_blob(root, "src/a.rs", None)
+        let staged = read_index_blob(root, "src/a.rs", 4096, None)
             .await
             .expect("git ran");
         assert_eq!(
@@ -75,13 +71,13 @@ mod tests {
             "index, not worktree"
         );
         assert_eq!(
-            read_index_blob(root, "src/bin.dat", None)
+            read_index_blob(root, "src/bin.dat", 4096, None)
                 .await
                 .expect("git ran"),
             None
         );
         assert_eq!(
-            read_index_blob(root, "src/missing.rs", None)
+            read_index_blob(root, "src/missing.rs", 4096, None)
                 .await
                 .expect("git ran"),
             None

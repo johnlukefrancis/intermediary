@@ -14,8 +14,10 @@ use crate::repos::mime_type_for_path;
 use super::delta_reads::ReadSources;
 use super::delta_resolve_text::resolve_text_read;
 use super::delta_stamp::{ms_of, now_stamp, stamp_of};
+use super::unified_patch::uncounted_removal_patch;
 use super::{
-    all_removed_patch, BaselineCache, PatchOutput, PendingChange, PendingOp, READ_DEADLINE,
+    all_removed_patch, Baseline, BaselineCache, PatchOutput, PendingChange, PendingOp,
+    MAX_DELTA_FILE_BYTES, READ_DEADLINE,
 };
 
 pub(super) struct ResolveContext<'a> {
@@ -129,12 +131,21 @@ async fn resolve_text_remove(context: &mut ResolveContext<'_>, path: &str) -> Re
         return emit(DeltaPayload::Gone, now_stamp(), None);
     }
     if let Some(old) = context.cache.remove(path) {
-        let payload = text_payload(all_removed_patch(&old), DeltaBaseline::PreviousSighting);
+        let patch = match &old {
+            Baseline::Text(text) => all_removed_patch(text),
+            Baseline::Lines(prints) => uncounted_removal_patch(prints.len()),
+        };
+        let payload = text_payload(patch, DeltaBaseline::PreviousSighting);
         return emit(payload, now_stamp(), None);
     }
     match context
         .reads
-        .index_text(context.root, path, context.cancel.clone())
+        .index_text(
+            context.root,
+            path,
+            MAX_DELTA_FILE_BYTES,
+            context.cancel.clone(),
+        )
         .await
     {
         Ok(Some(text)) => emit(

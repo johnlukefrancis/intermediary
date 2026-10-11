@@ -243,7 +243,27 @@
     },
     {
       "path": "app/src/components/overview_view.tsx",
-      "summary": "Connects the Overview presentation to configured roots and its live projection"
+      "summary": "Connects Overview's feed and Git column to configured roots, the shared filter and the full-pane workspace"
+    },
+    {
+      "path": "app/src/components/overview/git/overview_git_column.tsx",
+      "summary": "Overview's read-only Git column: changed working trees, worktrees nested under their project group"
+    },
+    {
+      "path": "app/src/components/overview/git/overview_git_group.tsx",
+      "summary": "One Git column group: shared section head, capped read-only rows that open the diff, and the SOURCE overflow link"
+    },
+    {
+      "path": "app/src/components/overview/git/overview_git_project.tsx",
+      "summary": "One grouped project in the Git column: the group's accent rule over a block per worktree with changes"
+    },
+    {
+      "path": "app/src/components/overview/git/overview_git_repo_head.tsx",
+      "summary": "Git column repository head: accent label to Stream, reread pulse, SOURCE link, branch line and state badges"
+    },
+    {
+      "path": "app/src/components/overview/git/overview_git_repo.tsx",
+      "summary": "One Git column working-tree block (a repository, or one worktree of a project): status, state lines, groups"
     },
     {
       "path": "app/src/components/overview/overview_feed_entries.ts",
@@ -262,12 +282,16 @@
       "summary": "Shared Overview filename-over-directory typography, icon and operation badge"
     },
     {
+      "path": "app/src/components/overview/overview_handset_deck.tsx",
+      "summary": "Handset Overview deck: filter toolbar, then FEED and GIT sections in the handset chassis, both kept mounted behind th..."
+    },
+    {
       "path": "app/src/components/overview/overview_image_preview.tsx",
       "summary": "Fixed-height real image preview that opens the full file workspace"
     },
     {
       "path": "app/src/components/overview/overview_panel.tsx",
-      "summary": "Full-width chronological work feed with active repository chips and watch-health awareness"
+      "summary": "Overview chronological work feed for the shown repositories, with its quiet-state empty panel"
     },
     {
       "path": "app/src/components/overview/overview_presentation.ts",
@@ -278,8 +302,12 @@
       "summary": "Observed edit with Stream-family file identity and a six-line excerpt"
     },
     {
+      "path": "app/src/components/overview/overview_toolbar.tsx",
+      "summary": "Overview glass strip above both columns: active-repository filter chips and the monitoring badge"
+    },
+    {
       "path": "app/src/components/overview/overview_workspace.tsx",
-      "summary": "Overview's full-pane file workspace using the shared repository viewers and actions"
+      "summary": "Overview's full-pane file or diff workspace using the shared repository viewers and actions"
     },
     {
       "path": "app/src/components/overview/use_overview_follow.ts",
@@ -310,12 +338,20 @@
       "summary": "Action labels, branch labels, and empty-state/error/confirm copy for the Source Control column"
     },
     {
+      "path": "app/src/components/source_control/source_control_entry_face.tsx",
+      "summary": "Shared changed-path face for SOURCE rows and the Overview Git column: icon, name over dir, change badge"
+    },
+    {
       "path": "app/src/components/source_control/source_control_icons.tsx",
       "summary": "Inline 24x24 stroke glyphs for source-control controls (stroke supplied by CSS)"
     },
     {
       "path": "app/src/components/source_control/source_control_row.tsx",
-      "summary": "One changed-path row: icon, name over dir, change badge, and a hover stage/unstage action"
+      "summary": "One SOURCE changed-path row: the shared entry face plus a hover stage/unstage action"
+    },
+    {
+      "path": "app/src/components/source_control/source_control_section_head.tsx",
+      "summary": "Shared collapsible group header: chevron, alert mark, LABEL [n], and an optional bulk-action slot"
     },
     {
       "path": "app/src/components/source_control/source_control_section.tsx",
@@ -530,8 +566,16 @@
       "summary": "Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency"
     },
     {
+      "path": "app/src/hooks/overview/use_dirty_repo_ids.ts",
+      "summary": "The shown repositories whose working tree is not known clean, read from the shared status registry"
+    },
+    {
       "path": "app/src/hooks/overview/use_overview_file_actions.ts",
       "summary": "Repository-bound Overview context menus and user-triggered drag-out actions"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_git_totals.ts",
+      "summary": "Changed-file and conflict totals across shown repositories, read from the shared status registry"
     },
     {
       "path": "app/src/hooks/overview/use_overview_history.ts",
@@ -540,6 +584,10 @@
     {
       "path": "app/src/hooks/overview/use_overview_images.ts",
       "summary": "Visible Overview image metadata projected into the shared revision-bound tile loader"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_selection.ts",
+      "summary": "Overview's one repository filter: working set, chip selection and the shown repositories for both columns"
     },
     {
       "path": "app/src/hooks/overview/use_overview.ts",
@@ -579,7 +627,11 @@
     },
     {
       "path": "app/src/hooks/source_control/use_source_control_state.ts",
-      "summary": "Per-repo source-control status state machine with event-driven refresh and serialized actions"
+      "summary": "SOURCE write side over the shared status registry: serialized actions, reconciliation, notices, draft"
+    },
+    {
+      "path": "app/src/hooks/source_control/use_source_control_status.ts",
+      "summary": "Read side of source-control status: demands the repo while mounted and selects its registry slot"
     },
     {
       "path": "app/src/hooks/source_control/use_tree_decorations.tsx",
@@ -623,7 +675,7 @@
     },
     {
       "path": "app/src/hooks/use_app_navigation.ts",
-      "summary": "App view selection and remembered repository navigation"
+      "summary": "App view selection, remembered repository navigation and the handset landing intent for a repo tab"
     },
     {
       "path": "app/src/hooks/use_bundle_state.ts",
@@ -900,6 +952,30 @@
     {
       "path": "app/src/lib/source_control/conflict_count.ts",
       "summary": "Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root"
+    },
+    {
+      "path": "app/src/lib/source_control/status_groups.ts",
+      "summary": "Pure split of a status into the SOURCE rail's sections: merge conflicts, staged changes, changes"
+    },
+    {
+      "path": "app/src/lib/source_control/status_read_queue.ts",
+      "summary": "FIFO gate bounding how many source-control status reads run at once across every repository"
+    },
+    {
+      "path": "app/src/lib/source_control/status_registry_test.ts",
+      "summary": "Status registry rules: read cap, release/dispose, stale generation, demanded routing, writer, hidden defer, WSL hold,..."
+    },
+    {
+      "path": "app/src/lib/source_control/status_registry_types.ts",
+      "summary": "Public contract of the source-control status registry: slot view, read phase, writer, host state"
+    },
+    {
+      "path": "app/src/lib/source_control/status_registry.ts",
+      "summary": "The one app-lifetime source-control status read owner: per-repo demand, LRU-kept statuses, capped reads, writer attach"
+    },
+    {
+      "path": "app/src/lib/source_control/status_slot.ts",
+      "summary": "One repository's status slot and its read lifecycle: generation guard, hidden/held deferral, transient retry"
     },
     {
       "path": "app/src/lib/source_control/tree_decorations.ts",
@@ -1386,16 +1462,20 @@
       "summary": "Singular chronological feed, repository section rules and Stream-family entry chassis"
     },
     {
+      "path": "app/src/styles/overview/overview_git.css",
+      "summary": "Overview Git column: glass shell, Stream-family repository blocks, state lines and dense read-only rows"
+    },
+    {
       "path": "app/src/styles/overview/overview_image.css",
       "summary": "Width-sized image workspace launcher on the Stream strip's slot and checkerboard"
     },
     {
       "path": "app/src/styles/overview/overview_panel.css",
-      "summary": "Overview glass panel, active-repository filter chips and the monitoring badge"
+      "summary": "Overview feed glass panel, and the toolbar strip of active-repository filter chips and the monitoring badge"
     },
     {
       "path": "app/src/styles/overview/overview_view.css",
-      "summary": "Full-pane Overview feed and file workspace without remounting the reading surface"
+      "summary": "Full-pane Overview: toolbar strip over the feed and Git column grid, and the file workspace without remounting"
     },
     {
       "path": "app/src/styles/overview/overview_workspace.css",
@@ -1703,7 +1783,11 @@
     },
     {
       "path": "crates/im_agent/src/repos/delta/baseline_cache.rs",
-      "summary": "Byte-bounded LRU of the text last served per path, per repo"
+      "summary": "Byte-bounded LRU of the baseline (text or line fingerprints) last served per path, per repo"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/baseline.rs",
+      "summary": "One retained baseline - full text for ordinary files, 64-bit line fingerprints for large ones"
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_budget_tests.rs",
@@ -1714,8 +1798,16 @@
       "summary": "The delta read budget - burst token bucket, causal refill, gone budget, per-window log gates, and the per-change char..."
     },
     {
+      "path": "crates/im_agent/src/repos/delta/delta_build.rs",
+      "summary": "The blocking half of a text delta - diff settled content against its baseline and derive the baseline retained next"
+    },
+    {
       "path": "crates/im_agent/src/repos/delta/delta_cache_tests.rs",
       "summary": "Baseline cache tests - byte budget, LRU eviction and the rename carry"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/delta_index_capture.rs",
+      "summary": "The index rung of the baseline ladder - stage-0 blob captured before the worktree read, fingerprinted off the runtime..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_limits.rs",
@@ -1751,7 +1843,7 @@
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_resolve_text.rs",
-      "summary": "The text arm of the resolver - index baseline captured before the worktree read, deadline-bounded owned read permits,..."
+      "summary": "The text arm of the resolver - deadline-bounded owned read permits, the zero-length first-sighting rule, the baseline..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/delta_resolve.rs",
@@ -1786,8 +1878,16 @@
       "summary": "The delta worker loop - drains settled changes, applies the burst budget, evicts stale baselines, stamps and publishe..."
     },
     {
+      "path": "crates/im_agent/src/repos/delta/large_delta_tests.rs",
+      "summary": "Large-content tests - per-row cap, fingerprint baselines (diff, budget, deletion, rename-over) and the raised read bound"
+    },
+    {
       "path": "crates/im_agent/src/repos/delta/mod.rs",
       "summary": "Bounded delta pipeline for fileDelta - named bounds, DeltaService owner, pure-core exports"
+    },
+    {
+      "path": "crates/im_agent/src/repos/delta/patch_render.rs",
+      "summary": "Renders diff ops as hunks-only unified patch text - per-row length cap, PATCH_MAX_BYTES budget, removed rows omitted..."
     },
     {
       "path": "crates/im_agent/src/repos/delta/settle_change.rs",
@@ -1799,7 +1899,7 @@
     },
     {
       "path": "crates/im_agent/src/repos/delta/unified_patch.rs",
-      "summary": "Hunks-only unified patch text and exact stats for one delta"
+      "summary": "Hunks-only unified patch text and exact stats for one delta, against a text or fingerprint baseline"
     },
     {
       "path": "crates/im_agent/src/repos/file_activity.rs",
@@ -1808,6 +1908,26 @@
     {
       "path": "crates/im_agent/src/repos/generated_code_extensions.rs",
       "summary": "Generated extension list for fallback code classification in the Rust agent. Generated by: scripts/classification/gen..."
+    },
+    {
+      "path": "crates/im_agent/src/repos/git_ignore/git_ignore_tests.rs",
+      "summary": "Real-repository tests for the Git ignore filter: info/exclude, tracked override, and event reload"
+    },
+    {
+      "path": "crates/im_agent/src/repos/git_ignore/loader.rs",
+      "summary": "Gathers a repo's Git ignore files (tracked .gitignore, info/exclude, core.excludesFile) off the async runtime"
+    },
+    {
+      "path": "crates/im_agent/src/repos/git_ignore/mod.rs",
+      "summary": "Watcher-side Git ignore filter: suppresses ignored untracked paths and reloads rules when ignore files change"
+    },
+    {
+      "path": "crates/im_agent/src/repos/git_ignore/rules_tests.rs",
+      "summary": "Unit tests for Git ignore rule precedence, directory patterns, and negation"
+    },
+    {
+      "path": "crates/im_agent/src/repos/git_ignore/rules.rs",
+      "summary": "Compiled Git ignore rules with Git's per-directory precedence and excluded-parent semantics"
     },
     {
       "path": "crates/im_agent/src/repos/ignore_matcher.rs",

@@ -13,8 +13,11 @@ use crate::protocol::FileKind;
 use crate::repos::source_control_watch::TrackedPathSet;
 use crate::server::EventBus;
 
+mod baseline;
 mod baseline_cache;
 mod delta_budget;
+mod delta_build;
+mod delta_index_capture;
 mod delta_limits;
 mod delta_read;
 mod delta_reads;
@@ -25,6 +28,7 @@ mod delta_worker;
 mod delta_worker_counters;
 mod delta_worker_emit;
 mod delta_worker_evict;
+mod patch_render;
 mod settle_change;
 mod settle_queue;
 mod unified_patch;
@@ -47,13 +51,16 @@ mod delta_resolve_text_tests;
 mod delta_test_support;
 #[cfg(test)]
 mod delta_worker_tests;
+#[cfg(test)]
+mod large_delta_tests;
 
+pub(crate) use baseline::Baseline;
 pub(crate) use baseline_cache::BaselineCache;
 pub use delta_limits::DeltaLimits;
 pub(crate) use delta_read::{read_settled, ReadOutcome};
 pub(crate) use settle_change::{PendingChange, PendingOp};
 pub(crate) use settle_queue::SettleQueue;
-pub(crate) use unified_patch::{all_added_patch, all_removed_patch, compute_patch, PatchOutput};
+pub(crate) use unified_patch::{all_added_patch, all_removed_patch, PatchOutput};
 
 /// Quiet period that absorbs an editor's write-truncate-rename dance
 /// within the 150-300 ms card budget.
@@ -74,10 +81,18 @@ pub(crate) const DRAIN_BATCH: usize = 16;
 /// read; bounds the truncate-then-write retry at ~3 x SETTLE_WINDOW.
 pub(crate) const MAX_RESETTLES: u32 = 3;
 
-/// Largest file the stream reads or diffs; above this the payload is `Opaque(tooLarge)`.
+/// Largest file whose full text is retained as its baseline; a larger file
+/// keeps only line fingerprints, so its next card cannot show removed text.
 pub(crate) const MAX_DELTA_FILE_BYTES: u64 = 512 * 1024;
 
-/// Baseline text retained per repo. Bounds agent memory at repos x 16 MiB.
+/// Largest file the stream reads or diffs at all; above this the payload is `Opaque(tooLarge)`.
+pub(crate) const MAX_FINGERPRINT_FILE_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Most lines one fingerprint baseline may hold (8 MiB of prints, half the repo
+/// budget), so one huge file cannot evict every other baseline; above it `Opaque(tooLarge)`.
+pub(crate) const MAX_FINGERPRINT_LINES: usize = 1 << 20;
+
+/// Baseline text and line fingerprints retained per repo. Bounds agent memory at repos x 16 MiB.
 pub(crate) const CACHE_BYTES_PER_REPO: usize = 16 * 1024 * 1024;
 
 /// Wall-clock budget handed to `similar`; past it the algorithm approximates
@@ -90,6 +105,10 @@ pub(crate) const CONTEXT_RADIUS: usize = 3;
 /// Largest patch published for one delta. Keeps the 128-slot event bus's worst
 /// case near 9 MiB and the card's parse cost flat.
 pub(crate) const PATCH_MAX_BYTES: usize = 64 * 1024;
+
+/// Longest text published for one patch row (cut on a char boundary, `truncated`
+/// set), so one minified line never pushes its whole hunk past `PATCH_MAX_BYTES`.
+pub(crate) const PATCH_LINE_MAX_BYTES: usize = 1024;
 
 /// Concurrent settled reads across the whole agent process, so the stream can
 /// never contend with the user's own IO.

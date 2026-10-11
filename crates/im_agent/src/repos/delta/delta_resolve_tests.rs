@@ -11,7 +11,13 @@ use crate::protocol::{DeltaPayload, FileKind};
 
 use super::delta_resolve::{resolve_image, Resolution};
 use super::delta_resolve_text::{expect_nonempty, move_rename_baseline};
-use super::{read_settled, BaselineCache, PendingChange, PendingOp, ReadOutcome, MAX_RESETTLES};
+use super::{
+    read_settled, Baseline, BaselineCache, PendingChange, PendingOp, ReadOutcome, MAX_RESETTLES,
+};
+
+fn base(text: &str) -> Baseline {
+    Baseline::Text(Arc::from(text))
+}
 
 /// The baseline moves with a rename exactly once. A re-settled rename finds
 /// nothing left at the source, and a second move would evict the very baseline
@@ -20,15 +26,18 @@ use super::{read_settled, BaselineCache, PendingChange, PendingOp, ReadOutcome, 
 fn rename_moves_the_baseline_once() {
     let mut cache = BaselineCache::new(1024);
     let text: Arc<str> = Arc::from("fn a() {}\n");
-    cache.insert("src/old.rs".to_string(), text);
+    cache.insert("src/old.rs".to_string(), Baseline::Text(text));
 
     move_rename_baseline(&mut cache, Some("src/old.rs"), "src/new.rs", 0);
-    assert_eq!(cache.get("src/new.rs").as_deref(), Some("fn a() {}\n"));
+    assert_eq!(
+        cache.get("src/new.rs").as_ref().and_then(Baseline::text),
+        Some("fn a() {}\n")
+    );
     assert!(cache.get("src/old.rs").is_none(), "the source moved away");
 
     move_rename_baseline(&mut cache, Some("src/old.rs"), "src/new.rs", 1);
     assert_eq!(
-        cache.get("src/new.rs").as_deref(),
+        cache.get("src/new.rs").as_ref().and_then(Baseline::text),
         Some("fn a() {}\n"),
         "a re-settled rename keeps the baseline it already moved",
     );
@@ -45,8 +54,8 @@ fn a_first_sighting_modify_holds_an_empty_read_back() {
         "an uncached modify still expects content",
     );
     assert!(!expect_nonempty(&PendingOp::Add, None));
-    assert!(!expect_nonempty(&PendingOp::Add, Some("")));
-    assert!(expect_nonempty(&PendingOp::Add, Some("fn a() {}\n")));
+    assert!(!expect_nonempty(&PendingOp::Add, Some(&base(""))));
+    assert!(expect_nonempty(&PendingOp::Add, Some(&base("fn a() {}\n"))));
 
     let root = tempdir().expect("tempdir");
     let path = root.path().join("main.ts");

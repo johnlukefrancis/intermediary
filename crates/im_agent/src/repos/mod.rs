@@ -5,6 +5,7 @@ mod categorizer;
 pub(crate) mod delta;
 mod file_activity;
 mod generated_code_extensions;
+mod git_ignore;
 mod ignore_matcher;
 mod image_file_reader;
 mod import;

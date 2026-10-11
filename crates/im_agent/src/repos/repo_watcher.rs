@@ -12,6 +12,7 @@ use crate::logging::Logger;
 use crate::protocol::{AgentEvent, FileEntry, SnapshotEvent};
 use crate::repos::categorizer::Categorizer;
 use crate::repos::delta::{DeltaLimits, DeltaService};
+use crate::repos::git_ignore::GitIgnoreFilter;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
@@ -20,7 +21,7 @@ use crate::repos::repo_watcher_startup::{
     create_watcher, filter_initial_entries, load_tracked_set,
 };
 use crate::repos::source_control_watch::{
-    resolve_external_watches, SourceControlChangeDetector, SourceControlWatch,
+    resolve_external_watches, SourceControlChangeDetector, SourceControlWatch, TrackedPathSet,
 };
 use crate::repos::watcher_error::build_watcher_error_event;
 use crate::server::EventBus;
@@ -61,6 +62,16 @@ impl RepoWatcher {
         combined_ignore_globs.extend(config.classification_ignore_globs.clone());
         let ignore_matcher = IgnoreMatcher::new(&combined_ignore_globs)?;
 
+        let root_path = PathBuf::from(&config.root_path);
+        let external_watches = resolve_external_watches(&root_path, &config.logger).await;
+        let tracked = TrackedPathSet::empty();
+        let git_ignore =
+            GitIgnoreFilter::new(root_path.clone(), tracked.clone(), config.logger.clone());
+        tokio::join!(
+            load_tracked_set(&root_path, &tracked, &config.logger),
+            git_ignore.load_now()
+        );
+
         let mut mru = MruIndex::new(config.mru_capacity).map_err(AgentError::internal)?;
         let initial_entries = config
             .recent_store
@@ -71,14 +82,10 @@ impl RepoWatcher {
                 Some(&ignore_matcher),
             )
             .await;
-        let initial_entries = filter_initial_entries(initial_entries, &ignore_matcher);
+        let initial_entries = filter_initial_entries(initial_entries, &ignore_matcher, &git_ignore);
         if !initial_entries.is_empty() {
             mru.load_from(initial_entries);
         }
-
-        let root_path = PathBuf::from(&config.root_path);
-        let external_watches = resolve_external_watches(&root_path, &config.logger).await;
-        let tracked = load_tracked_set(&root_path, &config.logger).await;
 
         let detector = SourceControlChangeDetector::new(
             &root_path,
@@ -136,6 +143,7 @@ impl RepoWatcher {
                 root_identity: &root_identity,
                 categorizer: &categorizer,
                 ignore_matcher: &ignore_matcher,
+                git_ignore: &git_ignore,
                 mru: &mru_clone,
                 recent_store: &recent_store,
                 event_bus: &event_bus,

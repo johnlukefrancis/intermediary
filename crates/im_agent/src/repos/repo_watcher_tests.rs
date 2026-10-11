@@ -6,6 +6,7 @@ use crate::logging::{LogConfig, LogLevel, Logger};
 use crate::protocol::{FileChangeType, FileEntry, FileKind};
 use crate::repos::categorizer::Categorizer;
 use crate::repos::delta::{DeltaLimits, DeltaService, PendingChange, PendingOp};
+use crate::repos::git_ignore::GitIgnoreFilter;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
@@ -19,8 +20,8 @@ use notify::{Event, EventKind};
 use std::path::PathBuf;
 use tokio::sync::{broadcast, RwLock};
 
-#[test]
-fn test_filter_initial_entries_applies_ignore_globs() {
+#[tokio::test]
+async fn test_filter_initial_entries_applies_ignore_globs() {
     let matcher = IgnoreMatcher::new(&["**/*.cpp".to_string()]).expect("valid ignore glob");
     let entry = |path: &str, kind| FileEntry {
         path: path.to_string(),
@@ -35,7 +36,7 @@ fn test_filter_initial_entries_applies_ignore_globs() {
         entry("docs/readme.md", FileKind::Docs),
     ];
 
-    let filtered = filter_initial_entries(entries, &matcher);
+    let filtered = filter_initial_entries(entries, &matcher, &EventHarness::new().await.git_ignore);
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0].path, "docs/readme.md");
 }
@@ -50,6 +51,7 @@ struct EventHarness {
     event_bus: EventBus,
     categorizer: Categorizer,
     ignore_matcher: IgnoreMatcher,
+    git_ignore: GitIgnoreFilter,
     mru: RwLock<MruIndex>,
     recent_store: RecentFilesStore,
     source_control: SourceControlWatch,
@@ -78,10 +80,11 @@ impl EventHarness {
                 "repo-1".to_string(),
                 event_bus.clone(),
                 detector,
-                tracked,
+                tracked.clone(),
                 root.clone(),
                 logger.clone(),
             ),
+            git_ignore: GitIgnoreFilter::new(root.clone(), tracked, logger.clone()),
             delta: DeltaService::new_queue_only(),
             categorizer: Categorizer::new(&["**/*.md".to_string()], &["**/*.rs".to_string()])
                 .expect("globs"),
@@ -103,6 +106,7 @@ impl EventHarness {
             root_identity: &self.root_identity,
             categorizer: &self.categorizer,
             ignore_matcher: &self.ignore_matcher,
+            git_ignore: &self.git_ignore,
             mru: &self.mru,
             recent_store: &self.recent_store,
             event_bus: &self.event_bus,

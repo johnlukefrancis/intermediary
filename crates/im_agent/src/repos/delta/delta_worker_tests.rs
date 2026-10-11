@@ -18,7 +18,8 @@ use super::delta_worker::{DeltaWorker, WorkerLinks};
 use super::delta_worker_counters::DeltaCounters;
 use super::delta_worker_evict::evict_withheld;
 use super::{
-    BaselineCache, DeltaLimits, PendingChange, PendingOp, SettleQueue, BURST_BUDGET, BURST_WINDOW,
+    Baseline, BaselineCache, DeltaLimits, PendingChange, PendingOp, SettleQueue, BURST_BUDGET,
+    BURST_WINDOW,
 };
 
 fn change(path: &str, abs: std::path::PathBuf, kind: FileKind, op: PendingOp) -> PendingChange {
@@ -42,9 +43,9 @@ fn change(path: &str, abs: std::path::PathBuf, kind: FileKind, op: PendingOp) ->
 #[test]
 fn a_withheld_rename_evicts_both_baselines() {
     let mut cache = BaselineCache::new(4096);
-    cache.insert("src/old.rs".to_string(), Arc::from("a\n"));
-    cache.insert("src/new.rs".to_string(), Arc::from("b\n"));
-    cache.insert("src/other.rs".to_string(), Arc::from("c\n"));
+    cache.insert("src/old.rs".to_string(), Baseline::Text(Arc::from("a\n")));
+    cache.insert("src/new.rs".to_string(), Baseline::Text(Arc::from("b\n")));
+    cache.insert("src/other.rs".to_string(), Baseline::Text(Arc::from("c\n")));
 
     let rename = change(
         "src/new.rs",

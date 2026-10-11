@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/repos/delta/delta_resolve_text.rs
-// Description: The text arm of the resolver - index baseline captured before the worktree read, deadline-bounded owned read permits, the zero-length first-sighting rule, the baseline ladder and diff
+// Description: The text arm of the resolver - deadline-bounded owned read permits, the zero-length first-sighting rule, the baseline ladder and the blocking diff
 
 use std::sync::Arc;
 use std::time::Instant;
@@ -8,18 +8,17 @@ use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
 use crate::protocol::{DeltaBaseline, DeltaPayload, OpaqueReason};
 
+use super::delta_build::build_delta;
+use super::delta_index_capture::capture_index_baseline;
 use super::delta_resolve::{emit, text_payload, unreadable, Resolution, ResolveContext};
 use super::delta_stamp::{now_stamp, stamp_from_ms};
 use super::{
-    all_added_patch, compute_patch, BaselineCache, PendingChange, PendingOp, ReadOutcome,
-    DIFF_DEADLINE, MAX_RESETTLES, READ_DEADLINE,
+    Baseline, BaselineCache, PendingChange, PendingOp, ReadOutcome, DIFF_DEADLINE, MAX_RESETTLES,
+    READ_DEADLINE,
 };
 
-/// The baseline ladder, in causal order: cache (renamed first) => index blob
-/// of the origin path => none. For an uncached path the index is read BEFORE
-/// the worktree and captured on the change, so the pair a `VS INDEX` card
-/// compares was taken in one order and a re-settle diffs against the same
-/// index text rather than an index a commit may have moved since.
+/// The causal baseline ladder: cache (renamed first) => index of the origin, then the
+/// destination, read BEFORE the worktree and captured on the change => none.
 pub(super) async fn resolve_text_read(
     context: &mut ResolveContext<'_>,
     change: &mut PendingChange,
@@ -31,11 +30,14 @@ pub(super) async fn resolve_text_read(
     };
     move_rename_baseline(context.cache, from.as_deref(), &path, change.resettles);
     let previous = context.cache.get(&path);
-    let expect_content = expect_nonempty(&change.op, previous.as_deref());
+    let expect_content = expect_nonempty(&change.op, previous.as_ref());
 
     let (baseline, old, failure) = match previous {
         Some(old) => (DeltaBaseline::PreviousSighting, Some(old), None),
-        None => capture_index_baseline(context, change, from.as_deref().unwrap_or(&path)).await,
+        None => {
+            let origin = from.clone().unwrap_or_else(|| path.clone());
+            capture_index_baseline(context, change, &origin).await
+        }
     };
 
     // A stopped watcher cannot cancel an in-flight blocking read: the pool
@@ -79,82 +81,49 @@ pub(super) async fn resolve_text_read(
     };
 
     let new: Arc<str> = Arc::from(content);
-    if settled_empty_against_index(baseline, old.as_deref(), &new) {
+    if settled_empty_against_index(baseline, old.as_ref(), &new) {
         // The zero-length rule: no card and no baseline, so the next sighting
         // is still a first sighting and diffs against the index again.
         return Resolution::Drop;
     }
-    let patch = match old {
-        Some(old) => {
-            let permit = match acquire_owned(context.permits).await {
-                Ok(permit) => permit,
-                Err(denied) => return permit_denied(context, &path, denied),
-            };
-            let new_text = Arc::clone(&new);
-            let diffed = tokio::time::timeout(
-                READ_DEADLINE,
-                tokio::task::spawn_blocking(move || {
-                    let _held = permit;
-                    compute_patch(&old, &new_text, Instant::now() + DIFF_DEADLINE)
-                }),
-            )
-            .await;
-            match diffed {
-                Ok(Ok(patch)) => patch,
-                Ok(Err(err)) => {
-                    context.cache.remove(&path);
-                    return unreadable(0, format!("diff task failed: {err}"));
-                }
-                Err(_) => {
-                    context.cache.remove(&path);
-                    return unreadable(0, "diff exceeded READ_DEADLINE".to_string());
-                }
-            }
-        }
-        None => all_added_patch(&new),
+    let permit = match acquire_owned(context.permits).await {
+        Ok(permit) => permit,
+        Err(denied) => return permit_denied(context, &path, denied),
     };
-    context.cache.insert(path, new);
+    let built = tokio::time::timeout(
+        READ_DEADLINE,
+        tokio::task::spawn_blocking(move || {
+            let _held = permit;
+            build_delta(old.as_ref(), new, Instant::now() + DIFF_DEADLINE)
+        }),
+    )
+    .await;
+    let built = match built {
+        Ok(Ok(built)) => built,
+        Ok(Err(err)) => {
+            context.cache.remove(&path);
+            return unreadable(0, format!("diff task failed: {err}"));
+        }
+        Err(_) => {
+            context.cache.remove(&path);
+            return unreadable(0, "diff exceeded READ_DEADLINE".to_string());
+        }
+    };
+    match built.retained {
+        Some(retained) => context.cache.insert(path, retained),
+        None => {
+            context.cache.remove(&path);
+        }
+    }
     emit(
-        text_payload(patch, baseline),
+        text_payload(built.patch, baseline),
         stamp_from_ms(mtime_ms),
         failure,
     )
 }
 
-/// The index half of a first sighting. Reuses the capture a previous attempt
-/// left on the change; otherwise fetches it now, before the worktree is read,
-/// and stores it. A Git failure is not captured, so a re-settle tries again
-/// and the failure still reaches the log through this attempt's `failure`.
-async fn capture_index_baseline(
-    context: &mut ResolveContext<'_>,
-    change: &mut PendingChange,
-    origin: &str,
-) -> (DeltaBaseline, Option<Arc<str>>, Option<String>) {
-    let captured = match &change.index_baseline {
-        Some(captured) => captured.clone(),
-        None => match context
-            .reads
-            .index_text(context.root, origin, context.cancel.clone())
-            .await
-        {
-            Ok(text) => {
-                let text = text.map(Arc::from);
-                change.index_baseline = Some(text.clone());
-                text
-            }
-            Err(err) => {
-                return (DeltaBaseline::None, None, Some(err.message().to_string()));
-            }
-        },
-    };
-    match captured {
-        Some(text) => (DeltaBaseline::Index, Some(text), None),
-        None => (DeltaBaseline::None, None, None),
-    }
-}
-
 /// Why a read permit was not obtained.
-enum PermitDenied {
+pub(super) enum PermitDenied {
     /// The semaphore was closed, which never happens in the product: the
     /// permits live on the runtime for the life of the process.
     Closed,
@@ -164,7 +133,9 @@ enum PermitDenied {
 }
 
 /// Waits at most `READ_DEADLINE` for one of the process-wide read permits.
-async fn acquire_owned(permits: &Arc<Semaphore>) -> Result<OwnedSemaphorePermit, PermitDenied> {
+pub(super) async fn acquire_owned(
+    permits: &Arc<Semaphore>,
+) -> Result<OwnedSemaphorePermit, PermitDenied> {
     match tokio::time::timeout(READ_DEADLINE, Arc::clone(permits).acquire_owned()).await {
         Ok(Ok(permit)) => Ok(permit),
         Ok(Err(_closed)) => Err(PermitDenied::Closed),
@@ -193,16 +164,14 @@ fn permit_denied(context: &mut ResolveContext<'_>, path: &str, denied: PermitDen
 /// (`PreviousSighting`) an empty read is an honest emptying and prints.
 pub(super) fn settled_empty_against_index(
     baseline: DeltaBaseline,
-    old: Option<&str>,
+    old: Option<&Baseline>,
     new: &str,
 ) -> bool {
-    baseline == DeltaBaseline::Index && new.is_empty() && old.is_some_and(|text| !text.is_empty())
+    baseline == DeltaBaseline::Index && new.is_empty() && old.is_some_and(|old| !old.is_empty())
 }
 
-/// Moves the baseline with a renamed path, on the FIRST attempt only. A
-/// re-settled rename finds nothing left at `from`, and `BaselineCache::rename`
-/// treats a missing source as "no baseline any more" - so repeating the move
-/// would evict the very baseline the first attempt carried across.
+/// Moves the baseline with a renamed path, on the FIRST attempt only, so a
+/// re-settle never re-applies a move whose source a later write may have reused.
 pub(super) fn move_rename_baseline(
     cache: &mut BaselineCache,
     from: Option<&str>,
@@ -219,6 +188,6 @@ pub(super) fn move_rename_baseline(
 /// empty read is the truncate half of a truncate-then-write even on a first
 /// sighting where no baseline exists to compare against; an add or a rename
 /// landing empty is taken at face value.
-pub(super) fn expect_nonempty(op: &PendingOp, previous: Option<&str>) -> bool {
-    matches!(op, PendingOp::Modify) || previous.is_some_and(|text| !text.is_empty())
+pub(super) fn expect_nonempty(op: &PendingOp, previous: Option<&Baseline>) -> bool {
+    matches!(op, PendingOp::Modify) || previous.is_some_and(|old| !old.is_empty())
 }

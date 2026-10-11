@@ -88,3 +88,13 @@ export function acceptDetails(activity: OverviewActivity, event: FileDeltaEvent 
   activity.missedDetails += event.withheld + event.dropped;
   return true;
 }
+
+/** Stream's rule: a modify whose settled text gained and lost nothing is no news, so its raw signal goes too */
+export function isUnchangedEdit(event: FileDeltaEvent): boolean {
+  return event.op === "modify" && event.payload.kind === "text"
+    && event.payload.stats.added + event.payload.stats.removed === 0;
+}
+
+export function retractLiveSignal(activity: OverviewActivity, path: string): void {
+  activity.recent = activity.recent.filter((signal) => signal.source !== "live" || signal.path !== path);
+}

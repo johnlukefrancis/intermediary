@@ -7,7 +7,7 @@ use crate::protocol::DeltaBaseline;
 
 use super::delta_resolve::Resolution;
 use super::delta_test_support::{change, text, text_of, Harness, RecordingReads};
-use super::{ReadOutcome, DELTA_READ_CONCURRENCY};
+use super::{Baseline, ReadOutcome, DELTA_READ_CONCURRENCY};
 
 /// On a first sighting the index blob is fetched BEFORE the worktree is read,
 /// so the pair a `VS INDEX` card compares was captured in one causal order.
@@ -26,7 +26,8 @@ async fn index_blob_is_read_before_the_worktree_on_a_first_sighting() {
         change
             .index_baseline
             .as_ref()
-            .and_then(|text| text.as_deref()),
+            .and_then(Option::as_ref)
+            .and_then(Baseline::text),
         Some("old\n"),
         "the capture stays on the change"
     );
@@ -48,7 +49,8 @@ async fn a_resettle_reuses_the_captured_index_baseline() {
         change
             .index_baseline
             .as_ref()
-            .and_then(|text| text.as_deref()),
+            .and_then(Option::as_ref)
+            .and_then(Baseline::text),
         Some("old\n")
     );
     change.resettles += 1;
@@ -72,7 +74,11 @@ async fn an_unchanged_first_sighting_still_emits_a_zero_stat_delta() {
     assert_eq!((added, removed), (0, 0));
     assert!(patch.is_empty());
     assert_eq!(
-        harness.cache.get("src/main.rs").as_deref(),
+        harness
+            .cache
+            .get("src/main.rs")
+            .as_ref()
+            .and_then(Baseline::text),
         Some("same\n"),
         "the sighting is cached, so the next card says SINCE LAST"
     );

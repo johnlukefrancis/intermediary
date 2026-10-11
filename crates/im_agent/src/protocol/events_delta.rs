@@ -46,7 +46,7 @@ pub struct DeltaStats {
 pub enum OpaqueReason {
     /// A NUL byte or invalid UTF-8.
     Binary,
-    /// Over `MAX_DELTA_FILE_BYTES`.
+    /// Over `MAX_FINGERPRINT_FILE_BYTES`, or too many lines to fingerprint.
     TooLarge,
     /// The read failed for any other reason.
     Unreadable,

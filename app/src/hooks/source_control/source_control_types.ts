@@ -7,16 +7,11 @@ import type {
   SourceControlScope,
   SourceControlStatus,
 } from "../../shared/protocol.js";
+import type { SourceControlReadPhase } from "../../lib/source_control/status_registry_types.js";
 
-/**
- * waiting -> loading -> ready | error; reconciling is entered when an action's outcome is
- * unknown and leaves on a status read that finds no mutation running (or on its budget expiring).
- */
+/** Reconciling: entered when an action's outcome is unknown; left on a read with no mutation running or on budget expiry */
 export type SourceControlPhase =
-  | { kind: "waiting" }
-  | { kind: "loading" }
-  | { kind: "ready" }
-  | { kind: "error"; code: string | null; message: string }
+  | SourceControlReadPhase
   | { kind: "reconciling"; action: SourceControlActionKind };
 
 /** A rejection the agent proved had no effect (`details.effect: notApplied`); shown inline */
@@ -34,11 +29,8 @@ export interface SourceControlCommit {
   at: number;
 }
 
-/**
- * The exact reviewed snapshot the COMMIT click (or the outside-root confirm modal) freezes.
- * A background status refresh while a commit is pending never rebinds these fields — the agent
- * itself refuses when the repository has moved past the snapshot frozen here.
- */
+/** The reviewed snapshot the COMMIT click freezes; a background refresh never rebinds it, and the
+ * agent refuses when the repository has moved past it */
 export interface SourceControlCommitRequest {
   message: string;
   /** `snapshotId` of the status that was on screen at the click; never empty */

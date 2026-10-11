@@ -129,8 +129,7 @@ impl EventContext<'_> {
     }
 
     /// `fileChanged` add for the destination, then exactly one delta mark: a
-    /// rename when the source is known and inside the root, otherwise a plain
-    /// add mark.
+    /// rename from a known, in-root, not Git-ignored source, else a plain add.
     async fn mark_rename_to(&self, to_path: &Path, from_path: Option<&Path>) {
         let Some((to_rel, kind)) = self
             .apply_change(to_path, FileChangeType::Add, DeltaIntent::Skip)
@@ -139,7 +138,10 @@ impl EventContext<'_> {
             return;
         };
         let to_owned = to_path.to_path_buf();
-        match from_path.and_then(|from| self.relative_of(from)) {
+        let from_rel = from_path
+            .and_then(|from| self.relative_of(from))
+            .filter(|from_rel| !self.git_ignore.is_suppressed(from_rel));
+        match from_rel {
             Some(from_rel) => self.delta.note_rename(&from_rel, &to_rel, to_owned, kind),
             None => self
                 .delta

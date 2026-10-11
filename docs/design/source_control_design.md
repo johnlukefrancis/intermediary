@@ -1,5 +1,5 @@
 # Source Control Design
-Updated on: 2026-09-03
+Updated on: 2026-10-11
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 
@@ -164,6 +164,10 @@ reported from before/after HEAD (commit) or from the refreshed lists.
 - With one bundle preset the preset selector is empty; when a second preset ships it stays inside the ZIPS
   body under the rail header, never as a second segmented rocker in the header.
 - Rows use the stacked name-over-directory idiom and must fit the 300px workspace-mode rail.
+- The row face (`source_control_entry_face.tsx`: icon, name over directory, change badge, and the
+  `opensDiff` rule) and the section head (`source_control_section_head.tsx`: chevron, alert mark,
+  `LABEL [n]`, bulk slot) are shared with the Overview Git column. That column sets the face on one line
+  and opens diffs on a single click; it has no row or bulk actions.
 
 ## Accepted boundaries
 

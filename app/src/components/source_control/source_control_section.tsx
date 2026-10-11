@@ -4,8 +4,9 @@
 import type React from "react";
 import { useId, useState } from "react";
 import type { SourceControlEntry } from "../../shared/protocol.js";
-import { ChevronIcon, DiscardIcon, MinusIcon, PlusIcon } from "./source_control_icons.js";
+import { DiscardIcon, MinusIcon, PlusIcon } from "./source_control_icons.js";
 import { SourceControlRow, type RowActionKind } from "./source_control_row.js";
+import { SourceControlSectionHead } from "./source_control_section_head.js";
 
 const MAX_ROWS = 500;
 
@@ -59,23 +60,14 @@ export function SourceControlSection({
       data-tone={tone}
       data-collapsed={collapsed || undefined}
     >
-      <div className="source-control-section__header">
-        <button
-          type="button"
-          className="source-control-section__toggle"
-          aria-expanded={!collapsed}
-          aria-controls={bodyId}
-          onClick={() => { setCollapsed((value) => !value); }}
-        >
-          <span className="source-control-section__chevron" aria-hidden="true">
-            <ChevronIcon />
-          </span>
-          {tone === "alert" && (
-            <span className="source-control-section__alert" aria-hidden="true">!</span>
-          )}
-          <span className="source-control-section__title">{title}</span>
-          <span className="source-control-section__count">[{entries.length}]</span>
-        </button>
+      <SourceControlSectionHead
+        title={title}
+        tone={tone}
+        count={entries.length}
+        collapsed={collapsed}
+        bodyId={bodyId}
+        onToggle={() => { setCollapsed((value) => !value); }}
+      >
         {bulk?.map((action) => (
           <button
             key={action.kind}
@@ -89,7 +81,7 @@ export function SourceControlSection({
             {bulkIcon(action.kind)}
           </button>
         ))}
-      </div>
+      </SourceControlSectionHead>
       {!collapsed && (
         <div id={bodyId} className="source-control-section__rows" role="list">
           {visible.map((entry) => (

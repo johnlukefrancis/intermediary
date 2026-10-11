@@ -12,7 +12,7 @@ import { DragErrorNotice } from "../components/drag_error_notice.js";
 import { useRepoState } from "../hooks/use_repo_state.js";
 import { useBundleState } from "../hooks/use_bundle_state.js";
 import { useConfig } from "../hooks/use_config.js";
-import { useDeckSection } from "../hooks/use_deck_section.js";
+import { useDeckSection, type DeckLanding } from "../hooks/use_deck_section.js";
 import { useDrag } from "../hooks/use_drag.js";
 import { useAgent } from "../hooks/use_agent.js";
 import { useFileSelection } from "../hooks/use_file_selection.js";
@@ -31,9 +31,10 @@ import type { UiMode } from "../shared/config.js";
 interface RepoTabProps {
   repoId: string;
   uiMode: UiMode;
+  deckLanding: DeckLanding;
 }
 
-export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
+export function RepoTab({ repoId, uiMode, deckLanding }: RepoTabProps): React.JSX.Element {
   const { connectionState, appPaths } = useAgent();
   const { config, setRailWidthPercent, setFilesMode } = useConfig();
   const repo = config.repos.find((entry) => entry.repoId === repoId);
@@ -64,7 +65,7 @@ export function RepoTab({ repoId, uiMode }: RepoTabProps): React.JSX.Element {
   const repoWorkspace = useRepoWorkspace(repoId);
   // Status is fetched for the active repo regardless of the active rail so the SOURCE count stays live.
   const sourceControl = useSourceControlState(repoId);
-  const deckSection = useDeckSection();
+  const deckSection = useDeckSection(deckLanding);
   const [fileFilter, setFileFilter] = useState<FileTypeFilter>("all");
   // The panel mode is global and persisted; the type filter stays per-tab and per-session
   const filesMode = config.uiState.filesMode;

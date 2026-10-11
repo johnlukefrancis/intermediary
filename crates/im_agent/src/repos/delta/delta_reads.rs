@@ -16,11 +16,12 @@ use super::{read_settled, ReadOutcome};
 /// first, worktree second - is provable without a repository.
 pub(super) trait ReadSources: Send + Sync {
     /// The stage-0 index text of `rel` under `root`, or `None` when the index
-    /// has nothing usable. Runs on the async runtime (it spawns `git show`).
+    /// has nothing usable within `limit` bytes. Runs on the async runtime (it spawns `git show`).
     fn index_text<'a>(
         &'a self,
         root: &'a Path,
         rel: &'a str,
+        limit: u64,
         cancel: BundleCancelToken,
     ) -> BoxFuture<'a, Result<Option<String>, AgentError>>;
 
@@ -42,9 +43,10 @@ impl ReadSources for DiskReads {
         &'a self,
         root: &'a Path,
         rel: &'a str,
+        limit: u64,
         cancel: BundleCancelToken,
     ) -> BoxFuture<'a, Result<Option<String>, AgentError>> {
-        Box::pin(read_index_blob(root, rel, Some(cancel)))
+        Box::pin(read_index_blob(root, rel, limit, Some(cancel)))
     }
 
     fn settled_read(

@@ -63,16 +63,23 @@ app/src/components/options/output_folder_section.tsx - Options panel controls fo
 app/src/components/options/reset_section.tsx - Options panel reset settings section with confirmation modal
 app/src/components/options/texture_picker.tsx - Small texture picker popover for tab theme selection
 app/src/components/options/theme_section.tsx - Options panel theme controls (warm mode toggle + texture/accent per tab)
-app/src/components/overview_view.tsx - Connects the Overview presentation to configured roots and its live projection
+app/src/components/overview_view.tsx - Connects Overview's feed and Git column to configured roots, the shared filter and the full-pane workspace
+app/src/components/overview/git/overview_git_column.tsx - Overview's read-only Git column: changed working trees, worktrees nested under their project group
+app/src/components/overview/git/overview_git_group.tsx - One Git column group: shared section head, capped read-only rows that open the diff, and the SOURCE overflow link
+app/src/components/overview/git/overview_git_project.tsx - One grouped project in the Git column: the group's accent rule over a block per worktree with changes
+app/src/components/overview/git/overview_git_repo_head.tsx - Git column repository head: accent label to Stream, reread pulse, SOURCE link, branch line and state badges
+app/src/components/overview/git/overview_git_repo.tsx - One Git column working-tree block (a repository, or one worktree of a project): status, state lines, groups
 app/src/components/overview/overview_feed_entries.ts - Bounded chronological Overview edit, observation and coverage entries
 app/src/components/overview/overview_feed_entry.tsx - One repository-bound feed entry with file opening, context menu and drag-out interactions
 app/src/components/overview/overview_feed.tsx - One chronological repository-labelled Overview feed with tail-follow
 app/src/components/overview/overview_file_head.tsx - Shared Overview filename-over-directory typography, icon and operation badge
+app/src/components/overview/overview_handset_deck.tsx - Handset Overview deck: filter toolbar, then FEED and GIT sections in the handset chassis, both kept mounted behind th...
 app/src/components/overview/overview_image_preview.tsx - Fixed-height real image preview that opens the full file workspace
-app/src/components/overview/overview_panel.tsx - Full-width chronological work feed with active repository chips and watch-health awareness
+app/src/components/overview/overview_panel.tsx - Overview chronological work feed for the shown repositories, with its quiet-state empty panel
 app/src/components/overview/overview_presentation.ts - Overview watch-health summaries and relative edit ages
 app/src/components/overview/overview_settled_edit.tsx - Observed edit with Stream-family file identity and a six-line excerpt
-app/src/components/overview/overview_workspace.tsx - Overview's full-pane file workspace using the shared repository viewers and actions
+app/src/components/overview/overview_toolbar.tsx - Overview glass strip above both columns: active-repository filter chips and the monitoring badge
+app/src/components/overview/overview_workspace.tsx - Overview's full-pane file or diff workspace using the shared repository viewers and actions
 app/src/components/overview/use_overview_follow.ts - Overview tail-follow with a bounded unread set and no private timer
 app/src/components/repo_workspace_panel.tsx - Repo workspace renderer for notes, text buffers, image previews, and text/image diffs
 app/src/components/source_control/source_control_body.tsx - Phase-dependent body of the Source Control column: empty states or the three sections
@@ -80,8 +87,10 @@ app/src/components/source_control/source_control_column.tsx - Source Control col
 app/src/components/source_control/source_control_commit_box.tsx - Commit message textarea (Ctrl+Enter) and compact COMMIT button for the Source Control column
 app/src/components/source_control/source_control_context_menu.ts - Right-click menu items for a source-control row, composed over the shared file items
 app/src/components/source_control/source_control_copy.ts - Action labels, branch labels, and empty-state/error/confirm copy for the Source Control column
+app/src/components/source_control/source_control_entry_face.tsx - Shared changed-path face for SOURCE rows and the Overview Git column: icon, name over dir, change badge
 app/src/components/source_control/source_control_icons.tsx - Inline 24x24 stroke glyphs for source-control controls (stroke supplied by CSS)
-app/src/components/source_control/source_control_row.tsx - One changed-path row: icon, name over dir, change badge, and a hover stage/unstage action
+app/src/components/source_control/source_control_row.tsx - One SOURCE changed-path row: the shared entry face plus a hover stage/unstage action
+app/src/components/source_control/source_control_section_head.tsx - Shared collapsible group header: chevron, alert mark, LABEL [n], and an optional bulk-action slot
 app/src/components/source_control/source_control_section.tsx - Collapsible MERGE CONFLICTS / STAGED CHANGES / CHANGES section with capped rows and a bulk action
 app/src/components/source_control/source_control_status_line.tsx - Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column
 app/src/components/source_control/source_control_warnings.tsx - Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column
@@ -135,9 +144,12 @@ app/src/hooks/bundles/use_tree_selection.ts - Row selection state for the ZIPS t
 app/src/hooks/images/image_tile_records.ts - Shared image tile records, Blob ownership and stable published pixel projections
 app/src/hooks/images/image_tile_thumbnail.ts - Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob
 app/src/hooks/images/use_image_tiles.ts - Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency
+app/src/hooks/overview/use_dirty_repo_ids.ts - The shown repositories whose working tree is not known clean, read from the shared status registry
 app/src/hooks/overview/use_overview_file_actions.ts - Repository-bound Overview context menus and user-triggered drag-out actions
+app/src/hooks/overview/use_overview_git_totals.ts - Changed-file and conflict totals across shown repositories, read from the shared status registry
 app/src/hooks/overview/use_overview_history.ts - Serial initial and reconnect history refresh across connected roots, with host roots first
 app/src/hooks/overview/use_overview_images.ts - Visible Overview image metadata projected into the shared revision-bound tile loader
+app/src/hooks/overview/use_overview_selection.ts - Overview's one repository filter: working set, chip selection and the shown repositories for both columns
 app/src/hooks/overview/use_overview.ts - Overview subscription and visible-only age clock
 app/src/hooks/repo_workspace_diff_loaders.ts - Diff loaders for the repo workspace hook: text patches and two-sided image snapshots
 app/src/hooks/repo_workspace_types.ts - RepoWorkspace union (note, text, image, diff, image diff) and path helpers for the workspace hook
@@ -147,7 +159,8 @@ app/src/hooks/source_control/source_control_failures.ts - Route an agent rejecti
 app/src/hooks/source_control/source_control_reconcile.ts - Bounded backoff loop that resolves an action whose outcome the UI could not observe
 app/src/hooks/source_control/source_control_refresh.ts - Status refresh timing owner: trailing debounce, delayed retries, in-flight dirty flag, post-mutation de-dup
 app/src/hooks/source_control/source_control_types.ts - State-machine and action contract exposed by useSourceControlState
-app/src/hooks/source_control/use_source_control_state.ts - Per-repo source-control status state machine with event-driven refresh and serialized actions
+app/src/hooks/source_control/use_source_control_state.ts - SOURCE write side over the shared status registry: serialized actions, reconciliation, notices, draft
+app/src/hooks/source_control/use_source_control_status.ts - Read side of source-control status: demands the repo while mounted and selects its registry slot
 app/src/hooks/source_control/use_tree_decorations.tsx - Context delivering the built tree decorations to the recursive bundle explorer rows
 app/src/hooks/stream/use_deferred_click.ts - A single click that fires only once the double-click grace has passed; shared by file cards and image strips
 app/src/hooks/stream/use_repo_stream.ts - Binds the active repo's Stream store to React: visibility, selection filter, card and tile actions
@@ -158,7 +171,7 @@ app/src/hooks/terminal/use_terminal_host.ts - Adopts the active terminal tab int
 app/src/hooks/terminal/use_terminal_lifecycle.ts - App-level terminal lifecycle: closes groups of removed repos, mirrors window foreground to cursor blink, closes every...
 app/src/hooks/use_activity_host.ts - One app-lifetime dispatcher for Stream and all-repository Overview activity
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
-app/src/hooks/use_app_navigation.ts - App view selection and remembered repository navigation
+app/src/hooks/use_app_navigation.ts - App view selection, remembered repository navigation and the handset landing intent for a repo tab
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
@@ -228,6 +241,12 @@ app/src/lib/overview/overview_store.ts - App-lifetime all-repository observation
 app/src/lib/overview/overview_types.ts - Bounded repository activity projections for the all-repository Overview
 app/src/lib/source_control/change_badges.ts - Single badge map (letter, variant, label) for every source-control change kind
 app/src/lib/source_control/conflict_count.ts - Conflicts that block a commit: listed unmerged paths plus unmerged paths above the configured root
+app/src/lib/source_control/status_groups.ts - Pure split of a status into the SOURCE rail's sections: merge conflicts, staged changes, changes
+app/src/lib/source_control/status_read_queue.ts - FIFO gate bounding how many source-control status reads run at once across every repository
+app/src/lib/source_control/status_registry_test.ts - Status registry rules: read cap, release/dispose, stale generation, demanded routing, writer, hidden defer, WSL hold,...
+app/src/lib/source_control/status_registry_types.ts - Public contract of the source-control status registry: slot view, read phase, writer, host state
+app/src/lib/source_control/status_registry.ts - The one app-lifetime source-control status read owner: per-repo demand, LRU-kept statuses, capped reads, writer attach
+app/src/lib/source_control/status_slot.ts - One repository's status slot and its read lifecycle: generation guard, hidden/held deferral, transient retry
 app/src/lib/source_control/tree_decorations.ts - Pure projection of a source-control status into per-file and rolled-up per-directory tree decorations
 app/src/lib/stream/stream_bounds.ts - Every numeric bound the Stream panel obeys; the only stream module with literals
 app/src/lib/stream/stream_burst_card.ts - Pure burst card arithmetic: counts per op and kind, top directories, elapsed time
@@ -349,9 +368,10 @@ app/src/styles/options_theme.css - Theme section styles - color picker, texture 
 app/src/styles/overview_navigation.css - Global Overview destination beside the repository tab track
 app/src/styles/overview/overview_detail.css - Stream-family file head, uppercase meta chips, relative clock and the shared diff-row density
 app/src/styles/overview/overview_feed.css - Singular chronological feed, repository section rules and Stream-family entry chassis
+app/src/styles/overview/overview_git.css - Overview Git column: glass shell, Stream-family repository blocks, state lines and dense read-only rows
 app/src/styles/overview/overview_image.css - Width-sized image workspace launcher on the Stream strip's slot and checkerboard
-app/src/styles/overview/overview_panel.css - Overview glass panel, active-repository filter chips and the monitoring badge
-app/src/styles/overview/overview_view.css - Full-pane Overview feed and file workspace without remounting the reading surface
+app/src/styles/overview/overview_panel.css - Overview feed glass panel, and the toolbar strip of active-repository filter chips and the monitoring badge
+app/src/styles/overview/overview_view.css - Full-pane Overview: toolbar strip over the feed and Git column grid, and the file workspace without remounting
 app/src/styles/overview/overview_workspace.css - Full-width Overview file workspace sizing without repository rails
 app/src/styles/panels.css - Modular deck panel surfaces with framed edges and etched headers
 app/src/styles/repo_rail.css - Right-rail panel with a slim section-switch header above the zips or source body
@@ -428,10 +448,13 @@ crates/im_agent/src/protocol/tests_shutdown.rs - Wire-shape tests for the shutdo
 crates/im_agent/src/protocol/tests_source_control.rs - Wire-shape tests for the source-control command and status payloads
 crates/im_agent/src/protocol/tr_fleet_tests.rs - TR fleet protocol command/response serialization tests
 crates/im_agent/src/repos/categorizer.rs - File kind classification based on globs and fallback heuristics
-crates/im_agent/src/repos/delta/baseline_cache.rs - Byte-bounded LRU of the text last served per path, per repo
+crates/im_agent/src/repos/delta/baseline_cache.rs - Byte-bounded LRU of the baseline (text or line fingerprints) last served per path, per repo
+crates/im_agent/src/repos/delta/baseline.rs - One retained baseline - full text for ordinary files, 64-bit line fingerprints for large ones
 crates/im_agent/src/repos/delta/delta_budget_tests.rs - Burst budget tests - per-emit charge, gone budget, causal refill (a flood never refills mid-run, a hot loop does), wi...
 crates/im_agent/src/repos/delta/delta_budget.rs - The delta read budget - burst token bucket, causal refill, gone budget, per-window log gates, and the per-change char...
+crates/im_agent/src/repos/delta/delta_build.rs - The blocking half of a text delta - diff settled content against its baseline and derive the baseline retained next
 crates/im_agent/src/repos/delta/delta_cache_tests.rs - Baseline cache tests - byte budget, LRU eviction and the rename carry
+crates/im_agent/src/repos/delta/delta_index_capture.rs - The index rung of the baseline ladder - stage-0 blob captured before the worktree read, fingerprinted off the runtime...
 crates/im_agent/src/repos/delta/delta_limits.rs - Process-wide delta bounds - the one read-permit semaphore every repo's worker shares
 crates/im_agent/src/repos/delta/delta_order_tests.rs - Resolver causal-order tests through the ReadSources seam - index blob before worktree, capture reused on re-settle, a...
 crates/im_agent/src/repos/delta/delta_patch_tests.rs - Patch grammar, truncation and settled-read tests for the delta pipeline
@@ -440,7 +463,7 @@ crates/im_agent/src/repos/delta/delta_read.rs - Blocking stat-read-restat of one
 crates/im_agent/src/repos/delta/delta_reads.rs - The two reads a text delta depends on - index blob and settled worktree read - behind one seam the resolver is tested...
 crates/im_agent/src/repos/delta/delta_resolve_tests.rs - Per-change decision tests - rename baseline move, first-sighting truncate guard, image metadata failures
 crates/im_agent/src/repos/delta/delta_resolve_text_tests.rs - Text-arm tests - the zero-length first-sighting rule and the READ_DEADLINE bound on the permit wait
-crates/im_agent/src/repos/delta/delta_resolve_text.rs - The text arm of the resolver - index baseline captured before the worktree read, deadline-bounded owned read permits,...
+crates/im_agent/src/repos/delta/delta_resolve_text.rs - The text arm of the resolver - deadline-bounded owned read permits, the zero-length first-sighting rule, the baseline...
 crates/im_agent/src/repos/delta/delta_resolve.rs - Resolves one settled change into a fileDelta payload - dispatch by kind and op, image metadata, the deletion card
 crates/im_agent/src/repos/delta/delta_stamp.rs - RFC 3339 mtime stamps for one delta - now, a SystemTime, or the milliseconds a settled read reported
 crates/im_agent/src/repos/delta/delta_test_support.rs - Resolver test seam - a scripted ReadSources recorder, a change fixture, and the harness that runs resolve against them
@@ -449,12 +472,19 @@ crates/im_agent/src/repos/delta/delta_worker_emit.rs - Builds the fileDelta wire
 crates/im_agent/src/repos/delta/delta_worker_evict.rs - Baseline eviction for changes that never reached the resolver - dropped marks (bounded record, overflow clears all) a...
 crates/im_agent/src/repos/delta/delta_worker_tests.rs - Worker-level tests - a withheld rename evicts both baselines, counters consume the shared seq, the time-bound standal...
 crates/im_agent/src/repos/delta/delta_worker.rs - The delta worker loop - drains settled changes, applies the burst budget, evicts stale baselines, stamps and publishe...
+crates/im_agent/src/repos/delta/large_delta_tests.rs - Large-content tests - per-row cap, fingerprint baselines (diff, budget, deletion, rename-over) and the raised read bound
 crates/im_agent/src/repos/delta/mod.rs - Bounded delta pipeline for fileDelta - named bounds, DeltaService owner, pure-core exports
+crates/im_agent/src/repos/delta/patch_render.rs - Renders diff ops as hunks-only unified patch text - per-row length cap, PATCH_MAX_BYTES budget, removed rows omitted...
 crates/im_agent/src/repos/delta/settle_change.rs - One pending change on the settle queue - its op vocabulary, op collapse, and deadline arithmetic
 crates/im_agent/src/repos/delta/settle_queue.rs - Pure per-path trailing coalescer for the delta pipeline
-crates/im_agent/src/repos/delta/unified_patch.rs - Hunks-only unified patch text and exact stats for one delta
+crates/im_agent/src/repos/delta/unified_patch.rs - Hunks-only unified patch text and exact stats for one delta, against a text or fingerprint baseline
 crates/im_agent/src/repos/file_activity.rs - Activity metadata updates for recent file ranking
 crates/im_agent/src/repos/generated_code_extensions.rs - Generated extension list for fallback code classification in the Rust agent. Generated by: scripts/classification/gen...
+crates/im_agent/src/repos/git_ignore/git_ignore_tests.rs - Real-repository tests for the Git ignore filter: info/exclude, tracked override, and event reload
+crates/im_agent/src/repos/git_ignore/loader.rs - Gathers a repo's Git ignore files (tracked .gitignore, info/exclude, core.excludesFile) off the async runtime
+crates/im_agent/src/repos/git_ignore/mod.rs - Watcher-side Git ignore filter: suppresses ignored untracked paths and reloads rules when ignore files change
+crates/im_agent/src/repos/git_ignore/rules_tests.rs - Unit tests for Git ignore rule precedence, directory patterns, and negation
+crates/im_agent/src/repos/git_ignore/rules.rs - Compiled Git ignore rules with Git's per-directory precedence and excluded-parent semantics
 crates/im_agent/src/repos/ignore_matcher.rs - Ignore glob matcher for repo watcher
 crates/im_agent/src/repos/image_file_reader_tests.rs - Image preview reader tests - mime gate, root escape, size bounds (process-wide and per-request), one-revision binding
 crates/im_agent/src/repos/image_file_reader.rs - Repo-relative image file reader for in-app preview workspaces

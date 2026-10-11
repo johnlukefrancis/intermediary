@@ -4,9 +4,10 @@
 use std::sync::Arc;
 
 use super::baseline_cache::BaselineCache;
+use super::Baseline;
 
-fn text(size: usize) -> Arc<str> {
-    Arc::from("x".repeat(size).as_str())
+fn text(size: usize) -> Baseline {
+    Baseline::Text(Arc::from("x".repeat(size).as_str()))
 }
 
 #[test]
@@ -34,6 +35,6 @@ fn cache_evicts_lru_by_bytes() {
     assert!(cache.get("d").is_none());
     assert!(cache.get("e").is_some(), "a rename carries the baseline");
 
-    assert_eq!(cache.remove("e").map(|entry| entry.len()), Some(100));
+    assert_eq!(cache.remove("e").map(|entry| entry.bytes()), Some(100));
     assert_eq!(cache.bytes(), 200);
 }

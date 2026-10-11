@@ -10,7 +10,11 @@ use crate::protocol::{DeltaBaseline, DeltaPayload, OpaqueReason};
 use super::delta_resolve::Resolution;
 use super::delta_resolve_text::settled_empty_against_index;
 use super::delta_test_support::{change, change_with_op, text, text_of, Harness, RecordingReads};
-use super::PendingOp;
+use super::{Baseline, PendingOp};
+
+fn base(text: &str) -> Baseline {
+    Baseline::Text(Arc::from(text))
+}
 
 /// The zero-length rule, stated on its inputs: only a first sighting that
 /// settled empty against a NON-EMPTY index is held back.
@@ -18,19 +22,19 @@ use super::PendingOp;
 fn the_zero_length_rule_needs_an_empty_read_against_a_non_empty_index() {
     assert!(settled_empty_against_index(
         DeltaBaseline::Index,
-        Some("old\n"),
+        Some(&base("old\n")),
         ""
     ));
     assert!(
-        !settled_empty_against_index(DeltaBaseline::Index, Some(""), ""),
+        !settled_empty_against_index(DeltaBaseline::Index, Some(&base("")), ""),
         "an empty index is not a baseline the empty read could falsify"
     );
     assert!(
-        !settled_empty_against_index(DeltaBaseline::Index, Some("old\n"), "new\n"),
+        !settled_empty_against_index(DeltaBaseline::Index, Some(&base("old\n")), "new\n"),
         "content is content"
     );
     assert!(
-        !settled_empty_against_index(DeltaBaseline::PreviousSighting, Some("old\n"), ""),
+        !settled_empty_against_index(DeltaBaseline::PreviousSighting, Some(&base("old\n")), ""),
         "a cached baseline makes an empty read an honest emptying"
     );
     assert!(!settled_empty_against_index(DeltaBaseline::None, None, ""));
@@ -72,7 +76,14 @@ async fn an_empty_first_sighting_against_an_empty_index_still_emits() {
     assert_eq!(baseline, DeltaBaseline::Index);
     assert_eq!((added, removed), (0, 0));
     assert!(patch.is_empty());
-    assert_eq!(harness.cache.get("src/main.rs").as_deref(), Some(""));
+    assert_eq!(
+        harness
+            .cache
+            .get("src/main.rs")
+            .as_ref()
+            .and_then(Baseline::text),
+        Some("")
+    );
 }
 
 /// With both process-wide permits held, the wait is bounded by
@@ -89,9 +100,10 @@ async fn a_permit_wait_past_read_deadline_degrades_to_an_opaque_card() {
         .await
         .expect("hold every permit");
     let mut harness = Harness::with_permits(Arc::clone(&reads), permits);
-    harness
-        .cache
-        .insert("src/main.rs".to_string(), Arc::from("cached\n"));
+    harness.cache.insert(
+        "src/main.rs".to_string(),
+        Baseline::Text(Arc::from("cached\n")),
+    );
     let mut change = change();
 
     match harness.resolve(&mut change).await {

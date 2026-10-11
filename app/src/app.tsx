@@ -35,7 +35,7 @@ export function App(): React.JSX.Element {
   } = useConfig();
   const { motionPaused, documentHidden } = useMotionGovernor();
   const effectiveUiMode = useEffectiveUiMode(config.uiMode, isLoaded);
-  const { activeRepoId, overviewActive, selectRepo, openRepoStream, openOverview } = useAppNavigation();
+  const { activeRepoId, overviewActive, deckLanding, selectRepo, openRepoStream, openRepoSource, openOverview } = useAppNavigation();
   useActivityHost(documentHidden);
 
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
@@ -195,8 +195,9 @@ export function App(): React.JSX.Element {
       </header>
       <main className="tab-content">
         {overviewActive
-          ? <OverviewView documentHidden={documentHidden} isHandset={effectiveUiMode === "handset"} onOpenRepo={openRepoStream} />
-          : activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} />}
+          ? <OverviewView documentHidden={documentHidden} isHandset={effectiveUiMode === "handset"}
+            onOpenRepo={openRepoStream} onOpenRepoSource={openRepoSource} />
+          : activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} deckLanding={deckLanding} />}
       </main>
     </div>
   );

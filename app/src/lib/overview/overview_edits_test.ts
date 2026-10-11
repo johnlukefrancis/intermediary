@@ -67,3 +67,19 @@ void test("each settled delta has a stable global identity in a twelve-entry per
   assert.equal(store.getSnapshot().repos.has("s"), false);
   store.dispose();
 });
+
+void test("a modify that settles with no textual change leaves neither an edit nor its raw signal", () => {
+  const store = createOverviewStore(() => NOW);
+  store.setRepositories([{ repoId: "r", root: { kind: "host", path: "/r" } }]);
+  store.intake({ type: "fileChanged", repoId: "r", rootPath: "/r", path: "same.ts", kind: "code", changeType: "change", mtime: "2000-01-01T00:00:00Z" }, NOW);
+  store.intake({ ...delta("r", 1), payload: {
+    kind: "text", patch: "", baseline: "previousSighting", truncated: false, stats: { added: 0, removed: 0, hunks: 0, newLines: 1 },
+  } }, NOW + 1);
+  store.intake(delta("r", 2), NOW + 2);
+  store.flush();
+  const repo = store.getSnapshot().repos.get("r");
+  assert.ok(repo);
+  assert.equal(repo.edits.length, 1);
+  assert.equal(repo.recent.length, 0);
+  store.dispose();
+});

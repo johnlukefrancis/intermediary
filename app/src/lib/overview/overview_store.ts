@@ -3,7 +3,9 @@
 
 import { isVisibleFileKind } from "../files/file_feed.js";
 import { activitySupport } from "../agent/activity_support.js";
-import { acceptDetails, createActivity, observeChange, seedHistory, type OverviewActivity } from "./overview_activity.js";
+import {
+  acceptDetails, createActivity, isUnchangedEdit, observeChange, retractLiveSignal, seedHistory, type OverviewActivity,
+} from "./overview_activity.js";
 import { projectEdit } from "./overview_edit.js";
 import {
   OVERVIEW_EDITS_MAX, type OverviewAvailability, type OverviewRepoSnapshot,
@@ -145,10 +147,13 @@ export function createOverviewStore(now: () => number = Date.now): OverviewStore
       } else if (event.type === "fileChanged") {
         observeChange(activity, event, at);
       } else if (acceptDetails(activity, event) && event.type === "fileDelta" && isVisibleFileKind(event.kind)) {
-        activity.edits.push(projectEdit(event, at, nextEditId));
-        nextEditId += 1;
-        if (activity.edits.length > OVERVIEW_EDITS_MAX) activity.edits.shift();
-        activity.lastWorkedAt = at;
+        if (isUnchangedEdit(event)) retractLiveSignal(activity, event.path);
+        else {
+          activity.edits.push(projectEdit(event, at, nextEditId));
+          nextEditId += 1;
+          if (activity.edits.length > OVERVIEW_EDITS_MAX) activity.edits.shift();
+          activity.lastWorkedAt = at;
+        }
       }
       publish();
     },

@@ -1,9 +1,23 @@
 /* Path: app/src/styles/overview/overview_view.css
- * Description: Full-pane Overview feed and file workspace without remounting the reading surface */
+ * Description: Full-pane Overview: toolbar strip over the feed and Git column grid, and the file workspace without remounting */
 
 .overview-view { position: relative; height: 100%; min-width: 0; min-height: 0; }
 
 /* The feed sits in the same deck inset as the file workspace (.tab), so opening a file never jumps */
-.overview-view__feed { display: flex; height: 100%; min-width: 0; min-height: 0; padding: var(--space-3); }
+.overview-view__feed { display: flex; flex-direction: column; gap: var(--space-2); height: 100%; min-width: 0; min-height: 0; padding: var(--space-3); container: overview-view / inline-size; }
 .overview-view__feed[hidden] { display: none; }
 .app[data-ui-mode="handset"] .overview-view__feed { padding: var(--space-2); }
+.overview-view__feed > .three-column { grid-template-rows: minmax(0, 1fr); }
+
+/* Stacked narrow deck: the feed keeps the room, the Git column caps and scrolls on its own */
+@media (max-width: 768px) {
+  .overview-view__feed > .three-column { grid-template-rows: minmax(200px, 1fr) auto; }
+  .overview-view__feed > .three-column > .overview-git { max-height: 45vh; }
+}
+
+/* Handset: the filter strip and the switcher sit inside the chassis above whichever section is active */
+.overview-handset > .handset-chassis > .overview-toolbar { margin: 0 var(--space-2) var(--space-2); }
+.overview-handset__switch { display: flex; align-items: center; flex: 0 0 auto; padding: 0 var(--space-2) var(--space-2); }
+.overview-handset__section { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
+.overview-handset__section[hidden] { display: none; }
+.overview-handset__section > .panel, .overview-handset__section > .overview-panel { flex: 1; min-height: 0; }

@@ -8,6 +8,7 @@ import { useOverviewHistory } from "./overview/use_overview_history.js";
 import { isWslTransportError } from "./agent/wsl_transport_errors.js";
 import { streamStoreRegistry } from "../lib/stream/stream_store_registry.js";
 import { overviewStore } from "../lib/overview/overview_store.js";
+import { statusRegistry } from "../lib/source_control/status_registry.js";
 import type { RepoRoot } from "../shared/config.js";
 import type { StreamRepoRootKind } from "../lib/stream/stream_types.js";
 
@@ -25,7 +26,7 @@ function usePrefersReducedMotion(): boolean {
 }
 
 export function useActivityHost(documentHidden: boolean): void {
-  const { subscribe, connectionState, helloState, rehydrateEpoch, agentError } = useAgent();
+  const { client, subscribe, connectionState, helloState, rehydrateEpoch, agentError } = useAgent();
   const { config } = useConfig();
   const reducedMotion = usePrefersReducedMotion();
   const [wslConnected, setWslConnected] = useState(true);
@@ -41,6 +42,7 @@ export function useActivityHost(documentHidden: boolean): void {
     streamStoreRegistry.setRepositories(config.repos);
     knownRootsRef.current = current;
     overviewStore.setRepositories(config.repos);
+    statusRegistry.setRepositories(config.repos);
   }, [config.repos]);
 
   // Root identity excludes delayed activity from a removed or replaced watch.
@@ -54,6 +56,7 @@ export function useActivityHost(documentHidden: boolean): void {
         if ("rootPath" in event && knownRootsRef.current.get(event.repoId)?.path !== event.rootPath) return;
         streamStoreRegistry.routeAgentEvent(event);
         overviewStore.intake(event);
+        statusRegistry.routeAgentEvent(event);
       }),
     [subscribe]
   );
@@ -77,6 +80,13 @@ export function useActivityHost(documentHidden: boolean): void {
       reducedMotion,
       rootKinds,
     });
+    statusRegistry.setHostState({
+      client,
+      ready: client !== null && connectionState.status === "connected" && helloState.status === "ok",
+      documentHidden,
+      wslOnline,
+      rootKinds,
+    });
     overviewStore.setTransport({
       connected: connectionState.status === "connected",
       helloOk: helloState.status === "ok",
@@ -85,7 +95,7 @@ export function useActivityHost(documentHidden: boolean): void {
       wslOnline,
       error: helloState.status === "error" ? helloState.lastError : null,
     });
-  }, [config.repos, connectionState.status, documentHidden, helloState.agentVersion, helloState.lastError, helloState.status, helloState.watchedRepoIds, reducedMotion, wslOnline]);
+  }, [client, config.repos, connectionState.status, documentHidden, helloState.agentVersion, helloState.lastError, helloState.status, helloState.watchedRepoIds, reducedMotion, wslOnline]);
 
   useEffect(() => {
     const resumed = previousEpochRef.current !== rehydrateEpoch;
@@ -98,5 +108,7 @@ export function useActivityHost(documentHidden: boolean): void {
     if (!resumed && !reconciled && !backendRecovered) return;
     streamStoreRegistry.markRehydrated();
     overviewStore.markRehydrated();
+    // A re-hello already rereads through the registry's ready transition (every hello passes pending)
+    if (resumed || backendRecovered) statusRegistry.markRehydrated();
   }, [helloState.lastHelloAt, rehydrateEpoch, wslOnline]);
 }

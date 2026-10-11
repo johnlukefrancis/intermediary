@@ -8,6 +8,9 @@ import { useConfig } from "./use_config.js";
 /** Handset sections add FILES in front of the two rail sections */
 export type DeckSection = "files" | ActiveRail;
 
+/** Navigation intent read once when the deck mounts: FILES, or the persisted rail section */
+export type DeckLanding = "files" | "rail";
+
 export interface DeckSectionState {
   /** Persisted rail section shown in the standard deck and workspace mode */
   activeRail: ActiveRail;
@@ -17,10 +20,10 @@ export interface DeckSectionState {
   setHandsetSection: (section: DeckSection) => void;
 }
 
-export function useDeckSection(): DeckSectionState {
+export function useDeckSection(landing: DeckLanding): DeckSectionState {
   const { config, setActiveRail: persistActiveRail } = useConfig();
   const activeRail = config.uiState.activeRail;
-  const [filesActive, setFilesActive] = useState(true);
+  const [filesActive, setFilesActive] = useState(landing === "files");
 
   const setActiveRail = useCallback(
     (rail: ActiveRail) => {

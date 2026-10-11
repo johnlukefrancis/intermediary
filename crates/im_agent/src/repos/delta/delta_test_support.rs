@@ -49,6 +49,7 @@ impl ReadSources for RecordingReads {
         &'a self,
         _root: &'a Path,
         _rel: &'a str,
+        _limit: u64,
         _cancel: BundleCancelToken,
     ) -> BoxFuture<'a, Result<Option<String>, AgentError>> {
         self.log

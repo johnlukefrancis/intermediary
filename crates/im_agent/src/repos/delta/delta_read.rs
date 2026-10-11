@@ -8,7 +8,7 @@ use std::time::UNIX_EPOCH;
 
 use crate::protocol::OpaqueReason;
 
-use super::MAX_DELTA_FILE_BYTES;
+use super::{MAX_DELTA_FILE_BYTES, MAX_FINGERPRINT_FILE_BYTES, MAX_FINGERPRINT_LINES};
 
 /// What one settled read produced.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,7 +61,7 @@ pub(crate) fn read_settled(
         Ok(None) => return ReadOutcome::Missing,
         Err(bytes) => return unreadable(bytes),
     };
-    if before.len > MAX_DELTA_FILE_BYTES {
+    if before.len > MAX_FINGERPRINT_FILE_BYTES {
         return ReadOutcome::Opaque {
             bytes: before.len,
             reason: OpaqueReason::TooLarge,
@@ -73,7 +73,7 @@ pub(crate) fn read_settled(
         Err(err) if err.kind() == io::ErrorKind::NotFound => return ReadOutcome::Missing,
         Err(_) => return unreadable(before.len),
     };
-    if bytes.len() as u64 > MAX_DELTA_FILE_BYTES {
+    if bytes.len() as u64 > MAX_FINGERPRINT_FILE_BYTES {
         // The file grew past the bound between the stat and the read. Report the
         // size it has now rather than the one byte of overflow that proved it.
         let bytes = match stamp(abs_path) {
@@ -106,6 +106,12 @@ pub(crate) fn read_settled(
     if bytes.contains(&0) {
         return binary(len);
     }
+    if len > MAX_DELTA_FILE_BYTES && line_count(&bytes) > MAX_FINGERPRINT_LINES {
+        return ReadOutcome::Opaque {
+            bytes: len,
+            reason: OpaqueReason::TooLarge,
+        };
+    }
     match String::from_utf8(bytes) {
         Ok(content) => ReadOutcome::Text {
             content,
@@ -116,13 +122,18 @@ pub(crate) fn read_settled(
     }
 }
 
-/// Reads at most `MAX_DELTA_FILE_BYTES + 1` bytes: a file that grew past the
-/// bound between the stat and the read costs one byte of overflow rather than
-/// the whole file, and that one byte is what proves it is `Opaque(tooLarge)`.
+/// Lines as `split_inclusive('\n')` counts them: a final unterminated line counts.
+fn line_count(bytes: &[u8]) -> usize {
+    let newlines = bytes.iter().filter(|byte| **byte == b'\n').count();
+    newlines + usize::from(bytes.last().is_some_and(|byte| *byte != b'\n'))
+}
+
+/// Reads at most `MAX_FINGERPRINT_FILE_BYTES + 1` bytes: a file that grew past the bound
+/// after the stat costs one byte of overflow, which proves it is `Opaque(tooLarge)`.
 fn read_bounded(abs_path: &Path) -> io::Result<Vec<u8>> {
     let file = fs::File::open(abs_path)?;
     let mut bytes = Vec::new();
-    file.take(MAX_DELTA_FILE_BYTES.saturating_add(1))
+    file.take(MAX_FINGERPRINT_FILE_BYTES.saturating_add(1))
         .read_to_end(&mut bytes)?;
     Ok(bytes)
 }

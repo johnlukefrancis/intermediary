@@ -7,7 +7,7 @@ import type { useFileActions } from "../../hooks/use_file_actions.js";
 import type { ContextMenuItem } from "../context_menu.js";
 import { buildSingleFileContextMenuItems } from "../file_context_menu_items.js";
 import { isPreviewImagePath } from "../../hooks/repo_workspace_types.js";
-import { isDeletedEntry } from "./source_control_row.js";
+import { isDeletedEntry } from "./source_control_entry_face.js";
 
 const DELETED_DISABLED_LABELS = new Set(["Open File", "Open Containing Folder"]);
 

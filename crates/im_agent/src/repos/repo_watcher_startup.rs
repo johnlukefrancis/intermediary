@@ -8,6 +8,7 @@ use tokio::sync::mpsc;
 use crate::error::AgentError;
 use crate::logging::Logger;
 use crate::protocol::FileEntry;
+use crate::repos::git_ignore::GitIgnoreFilter;
 use crate::repos::ignore_matcher::IgnoreMatcher;
 use crate::repos::source_control_watch::{load_tracked_paths, TrackedPathSet};
 
@@ -17,8 +18,7 @@ pub(super) type WatcherMessage = Result<Event, notify::Error>;
 /// watcher's first event; a `.git/index` change later refreshes it in place
 /// (`SourceControlWatch::note_event`). A failed load leaves the set empty and
 /// logs once.
-pub(super) async fn load_tracked_set(root_path: &Path, logger: &Logger) -> TrackedPathSet {
-    let tracked = TrackedPathSet::empty();
+pub(super) async fn load_tracked_set(root_path: &Path, tracked: &TrackedPathSet, logger: &Logger) {
     match load_tracked_paths(root_path).await {
         Ok(paths) => tracked.store(paths),
         Err(reason) => {
@@ -31,7 +31,6 @@ pub(super) async fn load_tracked_set(root_path: &Path, logger: &Logger) -> Track
             );
         }
     }
-    tracked
 }
 
 /// Creates the `notify` watcher on the blocking pool, watching the repo root
@@ -73,12 +72,14 @@ pub(super) async fn create_watcher(
 pub(super) fn filter_initial_entries(
     entries: Vec<FileEntry>,
     ignore_matcher: &IgnoreMatcher,
+    git_ignore: &GitIgnoreFilter,
 ) -> Vec<FileEntry> {
     entries
         .into_iter()
         .filter(|entry| {
             let normalized_path = entry.path.replace('\\', "/");
             !ignore_matcher.should_ignore(&normalized_path)
+                && !git_ignore.is_suppressed(&normalized_path)
         })
         .collect()
 }

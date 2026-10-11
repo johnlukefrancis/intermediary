@@ -1,5 +1,5 @@
 # Repository Overview Design
-Updated on: 2026-10-09
+Updated on: 2026-10-11
 Owners: JL · Codex
 Depends on: ADR-000, ADR-005, ADR-007
 
@@ -7,19 +7,25 @@ Depends on: ADR-000, ADR-005, ADR-007
 
 Overview is one continuous feed of work across active repositories. Every change
 carries its repository identity. It uses the whole small application window,
-without the repository's ZIP, Git or terminal rail. Stream supplies the visual
+with one read-only Git column beside the feed instead of the repository's ZIP,
+Git or terminal rail. Stream supplies the visual
 grammar: clear filenames over subordinate directories, compact badges, restrained
 surfaces and readable diffs. There is no grid of repository dashboards.
 
-Only repositories with changes in the last fifteen minutes appear. An open tab
+Only repositories with changes in the last fifteen minutes appear. Git-ignored,
+untracked paths (engine `Saved/`, build output) are not work: the agent never reports
+them, so they enter neither the feed, Stream nor recent files. A modify that settles
+with no textual change is not news either: like Stream, Overview drops the edit and
+retracts its raw change signal. An open tab
 or a healthy watcher alone does not qualify. Roots enter automatically when work
 arrives and leave after inactivity. Saved activity supplies startup orientation,
 labelled as history; it never fabricates live edit content. Newly observed activity
 uses observation time, independent of file modification time.
 
 The navigation tab names the destination; there is no repeated Overview title.
-One compact toolbar contains active-root filters and actual monitoring issues;
-it disappears when both are absent. Updates are continuous, without a Pause
+One compact glass toolbar strip spans both columns. It contains active-root
+filters and actual monitoring issues, and disappears when both are absent. A chip
+filters the feed and the Git column together. Updates are continuous, without a Pause
 button or a routine Live indicator.
 Repository accents and short labels identify work
 without repeating full roots, watch status and explanatory headings on every
@@ -36,6 +42,37 @@ deliberate difference is that the 3 px spine carries the repository accent, not 
 operation, because the badge already names the operation. Section heads and filter
 chips use the repository tab's mono uppercase lettering in that repository's accent.
 
+## Git column
+
+The right column is one glass panel headed `[ WORKING TREE ]`, sharing the
+repository tabs' splitter and persisted rail width. It lists only working trees with
+something to show: a clean worktree or repository is hidden, and when every shown
+root is clean the column reads `ALL CLEAN`. Reading, held and failed roots stay
+visible. The header counts the listed working trees as `N CHANGED`.
+
+A config group is one project whose members are worktrees. A grouped project gets
+one sticky accent rule with its group label, and each changed worktree hangs beneath
+it on an accent guide with its own label, branch line and `SOURCE ›`. An ungrouped
+repository keeps a single block whose sticky head copies the feed's repository
+rule. Labels and `SOURCE ›` open that root's SOURCE rail. The mono branch line shows
+ahead/behind and the `CONFLICTS`, `TRUNCATED` and `MID-OPERATION` badges.
+
+Sections match the SOURCE rail exactly: MERGE CONFLICTS (alert tone), STAGED
+CHANGES and CHANGES, where CHANGES includes untracked paths; empty sections are
+omitted. Rows use the SOURCE face on one 24 px line: icon, name,
+head-truncated directory, then the change badge. Each section shows eight rows, then
+`+N MORE IN SOURCE`. A click, Enter or Space opens the row's diff full-pane; the
+opened entry is frozen until reopened. A deleted text row is inert. Staging,
+discard, commit, push and context menus stay in SOURCE.
+
+State lines replace the groups: `READING WORKING TREE` before a first status, the
+SOURCE error heading on failure, and `WSL HELD`, `UPDATE REQUIRED` or `OFFLINE` from
+the watch availability. A reread keeps the last status with a 4 px pulse in the
+head, never a spinner. With no working repository there is no column, only the
+centered empty panel. Narrow windows stack the column under the feed, capped at
+45vh. The handset deck switches between FEED and GIT; GIT carries the shown
+repositories' change count and a conflict alert.
+
 ## Ownership and bounds
 
 One app-lifetime activity subscription supplies Stream and Overview. Overview
@@ -45,7 +82,8 @@ root. Each edit has at most six lines of 180 characters. The visible feed uses
 recent work only, ordered chronologically and capped at eighty entries.
 
 The existing agent pipeline owns file changes and settled content. Overview
-adds no filesystem watches, WebSocket or Git polling. Settled image edits carry
+adds no filesystem watches, WebSocket or Git polling. The Git column reads the
+shared source-control status registry, so it always agrees with SOURCE. Settled image edits carry
 the exact announced revision into the shared thumbnail loader. Both surfaces use
 the same byte/pixel limits, two concurrent reads per mounted view and twenty-four
 retained image slots. A replaced slot can also retain its captured prior version.
@@ -93,14 +131,20 @@ packaging. Install and reopen Overview for JL; JL owns visual and UX acceptance.
 
 ## Large-file follow-up
 
-JL's 6.6 MB Coilbound HTML exposed the agent's existing 512 KiB live-text input
-limit. The UI excerpt cap is not the cause: ordinary deltas already contain
-changed hunks with three context lines. Investigation found a separate tracked
-Git-diff route with a 2 MiB output cap and twenty-second deadline; those budgets
-are unsuitable to adopt unchanged for recurring live previews. A future bounded
-large-file path must name its baseline and account for atomic replacement saves,
-whose temporary source path can otherwise select an absent baseline. This was
-investigated at JL's request; no new large-file runtime policy is implemented.
+JL's 6.6 MB Coilbound HTML exposed the agent's 512 KiB live-text limit. The
+shipped policy keeps full text baselines up to 512 KiB and, for text files up to
+16 MiB (and at most 2^20 lines), retains one 64-bit fingerprint per line instead,
+charged against the same 16 MiB per-repo baseline budget and LRU. A large file's
+first sighting diffs against its index blob (read up to 16 MiB, fingerprinted)
+and prints `VS INDEX`; an untracked one prints `NEW` with its first rows. Later
+saves print `SINCE LAST` against the fingerprints: added and context rows carry
+real text, `+N −M` is exact, removed rows are omitted and each hunk header says
+how many removed lines were not retained, with `TRUNC` raised on both surfaces.
+Above 16 MiB the card stays `Opaque(tooLarge)`. An atomic save that renames an
+unindexed temp over the file keeps the destination's own baseline, and when the
+destination is uncached its own index blob is the fallback. Every published row
+is cut at 1 KiB, so one enormous minified line still shows its start instead of
+an empty `TRUNC` card.
 
 The configured root is `/home/johnf/dev/Coilbound`. Its `Coilbound.html` measured
 6,659,613 bytes and was tracked and clean during inspection. Git hunks are
