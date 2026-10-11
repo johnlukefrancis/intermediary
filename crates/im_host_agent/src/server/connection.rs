@@ -4,10 +4,11 @@
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use im_agent::logging::Logger;
 use im_agent::server::attach_runtime_identity_header;
 use im_agent::server::EventBus;
+use im_agent::server::{spawn_socket_writer, SessionLog};
 use serde_json::json;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, RwLock};
@@ -75,47 +76,39 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     };
 
-    ctx.logger.info(
-        "Host-agent client connected",
-        Some(json!({"peer": peer.to_string()})),
-    );
-
-    let (mut sink, mut stream) = ws_stream.split();
-    let (response_tx, mut response_rx) = mpsc::unbounded_channel::<Message>();
-    // Slow clients lose bounded stream events with a seq gap; control events backpressure.
-    let (mut event_rx, relay_task) = ctx.event_bus.relay(
+    let mut session = SessionLog::opened(ctx.logger.clone(), peer.to_string(), "Host-agent client");
+    let (sink, mut stream) = ws_stream.split();
+    let (response_tx, response_rx) = mpsc::unbounded_channel::<Message>();
+    // Slow clients lose bounded stream events with a seq gap; a lagged control lane closes the socket.
+    let (event_rx, relay_task) = ctx.event_bus.relay(
         ctx.logger.clone(),
         peer.to_string(),
         "Host-agent broadcast lagged",
     );
-
-    let writer_logger = ctx.logger.clone();
-    let writer = tokio::spawn(async move {
-        loop {
-            let next = tokio::select! {
-                biased;
-                response = response_rx.recv() => response,
-                event = event_rx.recv() => event.map(Message::Text),
-            };
-
-            let Some(message) = next else {
-                break;
-            };
-
-            if let Err(err) = sink.send(message).await {
-                writer_logger.warn(
-                    "Failed to send host-agent WebSocket message",
-                    Some(json!({"error": err.to_string()})),
-                );
-                break;
-            }
-        }
-    });
+    let mut writer = spawn_socket_writer(
+        sink,
+        response_rx,
+        event_rx,
+        ctx.logger.clone(),
+        peer.to_string(),
+    );
+    let mut writer_running = true;
 
     let mut requests = ConnectionRequests::default();
-    while let Some(message) = stream.next().await {
+    loop {
+        let message = tokio::select! {
+            _ = &mut writer, if writer_running => {
+                writer_running = false;
+                break;
+            }
+            message = stream.next() => message,
+        };
+        let Some(message) = message else {
+            break;
+        };
         match message {
             Ok(Message::Text(text)) => {
+                session.note_request();
                 requests.receive(&text, &ctx, &response_tx);
             }
             Ok(Message::Binary(_)) => {
@@ -127,10 +120,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
             Ok(Message::Close(_)) => break,
             Ok(_) => {}
             Err(err) => {
-                ctx.logger.warn(
-                    "Host-agent WebSocket error",
-                    Some(json!({"peer": peer.to_string(), "error": err.to_string()})),
-                );
+                session.note_error(err.to_string());
                 break;
             }
         }
@@ -139,12 +129,10 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
     drop(requests);
     drop(response_tx);
     relay_task.abort();
-    let _ = writer.await;
-
-    ctx.logger.info(
-        "Host-agent client disconnected",
-        Some(json!({"peer": peer.to_string()})),
-    );
+    if writer_running {
+        let _ = writer.await;
+    }
+    session.closed();
 }
 
 fn is_expected_probe_handshake_error(error_text: &str) -> bool {

@@ -26,6 +26,7 @@ async fn main() {
 
     let logger = match Logger::init(LogConfig {
         log_dir,
+        file_stem: "agent_host",
         min_level: log_level,
         emit_stdio,
     })

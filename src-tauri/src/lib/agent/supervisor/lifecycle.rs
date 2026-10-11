@@ -24,11 +24,13 @@ impl AgentSupervisor {
         Self::default()
     }
 
+    /// A healthcheck ensure queued behind a restart observes the restarted runtime, never kills it.
     pub async fn ensure_running(
         &self,
         app: &AppHandle,
         config: AgentSupervisorConfig,
     ) -> Result<AgentSupervisorResult, String> {
+        let _lifecycle = self.lifecycle.lock().await;
         self.ensure_running_internal(app, config, false).await
     }
 
@@ -37,11 +39,18 @@ impl AgentSupervisor {
         app: &AppHandle,
         config: AgentSupervisorConfig,
     ) -> Result<AgentSupervisorResult, String> {
-        self.stop().await?;
+        let _lifecycle = self.lifecycle.lock().await;
+        self.stop_locked().await?;
         self.ensure_running_internal(app, config, true).await
     }
 
     pub async fn stop(&self) -> Result<(), String> {
+        let _lifecycle = self.lifecycle.lock().await;
+        self.stop_locked().await
+    }
+
+    /// Caller holds `lifecycle`.
+    pub(super) async fn stop_locked(&self) -> Result<(), String> {
         self.stop_process(ProcessKind::Host).await?;
         self.stop_process(ProcessKind::Wsl).await?;
         logging::log("info", "agent", "stop", "Agent processes stopped");
@@ -262,3 +271,6 @@ fn merge_supervisor_message(primary: String, secondary: Option<String>) -> Optio
         None => Some(primary),
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -30,6 +30,7 @@ fn write(root: &Path, relative: &str, contents: &str) {
 async fn filter_for(root: &Path, logs: &Path) -> GitIgnoreFilter {
     let logger = Logger::init(LogConfig {
         log_dir: logs.to_path_buf(),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })

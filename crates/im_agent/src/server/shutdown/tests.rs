@@ -21,6 +21,7 @@ async fn test_logger() -> Logger {
     Logger::init(LogConfig {
         log_dir: PathBuf::from(std::env::temp_dir())
             .join(format!("im_agent_shutdown_drain_{}", now.as_nanos())),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

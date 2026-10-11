@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use serde_json::json;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, RwLock};
@@ -19,6 +19,9 @@ use crate::protocol::{InboundRequestEnvelope, ResponseEnvelope, UiCommand};
 use crate::runtime::AgentRuntime;
 use crate::server::attach_runtime_identity_header;
 use crate::server::EventBus;
+use crate::server::{spawn_socket_writer, SessionLog};
+
+use super::ws_server::ListenerRelease;
 
 mod dispatch;
 mod repo_commands;
@@ -38,6 +41,7 @@ pub struct ConnectionContext {
     pub event_bus: EventBus,
     pub handshake_auth: ConnectionHandshakeAuth,
     pub runtime_sha256: String,
+    pub listener_release: ListenerRelease,
 }
 
 pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: ConnectionContext) {
@@ -83,42 +87,24 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     };
 
-    ctx.logger
-        .info("Client connected", Some(json!({"peer": peer.to_string()})));
-
-    let (mut sink, mut stream) = ws_stream.split();
-    let (response_tx, mut response_rx) = mpsc::unbounded_channel::<Message>();
-    // Two bounded lanes: a client that stops reading loses stream events (a
-    // `seq` gap) past `EVENT_QUEUE_CAP` / `EVENT_QUEUE_BYTES`, never memory,
-    // and never a control event - that lane backpressures the relay instead.
-    let (mut event_rx, relay_task) =
+    let mut session = SessionLog::opened(ctx.logger.clone(), peer.to_string(), "Client");
+    let (sink, mut stream) = ws_stream.split();
+    let (response_tx, response_rx) = mpsc::unbounded_channel::<Message>();
+    // Stream events past `EVENT_QUEUE_CAP` / `EVENT_QUEUE_BYTES` drop with a `seq` gap; a
+    // lagged control lane ends the relay, and the writer then closes this socket.
+    let (event_rx, relay_task) =
         ctx.event_bus
             .relay(ctx.logger.clone(), peer.to_string(), "Broadcast lagged");
     let (request_done_tx, mut request_done_rx) = mpsc::unbounded_channel::<String>();
     let mut active_requests: HashMap<String, RequestCancellation> = HashMap::new();
-
-    let writer_logger = ctx.logger.clone();
-    let writer = tokio::spawn(async move {
-        loop {
-            let next = tokio::select! {
-                biased;
-                response = response_rx.recv() => response,
-                event = event_rx.recv() => event.map(Message::Text),
-            };
-
-            let Some(message) = next else {
-                break;
-            };
-
-            if let Err(err) = sink.send(message).await {
-                writer_logger.warn(
-                    "Failed to send WebSocket message",
-                    Some(json!({"error": err.to_string()})),
-                );
-                break;
-            }
-        }
-    });
+    let mut writer = spawn_socket_writer(
+        sink,
+        response_rx,
+        event_rx,
+        ctx.logger.clone(),
+        peer.to_string(),
+    );
+    let mut writer_running = true;
 
     loop {
         let message = tokio::select! {
@@ -128,6 +114,10 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
                 }
                 continue;
             }
+            _ = &mut writer, if writer_running => {
+                writer_running = false;
+                break;
+            }
             message = stream.next() => message,
         };
         let Some(message) = message else {
@@ -135,6 +125,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         };
         match message {
             Ok(Message::Text(text)) => {
+                session.note_request();
                 let envelope: InboundRequestEnvelope = match serde_json::from_str(&text) {
                     Ok(envelope) => envelope,
                     Err(err) => {
@@ -198,10 +189,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
             Ok(Message::Close(_)) => break,
             Ok(_) => {}
             Err(err) => {
-                ctx.logger.warn(
-                    "WebSocket error",
-                    Some(json!({"peer": peer.to_string(), "error": err.to_string()})),
-                );
+                session.note_error(err.to_string());
                 break;
             }
         }
@@ -212,12 +200,10 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
     }
     drop(response_tx);
     relay_task.abort();
-    let _ = writer.await;
-
-    ctx.logger.info(
-        "Client disconnected",
-        Some(json!({"peer": peer.to_string()})),
-    );
+    if writer_running {
+        let _ = writer.await;
+    }
+    session.closed();
 }
 
 async fn handle_request(

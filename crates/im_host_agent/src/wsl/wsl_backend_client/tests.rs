@@ -13,6 +13,7 @@ pub(super) async fn quiet_logger() -> Logger {
     Logger::init(LogConfig {
         log_dir: std::env::temp_dir()
             .join(format!("im_host_agent_wsl_client_{}", stamp.as_nanos())),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

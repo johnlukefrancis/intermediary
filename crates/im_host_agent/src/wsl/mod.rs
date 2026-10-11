@@ -3,6 +3,7 @@
 
 mod wsl_backend_client;
 mod wsl_backend_connection;
+mod wsl_backend_link;
 mod wsl_backend_messages;
 mod wsl_transport_status;
 

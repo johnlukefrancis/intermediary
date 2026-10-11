@@ -7,19 +7,14 @@ use crate::agent::wsl_shutdown::{probe_wsl_distro_idle, terminate_wsl_distro};
 use crate::obs::logging;
 
 impl AgentSupervisor {
-    /// Called from the Tauri exit handler. Reliably stops the managed agents, then — only when the
-    /// backend is one we manage, no interactive WSL session is open, and the host agent's own stop
-    /// reached a known finality — terminates the distro so the WSL VM releases its RAM instead of
-    /// lingering. A stop whose finality is `Unknown` (the process disappeared with no `drained: true`
-    /// ack) skips distro termination: it may have crashed mid-mutation, and killing the VM under it
-    /// proves nothing was recovered, only that nothing more can be. Any teardown failure is logged,
-    /// never propagated, so exit is never blocked.
+    /// Exit teardown under the lifecycle lock; a host stop of `Unknown` finality skips distro
+    /// termination. Failures are logged by the caller and never block exit.
     pub async fn shutdown_on_exit(&self) -> Result<(), String> {
-        // Snapshot before stop(): `stop` clears the launch target, and we need the distro/port to
-        // decide the conditional teardown. `last_wsl_backend` is None in external mode, so a
-        // user-managed backend is never torn down here.
+        let _lifecycle = self.lifecycle.lock().await;
+        // Snapshot first: stop clears the launch target. External mode records no backend handle,
+        // so a user-managed distro is never torn down here.
         let backend = self.last_wsl_backend_snapshot()?;
-        let stop_result = self.stop().await;
+        let stop_result = self.stop_locked().await;
         let host_finality = self.last_host_stop_finality_snapshot();
 
         if let Some(handle) = backend {

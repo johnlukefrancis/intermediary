@@ -85,11 +85,8 @@ impl QueuedBytes {
     }
 }
 
-/// Forwards one subscription into the two lanes. A stream event is `try_send`:
-/// a full lane or a crossed byte ceiling drops it, counts it, and warns at
-/// most once per `EVENT_DROP_LOG_INTERVAL`. A control event is awaited: when
-/// its lane fills the relay stops taking from the broadcast, which then lags
-/// (the pre-existing behaviour) rather than the event being silently lost.
+/// Stream events drop on a full lane or byte ceiling; control events are awaited, so a full
+/// control lane lags the broadcast, and a lag ends the relay so the writer closes the socket.
 pub(super) fn spawn(
     mut broadcast_rx: broadcast::Receiver<BusMessage>,
     logger: Logger,
@@ -107,8 +104,14 @@ pub(super) fn spawn(
                 Ok(message) => message,
                 Err(broadcast::error::RecvError::Closed) => break,
                 Err(broadcast::error::RecvError::Lagged(skipped)) => {
-                    logger.warn(lagged_message, Some(json!({"skipped": skipped})));
-                    continue;
+                    // Lost control events cannot be patched: ending the relay closes the socket.
+                    logger.warn(
+                        lagged_message,
+                        Some(
+                            json!({"peer": peer, "skipped": skipped, "action": "closeConnection"}),
+                        ),
+                    );
+                    break;
                 }
             };
             let len = message.text.len();

@@ -67,7 +67,7 @@ Depends on: ADR-000, ADR-007
 - 2026-09-29: The native arm64 macOS candidate is locally ad-hoc signed and its packaged helper launches successfully. Developer ID signing/notarization for distribution is not configured or verified. Local desktop and Finder drag acceptance are recorded in the macOS port Quest.
 - 2026-02-11: WSL bundle builds are bounded by timeout windows (5 minutes for build requests). Very large or contended builds can return timeout while preserving the previously successful bundle; retry is usually sufficient after backend recovers.
 - 2026-02-11: Linux/WSL runtime watching on mounted Windows paths (`/mnt/<drive>/...`) can be degraded on large or busy trees. Intermediary now emits a watcher warning with runbook guidance, but this mode remains warn-only (not blocked).
-- 2026-07-10: `agent_latest.log` is append-only and the installed runtime log was observed at about 780 MB, dominated by successful supervisor health-probe connection lifecycle entries. Long-running installs can accumulate unnecessary disk usage until logging gains bounded retention and probe-aware verbosity.
+- 2026-07-10: `agent_latest.log` is append-only and the installed runtime log was observed at about 780 MB, dominated by successful supervisor health-probe connection lifecycle entries. Long-running installs can accumulate unnecessary disk usage until logging gains bounded retention and probe-aware verbosity. Fixed 2026-10-11: each agent writes its own log (`agent_host_latest.log` / `agent_wsl_latest.log`) rotated at 16 MiB into one previous generation, and request-less probe sessions log at debug.
 
 ---
 

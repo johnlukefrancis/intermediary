@@ -64,8 +64,10 @@ pub enum WslTerminateOutcome {
 /// orchestration above it is exercised without a live `wsl.exe` — and so the
 /// production path has exactly one implementation.
 pub(super) trait WslTerminationChannel {
-    /// Every process this stop is responsible for, right now.
+    /// The detector, read once at TERM time: every process this stop is responsible for.
     fn list_pids(&mut self) -> Result<Vec<u32>, String>;
+    /// Which of the pids captured at TERM time are still alive; the agent closes its port early.
+    fn live_pids(&mut self, pids: &[u32]) -> Result<Vec<u32>, String>;
     /// Asks them to drain. `Ok(Some(_))` is a signal command that reported a
     /// failure but left the route usable.
     fn send_term(&mut self, pids: &[u32]) -> Result<Option<String>, String>;
@@ -146,7 +148,7 @@ pub(super) fn terminate_matching_wsl_agent_processes<C: WslTerminationChannel>(
     }
 
     let started = Instant::now();
-    let drain = wait_for_wsl_agent_exit(channel, budget.drain_wait);
+    let drain = wait_for_wsl_agent_exit(channel, &matching_pids, budget.drain_wait);
     if drain.exited {
         log_phase(
             "info",
@@ -164,7 +166,7 @@ pub(super) fn terminate_matching_wsl_agent_processes<C: WslTerminationChannel>(
 
     // The envelope is over, so this re-read is authoritative: a probe that
     // cannot answer here fails the stop instead of escalating blind.
-    let surviving_pids = channel.list_pids()?;
+    let surviving_pids = channel.live_pids(&matching_pids)?;
     if surviving_pids.is_empty() {
         log_phase(
             "info",
@@ -194,7 +196,7 @@ pub(super) fn terminate_matching_wsl_agent_processes<C: WslTerminationChannel>(
     );
 
     let signalled = channel.kill_process_trees(&surviving_pids)?;
-    let grace = wait_for_wsl_agent_exit(channel, budget.kill_grace);
+    let grace = wait_for_wsl_agent_exit(channel, &surviving_pids, budget.kill_grace);
     if grace.exited {
         log_phase(
             "warn",
@@ -233,12 +235,16 @@ struct ExitWait {
     probe_failures: usize,
 }
 
-fn wait_for_wsl_agent_exit<C: WslTerminationChannel>(channel: &mut C, bound: Duration) -> ExitWait {
+fn wait_for_wsl_agent_exit<C: WslTerminationChannel>(
+    channel: &mut C,
+    pids: &[u32],
+    bound: Duration,
+) -> ExitWait {
     let start = Instant::now();
     let mut probe_failures = 0usize;
     loop {
-        match channel.list_pids() {
-            Ok(pids) if pids.is_empty() => {
+        match channel.live_pids(pids) {
+            Ok(live) if live.is_empty() => {
                 return ExitWait {
                     exited: true,
                     probe_failures,

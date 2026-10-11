@@ -6,6 +6,7 @@ use crate::agent::host_process_control::{terminate_host_agent_process, HostTermi
 use crate::agent::install::AgentBundlePaths;
 use crate::agent::process_control::{
     capture_log_cursor, spawn_host_agent_process, wait_for_agent_ready, SpawnedHostAgent,
+    HOST_AGENT_LOG_FILE,
 };
 use crate::agent::supervisor::process_kill::{KILL_WAIT_POLL, KILL_WAIT_TIMEOUT};
 use crate::agent::supervisor::state::{ProcessKind, SupervisedChild};
@@ -103,7 +104,7 @@ impl AgentSupervisor {
         let auth = auth.clone();
         let spawned =
             tauri::async_runtime::spawn_blocking(move || -> Result<SupervisedChild, String> {
-                let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
+                let log_file = bundle_for_spawn.log_dir_host.join(HOST_AGENT_LOG_FILE);
                 let log_offset = capture_log_cursor(&log_file);
                 let SpawnedHostAgent { mut child, job } = spawn_host_agent_process(
                     &bundle_for_spawn,

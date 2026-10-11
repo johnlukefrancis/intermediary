@@ -4,6 +4,7 @@
 use crate::logging::Logger;
 use crate::protocol::{
     AgentEvent, FileChangeType, FileChangedEvent, FileEntry, FileKind, RepoTopologyChangedEvent,
+    SnapshotEvent,
 };
 use crate::repos::categorizer::Categorizer;
 use crate::repos::delta::DeltaService;
@@ -48,6 +49,26 @@ impl<'a> EventContext<'a> {
                     RepoTopologyChangedEvent::new(self.repo_id.to_string()),
                 ));
         }
+    }
+
+    /// The OS dropped events (inotify overflow): clients re-read the top level and adopt
+    /// the MRU snapshot, as on a refresh; Git status was already marked dirty.
+    async fn resync_after_rescan(&self) {
+        self.logger.warn(
+            "Watcher events were dropped by the OS; resyncing repo snapshot",
+            Some(serde_json::json!({"repoId": self.repo_id})),
+        );
+        let entries = self.mru.read().await.entries();
+        self.event_bus
+            .broadcast_event(AgentEvent::RepoTopologyChanged(
+                RepoTopologyChangedEvent::new(self.repo_id.to_string()),
+            ));
+        self.event_bus
+            .broadcast_event(AgentEvent::Snapshot(SnapshotEvent::new(
+                self.repo_id.to_string(),
+                self.root_identity.to_string(),
+                entries,
+            )));
     }
 
     /// The repo-relative slash path, or `None` for a path outside the root.
@@ -164,6 +185,10 @@ pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
     // note them before the file event filters and rename branch.
     context.source_control.note_event(&event);
     context.git_ignore.note_event(&event);
+    if event.need_rescan() {
+        context.resync_after_rescan().await;
+        return;
+    }
 
     // External git-dir events only feed the source control detector;
     // paths outside the root produce no file event or log.
@@ -195,6 +220,7 @@ pub(crate) async fn handle_event(context: &EventContext<'_>, event: Event) {
 pub(crate) fn raw_os_code(err: &notify::Error) -> Option<String> {
     match err.kind {
         notify::ErrorKind::Io(ref io_err) => io_err.raw_os_error().map(map_code),
+        notify::ErrorKind::MaxFilesWatch => Some("ENOSPC".to_string()),
         _ => None,
     }
 }

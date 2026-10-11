@@ -34,6 +34,7 @@ fn scratch_dir(label: &str) -> PathBuf {
 async fn quiet_logger() -> Logger {
     Logger::init(LogConfig {
         log_dir: scratch_dir("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

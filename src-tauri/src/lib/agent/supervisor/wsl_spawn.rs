@@ -3,7 +3,7 @@
 
 use super::{AgentSupervisor, EnsureProcessResult};
 use crate::agent::install::AgentBundlePaths;
-use crate::agent::process_control::{capture_log_cursor, wait_for_agent_ready};
+use crate::agent::process_control::{capture_log_cursor, wait_for_agent_ready, WSL_AGENT_LOG_FILE};
 use crate::agent::supervisor::state::ProcessKind;
 use crate::agent::wsl_process_control::{
     format_wsl_target, spawn_wsl_agent_process, WslLaunchTarget,
@@ -29,7 +29,7 @@ pub(super) async fn spawn_wsl_supervised(
     let target_for_spawn = target.clone();
     let wsl_ws_token = wsl_ws_token.to_string();
     let spawned = tauri::async_runtime::spawn_blocking(move || -> Result<Child, String> {
-        let log_file = bundle_for_spawn.log_dir_host.join("agent_latest.log");
+        let log_file = bundle_for_spawn.log_dir_host.join(WSL_AGENT_LOG_FILE);
         let log_offset = capture_log_cursor(&log_file);
         let mut child = spawn_wsl_agent_process(
             &bundle_for_spawn,

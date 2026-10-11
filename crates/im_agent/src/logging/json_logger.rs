@@ -1,5 +1,5 @@
 // Path: crates/im_agent/src/logging/json_logger.rs
-// Description: JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
+// Description: JSONL logger that writes each agent's own size-rotated log file and optionally mirrors to stdout/stderr
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -8,11 +8,12 @@ use std::sync::Arc;
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::Value;
-use tokio::fs::{self, OpenOptions};
-use tokio::io::AsyncWriteExt;
+use tokio::fs;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use crate::error::AgentError;
+
+use super::log_file::{LogFile, LOG_ROTATE_BYTES};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogLevel {
@@ -78,6 +79,8 @@ pub struct Logger {
 
 pub struct LogConfig {
     pub log_dir: PathBuf,
+    /// Names `<stem>_latest.log`; each agent owns its own file so appends never interleave.
+    pub file_stem: &'static str,
     pub min_level: LogLevel,
     pub emit_stdio: bool,
 }
@@ -93,10 +96,9 @@ impl Logger {
             }),
         };
 
-        let log_file = config.log_dir.join("agent_latest.log");
         tokio::spawn(run_writer(
             config.log_dir,
-            log_file,
+            config.file_stem,
             receiver,
             config.emit_stdio,
         ));
@@ -149,7 +151,7 @@ impl Logger {
 
 async fn run_writer(
     log_dir: PathBuf,
-    log_file: PathBuf,
+    file_stem: &'static str,
     mut receiver: UnboundedReceiver<LogEntry>,
     emit_stdio: bool,
 ) {
@@ -162,12 +164,7 @@ async fn run_writer(
         return;
     }
 
-    let mut file = match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_file)
-        .await
-    {
+    let mut file = match LogFile::open(&log_dir, file_stem, LOG_ROTATE_BYTES).await {
         Ok(file) => file,
         Err(err) => {
             let fallback = format!(
@@ -192,7 +189,7 @@ async fn run_writer(
             }
         };
 
-        if let Err(err) = append_line(&mut file, &line).await {
+        if let Err(err) = file.append_line(&line).await {
             let fallback = format!(
                 "{{\"level\":\"error\",\"msg\":\"Failed to write log entry\",\"error\":\"{}\"}}",
                 err
@@ -232,12 +229,6 @@ fn resolve_stdio_target(emit_stdio: bool, level: &str) -> StdioTarget {
     }
 }
 
-async fn append_line(file: &mut tokio::fs::File, line: &str) -> Result<(), std::io::Error> {
-    file.write_all(line.as_bytes()).await?;
-    file.write_all(b"\n").await?;
-    file.flush().await
-}
-
 pub fn resolve_log_dir(raw: Option<String>) -> PathBuf {
     match raw {
         Some(dir) if !dir.trim().is_empty() => PathBuf::from(dir),
@@ -268,44 +259,5 @@ fn default_log_dir() -> PathBuf {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{resolve_stdio_logging, resolve_stdio_target, StdioTarget};
-
-    #[test]
-    fn stdio_logging_defaults_to_enabled() {
-        assert!(resolve_stdio_logging(None));
-    }
-
-    #[test]
-    fn stdio_logging_supports_disable_values() {
-        assert!(!resolve_stdio_logging(Some("0".to_string())));
-        assert!(!resolve_stdio_logging(Some("false".to_string())));
-        assert!(!resolve_stdio_logging(Some("NO".to_string())));
-        assert!(!resolve_stdio_logging(Some("off".to_string())));
-    }
-
-    #[test]
-    fn stdio_logging_supports_enable_values() {
-        assert!(resolve_stdio_logging(Some("1".to_string())));
-        assert!(resolve_stdio_logging(Some("true".to_string())));
-        assert!(resolve_stdio_logging(Some("YES".to_string())));
-        assert!(resolve_stdio_logging(Some("on".to_string())));
-    }
-
-    #[test]
-    fn stdio_logging_invalid_value_falls_back_to_enabled() {
-        assert!(resolve_stdio_logging(Some("definitely".to_string())));
-    }
-
-    #[test]
-    fn disabled_stdio_suppresses_all_entry_output() {
-        assert_eq!(resolve_stdio_target(false, "info"), StdioTarget::None);
-        assert_eq!(resolve_stdio_target(false, "error"), StdioTarget::None);
-    }
-
-    #[test]
-    fn enabled_stdio_routes_errors_to_stderr() {
-        assert_eq!(resolve_stdio_target(true, "error"), StdioTarget::Stderr);
-        assert_eq!(resolve_stdio_target(true, "info"), StdioTarget::Stdout);
-    }
-}
+#[path = "json_logger_tests.rs"]
+mod tests;

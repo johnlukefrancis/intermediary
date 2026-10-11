@@ -12,6 +12,7 @@ async fn refresh_rejects_a_retained_stopped_watcher_without_a_snapshot() {
     let temp = tempfile::tempdir().expect("tempdir");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })
@@ -68,6 +69,7 @@ async fn watch_repo_restarts_a_watcher_whose_root_registration_failed() {
     let temp = tempfile::tempdir().expect("tempdir");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

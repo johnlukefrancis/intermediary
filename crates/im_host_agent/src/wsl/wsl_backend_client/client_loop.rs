@@ -9,10 +9,9 @@ use im_agent::logging::Logger;
 use im_agent::server::EventBus;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
-use tokio_tungstenite::connect_async_with_config;
-use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 use super::super::wsl_backend_connection::run_connected;
+use super::super::wsl_backend_link::{connect_bounded, WSL_LINK_LIMITS};
 use super::super::wsl_backend_messages::wsl_unavailable_error;
 use super::super::wsl_transport_status::WslTransportStatus;
 use super::hello_reconciler::{begin_generation, WslHelloShared};
@@ -20,27 +19,8 @@ use super::{untrack_outstanding, ForwardRequest, OutstandingMutations, RequestLo
 
 const RECONNECT_DELAY_MS: u64 = 750;
 
-/// tungstenite sends one message as one frame and reads with a 16 MiB frame
-/// bound by default, so an image-diff response carrying two 12 MiB blobs
-/// (~32 MiB of base64) would be rejected on this hop. The frame bound is
-/// raised to the 64 MiB message bound; the per-side byte bound stays in the
-/// agent, where the semantics live.
-const WSL_BACKEND_MAX_FRAME_BYTES: usize = 64 * 1024 * 1024;
-const WSL_BACKEND_MAX_MESSAGE_BYTES: usize = 64 * 1024 * 1024;
-
-fn wsl_backend_ws_config() -> WebSocketConfig {
-    WebSocketConfig {
-        max_message_size: Some(WSL_BACKEND_MAX_MESSAGE_BYTES),
-        max_frame_size: Some(WSL_BACKEND_MAX_FRAME_BYTES),
-        ..WebSocketConfig::default()
-    }
-}
-
-/// Answers one request the loop received while the backend was unreachable.
-/// The request never reached the wire, so nothing of ours is running in WSL
-/// for it: it is untracked first, because a mutation left outstanding here
-/// would hold a shutdown drain open for the full emergency bound over a
-/// request this host never sent.
+/// Answers a request received while the backend is unreachable; it never reached the wire, so it
+/// is untracked first rather than holding a shutdown drain open for the emergency bound.
 pub(super) fn answer_offline(request: ForwardRequest, outstanding: &OutstandingMutations) {
     untrack_outstanding(outstanding, &request.request_id);
     let _ = request
@@ -63,14 +43,8 @@ pub(super) async fn run_client_loop(
     let mut logged_offline_connect_failure = false;
     let mut offline_emitted_generation: Option<u64> = None;
     loop {
-        match connect_async_with_config(
-            endpoint_connect.as_str(),
-            Some(wsl_backend_ws_config()),
-            false,
-        )
-        .await
-        {
-            Ok((stream, _)) => {
+        match connect_bounded(&endpoint_connect, WSL_LINK_LIMITS.connect).await {
+            Ok(stream) => {
                 let generation = begin_generation(&connection_generation, &hello, &status);
                 logged_offline_connect_failure = false;
                 logger.info(
@@ -84,6 +58,7 @@ pub(super) async fn run_client_loop(
                     &logger,
                     generation,
                     &outstanding_mutations,
+                    WSL_LINK_LIMITS,
                 )
                 .await;
                 logger.warn(
@@ -99,7 +74,7 @@ pub(super) async fn run_client_loop(
                 if !logged_offline_connect_failure {
                     logger.warn(
                         "Failed to connect to WSL backend",
-                        Some(serde_json::json!({"endpoint": &endpoint_log, "error": err.to_string()})),
+                        Some(serde_json::json!({"endpoint": &endpoint_log, "error": err})),
                     );
                     logged_offline_connect_failure = true;
                 }
@@ -129,22 +104,5 @@ pub(super) async fn run_client_loop(
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::wsl_backend_ws_config;
-
-    /// An image-diff response can carry two bounded blobs, about 32 MiB of
-    /// base64 in one frame. tungstenite's 16 MiB default frame bound would drop
-    /// the whole connection here, so this hop must stay explicitly configured.
-    #[test]
-    fn wsl_backend_frame_bound_admits_a_two_sided_image_diff() {
-        let config = wsl_backend_ws_config();
-        let two_sides = 32 * 1024 * 1024;
-
-        assert!(config.max_frame_size.expect("frame bound") > two_sides);
-        assert!(config.max_message_size.expect("message bound") > two_sides);
     }
 }

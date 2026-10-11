@@ -103,7 +103,7 @@ fn sanitize_stream_text(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::super::capture_log_cursor;
+    use super::super::{capture_log_cursor, HOST_AGENT_LOG_FILE, WSL_AGENT_LOG_FILE};
     use super::read_log_tail_since;
     use std::fs::OpenOptions;
     use std::io::Write;
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn read_log_tail_since_ignores_pre_spawn_lines() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let log_file = dir.path().join("agent_latest.log");
+        let log_file = dir.path().join(HOST_AGENT_LOG_FILE);
         append_lines(&log_file, &["old-1", "old-2"]);
         let cursor = capture_log_cursor(&log_file);
 
@@ -127,12 +127,28 @@ mod tests {
     #[test]
     fn read_log_tail_since_returns_empty_without_new_bytes() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let log_file = dir.path().join("agent_latest.log");
+        let log_file = dir.path().join(WSL_AGENT_LOG_FILE);
         append_lines(&log_file, &["only-old"]);
         let cursor = capture_log_cursor(&log_file);
 
         let tail = read_log_tail_since(&log_file, cursor, 8 * 1024, 40).expect("tail");
         assert!(tail.is_empty());
+    }
+
+    /// The agent rotates `<stem>_latest.log` to `_previous.log` by size; a cursor past the new
+    /// file's end restarts at its beginning so post-spawn lines are still reported.
+    #[test]
+    fn read_log_tail_since_reads_a_rotated_log_from_its_start() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let log_file = dir.path().join(WSL_AGENT_LOG_FILE);
+        append_lines(&log_file, &["pre-rotation-1", "pre-rotation-2"]);
+        let cursor = capture_log_cursor(&log_file);
+
+        std::fs::rename(&log_file, dir.path().join("agent_wsl_previous.log")).expect("rotate");
+        append_lines(&log_file, &["after"]);
+        let tail = read_log_tail_since(&log_file, cursor, 8 * 1024, 40).expect("tail");
+
+        assert_eq!(tail, "after");
     }
 
     fn append_lines(log_file: &std::path::Path, lines: &[&str]) {

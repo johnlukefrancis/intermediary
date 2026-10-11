@@ -78,7 +78,7 @@ LOGS="$SCRATCH/eof_logs"; rm -rf "$LOGS"; mkdir -p "$LOGS"
   ./target/debug/im_agent >/dev/null 2>&1 ) &
 JOB=$!
 sleep 30
-cat "$LOGS/agent_latest.log"
+cat "$LOGS/agent_wsl_latest.log"
 kill -0 "$JOB" 2>/dev/null && echo "STILL RUNNING (fail)" || echo "exited after stdin EOF"
 ```
 
@@ -97,7 +97,7 @@ INTERMEDIARY_AGENT_PORT=3194 INTERMEDIARY_WSL_WS_TOKEN=witness \
   ./target/debug/im_agent < /dev/null >/dev/null 2>&1 &
 NULL_PID=$!
 sleep 20
-grep -c "Stdin is not a supervisor pipe" "$LOGS2/agent_latest.log"
+grep -c "Stdin is not a supervisor pipe" "$LOGS2/agent_wsl_latest.log"
 kill -0 "$NULL_PID" 2>/dev/null && echo "still running (correct)" || echo "EXITED (fail)"
 kill -TERM "$NULL_PID"
 ```

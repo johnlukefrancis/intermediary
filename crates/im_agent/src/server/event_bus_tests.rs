@@ -29,6 +29,7 @@ async fn logger() -> (tempfile::TempDir, Logger) {
     let temp = tempdir().expect("tempdir");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })
@@ -123,4 +124,22 @@ fn drop_gate_warns_once_per_interval_with_the_count() {
         "the interval's drops fold into one line"
     );
     assert_eq!(gate.note(start + EVENT_DROP_LOG_INTERVAL), None);
+}
+
+/// A lag means control events were lost; the relay ends on its own so the
+/// writer closes the socket instead of serving a silently stale client.
+#[tokio::test]
+async fn a_lagged_relay_ends_instead_of_continuing() {
+    let (_temp, logger) = logger().await;
+    let bus = EventBus::new(4);
+    let (mut relay, task) = bus.relay(logger, "peer".to_string(), "lagged");
+    for index in 0..10 {
+        bus.broadcast_event(control(&format!("event {index}")));
+    }
+
+    let ended = tokio::time::timeout(std::time::Duration::from_secs(2), task)
+        .await
+        .expect("the relay ends by itself after a lag");
+    assert!(ended.is_ok(), "the relay task finished rather than being aborted");
+    assert!(relay.recv().await.is_none(), "nothing past the lag is relayed");
 }

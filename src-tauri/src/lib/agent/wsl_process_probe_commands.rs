@@ -48,6 +48,21 @@ done"
     )
 }
 
+/// Echoes each captured pid still present and not zombie/dead; never re-detects by port or env.
+pub(super) fn build_wsl_live_pids_command_line(pids: &[u32]) -> String {
+    let list = pids
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<String>>()
+        .join(" ");
+    format!(
+        "for pid in {list}; do \
+state=$(sed -n 's/^.*) \\([A-Za-z]\\).*$/\\1/p' \"/proc/$pid/stat\" 2>/dev/null || true); \
+case \"$state\" in ''|Z|X) ;; *) echo \"$pid\";; esac; \
+done; exit 0"
+    )
+}
+
 /// Probes whether the distro is otherwise idle for exit-time teardown. "Busy" iff any process is
 /// attached to a `pts/*` pseudo-terminal (an interactive WSL shell/tab), excluding our own agent
 /// PIDs and the probe shell. Console gettys on `hvc0`/`tty1` and headless system services have no
@@ -77,8 +92,22 @@ mod tests {
     use super::{
         build_wsl_idle_teardown_probe_command_line, build_wsl_list_exact_pids_command_line,
         build_wsl_list_intermediary_agent_pids_command_line,
-        build_wsl_list_port_listener_pids_command_line,
+        build_wsl_list_port_listener_pids_command_line, build_wsl_live_pids_command_line,
     };
+
+    #[test]
+    fn wsl_live_pids_probe_checks_only_the_captured_pids() {
+        let command = build_wsl_live_pids_command_line(&[4242, 4243]);
+
+        assert!(command.starts_with("for pid in 4242 4243; do "));
+        assert!(command.contains("\"/proc/$pid/stat\""));
+        assert!(command.contains("case \"$state\" in ''|Z|X) ;;"));
+        assert!(
+            !command.contains("ss "),
+            "liveness never re-detects by port listener"
+        );
+        assert!(!command.contains("kill"));
+    }
 
     #[test]
     fn wsl_list_exact_pids_command_targets_absolute_agent_path() {

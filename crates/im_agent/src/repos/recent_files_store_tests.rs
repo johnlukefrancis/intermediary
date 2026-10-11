@@ -26,6 +26,7 @@ async fn load_rejects_changed_root_without_relabelling_stored_entries() {
             .expect("write cache");
         let logger = Logger::init(LogConfig {
             log_dir: temp.path().join("logs"),
+            file_stem: "agent_test",
             min_level: LogLevel::Error,
             emit_stdio: false,
         })
@@ -60,6 +61,7 @@ async fn timestamp_preserving_observation_survives_persistence_and_mru_reload() 
     let temp = tempdir().expect("temp dir");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })
@@ -119,6 +121,7 @@ async fn load_reclassifies_stale_image_entries_for_supported_schemas() {
 
         let logger = Logger::init(LogConfig {
             log_dir: temp.path().join("logs"),
+            file_stem: "agent_test",
             min_level: LogLevel::Error,
             emit_stdio: false,
         })
@@ -158,6 +161,7 @@ async fn load_reclassifies_stale_docs_and_drops_hidden_entries() {
 
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

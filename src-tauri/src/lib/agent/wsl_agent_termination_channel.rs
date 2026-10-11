@@ -7,6 +7,7 @@
 //! orchestration above it holds no `wsl.exe` knowledge at all, which is what
 //! lets its drain envelope and escalation be tested without a distro.
 
+use super::wsl_agent_discovery::list_live_wsl_pids;
 use super::wsl_agent_termination::WslTerminationChannel;
 use super::wsl_process_control_commands::build_wsl_signal_pids_command_line;
 use super::wsl_process_tree_commands::{
@@ -37,6 +38,10 @@ where
 {
     fn list_pids(&mut self) -> Result<Vec<u32>, String> {
         (self.list)()
+    }
+
+    fn live_pids(&mut self, pids: &[u32]) -> Result<Vec<u32>, String> {
+        list_live_wsl_pids(self.distro, pids)
     }
 
     fn send_term(&mut self, pids: &[u32]) -> Result<Option<String>, String> {

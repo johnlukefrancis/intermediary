@@ -4,7 +4,7 @@
 use super::wsl_process_control::{format_wsl_target, WslLaunchTarget};
 use super::wsl_process_probe_commands::{
     build_wsl_list_exact_pids_command_line, build_wsl_list_intermediary_agent_pids_command_line,
-    build_wsl_list_port_listener_pids_command_line,
+    build_wsl_list_port_listener_pids_command_line, build_wsl_live_pids_command_line,
 };
 use crate::wsl_control::{distro_label, run_wsl_script, sanitize_stream_text};
 
@@ -77,6 +77,24 @@ pub fn list_reclaimable_wsl_agent_pids_by_port(
     pids.sort_unstable();
     pids.dedup();
     Ok(pids)
+}
+
+/// The subset of `pids` still alive (present and not a zombie) inside the distro.
+pub fn list_live_wsl_pids(distro: Option<&str>, pids: &[u32]) -> Result<Vec<u32>, String> {
+    if pids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let output = run_wsl_script(distro, &build_wsl_live_pids_command_line(pids))?;
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to probe WSL agent pid liveness ({}, distro={}): {}",
+            exit_label(&output.status),
+            distro_label(distro),
+            sanitize_stream_text(&String::from_utf8_lossy(&output.stderr))
+        ));
+    }
+
+    parse_pid_list(&String::from_utf8_lossy(&output.stdout))
 }
 
 fn exit_label(status: &std::process::ExitStatus) -> String {

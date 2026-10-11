@@ -7,11 +7,10 @@ use crate::server::shutdown::{drain_source_control, finalize_shutdown, schedule_
 
 use super::ConnectionContext;
 
-/// Drains this agent and answers with what the drain achieved. The process exit
-/// is scheduled, not performed: the response has to leave the socket first, and
-/// the writer task owns that. Reads keep working for the whole drain, so a UI
-/// that is still up can watch the mutations finish.
+/// Releases the port, drains, answers, then schedules the exit after the writer flushes;
+/// connections already open keep their reads for the whole drain.
 pub async fn shutdown_command(ctx: &ConnectionContext) -> Result<UiResponse, AgentError> {
+    ctx.listener_release.request();
     let locks = {
         let state = ctx.runtime.read().await;
         state.source_control_locks.clone()

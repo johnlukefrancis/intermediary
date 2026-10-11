@@ -66,6 +66,7 @@ impl EventHarness {
         std::fs::create_dir_all(root.join("src")).expect("create repo tree");
         let logger = Logger::init(LogConfig {
             log_dir: temp.path().join("logs"),
+            file_stem: "agent_test",
             min_level: LogLevel::Warn,
             emit_stdio: false,
         })
@@ -199,6 +200,7 @@ async fn settled_write_publishes_one_file_delta() {
     git(&["add", "src/a.rs"]);
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })

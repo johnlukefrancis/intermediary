@@ -70,6 +70,7 @@ async fn counters_consume_the_shared_sequence() {
     fs::create_dir_all(&root).expect("repo dir");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })

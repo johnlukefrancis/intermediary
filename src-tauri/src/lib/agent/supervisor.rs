@@ -18,6 +18,8 @@ pub(super) enum EnsureProcessResult {
 #[derive(Debug, Default)]
 pub struct AgentSupervisor {
     state: Mutex<AgentSupervisorState>,
+    /// Single-flight owner for ensure/restart/stop/exit; `state` is never held across an await.
+    lifecycle: tauri::async_runtime::Mutex<()>,
 }
 
 fn build_result(

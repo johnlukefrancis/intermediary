@@ -16,6 +16,7 @@ use crate::wsl::{RequestLoopMessage, WslBackendClient};
 async fn test_logger() -> Logger {
     Logger::init(LogConfig {
         log_dir: unique_log_dir(),
+        file_stem: "agent_test",
         min_level: LogLevel::Error,
         emit_stdio: false,
     })

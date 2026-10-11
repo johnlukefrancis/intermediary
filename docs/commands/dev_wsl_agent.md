@@ -37,7 +37,7 @@ this backend as externally managed.
 
 The agent logs to the terminal and to:
 
-`logs/agent_latest.log`
+`logs/agent_wsl_latest.log`
 
 ## Health Check
 

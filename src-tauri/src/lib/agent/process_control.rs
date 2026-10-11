@@ -175,6 +175,10 @@ fn format_early_exit_error(label: &str, status: String, detail: Option<String>) 
     }
 }
 
+/// Per-agent JSONL log names written by the agents into the shared log dir; tails read their own.
+pub const HOST_AGENT_LOG_FILE: &str = "agent_host_latest.log";
+pub const WSL_AGENT_LOG_FILE: &str = "agent_wsl_latest.log";
+
 pub fn capture_log_cursor(log_file: &Path) -> u64 {
     match std::fs::metadata(log_file) {
         Ok(metadata) => metadata.len(),

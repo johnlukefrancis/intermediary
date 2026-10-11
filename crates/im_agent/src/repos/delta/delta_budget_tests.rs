@@ -18,6 +18,7 @@ use super::{
 async fn logger(dir: &std::path::Path) -> Logger {
     Logger::init(LogConfig {
         log_dir: dir.join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })

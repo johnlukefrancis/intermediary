@@ -201,6 +201,7 @@ app/src/lib/agent/activity_support.ts - Shared minimum agent contract for root-i
 app/src/lib/agent/agent_client_inspection_test.ts - Remote hover cancellation and settled-request cleanup at the WebSocket boundary
 app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope normalization for older agent payloads
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
+app/src/lib/agent/agent_request_timeouts_test.ts - Every UI request timeout exceeds its host->WSL forward budget by a fixed margin
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
 app/src/lib/agent/client_hello_runner_test.ts - Single-flight coalescing, retry backoff, WSL generation re-hello and disposal of the hello runner
 app/src/lib/agent/client_hello_runner.ts - Single-flight clientHello owner for one connection session with bounded retry backoff
@@ -417,7 +418,9 @@ crates/im_agent/src/error/agent_error.rs - AgentError type and mapping to protoc
 crates/im_agent/src/error/mod.rs - Error module exports for the agent runtime
 crates/im_agent/src/error/mutation_effect.rs - Outcome certainty (`details.effect`) carried by every source-control mutation error
 crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
-crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
+crates/im_agent/src/logging/json_logger_tests.rs - Unit tests for the JSON logger's stdio mirroring switches
+crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes each agent's own size-rotated log file and optionally mirrors to stdout/stderr
+crates/im_agent/src/logging/log_file.rs - One agent's JSONL log file, rotated by size into a single previous generation
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
 crates/im_agent/src/protocol/bundle_inspection.rs - Selection-aware bundle entry inspection request and response contracts
@@ -553,9 +556,13 @@ crates/im_agent/src/server/event_bus.rs - Broadcast agent events to connected We
 crates/im_agent/src/server/handshake_auth.rs - WSL-agent websocket handshake token validation utilities
 crates/im_agent/src/server/mod.rs - WebSocket server module exports
 crates/im_agent/src/server/runtime_identity.rs - Compute and expose the running agent executable identity during WebSocket handshake
+crates/im_agent/src/server/session_log.rs - Connection lifecycle logging that keeps request-less sessions (the supervisor's health probe) at debug
 crates/im_agent/src/server/shutdown.rs - The one drain-then-exit owner shared by the shutdown command and the process signals
 crates/im_agent/src/server/shutdown/tests.rs - Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained
+crates/im_agent/src/server/socket_writer_tests.rs - A lagged relay makes the socket writer close the client's connection with 1013
+crates/im_agent/src/server/socket_writer.rs - The per-connection socket writer shared by both agents - responses first, then relay events, closing the socket when...
 crates/im_agent/src/server/stdin_eof.rs - The supervisor's stdin pipe as a shutdown owner - EOF on fd 0 is a drain request
+crates/im_agent/src/server/ws_server_tests.rs - The accept loop frees its port the moment shutdown starts, before any drain
 crates/im_agent/src/server/ws_server.rs - WebSocket accept loop and connection dispatch
 crates/im_agent/src/source_control/actions/mod.rs - Dispatches one source-control mutation and reads the status that follows it
 crates/im_agent/src/source_control/actions/remote.rs - Push and pull for one repo root, including upstream selection
@@ -697,7 +704,9 @@ crates/im_host_agent/src/wsl/wsl_backend_client/tests_outstanding.rs - Unit test
 crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs - Unit tests for the per-command forward timeout ladder
 crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarding, cancellation, and outstanding-mutation tracking
 crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs - The host->WSL request-timeout ladder and the agent-side worst case each tier covers
-crates/im_host_agent/src/wsl/wsl_backend_connection.rs - Connected WSL backend request loop and pending response handling
+crates/im_host_agent/src/wsl/wsl_backend_connection.rs - Connected WSL backend request loop, ping liveness, and pending response handling
+crates/im_host_agent/src/wsl/wsl_backend_link_tests.rs - Host->WSL link bounds - frame size, connect deadline, ping liveness against silent and live peers
+crates/im_host_agent/src/wsl/wsl_backend_link.rs - Bounds on the host->WSL socket - connect+handshake deadline, ping cadence, silence and send limits
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 crates/im_host_agent/src/wsl/wsl_transport_status_tests.rs - WSL transport status tests: offline error de-noising and online recovery per generation
 crates/im_host_agent/src/wsl/wsl_transport_status.rs - Generation-scoped wslBackendStatus online announcements and de-noised WSL transport error events
@@ -730,6 +739,7 @@ src-tauri/src/lib/agent/supervisor/graceful_stop.rs - Ask the managed host agent
 src-tauri/src/lib/agent/supervisor/graceful_stop/tests.rs - Ack-parsing/route tests for the graceful host stop against a fake agent socket
 src-tauri/src/lib/agent/supervisor/host.rs - Host-agent startup and stale-port remediation for the supervisor
 src-tauri/src/lib/agent/supervisor/lifecycle.rs - Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend
+src-tauri/src/lib/agent/supervisor/lifecycle/tests.rs - The lifecycle lock makes ensure/restart/stop/exit single-flight
 src-tauri/src/lib/agent/supervisor/managed_processes.rs - Supervisor-owned child-process bookkeeping, stop, and reconciliation helpers
 src-tauri/src/lib/agent/supervisor/managed_processes/tests.rs - State transitions for the supervisor's recorded process and the tree owner it carries
 src-tauri/src/lib/agent/supervisor/probes.rs - Async supervisor probe helpers for port, websocket auth, and origin compatibility

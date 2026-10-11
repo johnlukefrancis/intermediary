@@ -28,8 +28,10 @@ What to do:
 Expected behavior after resume:
 - Status bar may briefly show `Reconnecting (...)`.
 - UI reconnects the WebSocket session.
-- `clientHello` is replayed once for the active WSL connection generation and repo/bundle state rehydrates.
-- Recursive watcher registration runs concurrently off the async runtime workers; the host uses the WSL client's single bounded request lifecycle rather than abandoning bootstrap under a shorter wrapper timeout.
+- The host answers `clientHello` without waiting for WSL; the WSL client applies one WSL `clientHello` for the active connection generation, emits `wslBackendStatus: online`, and the UI re-hellos to pick up WSL watched repos before repo/bundle state rehydrates.
+- `clientHello` replies once each repo watcher exists; recursive watch registration (which never follows symlinks) completes in the background and reports failure as a `watcher` error for that repo. The host uses the WSL client's single bounded request lifecycle rather than abandoning bootstrap under a shorter wrapper timeout.
+- A WSL backend that stops answering (half-open after sleep, frozen distro) is dropped by the host after 25 s without a pong, and a connect or upgrade that hangs is abandoned after 5 s; the host then reconnects under a new generation and logs `WSL backend stopped answering pings; dropping the connection`.
+- A client whose event relay lagged is disconnected with close code 1013 and reconnects; its hello resyncs state that the dropped events would have carried.
 - Stale WSL transport errors clear after explicit `wslBackendStatus: online`, including the recovery signal emitted on the first successful WSL operation after transport recovery.
 
 When to escalate:
@@ -74,20 +76,21 @@ Default runtime logs are under the app local-data `logs` directory:
 
 | Platform | Log directory | Files |
 |---|---|---|
-| Windows | `%LOCALAPPDATA%\\com.johnf.intermediary\\logs` | `run_latest.txt`, `agent_latest.log` |
-| macOS | `~/Library/Application Support/Intermediary/logs` | `run_latest.txt`, `agent_latest.log` |
-| Linux | `~/.local/share/intermediary/logs` (or `$XDG_DATA_HOME/intermediary/logs`) | `run_latest.txt`, `agent_latest.log` |
+| Windows | `%LOCALAPPDATA%\\com.johnf.intermediary\\logs` | `run_latest.txt`, `agent_host_latest.log`, `agent_wsl_latest.log` |
+| macOS | `~/Library/Application Support/Intermediary/logs` | `run_latest.txt`, `agent_host_latest.log` |
+| Linux | `~/.local/share/intermediary/logs` (or `$XDG_DATA_HOME/intermediary/logs`) | `run_latest.txt`, `agent_host_latest.log` |
 
 Notes:
 - `run_latest.txt` is app/supervisor-side logging.
-- `agent_latest.log` is host/WSL agent JSONL logging.
+- `agent_host_latest.log` and `agent_wsl_latest.log` are the host and WSL agents' JSONL logs, one file per agent; each rotates at 16 MiB into `agent_host_previous.log` / `agent_wsl_previous.log`, so an agent keeps at most 32 MiB.
+- The supervisor's health probe (a session that sends no request) logs only at debug; `<client> connected` appears at info once a session sends its first request.
 - WSL bootstrap completion/failure is anchored by `WSL backend clientHello applied` / `WSL backend clientHello failed`, with `durationMs` and `generation` fields.
-- Supervised app launches diagnose agent early exits from bounded `agent_latest.log` tails; they do not depend on draining child stdout/stderr pipes.
+- Supervised app launches diagnose agent early exits from bounded tails of the spawned agent's own log; they do not depend on draining child stdout/stderr pipes.
 - Dev workflows may override log directory (for example via `INTERMEDIARY_LOG_DIR`).
 
 ## 6) Restart Agent: what it resets
 
-`Restart Agent` performs a **forced** supervisor stop + start for managed host/WSL agent processes. It bypasses the "already running" short-circuit, reclaims the WSL backend by port (even a wedged or token-mismatched backend this session did not spawn), and always respawns. It no longer silently no-ops on a healthy-looking-but-wedged backend, so it recovers the app from the wedged state without manually killing the port.
+`Restart Agent` performs a **forced** supervisor stop + start for managed host/WSL agent processes. It bypasses the "already running" short-circuit, reclaims the WSL backend by port (even a wedged or token-mismatched backend this session did not spawn), and always respawns. It no longer silently no-ops on a healthy-looking-but-wedged backend, so it recovers the app from the wedged state without manually killing the port. Stop and start run under the supervisor's single lifecycle lock, so a healthcheck `ensure` that arrives mid-restart waits for it and adopts the new runtime rather than retiring it.
 
 Resets:
 - Active WebSocket session(s) and in-memory request pipelines.

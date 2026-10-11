@@ -26,6 +26,7 @@ struct ScriptedChannel {
     kill_calls: usize,
     kill_targets: Vec<u32>,
     signalled: usize,
+    detector_calls: usize,
 }
 
 impl ScriptedChannel {
@@ -39,6 +40,7 @@ impl ScriptedChannel {
             kill_calls: 0,
             kill_targets: Vec::new(),
             signalled: 0,
+            detector_calls: 0,
         }
     }
 
@@ -51,14 +53,13 @@ impl ScriptedChannel {
 
 impl WslTerminationChannel for ScriptedChannel {
     fn list_pids(&mut self) -> Result<Vec<u32>, String> {
-        if self.killed {
-            if let Some(after) = self.after_kill.as_ref() {
-                return Ok(after.clone());
-            }
-        }
-        let index = self.probe_index.min(self.probes.len().saturating_sub(1));
-        self.probe_index += 1;
-        self.probes[index].clone()
+        self.detector_calls += 1;
+        self.next_probe()
+    }
+
+    fn live_pids(&mut self, pids: &[u32]) -> Result<Vec<u32>, String> {
+        let live = self.next_probe()?;
+        Ok(live.into_iter().filter(|pid| pids.contains(pid)).collect())
     }
 
     fn send_term(&mut self, _pids: &[u32]) -> Result<Option<String>, String> {
@@ -71,6 +72,20 @@ impl WslTerminationChannel for ScriptedChannel {
         self.kill_targets = pids.to_vec();
         self.killed = true;
         Ok(self.signalled)
+    }
+}
+
+impl ScriptedChannel {
+    /// One scripted answer per probe, detector or liveness alike.
+    fn next_probe(&mut self) -> Result<Vec<u32>, String> {
+        if self.killed {
+            if let Some(after) = self.after_kill.as_ref() {
+                return Ok(after.clone());
+            }
+        }
+        let index = self.probe_index.min(self.probes.len().saturating_sub(1));
+        self.probe_index += 1;
+        self.probes[index].clone()
     }
 }
 
@@ -193,5 +208,22 @@ fn an_agent_that_exits_at_the_envelope_edge_is_reported_as_drained() {
             .expect("an exit at the edge is not an error");
 
     assert_eq!(outcome, WslTerminateOutcome::TerminatedWithTerm);
+    assert_eq!(channel.kill_calls, 0);
+}
+
+/// The agent releases its port at TERM, so the detector is read once; a still-live pid keeps the
+/// drain wait open even though a port-listener re-read would now be empty.
+#[test]
+fn the_drain_wait_polls_captured_pid_liveness_not_the_detector() {
+    let mut channel = ScriptedChannel::new(vec![Ok(vec![4242]), Ok(vec![4242, 777]), Ok(vec![])]);
+    let outcome =
+        terminate_matching_wsl_agent_processes(&mut channel, TEST_BUDGET, "port-listener :3142")
+            .expect("a drained agent is not an error");
+
+    assert_eq!(outcome, WslTerminateOutcome::TerminatedWithTerm);
+    assert_eq!(
+        channel.detector_calls, 1,
+        "the detector is read only at TERM time"
+    );
     assert_eq!(channel.kill_calls, 0);
 }

@@ -794,6 +794,10 @@
       "summary": "WebSocket client with reconnection and message correlation"
     },
     {
+      "path": "app/src/lib/agent/agent_request_timeouts_test.ts",
+      "summary": "Every UI request timeout exceeds its host->WSL forward budget by a fixed margin"
+    },
+    {
       "path": "app/src/lib/agent/agent_request_timeouts.ts",
       "summary": "Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)"
     },
@@ -1658,8 +1662,16 @@
       "summary": "Library root for the Intermediary WSL agent daemon"
     },
     {
+      "path": "crates/im_agent/src/logging/json_logger_tests.rs",
+      "summary": "Unit tests for the JSON logger's stdio mirroring switches"
+    },
+    {
       "path": "crates/im_agent/src/logging/json_logger.rs",
-      "summary": "JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr"
+      "summary": "JSONL logger that writes each agent's own size-rotated log file and optionally mirrors to stdout/stderr"
+    },
+    {
+      "path": "crates/im_agent/src/logging/log_file.rs",
+      "summary": "One agent's JSONL log file, rotated by size into a single previous generation"
     },
     {
       "path": "crates/im_agent/src/logging/mod.rs",
@@ -2202,6 +2214,10 @@
       "summary": "Compute and expose the running agent executable identity during WebSocket handshake"
     },
     {
+      "path": "crates/im_agent/src/server/session_log.rs",
+      "summary": "Connection lifecycle logging that keeps request-less sessions (the supervisor's health probe) at debug"
+    },
+    {
       "path": "crates/im_agent/src/server/shutdown.rs",
       "summary": "The one drain-then-exit owner shared by the shutdown command and the process signals"
     },
@@ -2210,8 +2226,20 @@
       "summary": "Unit tests for the drain gate: a held mutation keeps the drain waiting, and only idle reports drained"
     },
     {
+      "path": "crates/im_agent/src/server/socket_writer_tests.rs",
+      "summary": "A lagged relay makes the socket writer close the client's connection with 1013"
+    },
+    {
+      "path": "crates/im_agent/src/server/socket_writer.rs",
+      "summary": "The per-connection socket writer shared by both agents - responses first, then relay events, closing the socket when..."
+    },
+    {
       "path": "crates/im_agent/src/server/stdin_eof.rs",
       "summary": "The supervisor's stdin pipe as a shutdown owner - EOF on fd 0 is a drain request"
+    },
+    {
+      "path": "crates/im_agent/src/server/ws_server_tests.rs",
+      "summary": "The accept loop frees its port the moment shutdown starts, before any drain"
     },
     {
       "path": "crates/im_agent/src/server/ws_server.rs",
@@ -2779,7 +2807,15 @@
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_connection.rs",
-      "summary": "Connected WSL backend request loop and pending response handling"
+      "summary": "Connected WSL backend request loop, ping liveness, and pending response handling"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_link_tests.rs",
+      "summary": "Host->WSL link bounds - frame size, connect deadline, ping liveness against silent and live peers"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_link.rs",
+      "summary": "Bounds on the host->WSL socket - connect+handshake deadline, ping cadence, silence and send limits"
     },
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_messages.rs",
@@ -2908,6 +2944,10 @@
     {
       "path": "src-tauri/src/lib/agent/supervisor/lifecycle.rs",
       "summary": "Host-agent-first supervisor lifecycle implementation with optional Windows WSL backend"
+    },
+    {
+      "path": "src-tauri/src/lib/agent/supervisor/lifecycle/tests.rs",
+      "summary": "The lifecycle lock makes ensure/restart/stop/exit single-flight"
     },
     {
       "path": "src-tauri/src/lib/agent/supervisor/managed_processes.rs",

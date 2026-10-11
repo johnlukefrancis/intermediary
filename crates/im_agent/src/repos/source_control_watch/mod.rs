@@ -73,6 +73,12 @@ impl SourceControlWatch {
     }
 
     pub(crate) fn note_event(&self, event: &Event) {
+        // An overflowed queue may have hidden any Git change, the index included.
+        if event.need_rescan() {
+            self.signal.mark_dirty();
+            self.maybe_reload();
+            return;
+        }
         if self.detector.affects(event) {
             self.signal.mark_dirty();
         }

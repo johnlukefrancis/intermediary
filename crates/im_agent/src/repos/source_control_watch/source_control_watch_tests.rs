@@ -30,6 +30,7 @@ async fn a_working_tree_burst_emits_one_leading_and_one_trailing_event() {
     std::fs::create_dir_all(&root).expect("create repo root");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })
@@ -52,6 +53,9 @@ async fn a_working_tree_burst_emits_one_leading_and_one_trailing_event() {
     })
     .await
     .expect("watcher starts");
+    while !watcher.registration_finished() {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
 
     for index in 0..50 {
         std::fs::write(root.join(format!("f{index}.log")), b"x").expect("write file");
@@ -86,6 +90,7 @@ async fn index_change_event_reloads_the_tracked_set() {
         .expect("detector builds");
     let logger = Logger::init(LogConfig {
         log_dir: temp.path().join("logs"),
+        file_stem: "agent_test",
         min_level: LogLevel::Warn,
         emit_stdio: false,
     })

@@ -5,8 +5,11 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 
 use serde_json::json;
-use tokio::net::TcpListener;
-use tokio::sync::RwLock;
+use std::future::Future;
+use std::pin::Pin;
+
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{Notify, RwLock};
 
 use crate::error::AgentError;
 use crate::logging::Logger;
@@ -14,11 +17,43 @@ use crate::runtime::AgentRuntime;
 
 use super::connection::{handle_connection, ConnectionContext};
 use super::event_bus::EventBus;
-use super::shutdown::{drain_source_control, finalize_shutdown, wait_for_shutdown_signal};
 use super::handshake_auth::ConnectionHandshakeAuth;
 use super::runtime_identity::runtime_binary_sha256;
+use super::shutdown::{drain_source_control, finalize_shutdown, wait_for_shutdown_signal};
 
 const DEFAULT_PORT: u16 = 3141;
+
+/// Asks the accept loop to stop and drop its listener; the `shutdown` command's first act.
+#[derive(Clone, Default)]
+pub struct ListenerRelease {
+    notify: Arc<Notify>,
+}
+
+impl ListenerRelease {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Stored as a permit when the loop is not waiting yet, so a release is never lost.
+    pub fn request(&self) {
+        self.notify.notify_one();
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum AcceptStop {
+    Signal(&'static str),
+    Released,
+}
+
+impl AcceptStop {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Signal(reason) => reason,
+            Self::Released => "shutdownCommand",
+        }
+    }
+}
 
 pub struct ServerConfig {
     pub port: Option<u16>,
@@ -45,41 +80,38 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
         .logger
         .info("WebSocket server started", Some(json!({"port": port})));
 
-    // SIGTERM and ctrl-c take the same route as the `shutdown` command: stop
-    // accepting, drain the mutations already running, then let `main` return.
+    // Signals and the `shutdown` command both release the port first, so a respawn can
+    // bind while this process drains; a command-led drain still yields to a later signal.
+    let listener_release = ListenerRelease::new();
     let shutdown = wait_for_shutdown_signal(&config.logger);
     tokio::pin!(shutdown);
-    let signal_reason;
-
-    loop {
-        tokio::select! {
-            accept_result = listener.accept() => {
-                match accept_result {
-                    Ok((stream, peer)) => {
-                        let ctx = ConnectionContext {
-                            runtime: Arc::clone(&config.runtime),
-                            logger: config.logger.clone(),
-                            agent_version: config.agent_version.clone(),
-                            event_bus: event_bus.clone(),
-                            handshake_auth: handshake_auth.clone(),
-                            runtime_sha256: runtime_sha256.clone(),
-                        };
-                        tokio::spawn(handle_connection(stream, peer, ctx));
-                    }
-                    Err(err) => {
-                        config.logger.warn(
-                            "Failed to accept connection",
-                            Some(json!({"error": err.to_string()})),
-                        );
-                    }
-                }
-            }
-            reason = &mut shutdown => {
-                signal_reason = reason;
-                break;
-            }
-        }
-    }
+    let stop = accept_until_stop(
+        listener,
+        shutdown.as_mut(),
+        &listener_release,
+        &config.logger,
+        |stream, peer| {
+            let ctx = ConnectionContext {
+                runtime: Arc::clone(&config.runtime),
+                logger: config.logger.clone(),
+                agent_version: config.agent_version.clone(),
+                event_bus: event_bus.clone(),
+                handshake_auth: handshake_auth.clone(),
+                runtime_sha256: runtime_sha256.clone(),
+                listener_release: listener_release.clone(),
+            };
+            tokio::spawn(handle_connection(stream, peer, ctx));
+        },
+    )
+    .await;
+    config.logger.info(
+        "WebSocket listener released for shutdown",
+        Some(json!({"port": port, "cause": stop.label()})),
+    );
+    let signal_reason = match stop {
+        AcceptStop::Signal(reason) => reason,
+        AcceptStop::Released => shutdown.await,
+    };
 
     let locks = {
         let state = config.runtime.read().await;
@@ -98,3 +130,34 @@ pub async fn run_server(config: ServerConfig) -> Result<(), AgentError> {
     );
     Ok(())
 }
+
+/// Accepts until a signal or a release, and consumes the listener so the port is free on return.
+pub(super) async fn accept_until_stop<S, A>(
+    listener: TcpListener,
+    mut shutdown: Pin<&mut S>,
+    release: &ListenerRelease,
+    logger: &Logger,
+    mut on_accept: A,
+) -> AcceptStop
+where
+    S: Future<Output = &'static str>,
+    A: FnMut(TcpStream, SocketAddr),
+{
+    loop {
+        tokio::select! {
+            accept_result = listener.accept() => match accept_result {
+                Ok((stream, peer)) => on_accept(stream, peer),
+                Err(err) => logger.warn(
+                    "Failed to accept connection",
+                    Some(json!({"error": err.to_string()})),
+                ),
+            },
+            reason = shutdown.as_mut() => return AcceptStop::Signal(reason),
+            _ = release.notify.notified() => return AcceptStop::Released,
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "ws_server_tests.rs"]
+mod tests;
