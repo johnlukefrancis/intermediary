@@ -37,11 +37,6 @@ impl HostRuntime {
                 let result = self.local_backend.read_image_file(command).await?;
                 Ok(UiResponse::ReadImageFileResult(result))
             }
-            UiCommand::BuildBundle(command) => {
-                self.local_backend
-                    .build_bundle(command, event_bus, &self.logger)
-                    .await
-            }
             UiCommand::CancelBundleBuild(command) => {
                 let result = self.local_backend.cancel_bundle_build(command);
                 Ok(UiResponse::CancelBundleBuildResult(result))
@@ -59,7 +54,8 @@ impl HostRuntime {
                 Ok(UiResponse::ListBundlesResult(result))
             }
             // Long repository operations and shutdown belong to the unlocked server route.
-            UiCommand::InspectBundleEntry(_)
+            UiCommand::BuildBundle(_)
+            | UiCommand::InspectBundleEntry(_)
             | UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)
             | UiCommand::SourceControlImageDiff(_)
@@ -67,7 +63,7 @@ impl HostRuntime {
             | UiCommand::ImportFiles(_)
             | UiCommand::WorktreeAction(_)
             | UiCommand::Shutdown => Err(AgentError::internal(
-                "Source-control, import, worktree and shutdown commands must be dispatched without the runtime lock",
+                "Build, source-control, import, worktree and shutdown commands must be dispatched without the runtime lock",
             )),
             UiCommand::ClientHello(_)
             | UiCommand::SetOptions(_)

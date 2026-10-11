@@ -11,9 +11,9 @@ mod local_host_worktree_backend;
 mod repo_backend;
 mod router;
 mod tr_fleet_service;
-mod wsl_client_hello_cache;
 
 pub use host_runtime::{HostRuntime, HostShutdownTargets};
+pub use local_host_backend::run_host_build_bundle;
 pub use local_host_import_backend::execute_host_import;
 pub use local_host_source_control_backend::{
     execute_host_source_control, HostSourceControlContext,

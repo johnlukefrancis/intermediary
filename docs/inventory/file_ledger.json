@@ -683,7 +683,7 @@
     },
     {
       "path": "app/src/hooks/use_client_hello.ts",
-      "summary": "Custom hook for clientHello lifecycle with reconnect support"
+      "summary": "Owns the clientHello lifecycle: per-session runner, retry backoff, resync and WSL re-hello"
     },
     {
       "path": "app/src/hooks/use_config_actions_extended.ts",
@@ -798,6 +798,14 @@
       "summary": "Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)"
     },
     {
+      "path": "app/src/lib/agent/client_hello_runner_test.ts",
+      "summary": "Single-flight coalescing, retry backoff, WSL generation re-hello and disposal of the hello runner"
+    },
+    {
+      "path": "app/src/lib/agent/client_hello_runner.ts",
+      "summary": "Single-flight clientHello owner for one connection session with bounded retry backoff"
+    },
+    {
       "path": "app/src/lib/agent/connection_state.ts",
       "summary": "Agent connection status types"
     },
@@ -822,8 +830,12 @@
       "summary": "Typed helper functions for sending agent commands"
     },
     {
+      "path": "app/src/lib/agent/transient_wsl_error_test.ts",
+      "summary": "Repo request retry classification treats UI request timeouts as transient"
+    },
+    {
       "path": "app/src/lib/agent/transient_wsl_error.ts",
-      "summary": "Detect transient WSL transport/bootstrap failures and compute retry delays"
+      "summary": "Detect transient WSL transport/bootstrap failures and request timeouts; compute retry delays"
     },
     {
       "path": "app/src/lib/bundles/bundle_selection_updates_test.ts",
@@ -2014,8 +2026,12 @@
       "summary": "Event handling for repo watcher changes and rename mapping"
     },
     {
+      "path": "crates/im_agent/src/repos/repo_watcher_startup_tests.rs",
+      "summary": "Unit test that repo watch registration never follows symlinks out of the repo root"
+    },
+    {
       "path": "crates/im_agent/src/repos/repo_watcher_startup.rs",
-      "summary": "Repo watcher startup - notify watcher creation, external git watches, initial tracked-path load"
+      "summary": "Repo watcher startup - notify watcher creation, background watch registration, initial tracked-path load"
     },
     {
       "path": "crates/im_agent/src/repos/repo_watcher_tests.rs",
@@ -2107,7 +2123,7 @@
     },
     {
       "path": "crates/im_agent/src/runtime/config_fingerprint.rs",
-      "summary": "Compute watcher-relevant config fingerprint"
+      "summary": "Compute global and per-repo watcher-relevant config fingerprints"
     },
     {
       "path": "crates/im_agent/src/runtime/config.rs",
@@ -2119,7 +2135,7 @@
     },
     {
       "path": "crates/im_agent/src/runtime/state_refresh_tests.rs",
-      "summary": "Refresh rejects stopped watchers without publishing retained history"
+      "summary": "Refresh rejects stopped watchers; watch_repo replaces one whose root watch failed"
     },
     {
       "path": "crates/im_agent/src/runtime/state_watchers.rs",
@@ -2619,11 +2635,11 @@
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime_helpers.rs",
-      "summary": "Host-runtime helper functions for config parsing and repo-command metadata"
+      "summary": "Host-runtime helper functions for config parsing and the WSL hello payload"
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs",
-      "summary": "Build-bundle host dispatch and WSL forwarding helpers for HostRuntime"
+      "summary": "Host build-bundle preparation and cancellation helpers for HostRuntime"
     },
     {
       "path": "crates/im_host_agent/src/runtime/host_runtime/host_dispatch.rs",
@@ -2638,16 +2654,8 @@
       "summary": "The two things a host-agent shutdown must reach: the WSL backend client and the host locks"
     },
     {
-      "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs",
-      "summary": "WSL transport transition tests for host runtime routing"
-    },
-    {
       "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs",
-      "summary": "WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime"
-    },
-    {
-      "path": "crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs",
-      "summary": "Tracks WSL transport error emission by backend connection generation for de-noised offline transitions"
+      "summary": "WSL client ownership and lock-free WSL route resolution for HostRuntime"
     },
     {
       "path": "crates/im_host_agent/src/runtime/local_host_backend.rs",
@@ -2686,16 +2694,16 @@
       "summary": "Host-agent TR fleet status polling and recovery action execution"
     },
     {
-      "path": "crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs",
-      "summary": "Caches and fingerprints latest WSL clientHello payload for resilient bootstrap replay"
-    },
-    {
       "path": "crates/im_host_agent/src/server/connection.rs",
       "summary": "Host-agent per-connection WebSocket handling and response serialization"
     },
     {
+      "path": "crates/im_host_agent/src/server/dispatch_tests.rs",
+      "summary": "Dispatch tests with a scripted WSL backend: hello never waits on WSL, commands share one hello"
+    },
+    {
       "path": "crates/im_host_agent/src/server/dispatch.rs",
-      "summary": "Host-agent command dispatch over routed runtime backends"
+      "summary": "Host-agent command dispatch: WSL forwards and long host work run after the runtime lock is released"
     },
     {
       "path": "crates/im_host_agent/src/server/handshake_auth.rs",
@@ -2734,6 +2742,26 @@
       "summary": "The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable"
     },
     {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/hello_reconciler.rs",
+      "summary": "The single in-flight WSL clientHello reconciliation per connection generation, owned by the WSL client"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/hello_state_tests.rs",
+      "summary": "Unit tests for WSL hello desired/applied/failed state and waiter decisions"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/hello_state.rs",
+      "summary": "Desired, applied and failed WSL clientHello state for the per-generation hello reconciler"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/routed_forward.rs",
+      "summary": "WSL-routed command forwarding that awaits the shared generation hello, plus the hello's public surface"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests_hello.rs",
+      "summary": "Hello reconciler tests: online once per generation, failure hand-off, root identity version gate"
+    },
+    {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_client/tests_outstanding.rs",
       "summary": "Unit tests for the outstanding-mutation ledger: decode-site clearing, timeouts, and offline answers"
     },
@@ -2756,6 +2784,14 @@
     {
       "path": "crates/im_host_agent/src/wsl/wsl_backend_messages.rs",
       "summary": "WSL-backend message parsing and pending-response helpers"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_transport_status_tests.rs",
+      "summary": "WSL transport status tests: offline error de-noising and online recovery per generation"
+    },
+    {
+      "path": "crates/im_host_agent/src/wsl/wsl_transport_status.rs",
+      "summary": "Generation-scoped wslBackendStatus online announcements and de-noised WSL transport error events"
     },
     {
       "path": "scripts/classification/code_extensions_source.mjs",

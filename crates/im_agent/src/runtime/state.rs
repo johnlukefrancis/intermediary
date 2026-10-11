@@ -17,12 +17,12 @@ use crate::server::EventBus;
 use crate::source_control::SourceControlLocks;
 use crate::staging::PathBridgeConfig;
 
-use super::{compute_config_fingerprint, AppConfig, RepoConfig, RepoRootKind};
+use super::{compute_config_fingerprint, AppConfig, ConfigFingerprint, RepoConfig, RepoRootKind};
 
 pub struct AgentRuntime {
     pub supported_root_kind: RepoRootKind,
     pub config: Option<AppConfig>,
-    pub config_fingerprint: Option<String>,
+    pub config_fingerprint: Option<ConfigFingerprint>,
     pub staging: Option<PathBridgeConfig>,
     pub repo_configs: HashMap<String, RepoConfig>,
     pub recent_files_store: Option<RecentFilesStore>,
@@ -70,14 +70,16 @@ impl AgentRuntime {
         let parsed_config = parse_app_config(&command.config)?;
         let staging_root_for_runtime = self.staging_root_for_runtime(&command)?;
         let fingerprint = compute_config_fingerprint(&parsed_config, &staging_root_for_runtime);
-        let needs_reset = self
+        let global_changed = self
             .config_fingerprint
             .as_ref()
-            .map(|current| current != &fingerprint)
+            .map(|current| current.global != fingerprint.global)
             .unwrap_or(true);
 
-        if needs_reset {
+        if global_changed {
             self.reset_watchers().await;
+        } else {
+            self.stop_changed_repo_watchers(&fingerprint).await;
         }
 
         self.config_fingerprint = Some(fingerprint);
@@ -96,7 +98,7 @@ impl AgentRuntime {
             .map(|repo| (repo.repo_id.clone(), repo))
             .collect();
 
-        if needs_reset || self.recent_files_store.is_none() {
+        if global_changed || self.recent_files_store.is_none() {
             let state_dir = PathBuf::from(&staging_root_for_runtime).join("state");
             self.recent_files_store = Some(RecentFilesStore::new(state_dir, logger.clone()));
         }
@@ -129,7 +131,7 @@ impl AgentRuntime {
         if self
             .watchers
             .get(repo_id)
-            .map(|watcher| !watcher.is_task_finished())
+            .map(|watcher| !watcher.needs_restart())
             .unwrap_or(false)
         {
             return Ok(WatchRepoResult {
@@ -174,7 +176,7 @@ impl AgentRuntime {
         let watcher = self.watchers.get(repo_id).ok_or_else(|| {
             AgentError::new("UNKNOWN_REPO", format!("Repo not watched: {repo_id}"))
         })?;
-        if watcher.is_task_finished() {
+        if watcher.needs_restart() {
             return Err(AgentError::new(
                 "WATCHER_STOPPED",
                 format!("Repo watcher stopped; restart monitoring before refreshing: {repo_id}"),

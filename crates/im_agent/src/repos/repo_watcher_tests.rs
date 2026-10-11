@@ -222,6 +222,14 @@ async fn settled_write_publishes_one_file_delta() {
     })
     .await
     .expect("watcher starts");
+    let registered_by = tokio::time::Instant::now() + std::time::Duration::from_secs(2);
+    while !watcher.registration_finished() {
+        assert!(
+            tokio::time::Instant::now() < registered_by,
+            "watch registration finishes"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+    }
 
     watcher.broadcast_snapshot();
     let snapshot = tokio::time::timeout(std::time::Duration::from_secs(1), events.recv())

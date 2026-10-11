@@ -5,14 +5,14 @@ mod bundle_forwarding;
 mod host_dispatch;
 mod shutdown_targets;
 mod wsl_routing;
-mod wsl_transport_epoch_state;
 
 use std::collections::{HashMap, HashSet};
 
 use im_agent::error::AgentError;
 use im_agent::logging::Logger;
 use im_agent::protocol::{
-    ClientHelloCommand, ClientHelloResult, SetOptionsCommand, UiCommand, UiResponse,
+    ClientHelloCommand, ClientHelloResult, SetOptionsCommand, SetOptionsResult, UiCommand,
+    UiResponse,
 };
 use im_agent::server::EventBus;
 
@@ -23,20 +23,17 @@ use crate::runtime::local_host_backend::LocalHostBackend;
 use crate::runtime::local_host_source_control_backend::HostSourceControlContext;
 use crate::runtime::router::resolve_repo_backend;
 use crate::runtime::tr_fleet_service::TrFleetService;
-use crate::runtime::wsl_client_hello_cache::WslClientHelloCache;
 use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
-
-use self::wsl_transport_epoch_state::WslTransportEpochState;
 
 pub use self::shutdown_targets::HostShutdownTargets;
 
 pub struct HostRuntime {
     local_backend: LocalHostBackend,
     repo_backends: HashMap<String, RepoBackend>,
-    wsl_client_hello_cache: WslClientHelloCache,
     wsl_client: Option<WslBackendClient>,
-    wsl_transport_state: WslTransportEpochState,
+    /// WSL roots route only on Windows; tests enable it with a scripted client.
+    wsl_routing_supported: bool,
     wsl_port: u16,
     wsl_ws_token: String,
     tr_fleet_service: TrFleetService,
@@ -48,9 +45,8 @@ impl HostRuntime {
         Self {
             local_backend: LocalHostBackend::new(),
             repo_backends: HashMap::new(),
-            wsl_client_hello_cache: WslClientHelloCache::default(),
             wsl_client: None,
-            wsl_transport_state: WslTransportEpochState::default(),
+            wsl_routing_supported: cfg!(target_os = "windows"),
             wsl_port,
             wsl_ws_token,
             tr_fleet_service: TrFleetService::new(),
@@ -70,10 +66,6 @@ impl HostRuntime {
                     .handle_client_hello(command, agent_version, event_bus)
                     .await?;
                 Ok(UiResponse::ClientHelloResult(result))
-            }
-            UiCommand::SetOptions(command) => {
-                let result = self.handle_set_options(command, event_bus).await;
-                Ok(UiResponse::SetOptionsResult(result))
             }
             UiCommand::GetTrFleetStatus(_) => {
                 let result = self.tr_fleet_service.get_tr_fleet_status().await;
@@ -100,10 +92,9 @@ impl HostRuntime {
             | UiCommand::SourceControlAction(_)
             | UiCommand::ImportFiles(_)
             | UiCommand::WorktreeAction(_) => self.dispatch_repo_command(command, event_bus).await,
-            // Shutdown is dispatched by the server without the runtime lock, so
-            // the drain never freezes the agent it is draining.
-            UiCommand::Shutdown => Err(AgentError::internal(
-                "Shutdown must be dispatched without the runtime lock",
+            // The server owns these routes so their WSL waits and drains hold no runtime lock.
+            UiCommand::Shutdown | UiCommand::SetOptions(_) => Err(AgentError::internal(
+                "Shutdown and setOptions must be dispatched without the runtime lock",
             )),
             UiCommand::Unknown => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
         }
@@ -118,6 +109,7 @@ impl HostRuntime {
         self.local_backend.source_control_context(repo_id)
     }
 
+    /// Applies host config and records the WSL hello for the client's reconciler; never awaits WSL I/O.
     async fn handle_client_hello(
         &mut self,
         command: ClientHelloCommand,
@@ -125,19 +117,21 @@ impl HostRuntime {
         event_bus: &EventBus,
     ) -> Result<ClientHelloResult, AgentError> {
         let parsed_config = parse_app_config(&command.config)?;
-        let wsl_repo_ids: Vec<String> = parsed_config
+        let wsl_repo_ids: HashSet<String> = parsed_config
             .repos
             .iter()
             .filter(|repo| repo.root_kind() == im_agent::runtime::RepoRootKind::Wsl)
             .map(|repo| repo.repo_id.clone())
             .collect();
 
-        if cfg!(not(target_os = "windows")) && !wsl_repo_ids.is_empty() {
+        if !self.wsl_routing_supported && !wsl_repo_ids.is_empty() {
+            let mut sorted: Vec<&str> = wsl_repo_ids.iter().map(String::as_str).collect();
+            sorted.sort_unstable();
             return Err(AgentError::new(
                 "UNSUPPORTED_REPO_ROOT",
                 format!(
                     "WSL repo roots are not supported on this platform (repos: {})",
-                    wsl_repo_ids.join(", ")
+                    sorted.join(", ")
                 ),
             ));
         }
@@ -153,29 +147,20 @@ impl HostRuntime {
 
         let mut watched_ids: HashSet<String> = local_result.watched_repo_ids.into_iter().collect();
 
-        if cfg!(target_os = "windows")
+        if self.wsl_routing_supported
             && should_forward_wsl_hello(had_wsl_repos_before, has_wsl_repos_now)
         {
             let wsl_hello = build_wsl_client_hello(&parsed_config, &command)?;
-            self.wsl_client_hello_cache.update_latest(wsl_hello)?;
-            match self
-                .replay_cached_wsl_client_hello_if_needed(event_bus)
-                .await
-            {
-                Ok(Some(wsl_result)) => watched_ids.extend(wsl_result.watched_repo_ids),
-                Ok(None) => {}
-                Err(err) => {
-                    if err.code() == crate::error_codes::WSL_BACKEND_UNAVAILABLE
-                        || err.code() == crate::error_codes::WSL_BACKEND_TIMEOUT
-                    {
-                        self.emit_wsl_unavailable_if_transport_error(&err, event_bus, None);
-                    } else {
-                        self.emit_wsl_backend_error(&err, event_bus, None);
-                    }
-                }
-            }
-        } else if cfg!(target_os = "windows") {
-            self.wsl_client_hello_cache.clear();
+            let client = self.wsl_client(event_bus);
+            client.set_desired_hello(Some(wsl_hello))?;
+            watched_ids.extend(
+                client
+                    .applied_watched_repo_ids()
+                    .into_iter()
+                    .filter(|repo_id| wsl_repo_ids.contains(repo_id)),
+            );
+        } else if let Some(client) = &self.wsl_client {
+            client.set_desired_hello(None)?;
         }
 
         let mut watched_repo_ids: Vec<String> = watched_ids.into_iter().collect();
@@ -187,28 +172,18 @@ impl HostRuntime {
         })
     }
 
-    async fn handle_set_options(
+    /// Applies options locally and returns the WSL client the caller forwards them to after unlocking.
+    pub fn apply_set_options(
         &mut self,
         command: SetOptionsCommand,
-        event_bus: &EventBus,
-    ) -> im_agent::protocol::SetOptionsResult {
-        let result = self.local_backend.apply_set_options(command.clone());
-        if !self.has_wsl_repos() || !cfg!(target_os = "windows") {
-            return result;
-        }
-
-        match self
-            .wsl_client(event_bus)
-            .forward_command_with_generation(UiCommand::SetOptions(command))
-            .await
-        {
-            Ok(forwarded) => {
-                self.mark_wsl_transport_success_for_generation(event_bus, forwarded.generation)
-            }
-            Err(err) => self.emit_wsl_unavailable_if_transport_error(&err, event_bus, None),
-        }
-
-        result
+    ) -> (SetOptionsResult, Option<WslBackendClient>) {
+        let result = self.local_backend.apply_set_options(command);
+        let client = if self.wsl_routing_supported && self.has_wsl_repos() {
+            self.wsl_client.clone()
+        } else {
+            None
+        };
+        (result, client)
     }
 
     async fn dispatch_repo_command(
@@ -222,11 +197,9 @@ impl HostRuntime {
 
         match backend {
             RepoBackend::Host => self.dispatch_host_command(command, event_bus).await,
-            RepoBackend::Wsl if cfg!(target_os = "windows") => {
-                self.replay_cached_wsl_client_hello_if_needed(event_bus)
-                    .await?;
-                self.forward_wsl_command(command, event_bus).await
-            }
+            RepoBackend::Wsl if self.wsl_routing_supported => Err(AgentError::internal(
+                "WSL-routed commands must be forwarded without the runtime lock",
+            )),
             RepoBackend::Wsl => Err(Self::unsupported_wsl_root_error(repo_id)),
         }
     }

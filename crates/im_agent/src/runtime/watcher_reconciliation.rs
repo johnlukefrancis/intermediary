@@ -66,10 +66,10 @@ impl AgentRuntime {
         if self
             .watchers
             .get(&repo.repo_id)
-            .is_some_and(RepoWatcher::is_task_finished)
+            .is_some_and(RepoWatcher::needs_restart)
         {
             logger.warn(
-                "Repo watcher task ended; restarting watcher",
+                "Repo watcher is not observing (task ended or root watch failed); restarting",
                 Some(json!({"repoId": repo.repo_id})),
             );
             if let Some(watcher) = self.watchers.remove(&repo.repo_id) {

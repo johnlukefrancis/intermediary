@@ -31,7 +31,7 @@ pub(super) fn confirmed(request_id: String) -> ResponseEnvelope {
 
 #[tokio::test]
 async fn forward_command_timeout_enqueues_cancel_message() {
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
 
     let recv_task = tokio::spawn(async move {
         let held_request = match request_rx.recv().await {
@@ -69,7 +69,7 @@ async fn forward_command_timeout_enqueues_cancel_message() {
 
 #[tokio::test]
 async fn forwarded_response_preserves_serving_connection_generation() {
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
 
     let response_task = tokio::spawn(async move {
         let request = match request_rx.recv().await {

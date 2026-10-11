@@ -36,7 +36,8 @@ The behaviour contract is `docs/design/stream_panel_design.md`; the witness rout
 ## Lifecycle
 
 1. `RepoWatcher::start` loads the tracked set, constructs `DeltaService` (spawning the worker), and hands it to
-   `EventContext`. Every notify event still publishes `fileChanged` first; on `DeltaIntent::Note` the path is
+   `EventContext`; recursive watch registration (symlinks not followed) completes on a blocking worker after
+   `start` returns, so events begin once it lands. Every notify event still publishes `fileChanged` first; on `DeltaIntent::Note` the path is
    marked on the settle queue (lock, mutate, `notify_one` — no IO, no `await`).
 2. The worker wakes on the earliest deadline or a nudge, evicts baselines for dropped paths, drains a batch,
    charges the budget, and resolves each change: settled read under the process-wide permit, baseline ladder,
@@ -46,7 +47,7 @@ The behaviour contract is `docs/design/stream_panel_design.md`; the witness rout
    `useActivityHost` subscription → `routeAgentEvent` → the repo's store. A flush runs the reducers; the conductor
    admits one resolved card per cadence tick into the twenty-card ring; the panel renders through
    `useSyncExternalStore`.
-4. Stop order: `stop_tx` → unwatch → `DeltaService::stop` (cancel token, grace, abort; the cache drops with the
+4. Stop order: `stop_tx` → unwatch (a registration still in flight releases its own watcher) → `DeltaService::stop` (cancel token, grace, abort; the cache drops with the
    worker) → task abort → recent-files flush.
 
 ## Invariants
@@ -57,8 +58,9 @@ The behaviour contract is `docs/design/stream_panel_design.md`; the witness rout
 - Every dimension is bounded: settle queue, read permits, bytes per file, cache bytes, patch bytes, budget per
   window, ring size (twenty plus one card mid-exit), lines per card, image tiles, notices, stores.
 - `seq` is strictly increasing per repo per watcher start and is consumed by `fileDelta` and `fileDeltaCounters`
-  alike; a forward gap prints a notice, a restart does not. Every drop — bus lag, a full stream lane (`EVENT_QUEUE_CAP` slots or `EVENT_QUEUE_BYTES`)
-  queue, or a dropped counters event — is therefore visible as a gap, and no drop event exists on the wire.
+  alike; a forward gap prints a notice, a restart does not. Every drop — a full stream lane (`EVENT_QUEUE_CAP` slots or `EVENT_QUEUE_BYTES`)
+  queue, or a dropped counters event — is therefore visible as a gap, and no drop event exists on the wire; bus lag
+  instead closes the connection (see the failure table).
 - Counters are never stranded: they ride the next `fileDelta` or a `fileDeltaCounters` event.
 - A `VS INDEX` card's two sides are captured in one causal order: the index blob first, then the worktree,
   the pair carried across re-settles. A first sighting whose settled text is empty while the captured index
@@ -90,7 +92,7 @@ The behaviour contract is `docs/design/stream_panel_design.md`; the witness rout
 | Read or diff hangs | `READ_DEADLINE` 2 s → `opaque(unreadable)`; the permit is released, the pool thread finishes on its own. |
 | Budget exhausted | Add/modify/rename/image: no event, baseline evicted, counted in `withheld`; delete: `gone` without a patch. |
 | Queue over `QUEUE_CAP` | Mark discarded, counted in `dropped`, baseline evicted so the next edit says `VS INDEX`. |
-| Broadcast bus lag | Deltas dropped for that subscriber; the UI prints `N EDITS NOT SHOWN` from the `seq` gap. |
+| Broadcast bus lag | Lost events may include control events, so the relay ends and the socket writer closes that client with close code 1013 (`event relay lagged; reconnect to resync`); the client reconnects and its hello resyncs. |
 | Per-connection stream lane full (`EVENT_QUEUE_CAP` slots or `EVENT_QUEUE_BYTES`) | A stream event is dropped (control events wait on their own lane instead), a drop counter increments, one rate-limited warn is logged per drop burst; the UI sees a `seq` gap. |
 | Counters event dropped | Visible as a `seq` gap like any delta — the counters event consumes the same sequence. |
 | Image changed between the delta and the pixel fetch | Bytes or `mtimeMs` mismatch; nothing is decoded and the tile reads `IMAGE CHANGED` until the next delta for that path. |

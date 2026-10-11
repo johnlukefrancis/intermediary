@@ -149,9 +149,10 @@ Intermediary uses a **host-routed architecture**:
   - On Windows only: launches the WSL backend agent on `agentPort + 1` when any configured repo has `root.kind = "wsl"`
   - Auto-start toggle with optional distro override (Windows-only control)
   - Restart command and diagnostics surfaced in the UI
-  - Spawns managed host/WSL agents with stdio logging disabled and null stdio streams to avoid undrained pipe-buffer stalls; early-exit diagnostics read bounded tails from `agent_latest.log`
+  - Spawns managed host/WSL agents with stdio logging disabled and null stdio streams to avoid undrained pipe-buffer stalls; early-exit diagnostics read bounded tails from the spawned agent's own log (`agent_host_latest.log` / `agent_wsl_latest.log`)
   - Reconciles tracked host/WSL child processes before spawn/replace/stop, and stops tracked children on app exit to enforce a no-orphan-process boundary for supervisor-owned processes
   - Reclaims the reserved WSL backend port from any confirmed Intermediary `im_agent` — the owning PID(s) are found by port listener (via `ss` inside the distro) and verified by `/proc/<pid>/comm`, executable basename, or `INTERMEDIARY_WSL_WS_TOKEN` in the process environment — so a stale agent from a prior install or a closed dev task is reclaimed even when it was launched from a different path or token; a genuinely foreign (non-Intermediary) listener is never terminated and still errors in `mode=auto`. `external` mode remains user-managed
+  - One async lifecycle lock makes `ensure_agent_running` (startup and the UI's 10 s WSL healthcheck), `restart_agent`, `stop_agent`, and app-exit teardown single-flight: a healthcheck arriving mid-restart waits and then adopts the restarted runtime instead of retiring it mid-handshake
   - **Restart Agent** forces a real teardown: it bypasses the "already running" short-circuit and always reclaims the port and respawns the backend, even when the backend is healthy (no more silent no-op)
   - On app exit — after the integrated terminal has closed and waited its own sessions — stops the agents by port, then frees the WSL VM RAM only when the distro is otherwise idle — no interactive `pts/*` session is open (console gettys on `hvc0`/`tty1` and headless services are ignored) — by running `wsl --terminate <distro>` (targeted to the one distro, never `wsl --shutdown`); when any interactive WSL shell/tab is open the distro is left running, and in `external` mode nothing is terminated
 
@@ -164,9 +165,13 @@ Intermediary uses a **host-routed architecture**:
   - Handles host-native roots locally for watch/refresh/stage/build/list/top-level
   - Maintains internal WebSocket client to WSL backend agent
   - Forwards WSL-targeted requests and relays backend events to the UI
-  - Keeps retrying WSL backend transport with bounded reconnect delay and emits explicit online/offline transition events (`wslBackendStatus`) with a reconnect generation counter
+  - Keeps retrying WSL backend transport with bounded reconnect delay and emits explicit online/offline transition events (`wslBackendStatus`) with a reconnect generation counter; `online` for a generation is emitted once its WSL `clientHello` applies (or at connect when no WSL config exists), and again when a changed WSL config first applies on it
+  - Host `clientHello` applies host config, records the WSL hello payload on the WSL client and replies without awaiting WSL I/O; `watchedRepoIds` holds host repos plus WSL repos already applied on the current generation. The UI re-hellos on `online` to collect WSL ids
+  - The WSL client owns one hello reconciliation per connection generation (`wsl/wsl_backend_client/hello_reconciler.rs`): started on connect and on WSL config change, single in-flight, latest payload wins. WSL-routed commands await that shared attempt within their own timeout and never send a hello; a failed attempt fails the commands waiting on it, and the next command re-arms one attempt
+  - No runtime lock (read or write) spans a WSL await: the route and client are read under a short lock, then the command is forwarded unlocked; transport status/errors are owned by the WSL client. Host builds also run unlocked, so host commands and new UI hellos never queue behind WSL waits or a disconnected client's work
   - Owns one bounded timeout per forwarded request; timed-out requests send a request-id-scoped cooperative cancellation to the WSL backend and let the operation retain its cleanup guards until work stops
-  - Attributes every successful forwarded response to the connection generation that produced it, including `clientHello`, options, build, and build-cancellation paths, so an older response cannot clear a newer transport error
+  - Bounds the WSL socket itself (`wsl/wsl_backend_link.rs`): TCP connect plus WebSocket upgrade 5 s, a ping every 10 s, and any connection with no inbound frame (pong, event or response) for 25 s — or an outbound frame that cannot be sent in 25 s — is dropped and the next connect starts a new generation; the WSL agent's read loop answers pings itself
+  - Attributes every successful forwarded response, including the WSL `clientHello`, to the connection generation that produced it, so an older response cannot clear a newer transport error
   - Emits explicit backend-availability errors without taking down Windows repos
   - Dispatches source-control commands without holding the runtime write lock: the backend is resolved under a short read lock, then host repos run Git in-process and WSL repos are forwarded, so a long push never freezes other repos or WSL forwards
   - On `shutdown` (app stop/restart/exit, SIGTERM, ctrl-c), forwards `shutdown` to the WSL backend first, then drains its own in-flight source-control mutations before responding and exiting; new mutations requested while draining return `AGENT_DRAINING` while reads are still served; `drained: false` never triggers an exit — the agent keeps waiting up to a 450 s emergency bound (then terminates its owned process tree and logs `unknown` with the residue), and `WSL_BACKEND_UNAVAILABLE` counts as drained only when no forwarded mutation request id is still outstanding to that backend
@@ -177,7 +182,12 @@ Intermediary uses a **host-routed architecture**:
 - **Purpose:** File watching and bundle generation for WSL roots
 - **Key features:**
   - inotify-based file watching via notify (reliable for Linux FS)
-  - Recursive native watcher registration/unregistration runs on blocking workers, with independent repo watchers started and reset concurrently during `clientHello` bootstrap
+  - `clientHello` creates each repo watcher (classification, tracked set, recents, event task) and replies; recursive native watch registration then runs on a blocking worker in the background, so the repo is in `watchedRepoIds` as soon as its watcher exists and a later registration failure arrives as a `watcher`-scope `error` event with `repoId`/`rootPath`. Changes in the gap before registration completes are not reported; the UI hydrates by request
+  - Watch registration never follows symlinks (notify `Config::with_follow_symlinks(false)`), so a link out of the repo root (for example `work -> /mnt/j/...`) registers no watches and reports no events
+  - A failed root watch registration marks the watcher not observing: `watchRepo`, a reconciling `clientHello`, and `refresh` (`WATCHER_STOPPED`) treat it like an ended watcher task, so the next `watchRepo` or hello restarts it and `watchedRepoIds` omits it meanwhile
+  - An OS event-queue overflow (notify `Flag::Rescan`) marks Git status dirty, reloads the tracked set and ignore rules, and broadcasts `repoTopologyChanged` plus the repo's MRU `snapshot` so clients re-read what they show
+  - Shutdown (the `shutdown` command or a signal) first drops the listening socket, so a respawned agent can bind the port while this one drains; already-open connections keep their reads for the whole drain
+  - A repeated `clientHello` reconciles per repo: a change to global watcher inputs (staging root, `recentFilesLimit`, classification excludes) restarts every watcher; otherwise only repos that were removed or whose root, docs/code/ignore globs changed are stopped, and missing watchers are started
   - Emits `sourceControlChanged` (coalesced to at most one per 250ms with a trailing emit) for `.git` metadata writes and working-tree changes outside the repo's structural ignore globs; a tracked-path set loaded from `git ls-files -z` at watcher start (refreshed on `.git/index` changes) overrides the structural exclude so a tracked file under `node_modules`/`target`/ignore globs still emits, while untracked noise there stays suppressed; linked worktrees get a second watch on their real git dir
   - Source-control commands run Git through the shared `im_bundle::git` facade on blocking workers, serialized per repo (lock keyed by the physical git dir) for mutations, with WSL-routed reads cancellable and mutations bounded by timeout only; on `shutdown` the agent stops admitting new mutations and waits for the in-flight one — `drained: false` never exits it, only the 450 s emergency bound does, terminating its owned process tree and logging `unknown` with the residue
   - Recent changes index with 250ms debouncing, persisted history under `staging/state/recent_files/<repoId>.json`, and per-file activity metadata for Auto Files ranking
@@ -239,15 +249,19 @@ UI communication is via WebSocket on `127.0.0.1:<hostPort>` to the host agent, w
 ### Lifecycle recovery behavior
 
 - If the WSL backend goes offline, Windows-root repos continue to function; WSL-targeted commands return explicit transport errors and status remains recoverable.
-- On reconnect, host runtime replays cached WSL `clientHello` once per backend connection generation so watchers/state re-bootstrap without requiring manual full app reset. A successful replay is recorded against the generation carried by its response, not a generation sampled before the request.
+- On reconnect, the WSL client's hello reconciler re-sends the latest WSL `clientHello` once for the new connection generation so watchers/state re-bootstrap without a manual reset; an apply is recorded against the generation carried by its response, then `wslBackendStatus: online` is emitted for that generation.
+- A half-open or wedged WSL backend is detected by the WSL link bounds (5 s connect/upgrade, 25 s without a pong) and moves to a new connection generation instead of holding forwarded requests until their own timeouts.
+- Both agents close a client socket whose event relay lagged (close code 1013), so a client never keeps a connection that silently lost control events; the UI's reconnect and the host's WSL reconnect re-run their hellos.
+- Each agent writes its own JSONL log (`agent_host_latest.log`, `agent_wsl_latest.log`), rotated at 16 MiB into one `*_previous.log` generation. A session that sends no request (the supervisor's 10 s health probe) logs its open/reset/close at debug only.
 - Forwarding uses the WSL client's canonical per-command timeout. There is no shorter wrapper timeout that can abandon the caller while the same backend request remains active; a canonical timeout emits request-id cancellation and the backend retains operation guards through cleanup before accepting conflicting work.
+- UI request timeouts (`app/src/lib/agent/agent_request_timeouts.ts`) sit strictly above that forward budget: each tier is the host→WSL budget + 30 s (default 60 s → UI 90 s, build 300 s → 330 s), except `clientHello` (host 12 s → UI 30 s); `agent_request_timeouts_test.ts` reads the host table and pins the margin.
 - WSL `clientHello` diagnostics log `WSL backend clientHello applied` or `WSL backend clientHello failed` with `durationMs` and `generation`, without logging the configuration payload.
 - On OS resume (sleep/wake), the UI triggers reconnect + rehydrate flow; users may briefly see `Reconnecting (...)` and then normal status once handshake and hydration complete.
 
 | Situation | Expected visible outcome |
 |---|---|
-| UI→host socket is connected while WSL `clientHello` is still applying | Status may say `Connected` because the host endpoint is live; WSL hydration waits for its generation-scoped bootstrap instead of issuing duplicate handshakes. |
-| Multiple WSL repos require watcher startup | Watchers initialize concurrently off async runtime workers; one slow repo does not serialize every independent watcher registration. |
+| UI→host socket is connected while WSL `clientHello` is still applying | Host `clientHello` answers at once with host repos; WSL commands wait on the one generation-scoped hello instead of issuing duplicate handshakes, and the UI re-hellos when `online` arrives for that generation. |
+| Multiple WSL repos require watcher startup | `clientHello` replies once watchers exist; recursive registration finishes in the background per repo, so a large tree never holds the handshake. |
 | A WSL request exceeds its canonical request budget | One WSL timeout is surfaced, the matching operation is cooperatively cancelled by request ID, temporary output is cleaned before its guard releases, and host-root workflows remain available. |
 
 ### Host OS File Actions
@@ -347,7 +361,7 @@ intermediary/
 │   ├── compliance/         # ADRs
 │   └── inventory/          # File ledger
 ├── scripts/                # Build and utility scripts
-└── logs/                   # Runtime logs (run_latest.txt, agent_latest.log)
+└── logs/                   # Runtime logs (run_latest.txt, agent_host_latest.log, agent_wsl_latest.log)
 ```
 
 ## Key Workflows

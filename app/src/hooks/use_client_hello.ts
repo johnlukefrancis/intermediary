@@ -1,10 +1,15 @@
 // Path: app/src/hooks/use_client_hello.ts
-// Description: Custom hook for clientHello lifecycle with reconnect support
+// Description: Owns the clientHello lifecycle: per-session runner, retry backoff, resync and WSL re-hello
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { AgentClient } from "../lib/agent/agent_client.js";
 import type { ConnectionState } from "../lib/agent/connection_state.js";
 import { sendClientHello } from "../lib/agent/messages.js";
+import {
+  ClientHelloRunner,
+  type HelloOutcome,
+  type HelloScheduler,
+} from "../lib/agent/client_hello_runner.js";
 import type { AppConfig } from "../shared/config.js";
 import type { AppPaths } from "../types/app_paths.js";
 
@@ -17,6 +22,13 @@ export interface HelloState {
   agentVersion: string | null;
   lastHelloAt: number | null;
   lastError: string | null;
+}
+
+export interface ClientHelloOwner {
+  helloState: HelloState;
+  /** Sends a hello through the session owner; false when disconnected or the hello failed. */
+  resyncClientHello: () => Promise<boolean>;
+  noteWslOnline: (generation: number) => void;
 }
 
 interface UseClientHelloOptions {
@@ -35,100 +47,106 @@ const INITIAL_HELLO_STATE: HelloState = {
   lastError: null,
 };
 
-function buildConfigKey(config: AppConfig): string {
-  return JSON.stringify(config);
+const PENDING_HELLO_STATE: HelloState = { ...INITIAL_HELLO_STATE, status: "pending" };
+
+const scheduleTimeout: HelloScheduler = (run, delayMs) => {
+  const handle = setTimeout(run, delayMs);
+  return () => { clearTimeout(handle); };
+};
+
+function nextHelloState(prev: HelloState, outcome: HelloOutcome, now: number): HelloState {
+  if (outcome.kind === "ok") {
+    return {
+      status: "ok",
+      watchedRepoIds: outcome.result.watchedRepoIds,
+      agentVersion: outcome.result.agentVersion,
+      lastHelloAt: now,
+      lastError: null,
+    };
+  }
+  // A failed resync keeps the applied session usable; retries continue in the runner.
+  if (prev.status === "ok") {
+    return { ...prev, lastError: outcome.message };
+  }
+  return { ...INITIAL_HELLO_STATE, status: "error", lastError: outcome.message };
 }
 
-export function useClientHello(options: UseClientHelloOptions): HelloState {
+export function useClientHello(options: UseClientHelloOptions): ClientHelloOwner {
   const { client, connectionState, config, appPaths, autoStageOnChange } = options;
   const [helloState, setHelloState] = useState<HelloState>(INITIAL_HELLO_STATE);
-
-  // Stable ref for autoStageOnChange to avoid effect churn
+  const runnerRef = useRef<ClientHelloRunner | null>(null);
   const autoStageRef = useRef(autoStageOnChange);
-  const lastHelloKeyRef = useRef<string | null>(null);
-  const configKey = useMemo(() => buildConfigKey(config), [config]);
+  const configRef = useRef(config);
+  const appPathsRef = useRef(appPaths);
+  const configKey = useMemo(() => JSON.stringify(config), [config]);
+  const hasAppPaths = appPaths !== null;
+  const stagingHostRoot = appPaths?.stagingHostRoot ?? null;
+  const stagingWslRoot = appPaths?.stagingWslRoot ?? null;
 
   useEffect(() => {
     autoStageRef.current = autoStageOnChange;
-  }, [autoStageOnChange]);
+    configRef.current = config;
+    appPathsRef.current = appPaths;
+  }, [appPaths, autoStageOnChange, config]);
 
   useEffect(() => {
-    // Reset to idle when not connected
     if (connectionState.status !== "connected") {
-      lastHelloKeyRef.current = null;
-      setHelloState((prev) =>
-        prev.status === "idle" ? prev : INITIAL_HELLO_STATE
-      );
+      setHelloState((prev) => (prev.status === "idle" ? prev : INITIAL_HELLO_STATE));
+      return;
+    }
+    const paths = appPathsRef.current;
+    if (!client || !hasAppPaths || !paths) {
       return;
     }
 
-    if (!client || !appPaths) {
-      return;
-    }
-
-    const helloKey = [
-      connectionState.connectedAt ?? "no-conn",
-      appPaths.stagingHostRoot,
-      appPaths.stagingWslRoot ?? "no-wsl-root",
-      configKey,
-    ].join("|");
-
-    if (lastHelloKeyRef.current === helloKey) {
-      return;
-    }
-    lastHelloKeyRef.current = helloKey;
-
-    // Send clientHello on (re)connect and when hello inputs change while connected
-    let cancelled = false;
-    setHelloState({
-      status: "pending",
-      watchedRepoIds: [],
-      agentVersion: null,
-      lastHelloAt: null,
-      lastError: null,
+    // One runner per connection + hello inputs; disposal drops its retries and late results.
+    const sessionConfig = configRef.current;
+    const runner = new ClientHelloRunner({
+      send: () => sendClientHello(
+        client,
+        sessionConfig,
+        paths.stagingHostRoot,
+        paths.stagingWslRoot,
+        autoStageRef.current
+      ),
+      onStart: () => {
+        setHelloState((prev) => (prev.status === "ok" ? prev : { ...prev, status: "pending" }));
+      },
+      onOutcome: (outcome) => {
+        if (outcome.kind === "error") {
+          console.error("[useClientHello] clientHello failed:", outcome.message);
+        }
+        setHelloState((prev) => nextHelloState(prev, outcome, Date.now()));
+      },
+      schedule: scheduleTimeout,
     });
-
-    void sendClientHello(
-      client,
-      config,
-      appPaths.stagingHostRoot,
-      appPaths.stagingWslRoot,
-      autoStageRef.current
-    )
-      .then((result) => {
-        if (cancelled) return;
-        setHelloState({
-          status: "ok",
-          watchedRepoIds: result.watchedRepoIds,
-          agentVersion: result.agentVersion,
-          lastHelloAt: Date.now(),
-          lastError: null,
-        });
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : "clientHello failed";
-        console.error("[useClientHello] clientHello failed:", err);
-        setHelloState({
-          status: "error",
-          watchedRepoIds: [],
-          agentVersion: null,
-          lastHelloAt: null,
-          lastError: message,
-        });
-      });
+    runnerRef.current = runner;
+    setHelloState(PENDING_HELLO_STATE);
+    void runner.request();
 
     return () => {
-      cancelled = true;
+      runner.dispose();
+      if (runnerRef.current === runner) {
+        runnerRef.current = null;
+      }
     };
   }, [
-    appPaths,
     client,
-    config,
     configKey,
     connectionState.connectedAt,
     connectionState.status,
+    hasAppPaths,
+    stagingHostRoot,
+    stagingWslRoot,
   ]);
 
-  return helloState;
+  const resyncClientHello = useCallback(
+    (): Promise<boolean> => runnerRef.current?.request() ?? Promise.resolve(false),
+    []
+  );
+  const noteWslOnline = useCallback((generation: number): void => {
+    runnerRef.current?.noteWslOnline(generation);
+  }, []);
+
+  return { helloState, resyncClientHello, noteWslOnline };
 }

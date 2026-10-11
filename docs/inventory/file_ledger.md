@@ -173,7 +173,7 @@ app/src/hooks/use_activity_host.ts - One app-lifetime dispatcher for Stream and 
 app/src/hooks/use_agent.tsx - Agent context provider and connection management hook
 app/src/hooks/use_app_navigation.ts - App view selection, remembered repository navigation and the handset landing intent for a repo tab
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
-app/src/hooks/use_client_hello.ts - Custom hook for clientHello lifecycle with reconnect support
+app/src/hooks/use_client_hello.ts - Owns the clientHello lifecycle: per-session runner, retry backoff, resync and WSL re-hello
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
 app/src/hooks/use_config_actions_rail.ts - Config actions for persisted panel state: the rail section, the rail width, and the left files mode
 app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
@@ -202,13 +202,16 @@ app/src/lib/agent/agent_client_inspection_test.ts - Remote hover cancellation an
 app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope normalization for older agent payloads
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
+app/src/lib/agent/client_hello_runner_test.ts - Single-flight coalescing, retry backoff, WSL generation re-hello and disposal of the hello runner
+app/src/lib/agent/client_hello_runner.ts - Single-flight clientHello owner for one connection session with bounded retry backoff
 app/src/lib/agent/connection_state.ts - Agent connection status types
 app/src/lib/agent/error_codes.ts - Typed agent response error plus accessors for its code, message, and details
 app/src/lib/agent/messages_import.ts - Typed helper for sending the drag-and-drop import command
 app/src/lib/agent/messages_source_control.ts - Typed helpers for sending source-control status, diff, and action commands
 app/src/lib/agent/messages_worktree.ts - Typed helper for sending the ZIPS-tree worktree action command
 app/src/lib/agent/messages.ts - Typed helper functions for sending agent commands
-app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and compute retry delays
+app/src/lib/agent/transient_wsl_error_test.ts - Repo request retry classification treats UI request timeouts as transient
+app/src/lib/agent/transient_wsl_error.ts - Detect transient WSL transport/bootstrap failures and request timeouts; compute retry delays
 app/src/lib/bundles/bundle_selection_updates_test.ts - Regression coverage for selective inclusion beneath excluded bundle ancestors
 app/src/lib/bundles/bundle_selection_updates.ts - Explicit bundle inclusion changes without enumerating or enabling sibling paths
 app/src/lib/bundles/bundle_selection_visibility_test.ts - Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included
@@ -506,7 +509,8 @@ crates/im_agent/src/repos/repo_top_level.rs - Scan top-level entries and bounded
 crates/im_agent/src/repos/repo_topology_change.rs - Detect watcher events that invalidate repo top-level metadata
 crates/im_agent/src/repos/repo_watcher_delta_marks.rs - How watcher events mark the delta queue - one note per change, one rename per two-path arm
 crates/im_agent/src/repos/repo_watcher_events.rs - Event handling for repo watcher changes and rename mapping
-crates/im_agent/src/repos/repo_watcher_startup.rs - Repo watcher startup - notify watcher creation, external git watches, initial tracked-path load
+crates/im_agent/src/repos/repo_watcher_startup_tests.rs - Unit test that repo watch registration never follows symlinks out of the repo root
+crates/im_agent/src/repos/repo_watcher_startup.rs - Repo watcher startup - notify watcher creation, background watch registration, initial tracked-path load
 crates/im_agent/src/repos/repo_watcher_tests.rs - Unit tests for the repo watcher's initial-entries ignore filtering and rename delta marks
 crates/im_agent/src/repos/repo_watcher.rs - Notify-based repo watcher with MRU, delta pipeline, and event emission
 crates/im_agent/src/repos/source_control_watch/coalescer.rs - Rate-limit sourceControlChanged emission with a guaranteed trailing event
@@ -529,10 +533,10 @@ crates/im_agent/src/repos/worktree/tests_move.rs - Move behaviour tests: what la
 crates/im_agent/src/repos/worktree/tests_no_replace.rs - Tests for the no-replace write a move performs at every destination the user did not authorize
 crates/im_agent/src/repos/worktree/tests_rename.rs - Rename behaviour tests: what commits, which names are refused, and what is never replaced
 crates/im_agent/src/repos/worktree/tests_support.rs - Shared fixtures for the worktree action tests: a worktree, its files, and one call
-crates/im_agent/src/runtime/config_fingerprint.rs - Compute watcher-relevant config fingerprint
+crates/im_agent/src/runtime/config_fingerprint.rs - Compute global and per-repo watcher-relevant config fingerprints
 crates/im_agent/src/runtime/config.rs - Minimal app configuration structures for the agent runtime
 crates/im_agent/src/runtime/mod.rs - Agent runtime exports
-crates/im_agent/src/runtime/state_refresh_tests.rs - Refresh rejects stopped watchers without publishing retained history
+crates/im_agent/src/runtime/state_refresh_tests.rs - Refresh rejects stopped watchers; watch_repo replaces one whose root watch failed
 crates/im_agent/src/runtime/state_watchers.rs - Watcher lifecycle helpers for agent runtime state
 crates/im_agent/src/runtime/state.rs - Agent runtime state and option handlers
 crates/im_agent/src/runtime/watcher_reconciliation.rs - Concurrent repository watcher reconciliation for agent clientHello bootstrap
@@ -657,14 +661,12 @@ crates/im_host_agent/src/config.rs - Host agent environment configuration parsin
 crates/im_host_agent/src/error_codes.rs - Shared host-agent error code constants for routing and WSL backend failures
 crates/im_host_agent/src/lib.rs - Library root for the Intermediary host agent daemon
 crates/im_host_agent/src/main.rs - Host agent daemon entry point
-crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and repo-command metadata
-crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Build-bundle host dispatch and WSL forwarding helpers for HostRuntime
+crates/im_host_agent/src/runtime/host_runtime_helpers.rs - Host-runtime helper functions for config parsing and the WSL hello payload
+crates/im_host_agent/src/runtime/host_runtime/bundle_forwarding.rs - Host build-bundle preparation and cancellation helpers for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/host_dispatch.rs - Host-rooted repo command dispatch onto the local backend for HostRuntime
 crates/im_host_agent/src/runtime/host_runtime/mod.rs - Host runtime command routing and clientHello orchestration for host and WSL backends
 crates/im_host_agent/src/runtime/host_runtime/shutdown_targets.rs - The two things a host-agent shutdown must reach: the WSL backend client and the host locks
-crates/im_host_agent/src/runtime/host_runtime/wsl_routing_tests.rs - WSL transport transition tests for host runtime routing
-crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
-crates/im_host_agent/src/runtime/host_runtime/wsl_transport_epoch_state.rs - Tracks WSL transport error emission by backend connection generation for de-noised offline transitions
+crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs - WSL client ownership and lock-free WSL route resolution for HostRuntime
 crates/im_host_agent/src/runtime/local_host_backend.rs - Host-native local backend for repo watch, staging, and bundle operations
 crates/im_host_agent/src/runtime/local_host_import_backend.rs - Host-native file import execution that never holds the runtime lock across the copy
 crates/im_host_agent/src/runtime/local_host_repo_backend.rs - Host-native repo read and topology operations
@@ -674,9 +676,9 @@ crates/im_host_agent/src/runtime/mod.rs - Host runtime exports for backend routi
 crates/im_host_agent/src/runtime/repo_backend.rs - Repo backend kind mapping for host-agent routing
 crates/im_host_agent/src/runtime/router.rs - Repo-id command routing for host-agent backend selection
 crates/im_host_agent/src/runtime/tr_fleet_service.rs - Host-agent TR fleet status polling and recovery action execution
-crates/im_host_agent/src/runtime/wsl_client_hello_cache.rs - Caches and fingerprints latest WSL clientHello payload for resilient bootstrap replay
 crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSocket handling and response serialization
-crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
+crates/im_host_agent/src/server/dispatch_tests.rs - Dispatch tests with a scripted WSL backend: hello never waits on WSL, commands share one hello
+crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch: WSL forwards and long host work run after the runtime lock is released
 crates/im_host_agent/src/server/handshake_auth.rs - Host-agent websocket handshake token and origin validation utilities
 crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
 crates/im_host_agent/src/server/request_dispatch.rs - Connection-scoped request dispatch and cancellation of the current hover inspection
@@ -686,12 +688,19 @@ crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop 
 crates/im_host_agent/src/wsl/mod.rs - WSL backend client module exports
 crates/im_host_agent/src/wsl/wsl_backend_client.rs - Persistent WebSocket client for forwarding commands/events to the WSL backend agent
 crates/im_host_agent/src/wsl/wsl_backend_client/client_loop.rs - The WSL backend connect/reconnect loop and the answers it gives while the backend is unreachable
+crates/im_host_agent/src/wsl/wsl_backend_client/hello_reconciler.rs - The single in-flight WSL clientHello reconciliation per connection generation, owned by the WSL client
+crates/im_host_agent/src/wsl/wsl_backend_client/hello_state_tests.rs - Unit tests for WSL hello desired/applied/failed state and waiter decisions
+crates/im_host_agent/src/wsl/wsl_backend_client/hello_state.rs - Desired, applied and failed WSL clientHello state for the per-generation hello reconciler
+crates/im_host_agent/src/wsl/wsl_backend_client/routed_forward.rs - WSL-routed command forwarding that awaits the shared generation hello, plus the hello's public surface
+crates/im_host_agent/src/wsl/wsl_backend_client/tests_hello.rs - Hello reconciler tests: online once per generation, failure hand-off, root identity version gate
 crates/im_host_agent/src/wsl/wsl_backend_client/tests_outstanding.rs - Unit tests for the outstanding-mutation ledger: decode-site clearing, timeouts, and offline answers
 crates/im_host_agent/src/wsl/wsl_backend_client/tests_timeouts.rs - Unit tests for the per-command forward timeout ladder
 crates/im_host_agent/src/wsl/wsl_backend_client/tests.rs - Unit tests for WSL backend forwarding, cancellation, and outstanding-mutation tracking
 crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs - The host->WSL request-timeout ladder and the agent-side worst case each tier covers
 crates/im_host_agent/src/wsl/wsl_backend_connection.rs - Connected WSL backend request loop and pending response handling
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
+crates/im_host_agent/src/wsl/wsl_transport_status_tests.rs - WSL transport status tests: offline error de-noising and online recovery per generation
+crates/im_host_agent/src/wsl/wsl_transport_status.rs - Generation-scoped wslBackendStatus online announcements and de-noised WSL transport error events
 scripts/classification/code_extensions_source.mjs - Pinned baseline + local overrides for code-classification file extensions.
 scripts/classification/generate_code_classification_artifacts.mjs - Generate TS/Rust code-classification extension artifacts from a pinned source list.
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.

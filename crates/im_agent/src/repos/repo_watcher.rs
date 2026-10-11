@@ -1,11 +1,10 @@
 // Path: crates/im_agent/src/repos/repo_watcher.rs
 // Description: Notify-based repo watcher with MRU, delta pipeline, and event emission
 
-use notify::{RecommendedWatcher, Watcher};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{watch, Mutex, RwLock};
+use tokio::sync::{watch, RwLock};
 
 use crate::error::AgentError;
 use crate::logging::Logger;
@@ -18,7 +17,8 @@ use crate::repos::mru_index::MruIndex;
 use crate::repos::recent_files_store::RecentFilesStore;
 use crate::repos::repo_watcher_events::{handle_event, raw_os_code, EventContext, PendingRename};
 use crate::repos::repo_watcher_startup::{
-    create_watcher, filter_initial_entries, load_tracked_set,
+    create_watcher, filter_initial_entries, load_tracked_set, root_registration_failed,
+    spawn_watch_registration, stop_watcher_slot, SharedWatcherSlot, WatchRegistration,
 };
 use crate::repos::source_control_watch::{
     resolve_external_watches, SourceControlChangeDetector, SourceControlWatch, TrackedPathSet,
@@ -48,7 +48,7 @@ pub struct RepoWatcher {
     recent_store: RecentFilesStore,
     logger: Logger,
     event_bus: EventBus,
-    watcher: Mutex<Option<RecommendedWatcher>>,
+    watcher: SharedWatcherSlot,
     extra_watch_paths: Vec<PathBuf>,
     delta: Arc<DeltaService>,
     stop_tx: watch::Sender<bool>,
@@ -99,12 +99,20 @@ impl RepoWatcher {
             .map(|(path, _)| path.clone())
             .collect();
 
-        let (watcher, mut event_rx) = create_watcher(
-            config.root_path.clone(),
-            external_watches.watch_paths,
-            config.logger.clone(),
-        )
-        .await?;
+        let (watcher, mut event_rx) = create_watcher()?;
+        let watcher_slot = SharedWatcherSlot::default();
+        spawn_watch_registration(
+            watcher,
+            Arc::clone(&watcher_slot),
+            WatchRegistration {
+                repo_id: config.repo_id.clone(),
+                root_identity: config.root_path.clone(),
+                watch_root: root_path.clone(),
+                extra_watches: external_watches.watch_paths,
+                event_bus: config.event_bus.clone(),
+                logger: config.logger.clone(),
+            },
+        );
 
         let (stop_tx, mut stop_rx) = watch::channel(false);
 
@@ -206,7 +214,7 @@ impl RepoWatcher {
             recent_store: config.recent_store,
             logger: config.logger,
             event_bus: config.event_bus,
-            watcher: Mutex::new(Some(watcher)),
+            watcher: watcher_slot,
             extra_watch_paths,
             delta,
             stop_tx,
@@ -221,17 +229,12 @@ impl RepoWatcher {
     /// Stop order: task loop, unwatch, delta worker, task abort, recents flush.
     pub async fn stop(&self) {
         let _ = self.stop_tx.send(true);
-        if let Some(mut watcher) = self.watcher.lock().await.take() {
-            let root_path = self.root_path.clone();
-            let extra_watch_paths = self.extra_watch_paths.clone();
-            let _ = tokio::task::spawn_blocking(move || {
-                let _ = watcher.unwatch(&root_path);
-                for path in &extra_watch_paths {
-                    let _ = watcher.unwatch(path);
-                }
-            })
-            .await;
-        }
+        stop_watcher_slot(
+            &self.watcher,
+            self.root_path.clone(),
+            self.extra_watch_paths.clone(),
+        )
+        .await;
         self.delta.stop().await;
         self.task.abort();
         self.recent_store.flush_repo(&self.repo_id).await;
@@ -246,8 +249,14 @@ impl RepoWatcher {
         mru.entries()
     }
 
-    pub fn is_task_finished(&self) -> bool {
-        self.task.is_finished()
+    #[cfg(test)]
+    pub(crate) fn registration_finished(&self) -> bool {
+        crate::repos::repo_watcher_startup::registration_finished(&self.watcher)
+    }
+
+    /// Its task ended or its root watch failed: either way it observes nothing and is restarted.
+    pub fn needs_restart(&self) -> bool {
+        self.task.is_finished() || root_registration_failed(&self.watcher)
     }
 
     pub fn broadcast_snapshot(&self) {

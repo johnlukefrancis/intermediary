@@ -12,7 +12,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
-use notify::Event;
+use notify::{Event, EventKind};
 
 use crate::logging::Logger;
 use crate::repos::source_control_watch::TrackedPathSet;
@@ -67,6 +67,15 @@ impl GitIgnoreFilter {
 
     /// Schedules a reload when an ignore file Git would read changes.
     pub(crate) fn note_event(&self, event: &Event) {
+        // The loader's own reads raise inotify opens (notify 8); reacting to them reloads forever.
+        if matches!(event.kind, EventKind::Access(_)) {
+            return;
+        }
+        // An overflowed queue may have hidden an ignore-file edit.
+        if event.need_rescan() {
+            self.schedule_reload();
+            return;
+        }
         let mut affected = false;
         for path in &event.paths {
             affected |= self.is_exclude_file(path) || self.note_gitignore(path);

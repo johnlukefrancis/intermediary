@@ -8,5 +8,5 @@ mod state_watchers;
 mod watcher_reconciliation;
 
 pub use config::{AppConfig, RepoConfig, RepoRoot, RepoRootKind};
-pub use config_fingerprint::compute_config_fingerprint;
+pub use config_fingerprint::{compute_config_fingerprint, ConfigFingerprint};
 pub use state::AgentRuntime;

@@ -1,29 +1,36 @@
 // Path: crates/im_agent/src/runtime/config_fingerprint.rs
-// Description: Compute watcher-relevant config fingerprint
+// Description: Compute global and per-repo watcher-relevant config fingerprints
+
+use std::collections::HashMap;
 
 use serde::Serialize;
 
 use super::config::{AppConfig, RepoConfig};
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct RepoFingerprint {
-    repo_id: String,
-    root_kind: String,
-    root_path: String,
-    docs_globs: Vec<String>,
-    code_globs: Vec<String>,
-    ignore_globs: Vec<String>,
-    auto_stage: bool,
+/// Watcher-relevant config split so a hello restarts only what changed: `global`
+/// feeds every watcher, `repos` holds one fingerprint per repo id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfigFingerprint {
+    pub global: String,
+    pub repos: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct FingerprintData {
+struct RepoFingerprint<'a> {
+    root_kind: &'a str,
+    root_path: &'a str,
+    docs_globs: Vec<String>,
+    code_globs: Vec<String>,
+    ignore_globs: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GlobalFingerprint {
     staging_root: String,
     recent_files_limit: usize,
     classification_excludes: ClassificationExcludesFingerprint,
-    repos: Vec<RepoFingerprint>,
 }
 
 #[derive(Debug, Serialize)]
@@ -36,19 +43,21 @@ struct ClassificationExcludesFingerprint {
     patterns: Vec<String>,
 }
 
-pub fn compute_config_fingerprint(config: &AppConfig, staging_root: &str) -> String {
-    let mut repos: Vec<RepoFingerprint> = config.repos.iter().map(|repo| map_repo(repo)).collect();
-
-    repos.sort_by(|a, b| a.repo_id.cmp(&b.repo_id));
-
-    let data = FingerprintData {
+pub fn compute_config_fingerprint(config: &AppConfig, staging_root: &str) -> ConfigFingerprint {
+    let global = GlobalFingerprint {
         staging_root: staging_root.to_string(),
         recent_files_limit: config.recent_files_limit,
         classification_excludes: map_classification_excludes(config),
-        repos,
     };
-
-    serde_json::to_string(&data).unwrap_or_default()
+    let repos = config
+        .repos
+        .iter()
+        .map(|repo| (repo.repo_id.clone(), fingerprint_repo(repo)))
+        .collect();
+    ConfigFingerprint {
+        global: serde_json::to_string(&global).unwrap_or_default(),
+        repos,
+    }
 }
 
 fn map_classification_excludes(config: &AppConfig) -> ClassificationExcludesFingerprint {
@@ -72,7 +81,7 @@ fn map_classification_excludes(config: &AppConfig) -> ClassificationExcludesFing
     }
 }
 
-fn map_repo(repo: &RepoConfig) -> RepoFingerprint {
+fn fingerprint_repo(repo: &RepoConfig) -> String {
     let mut docs_globs = repo.docs_globs.clone();
     docs_globs.sort();
     let mut code_globs = repo.code_globs.clone();
@@ -80,13 +89,42 @@ fn map_repo(repo: &RepoConfig) -> RepoFingerprint {
     let mut ignore_globs = repo.ignore_globs.clone();
     ignore_globs.sort();
 
-    RepoFingerprint {
-        repo_id: repo.repo_id.clone(),
-        root_kind: repo.root.kind().to_string(),
-        root_path: repo.root.path().to_string(),
+    let data = RepoFingerprint {
+        root_kind: repo.root.kind(),
+        root_path: repo.root.path(),
         docs_globs,
         code_globs,
         ignore_globs,
-        auto_stage: repo.auto_stage,
+    };
+    serde_json::to_string(&data).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    fn fingerprint(config: serde_json::Value) -> ConfigFingerprint {
+        let config: AppConfig = serde_json::from_value(config).expect("config");
+        compute_config_fingerprint(&config, "/staging")
+    }
+
+    fn repo(repo_id: &str, ignore: &[&str]) -> serde_json::Value {
+        json!({"repoId": repo_id, "root": {"kind": "wsl", "path": format!("/r/{repo_id}")},
+            "ignoreGlobs": ignore})
+    }
+
+    #[test]
+    fn repo_change_moves_only_that_repo_fingerprint() {
+        let before = fingerprint(json!({"repos": [repo("a", &[]), repo("b", &[])]}));
+        let after = fingerprint(json!({"repos": [repo("a", &["**/*.tmp"]), repo("b", &[])]}));
+        assert_eq!(before.global, after.global);
+        assert_ne!(before.repos["a"], after.repos["a"]);
+        assert_eq!(before.repos["b"], after.repos["b"]);
+
+        let excluded = fingerprint(json!({"repos": [repo("a", &[]), repo("b", &[])],
+            "classificationExcludes": {"dirNames": ["vendor"]}}));
+        assert_ne!(before.global, excluded.global);
     }
 }

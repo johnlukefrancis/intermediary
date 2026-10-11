@@ -32,7 +32,7 @@ async fn mutation_answered_through_decode(
     envelope_for: fn(String) -> ResponseEnvelope,
 ) -> (WslBackendClient, Result<ForwardedWslResponse, AgentError>) {
     let logger = quiet_logger().await;
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
     let outstanding = client.outstanding_mutations.clone();
 
     let respond_task = tokio::spawn(async move {
@@ -137,7 +137,7 @@ async fn an_envelope_that_crosses_the_timeout_clears_the_outstanding_mutation() 
 /// nothing will ever clear this id and it must stay outstanding.
 #[tokio::test]
 async fn a_timed_out_mutation_stays_outstanding() {
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
 
     let recv_task = tokio::spawn(async move {
         let held_request = match request_rx.recv().await {
@@ -164,7 +164,7 @@ async fn a_timed_out_mutation_stays_outstanding() {
 /// `SourceControlAction` leaves residue Git cares about.
 #[tokio::test]
 async fn a_non_mutation_command_is_never_tracked_even_on_timeout() {
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
 
     let recv_task = tokio::spawn(async move {
         let held_request = match request_rx.recv().await {
@@ -192,7 +192,7 @@ async fn a_non_mutation_command_is_never_tracked_even_on_timeout() {
 /// must not hold its whole emergency bound open waiting for it.
 #[tokio::test]
 async fn an_offline_answer_clears_a_mutation_that_never_reached_the_wire() {
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), quiet_logger().await);
     let outstanding = client.outstanding_mutations.clone();
 
     let loop_task = tokio::spawn(async move {

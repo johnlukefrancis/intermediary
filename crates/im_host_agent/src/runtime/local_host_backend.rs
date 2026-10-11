@@ -94,12 +94,11 @@ impl LocalHostBackend {
         })
     }
 
-    pub async fn build_bundle(
+    /// Captures everything a host build needs so it can run without borrowing the backend.
+    pub fn prepare_build_bundle(
         &self,
         command: BuildBundleCommand,
-        event_bus: &EventBus,
-        logger: &Logger,
-    ) -> Result<UiResponse, AgentError> {
+    ) -> Result<BuildBundleOptions, AgentError> {
         let staging = self
             .runtime
             .staging
@@ -118,55 +117,19 @@ impl LocalHostBackend {
                     "UNKNOWN_PRESET",
                     format!("Unknown preset: {}", command.preset_id),
                 )
-            })?
-            .clone();
+            })?;
 
-        let result = build_bundle(
-            BuildBundleOptions {
-                repo_id: command.repo_id.clone(),
-                repo_root: repo_root.to_string(),
-                preset_id: command.preset_id.clone(),
-                build_id: command.build_id.clone(),
-                preset_name: preset.preset_name,
-                selection: command.selection,
-                staging,
-                staging_kind: StagingRootKind::Host,
-                global_excludes: command.global_excludes,
-            },
-            event_bus,
-            logger,
-            BundleCancelToken::new(),
-        )
-        .await?;
-
-        event_bus.broadcast_event(im_agent::protocol::AgentEvent::BundleBuilt(
-            BundleBuiltEvent {
-                repo_id: command.repo_id.clone(),
-                preset_id: command.preset_id.clone(),
-                host_path: result.host_path.clone(),
-                legacy_windows_path: Some(result.host_path.clone()),
-                alias_host_path: result.alias_host_path.clone(),
-                legacy_alias_windows_path: Some(result.alias_host_path.clone()),
-                bytes: result.bytes,
-                file_count: result.file_count,
-                built_at_iso: result.built_at_iso.clone(),
-            },
-        ));
-
-        Ok(UiResponse::BuildBundleResult(
-            im_agent::protocol::BuildBundleResult {
-                repo_id: command.repo_id,
-                preset_id: command.preset_id,
-                host_path: result.host_path.clone(),
-                legacy_windows_path: Some(result.host_path),
-                wsl_path: result.wsl_path,
-                alias_host_path: result.alias_host_path.clone(),
-                legacy_alias_windows_path: Some(result.alias_host_path),
-                bytes: result.bytes,
-                file_count: result.file_count,
-                built_at_iso: result.built_at_iso,
-            },
-        ))
+        Ok(BuildBundleOptions {
+            repo_id: command.repo_id,
+            repo_root: repo_root.to_string(),
+            preset_id: command.preset_id,
+            build_id: command.build_id,
+            preset_name: preset.preset_name.clone(),
+            selection: command.selection,
+            staging,
+            staging_kind: StagingRootKind::Host,
+            global_excludes: command.global_excludes,
+        })
     }
 
     pub fn cancel_bundle_build(
@@ -230,4 +193,41 @@ impl LocalHostBackend {
             )
         })
     }
+}
+
+pub async fn run_host_build_bundle(
+    options: BuildBundleOptions,
+    event_bus: &EventBus,
+    logger: &Logger,
+) -> Result<UiResponse, AgentError> {
+    let repo_id = options.repo_id.clone();
+    let preset_id = options.preset_id.clone();
+    let result = build_bundle(options, event_bus, logger, BundleCancelToken::new()).await?;
+
+    event_bus.broadcast_event(im_agent::protocol::AgentEvent::BundleBuilt(BundleBuiltEvent {
+        repo_id: repo_id.clone(),
+        preset_id: preset_id.clone(),
+        host_path: result.host_path.clone(),
+        legacy_windows_path: Some(result.host_path.clone()),
+        alias_host_path: result.alias_host_path.clone(),
+        legacy_alias_windows_path: Some(result.alias_host_path.clone()),
+        bytes: result.bytes,
+        file_count: result.file_count,
+        built_at_iso: result.built_at_iso.clone(),
+    }));
+
+    Ok(UiResponse::BuildBundleResult(
+        im_agent::protocol::BuildBundleResult {
+            repo_id,
+            preset_id,
+            host_path: result.host_path.clone(),
+            legacy_windows_path: Some(result.host_path),
+            wsl_path: result.wsl_path,
+            alias_host_path: result.alias_host_path.clone(),
+            legacy_alias_windows_path: Some(result.alias_host_path),
+            bytes: result.bytes,
+            file_count: result.file_count,
+            built_at_iso: result.built_at_iso,
+        },
+    ))
 }

@@ -16,7 +16,7 @@ import {
 } from "../lib/agent/messages.js";
 import {
   computeTransientRetryDelayMs,
-  isTransientWslTransportError,
+  isTransientRepoRequestError,
 } from "../lib/agent/transient_wsl_error.js";
 import { isVisibleFileKind } from "../lib/files/file_feed.js";
 
@@ -185,24 +185,25 @@ export function useRepoState(repoId: string): RepoState {
     return unsubscribe;
   }, [subscribe, handleEvent]);
 
+  const watched = helloState.watchedRepoIds.includes(repoId);
   useEffect(() => {
     if (
       connectionState.status !== "connected" ||
       !client ||
-      helloState.status !== "ok" ||
-      helloState.lastHelloAt === null
+      helloState.status !== "ok"
     ) {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
       }
       refreshInFlightKeyRef.current = null;
+      lastHelloRefreshKeyRef.current = null;
       setHydrationStatus("waiting_for_agent");
       setIsLoading(true);
       return;
     }
 
-    const refreshKey = `${repoId}:${helloState.lastHelloAt}:${rehydrateEpoch}`;
+    const refreshKey = `${repoId}:${String(connectionState.connectedAt)}:${String(watched)}:${rehydrateEpoch}`;
     if (lastHelloRefreshKeyRef.current === refreshKey) {
       return;
     }
@@ -223,7 +224,7 @@ export function useRepoState(repoId: string): RepoState {
       setHydrationStatus(retryAttempt === 0 ? "hydrating" : "retrying");
       setIsLoading(true);
       try {
-        if (!helloState.watchedRepoIds.includes(repoId)) {
+        if (!watched) {
           await sendWatchRepo(client, repoId);
         }
         if (isStale()) return;
@@ -243,7 +244,7 @@ export function useRepoState(repoId: string): RepoState {
         setIsLoading(false);
       } catch (err: unknown) {
         if (isStale()) return;
-        if (isTransientWslTransportError(err)) {
+        if (isTransientRepoRequestError(err)) {
           const delay = computeTransientRetryDelayMs(retryAttempt);
           retryAttempt += 1;
           clearRetryTimeout();
@@ -279,8 +280,8 @@ export function useRepoState(repoId: string): RepoState {
     client,
     connectionState.status,
     helloState.status,
-    helloState.lastHelloAt,
-    helloState.watchedRepoIds,
+    connectionState.connectedAt,
+    watched,
     rehydrateEpoch,
   ]);
 

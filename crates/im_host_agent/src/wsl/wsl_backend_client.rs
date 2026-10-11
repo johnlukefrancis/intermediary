@@ -14,16 +14,19 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::time::timeout;
 
 use super::wsl_backend_messages::wsl_unavailable_error;
+use super::wsl_transport_status::WslTransportStatus;
 use client_loop::run_client_loop;
+use hello_reconciler::{run_hello_reconciler, WeakWslBackendClient, WslHelloShared};
 use timeouts::timeout_for_command;
 
 mod client_loop;
+mod hello_reconciler;
+mod hello_state;
+mod routed_forward;
 mod timeouts;
 
-/// Request ids of forwarded mutations this client has sent to the WSL agent
-/// and not had confirmed back. Shared with the connection's decode site, which
-/// sees every confirmed answer, and with the request loop, which is the one
-/// place that knows a request never reached the wire.
+/// Forwarded mutation ids with no confirmed answer; the decode site clears confirmed ones
+/// and the request loop clears ones that never reached the wire.
 pub(super) type OutstandingMutations = Arc<Mutex<HashSet<String>>>;
 
 #[derive(Clone)]
@@ -31,12 +34,11 @@ pub struct WslBackendClient {
     request_tx: mpsc::UnboundedSender<RequestLoopMessage>,
     request_counter: Arc<AtomicU64>,
     connection_generation: Arc<AtomicU64>,
-    /// Request ids of forwarded `sourceControlAction` commands this client has
-    /// sent to the WSL agent but never received a confirmed response for. A
-    /// shutdown drain reads this to tell "the connection just hiccupped" from
-    /// "a mutation may still be running over there" when the backend answers
-    /// `WSL_BACKEND_UNAVAILABLE`.
+    /// Unconfirmed forwarded mutations: lets a shutdown drain tell a transport hiccup from a
+    /// mutation that may still run in WSL when the backend answers `WSL_BACKEND_UNAVAILABLE`.
     outstanding_mutations: OutstandingMutations,
+    hello: Arc<WslHelloShared>,
+    status: WslTransportStatus,
 }
 
 #[derive(Debug)]
@@ -60,8 +62,7 @@ impl WslBackendClient {
         let (request_tx, request_rx) = mpsc::unbounded_channel();
         let endpoint_log = format!("ws://127.0.0.1:{wsl_port}");
         let endpoint_connect = format!("{endpoint_log}/?token={wsl_ws_token}");
-        let connection_generation = Arc::new(AtomicU64::new(0));
-        let outstanding_mutations: OutstandingMutations = Arc::new(Mutex::new(HashSet::new()));
+        let client = Self::assemble(request_tx, event_bus.clone(), logger.clone());
 
         tokio::spawn(run_client_loop(
             endpoint_connect,
@@ -69,41 +70,50 @@ impl WslBackendClient {
             request_rx,
             event_bus,
             logger,
-            connection_generation.clone(),
-            outstanding_mutations.clone(),
+            client.connection_generation.clone(),
+            client.outstanding_mutations.clone(),
+            client.hello.clone(),
+            client.status.clone(),
         ));
-
-        Self {
-            request_tx,
-            request_counter: Arc::new(AtomicU64::new(0)),
-            connection_generation,
-            outstanding_mutations,
-        }
+        client
     }
 
     /// A client whose request loop is the caller's own channel: a test drives
-    /// each arm the loop would take itself, instead of racing a real
-    /// connection for the one state that matters here — a mutation forwarded
-    /// with no answer back.
+    /// each arm the loop would take itself instead of racing a real connection.
     #[cfg(test)]
-    pub(crate) fn with_request_channel() -> (Self, mpsc::UnboundedReceiver<RequestLoopMessage>) {
+    pub(crate) fn with_request_channel(
+        event_bus: EventBus,
+        logger: Logger,
+    ) -> (Self, mpsc::UnboundedReceiver<RequestLoopMessage>) {
         let (request_tx, request_rx) = mpsc::unbounded_channel();
+        (Self::assemble(request_tx, event_bus, logger), request_rx)
+    }
+
+    /// Builds the shared handles and starts the hello reconciler task for them.
+    fn assemble(
+        request_tx: mpsc::UnboundedSender<RequestLoopMessage>,
+        event_bus: EventBus,
+        logger: Logger,
+    ) -> Self {
+        let connection_generation = Arc::new(AtomicU64::new(0));
         let client = Self {
             request_tx,
             request_counter: Arc::new(AtomicU64::new(0)),
-            connection_generation: Arc::new(AtomicU64::new(0)),
+            status: WslTransportStatus::new(event_bus, connection_generation.clone()),
+            connection_generation,
             outstanding_mutations: Arc::new(Mutex::new(HashSet::new())),
+            hello: WslHelloShared::new(),
         };
-        (client, request_rx)
+        tokio::spawn(run_hello_reconciler(WeakWslBackendClient::new(&client), logger));
+        client
     }
+
     pub fn connection_generation(&self) -> u64 {
         self.connection_generation.load(Ordering::SeqCst)
     }
 
-    /// Whether a forwarded `sourceControlAction` request is still outstanding:
-    /// sent to the WSL agent with no confirmed response back yet. A shutdown
-    /// drain treats a non-empty set as proof it must not trust
-    /// `WSL_BACKEND_UNAVAILABLE` as idle.
+    /// A forwarded mutation was sent with no confirmed answer yet; a shutdown drain must then
+    /// not trust `WSL_BACKEND_UNAVAILABLE` as idle.
     pub fn has_outstanding_mutations(&self) -> bool {
         self.outstanding_mutation_count() > 0
     }
@@ -128,9 +138,8 @@ impl WslBackendClient {
             .await
     }
 
-    /// Forwards one command with an explicit timeout, so a shutdown drain can
-    /// bound each retry by its own remaining budget rather than the fixed
-    /// per-command ladder in `timeouts.rs`.
+    /// Forwards with an explicit timeout so a shutdown drain can bound each retry by its
+    /// remaining budget instead of the `timeouts.rs` ladder.
     pub(crate) async fn forward_command_with_timeout(
         &self,
         command: UiCommand,
@@ -166,18 +175,8 @@ impl WslBackendClient {
         }
 
         let timeout_ms = timeout_duration.as_millis();
-        // Waiting here never clears the ledger. A decoded response envelope —
-        // result or error alike — is the confirmation, and the decode site
-        // untracks the id as it arrives, including one that crosses this
-        // timeout and decodes after the caller has already been answered.
-        // Every exit below is either that confirmation (already untracked) or
-        // a transport failure, which proves nothing about the Git process on
-        // the other side and must leave the mutation outstanding for the
-        // shutdown drain. A mutation that times out therefore stays
-        // outstanding for good: the Cancel sent below cannot produce a late
-        // envelope, because a `SourceControlAction` is cancelled passively in
-        // the WSL agent and that agent suppresses the answer to a request it
-        // has been told to cancel rather than sending it.
+        // Only a decoded envelope (untracked at the decode site) confirms; transport exits and
+        // timeouts leave the mutation outstanding, since WSL suppresses answers to cancelled requests.
         match timeout(timeout_duration, response_rx).await {
             Ok(Ok(result)) => result,
             Ok(Err(_)) => Err(wsl_unavailable_error(
@@ -210,10 +209,8 @@ impl WslBackendClient {
         format!("host_wsl_req_{next}")
     }
 }
-/// A forwarded request stops being outstanding: the WSL agent answered it with
-/// a decoded envelope — result or error alike — or it is proven never to have
-/// reached the WSL agent at all. Ids that were never tracked (reads, and the
-/// shutdown command itself) are absent, so removing one is a harmless no-op.
+/// Clears an id once WSL answered it with any envelope or it provably never reached WSL;
+/// untracked ids (reads, shutdown) make this a no-op.
 pub(super) fn untrack_outstanding(outstanding: &OutstandingMutations, request_id: &str) {
     if let Ok(mut set) = outstanding.lock() {
         set.remove(request_id);
@@ -222,6 +219,8 @@ pub(super) fn untrack_outstanding(outstanding: &OutstandingMutations, request_id
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_hello;
 #[cfg(test)]
 mod tests_outstanding;
 #[cfg(test)]

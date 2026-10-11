@@ -10,7 +10,7 @@ use futures_util::future::join_all;
 use serde_json::json;
 
 use super::state::AgentRuntime;
-use super::{RepoConfig, RepoRootKind};
+use super::{ConfigFingerprint, RepoConfig, RepoRootKind};
 
 impl AgentRuntime {
     pub async fn reset_watchers(&mut self) {
@@ -27,11 +27,36 @@ impl AgentRuntime {
         }
     }
 
+    /// Stops watchers whose repo was removed or whose repo fingerprint changed;
+    /// the following reconcile starts their replacements.
+    pub(super) async fn stop_changed_repo_watchers(&mut self, next: &ConfigFingerprint) {
+        let previous = self.config_fingerprint.as_ref();
+        let stale: Vec<String> = self
+            .watchers
+            .keys()
+            .filter(|repo_id| {
+                let before = previous.and_then(|fp| fp.repos.get(*repo_id));
+                before.is_none() || before != next.repos.get(*repo_id)
+            })
+            .cloned()
+            .collect();
+        let stopping: Vec<RepoWatcher> = stale
+            .iter()
+            .filter_map(|repo_id| self.watchers.remove(repo_id))
+            .collect();
+        join_all(
+            stopping
+                .into_iter()
+                .map(|watcher| async move { watcher.stop().await }),
+        )
+        .await;
+    }
+
     pub(crate) fn watched_repo_ids(&self) -> Vec<String> {
         self.watchers
             .iter()
             .filter_map(|(repo_id, watcher)| {
-                if watcher.is_task_finished() {
+                if watcher.needs_restart() {
                     return None;
                 }
                 Some(repo_id.clone())
@@ -62,12 +87,12 @@ impl AgentRuntime {
         let watcher_finished = self
             .watchers
             .get(repo_id)
-            .map(|watcher| watcher.is_task_finished())
+            .map(|watcher| watcher.needs_restart())
             .unwrap_or(false);
 
         if watcher_finished {
             logger.warn(
-                "Repo watcher task ended; restarting watcher",
+                "Repo watcher is not observing (task ended or root watch failed); restarting",
                 Some(json!({ "repoId": repo_id })),
             );
             if let Some(watcher) = self.watchers.remove(repo_id) {

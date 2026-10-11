@@ -65,7 +65,7 @@ async fn unavailable_backend_with_nothing_outstanding_drains_at_once() {
 #[tokio::test]
 async fn unavailable_backend_with_a_mutation_outstanding_waits_the_bound() {
     let logger = test_logger().await;
-    let (client, mut request_rx) = WslBackendClient::with_request_channel();
+    let (client, mut request_rx) = WslBackendClient::with_request_channel(EventBus::new(8), logger.clone());
 
     // The request loop's receiver, scripted: the mutation is received and
     // then held until its caller's timeout fires — sent with no answer back,

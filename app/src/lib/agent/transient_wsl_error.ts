@@ -1,5 +1,5 @@
 // Path: app/src/lib/agent/transient_wsl_error.ts
-// Description: Detect transient WSL transport/bootstrap failures and compute retry delays
+// Description: Detect transient WSL transport/bootstrap failures and request timeouts; compute retry delays
 
 const RETRY_BASE_MS = 500;
 const RETRY_CAP_MS = 5000;
@@ -49,4 +49,13 @@ export function isTransientWslTransportError(error: unknown): boolean {
   }
 
   return false;
+}
+
+/** UI request timeouts (agent_client "Request timeout: <type>") mean a busy agent, not a failure. */
+export function isRequestTimeoutError(error: unknown): boolean {
+  return toLowerMessage(error).startsWith("request timeout:");
+}
+
+export function isTransientRepoRequestError(error: unknown): boolean {
+  return isTransientWslTransportError(error) || isRequestTimeoutError(error);
 }

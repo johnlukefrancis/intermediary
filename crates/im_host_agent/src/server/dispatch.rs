@@ -1,26 +1,48 @@
 // Path: crates/im_host_agent/src/server/dispatch.rs
-// Description: Host-agent command dispatch over routed runtime backends
+// Description: Host-agent command dispatch: WSL forwards and long host work run after the runtime lock is released
 
 use im_agent::error::AgentError;
-use im_agent::protocol::{UiCommand, UiResponse};
+use im_agent::protocol::{SetOptionsCommand, UiCommand, UiResponse};
 
 use super::connection::ConnectionContext;
 use super::shutdown_dispatch;
 use crate::runtime::{
-    execute_host_import, execute_host_source_control, execute_host_worktree_action, RepoBackend,
+    execute_host_import, execute_host_source_control, execute_host_worktree_action,
+    run_host_build_bundle,
 };
 
+/// Locks are taken only to read or apply runtime state; no lock spans a WSL or long host await.
 pub async fn dispatch_command(
     command: UiCommand,
     ctx: &ConnectionContext,
     inspection_cancel: Option<im_agent::bundles::BundleCancelToken>,
 ) -> Result<UiResponse, AgentError> {
     match command {
+        // Shutdown drains the WSL backend and then this process; both waits are minutes long.
+        UiCommand::Shutdown => return shutdown_dispatch::dispatch_shutdown(ctx).await,
+        UiCommand::SetOptions(command) => return dispatch_set_options(command, ctx).await,
+        _ => {}
+    }
+
+    let wsl_client = {
+        let runtime = ctx.runtime.read().await;
+        runtime.wsl_client_for_command(&command)?
+    };
+    if let Some(client) = wsl_client {
+        return client.forward_routed(command).await;
+    }
+
+    match command {
         UiCommand::BuildBundle(command) => {
-            return dispatch_build_bundle(command, ctx).await;
+            let options = {
+                let runtime = ctx.runtime.read().await;
+                runtime.prepare_host_build_bundle(command)?
+            };
+            run_host_build_bundle(options, &ctx.event_bus, &ctx.logger).await
         }
         UiCommand::CancelBundleBuild(command) => {
-            return dispatch_cancel_bundle_build(command, ctx).await;
+            let runtime = ctx.runtime.read().await;
+            Ok(runtime.dispatch_host_cancel_bundle_build(command))
         }
         UiCommand::InspectBundleEntry(_)
         | UiCommand::SourceControlStatus(_)
@@ -29,12 +51,7 @@ pub async fn dispatch_command(
         | UiCommand::SourceControlAction(_)
         | UiCommand::ImportFiles(_)
         | UiCommand::WorktreeAction(_) => {
-            return dispatch_unlocked_repo_command(command, ctx, inspection_cancel).await;
-        }
-        // Shutdown drains the WSL backend and then this process; both waits are
-        // minutes long, so it never touches the runtime write lock.
-        UiCommand::Shutdown => {
-            return shutdown_dispatch::dispatch_shutdown(ctx).await;
+            dispatch_unlocked_host_command(command, ctx, inspection_cancel).await
         }
         command => {
             let mut runtime = ctx.runtime.write().await;
@@ -45,95 +62,26 @@ pub async fn dispatch_command(
     }
 }
 
-async fn dispatch_build_bundle(
-    command: im_agent::protocol::BuildBundleCommand,
+/// Options apply locally under the lock; the WSL copy is forwarded after release.
+async fn dispatch_set_options(
+    command: SetOptionsCommand,
     ctx: &ConnectionContext,
 ) -> Result<UiResponse, AgentError> {
-    let route_command = UiCommand::BuildBundle(command.clone());
-    let backend = {
-        let runtime = ctx.runtime.read().await;
-        runtime.repo_backend_for_command(&route_command)?
+    let (result, wsl_client) = {
+        let mut runtime = ctx.runtime.write().await;
+        runtime.apply_set_options(command.clone())
     };
-
-    match backend {
-        Some(RepoBackend::Host) => {
-            let runtime = ctx.runtime.read().await;
-            runtime
-                .dispatch_host_build_bundle(command, &ctx.event_bus)
-                .await
-        }
-        Some(RepoBackend::Wsl) => {
-            let client = {
-                let mut runtime = ctx.runtime.write().await;
-                runtime
-                    .prepare_wsl_client_for_command(&route_command, &ctx.event_bus)
-                    .await?
-            };
-            let repo_id = command.repo_id.clone();
-            let result = client
-                .forward_command_with_generation(UiCommand::BuildBundle(command))
-                .await;
-            let mut runtime = ctx.runtime.write().await;
-            match result {
-                Ok(forwarded) => {
-                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
-                    Ok(forwarded.response)
-                }
-                Err(err) => {
-                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
-                    Err(err)
-                }
-            }
-        }
-        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
+    if let Some(client) = wsl_client {
+        // A WSL failure is reported as a transport event; the host options already applied.
+        let _ = client
+            .forward_unrouted(UiCommand::SetOptions(command))
+            .await;
     }
+    Ok(UiResponse::SetOptionsResult(result))
 }
 
-async fn dispatch_cancel_bundle_build(
-    command: im_agent::protocol::CancelBundleBuildCommand,
-    ctx: &ConnectionContext,
-) -> Result<UiResponse, AgentError> {
-    let route_command = UiCommand::CancelBundleBuild(command.clone());
-    let backend = {
-        let runtime = ctx.runtime.read().await;
-        runtime.repo_backend_for_command(&route_command)?
-    };
-
-    match backend {
-        Some(RepoBackend::Host) => {
-            let runtime = ctx.runtime.read().await;
-            Ok(runtime.dispatch_host_cancel_bundle_build(command))
-        }
-        Some(RepoBackend::Wsl) => {
-            let client = {
-                let mut runtime = ctx.runtime.write().await;
-                runtime
-                    .prepare_wsl_client_for_command(&route_command, &ctx.event_bus)
-                    .await?
-            };
-            let repo_id = command.repo_id.clone();
-            let result = client
-                .forward_command_with_generation(UiCommand::CancelBundleBuild(command))
-                .await;
-            let mut runtime = ctx.runtime.write().await;
-            match result {
-                Ok(forwarded) => {
-                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
-                    Ok(forwarded.response)
-                }
-                Err(err) => {
-                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
-                    Err(err)
-                }
-            }
-        }
-        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
-    }
-}
-
-/// Resolve the backend under a short lock; long repository operations must not
-/// freeze other repos, clientHello or WSL forwards.
-async fn dispatch_unlocked_repo_command(
+/// Long host repository operations clone their context under a short lock and run unlocked.
+async fn dispatch_unlocked_host_command(
     command: UiCommand,
     ctx: &ConnectionContext,
     inspection_cancel: Option<im_agent::bundles::BundleCancelToken>,
@@ -142,54 +90,24 @@ async fn dispatch_unlocked_repo_command(
         .repo_id()
         .map(str::to_string)
         .ok_or_else(|| AgentError::new("UNKNOWN_COMMAND", "Unsupported command"))?;
-    let backend = {
+    let context = {
         let runtime = ctx.runtime.read().await;
-        runtime.repo_backend_for_command(&command)?
+        runtime.host_source_control_context(&repo_id)?
     };
-
-    match backend {
-        Some(RepoBackend::Host) => {
-            let context = {
-                let runtime = ctx.runtime.read().await;
-                runtime.host_source_control_context(&repo_id)?
-            };
-            match command {
-                UiCommand::InspectBundleEntry(command) => {
-                    let cancel = inspection_cancel.ok_or_else(|| {
-                        AgentError::internal("Inspection cancellation owner missing")
-                    })?;
-                    let result =
-                        im_agent::bundles::inspect_bundle_entry(context.repo_root, command, cancel)
-                            .await?;
-                    Ok(UiResponse::InspectBundleEntryResult(result))
-                }
-                UiCommand::ImportFiles(command) => execute_host_import(command, context).await,
-                UiCommand::WorktreeAction(command) => {
-                    execute_host_worktree_action(command, context).await
-                }
-                command => execute_host_source_control(command, context).await,
-            }
+    match command {
+        UiCommand::InspectBundleEntry(command) => {
+            let cancel = inspection_cancel
+                .ok_or_else(|| AgentError::internal("Inspection cancellation owner missing"))?;
+            let result =
+                im_agent::bundles::inspect_bundle_entry(context.repo_root, command, cancel).await?;
+            Ok(UiResponse::InspectBundleEntryResult(result))
         }
-        Some(RepoBackend::Wsl) => {
-            let client = {
-                let mut runtime = ctx.runtime.write().await;
-                runtime
-                    .prepare_wsl_client_for_command(&command, &ctx.event_bus)
-                    .await?
-            };
-            let result = client.forward_command_with_generation(command).await;
-            let mut runtime = ctx.runtime.write().await;
-            match result {
-                Ok(forwarded) => {
-                    runtime.mark_wsl_forward_success(&ctx.event_bus, forwarded.generation);
-                    Ok(forwarded.response)
-                }
-                Err(err) => {
-                    runtime.emit_wsl_forward_error(&err, &ctx.event_bus, Some(repo_id));
-                    Err(err)
-                }
-            }
-        }
-        None => Err(AgentError::new("UNKNOWN_COMMAND", "Unsupported command")),
+        UiCommand::ImportFiles(command) => execute_host_import(command, context).await,
+        UiCommand::WorktreeAction(command) => execute_host_worktree_action(command, context).await,
+        command => execute_host_source_control(command, context).await,
     }
 }
+
+#[cfg(test)]
+#[path = "dispatch_tests.rs"]
+mod tests;

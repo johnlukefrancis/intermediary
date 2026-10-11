@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use notify::event::{CreateKind, EventKind};
+use notify::event::{AccessKind, AccessMode, CreateKind, EventKind};
 use notify::Event;
 
 use super::GitIgnoreFilter;
@@ -134,4 +134,20 @@ async fn untracked_gitignore_event_reloads_the_rules() {
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
     panic!("reload never applied the new .gitignore");
+}
+
+#[tokio::test]
+async fn an_open_of_a_gitignore_never_schedules_a_reload() {
+    let temp = tempfile::tempdir().expect("tempdir");
+    let root = temp.path().join("repo");
+    std::fs::create_dir_all(&root).expect("create repo");
+    git(&root, &["init", "-q"]);
+
+    let filter = filter_for(&root, &temp.path().join("logs")).await;
+    write(&root, "Plugin/.gitignore", "Intermediate/\n");
+    let event = Event::new(EventKind::Access(AccessKind::Open(AccessMode::Any)))
+        .add_path(root.join("Plugin/.gitignore"));
+    filter.note_event(&event);
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert!(!filter.is_suppressed("Plugin/Intermediate/a.obj"), "an open must not reload");
 }

@@ -1,107 +1,33 @@
 // Path: crates/im_host_agent/src/runtime/host_runtime/wsl_routing.rs
-// Description: WSL forwarding, generation-aware clientHello replay, and transport error emission for HostRuntime
-
-use std::time::Instant;
+// Description: WSL client ownership and lock-free WSL route resolution for HostRuntime
 
 use im_agent::error::AgentError;
-use im_agent::protocol::{
-    AgentErrorDetails, AgentErrorEvent, AgentEvent, ClientHelloCommand, ClientHelloResult,
-    UiCommand, UiResponse, WslBackendConnectionStatus, WslBackendStatusEvent,
-};
+use im_agent::protocol::UiCommand;
 use im_agent::server::EventBus;
 
-use crate::error_codes::{
-    WSL_BACKEND_TIMEOUT, WSL_BACKEND_UNAVAILABLE, WSL_BACKEND_VERSION_MISMATCH,
-};
+use crate::error_codes::WSL_BACKEND_UNAVAILABLE;
+use crate::runtime::router::resolve_repo_backend;
+use crate::runtime::RepoBackend;
 use crate::wsl::WslBackendClient;
 
 use super::HostRuntime;
 
-const ROOT_IDENTITY_MIN_AGENT_VERSION: &str = "0.1.24";
-
 impl HostRuntime {
-    pub(super) async fn replay_cached_wsl_client_hello_if_needed(
-        &mut self,
-        event_bus: &EventBus,
-    ) -> Result<Option<ClientHelloResult>, AgentError> {
-        let current_generation = self.wsl_client(event_bus).connection_generation();
-        let Some(pending_hello) = self.wsl_client_hello_cache.pending(current_generation) else {
-            return Ok(None);
-        };
-
-        let (result, applied_generation) = self
-            .forward_client_hello_to_wsl(pending_hello.command.clone(), event_bus)
-            .await?;
-        self.wsl_client_hello_cache
-            .mark_applied_if_latest(&pending_hello.fingerprint, applied_generation);
-        Ok(Some(result))
-    }
-
-    async fn forward_client_hello_to_wsl(
-        &mut self,
-        command: ClientHelloCommand,
-        event_bus: &EventBus,
-    ) -> Result<(ClientHelloResult, u64), AgentError> {
-        let wsl_client = self.wsl_client(event_bus);
-        let started = Instant::now();
-        let forwarded = wsl_client
-            .forward_command_with_generation(UiCommand::ClientHello(command))
-            .await;
-
-        match forwarded {
-            Ok(forwarded) => match forwarded.response {
-                UiResponse::ClientHelloResult(result) => {
-                    require_root_identity_version(&result.agent_version)?;
-                    self.mark_wsl_transport_success_for_generation(event_bus, forwarded.generation);
-                    self.logger.info(
-                        "WSL backend clientHello applied",
-                        Some(serde_json::json!({
-                            "durationMs": started.elapsed().as_millis(),
-                            "generation": forwarded.generation,
-                            "watchedRepoCount": result.watched_repo_ids.len()
-                        })),
-                    );
-                    Ok((result, forwarded.generation))
-                }
-                _ => Err(AgentError::new(
-                    WSL_BACKEND_UNAVAILABLE,
-                    "WSL backend returned unexpected response type for clientHello",
-                )),
-            },
-            Err(err) => {
-                self.logger.warn(
-                    "WSL backend clientHello failed",
-                    Some(serde_json::json!({
-                        "code": err.code(),
-                        "durationMs": started.elapsed().as_millis(),
-                        "generation": wsl_client.connection_generation()
-                    })),
-                );
-                Err(err)
+    /// The WSL client for a WSL-routed command, cloned so the caller awaits it after unlocking.
+    pub fn wsl_client_for_command(
+        &self,
+        command: &UiCommand,
+    ) -> Result<Option<WslBackendClient>, AgentError> {
+        match resolve_repo_backend(command, &self.repo_backends)? {
+            Some(RepoBackend::Wsl) if self.wsl_routing_supported => {
+                self.wsl_client.clone().map(Some).ok_or_else(|| {
+                    AgentError::new(WSL_BACKEND_UNAVAILABLE, "WSL backend client is not started")
+                })
             }
-        }
-    }
-
-    pub(super) async fn forward_wsl_command(
-        &mut self,
-        command: UiCommand,
-        event_bus: &EventBus,
-    ) -> Result<UiResponse, AgentError> {
-        let repo_id = command.repo_id().map(str::to_string);
-
-        match self
-            .wsl_client(event_bus)
-            .forward_command_with_generation(command)
-            .await
-        {
-            Ok(forwarded) => {
-                self.mark_wsl_transport_success_for_generation(event_bus, forwarded.generation);
-                Ok(forwarded.response)
-            }
-            Err(err) => {
-                self.emit_wsl_unavailable_if_transport_error(&err, event_bus, repo_id);
-                Err(err)
-            }
+            Some(RepoBackend::Wsl) => Err(Self::unsupported_wsl_root_error(
+                command.repo_id().map(str::to_string),
+            )),
+            Some(RepoBackend::Host) | None => Ok(None),
         }
     }
 
@@ -120,131 +46,15 @@ impl HostRuntime {
         client
     }
 
-    pub(super) fn mark_wsl_transport_success_for_generation(
-        &mut self,
-        event_bus: &EventBus,
-        generation: u64,
-    ) {
-        if !self.wsl_transport_state.mark_success(generation) {
-            return;
-        }
-
-        event_bus.broadcast_event(AgentEvent::WslBackendStatus(WslBackendStatusEvent {
-            status: WslBackendConnectionStatus::Online,
-            generation,
-        }));
-    }
-
-    pub(super) fn emit_wsl_unavailable_if_transport_error(
-        &mut self,
-        err: &AgentError,
-        event_bus: &EventBus,
-        repo_id: Option<String>,
-    ) {
-        let generation = self.wsl_client(event_bus).connection_generation();
-        self.emit_wsl_unavailable_if_transport_error_for_generation(
-            err, event_bus, repo_id, generation,
-        );
-    }
-
-    fn emit_wsl_unavailable_if_transport_error_for_generation(
-        &mut self,
-        err: &AgentError,
-        event_bus: &EventBus,
-        repo_id: Option<String>,
-        generation: u64,
-    ) {
-        if !is_wsl_transport_error(err) {
-            return;
-        }
-
-        if !self
-            .wsl_transport_state
-            .should_emit_offline_error(generation)
-        {
-            return;
-        }
-
-        self.emit_wsl_backend_error_with_code(
-            event_bus,
-            err.message().to_string(),
-            repo_id,
-            err.code(),
-        );
-    }
-
-    pub(super) fn emit_wsl_backend_error(
-        &self,
-        err: &AgentError,
-        event_bus: &EventBus,
-        repo_id: Option<String>,
-    ) {
-        self.emit_wsl_backend_error_with_code(
-            event_bus,
-            err.message().to_string(),
-            repo_id,
-            err.code(),
-        );
-    }
-
-    fn emit_wsl_backend_error_with_code(
-        &self,
-        event_bus: &EventBus,
-        message: String,
-        repo_id: Option<String>,
-        raw_code: &str,
-    ) {
-        let event = AgentErrorEvent::new(
-            "wslBackend",
-            message.clone(),
-            Some(AgentErrorDetails {
-                code: None,
-                doc_path: None,
-                repo_id,
-                root_path: None,
-                raw_code: Some(raw_code.to_string()),
-                raw_message: Some(message),
-            }),
-        );
-
-        event_bus.broadcast_event(AgentEvent::Error(event));
+    /// Routes WSL roots through a scripted client, as the Windows build routes them to the real one.
+    #[cfg(test)]
+    pub(crate) fn with_wsl_client_for_test(
+        client: WslBackendClient,
+        logger: im_agent::logging::Logger,
+    ) -> Self {
+        let mut runtime = Self::new(0, "test_token".to_string(), logger);
+        runtime.wsl_client = Some(client);
+        runtime.wsl_routing_supported = true;
+        runtime
     }
 }
-
-fn is_wsl_transport_error(err: &AgentError) -> bool {
-    err.code() == WSL_BACKEND_UNAVAILABLE || err.code() == WSL_BACKEND_TIMEOUT
-}
-
-fn require_root_identity_version(actual: &str) -> Result<(), AgentError> {
-    if numeric_version(actual)
-        .zip(numeric_version(ROOT_IDENTITY_MIN_AGENT_VERSION))
-        .is_some_and(|(actual, required)| actual >= required)
-    {
-        return Ok(());
-    }
-    Err(AgentError::new(
-        WSL_BACKEND_VERSION_MISMATCH,
-        format!("WSL backend requires agent version {ROOT_IDENTITY_MIN_AGENT_VERSION} or newer for root identity; received {actual}"),
-    ))
-}
-
-fn numeric_version(version: &str) -> Option<(u64, u64, u64)> {
-    let mut parts = version.split('.');
-    let mut number = || {
-        let part = parts.next()?;
-        if part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()) {
-            return None;
-        }
-        part.parse::<u64>().ok()
-    };
-    let triple = (number()?, number()?, number()?);
-    if parts.next().is_some() {
-        None
-    } else {
-        Some(triple)
-    }
-}
-
-#[cfg(test)]
-#[path = "wsl_routing_tests.rs"]
-mod tests;

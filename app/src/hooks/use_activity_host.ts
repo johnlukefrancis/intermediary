@@ -108,7 +108,7 @@ export function useActivityHost(documentHidden: boolean): void {
     if (!resumed && !reconciled && !backendRecovered) return;
     streamStoreRegistry.markRehydrated();
     overviewStore.markRehydrated();
-    // A re-hello already rereads through the registry's ready transition (every hello passes pending)
+    // Status rereads follow resume and WSL recovery; a re-hello keeps the session ready and its slots current
     if (resumed || backendRecovered) statusRegistry.markRehydrated();
   }, [helloState.lastHelloAt, rehydrateEpoch, wslOnline]);
 }

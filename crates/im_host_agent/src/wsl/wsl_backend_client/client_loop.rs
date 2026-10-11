@@ -6,7 +6,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use im_agent::logging::Logger;
-use im_agent::protocol::{AgentEvent, WslBackendConnectionStatus, WslBackendStatusEvent};
 use im_agent::server::EventBus;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
@@ -15,6 +14,8 @@ use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 use super::super::wsl_backend_connection::run_connected;
 use super::super::wsl_backend_messages::wsl_unavailable_error;
+use super::super::wsl_transport_status::WslTransportStatus;
+use super::hello_reconciler::{begin_generation, WslHelloShared};
 use super::{untrack_outstanding, ForwardRequest, OutstandingMutations, RequestLoopMessage};
 
 const RECONNECT_DELAY_MS: u64 = 750;
@@ -47,6 +48,7 @@ pub(super) fn answer_offline(request: ForwardRequest, outstanding: &OutstandingM
         .send(Err(wsl_unavailable_error("WSL backend is not available")));
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn run_client_loop(
     endpoint_connect: String,
     endpoint_log: String,
@@ -55,6 +57,8 @@ pub(super) async fn run_client_loop(
     logger: Logger,
     connection_generation: Arc<AtomicU64>,
     outstanding_mutations: OutstandingMutations,
+    hello: Arc<WslHelloShared>,
+    status: WslTransportStatus,
 ) {
     let mut logged_offline_connect_failure = false;
     let mut offline_emitted_generation: Option<u64> = None;
@@ -67,13 +71,12 @@ pub(super) async fn run_client_loop(
         .await
         {
             Ok((stream, _)) => {
-                let generation = connection_generation.fetch_add(1, Ordering::SeqCst) + 1;
+                let generation = begin_generation(&connection_generation, &hello, &status);
                 logged_offline_connect_failure = false;
                 logger.info(
                     "Connected to WSL backend",
                     Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),
                 );
-                emit_wsl_backend_status(&event_bus, WslBackendConnectionStatus::Online, generation);
                 run_connected(
                     stream,
                     &mut request_rx,
@@ -88,11 +91,7 @@ pub(super) async fn run_client_loop(
                     Some(serde_json::json!({"endpoint": &endpoint_log, "generation": generation})),
                 );
                 if offline_emitted_generation != Some(generation) {
-                    emit_wsl_backend_status(
-                        &event_bus,
-                        WslBackendConnectionStatus::Offline,
-                        generation,
-                    );
+                    status.announce_offline(generation);
                     offline_emitted_generation = Some(generation);
                 }
             }
@@ -106,11 +105,7 @@ pub(super) async fn run_client_loop(
                 }
                 let generation = connection_generation.load(Ordering::SeqCst);
                 if offline_emitted_generation != Some(generation) {
-                    emit_wsl_backend_status(
-                        &event_bus,
-                        WslBackendConnectionStatus::Offline,
-                        generation,
-                    );
+                    status.announce_offline(generation);
                     offline_emitted_generation = Some(generation);
                 }
             }
@@ -126,22 +121,15 @@ pub(super) async fn run_client_loop(
                             answer_offline(*request, &outstanding_mutations);
                         }
                         Some(RequestLoopMessage::Cancel { .. }) => {}
-                        None => return,
+                        None => {
+                            hello.close();
+                            return;
+                        }
                     }
                 }
             }
         }
     }
-}
-fn emit_wsl_backend_status(
-    event_bus: &EventBus,
-    status: WslBackendConnectionStatus,
-    generation: u64,
-) {
-    event_bus.broadcast_event(AgentEvent::WslBackendStatus(WslBackendStatusEvent {
-        status,
-        generation,
-    }));
 }
 
 #[cfg(test)]

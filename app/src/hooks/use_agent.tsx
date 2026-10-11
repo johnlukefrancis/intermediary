@@ -16,7 +16,7 @@ import {
   createAgentClient,
   type AgentClient,
 } from "../lib/agent/agent_client.js";
-import { sendClientHello, sendSetOptions } from "../lib/agent/messages.js";
+import { sendSetOptions } from "../lib/agent/messages.js";
 import { useClientHello } from "./use_client_hello.js";
 import { useResumeDetector } from "./use_resume_detector.js";
 import { extractAppConfig } from "../shared/config.js";
@@ -68,7 +68,6 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const [client, setClient] = useState<AgentClient | null>(null);
   const [rehydrateEpoch, setRehydrateEpoch] = useState(0);
   const [agentError, setAgentError] = useState<AgentErrorEvent | null>(null);
-  const helloSyncInFlightRef = useRef<Promise<boolean> | null>(null);
 
   const handlersRef = useRef<Set<EventHandler>>(new Set());
   const outputHostRootRef = useRef(persistedConfig.outputWindowsRoot);
@@ -78,7 +77,7 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
   const distroOverride = persistedConfig.agentDistro;
   const requiresWsl = config.repos.some((repo) => repo.root.kind === "wsl");
   const platformSupportsWsl = hostSupportsWsl();
-  const helloState = useClientHello({
+  const { helloState, resyncClientHello, noteWslOnline } = useClientHello({
     client,
     connectionState,
     config,
@@ -97,10 +96,13 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     if (event.type === "error" || event.type === "wslBackendStatus") {
       setAgentError((current) => nextAgentError(current, event));
     }
+    if (event.type === "wslBackendStatus" && event.status === "online") {
+      noteWslOnline(event.generation);
+    }
     for (const handler of handlersRef.current) {
       handler(event);
     }
-  }, []);
+  }, [noteWslOnline]);
 
   useEffect(() => {
     if (autoStageOnChange === config.autoStageGlobal) {
@@ -248,37 +250,6 @@ export function AgentProvider({ children }: AgentProviderProps): React.JSX.Eleme
     },
     [client, connectionState.status, setAutoStageGlobal]
   );
-
-  const resyncClientHello = useCallback(async (): Promise<boolean> => {
-    if (!client || !appPaths || connectionState.status !== "connected") {
-      return false;
-    }
-
-    if (helloSyncInFlightRef.current) {
-      return helloSyncInFlightRef.current;
-    }
-
-    const syncPromise = sendClientHello(
-      client,
-      config,
-      appPaths.stagingHostRoot,
-      appPaths.stagingWslRoot,
-      autoStageOnChange
-    )
-      .then(() => {
-        return true;
-      })
-      .catch((err: unknown) => {
-        console.error("[AgentProvider] clientHello re-sync failed:", err);
-        return false;
-      })
-      .finally(() => {
-        helloSyncInFlightRef.current = null;
-      });
-
-    helloSyncInFlightRef.current = syncPromise;
-    return syncPromise;
-  }, [appPaths, autoStageOnChange, client, config, connectionState.status]);
 
   const agentDiagnostics = buildAgentDiagnostics({
     connectionState,
