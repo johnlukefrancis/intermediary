@@ -36,6 +36,13 @@ export interface OverviewEdit {
   truncated: boolean;
 }
 
+/** Edits the agent withheld or dropped, or a sequence gap, disclosed where they happened */
+export interface OverviewLoss {
+  id: number;
+  at: number;
+  count: number;
+}
+
 export interface OverviewRepoSnapshot {
   repoId: string;
   root: RepoRoot;
@@ -45,8 +52,7 @@ export interface OverviewRepoSnapshot {
   edits: readonly OverviewEdit[];
   lastChangedAt: number | null;
   lastWorkedAt: number | null;
-  missedDetails: number;
-  coverageInterrupted: boolean;
+  losses: readonly OverviewLoss[];
 }
 
 export interface OverviewSnapshot {

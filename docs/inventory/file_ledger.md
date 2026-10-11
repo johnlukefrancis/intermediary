@@ -69,6 +69,7 @@ app/src/components/overview/git/overview_git_group.tsx - One Git column group: s
 app/src/components/overview/git/overview_git_project.tsx - One grouped project in the Git column: the group's accent rule over a block per worktree with changes
 app/src/components/overview/git/overview_git_repo_head.tsx - Git column repository head: accent label to Stream, reread pulse, SOURCE link, branch line and state badges
 app/src/components/overview/git/overview_git_repo.tsx - One Git column working-tree block (a repository, or one worktree of a project): status, state lines, groups
+app/src/components/overview/overview_feed_entries_test.ts - Loss notices sit where the loss happened and age out with the working window
 app/src/components/overview/overview_feed_entries.ts - Bounded chronological Overview edit, observation and coverage entries
 app/src/components/overview/overview_feed_entry.tsx - One repository-bound feed entry with file opening, context menu and drag-out interactions
 app/src/components/overview/overview_feed.tsx - One chronological repository-labelled Overview feed with tail-follow

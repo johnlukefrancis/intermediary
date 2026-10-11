@@ -30,14 +30,18 @@ export function overviewFeedEntries(repos: readonly RepoConfig[], snapshot: Over
       entries.push({ key: `${repo.repoId}:${signal.source}:${signal.path}:${String(signal.at)}`, repo,
         at: signal.at, order: 0, kind: "signal", signal });
     }
-    const incomplete = state.coverageInterrupted || state.missedDetails > 0;
+    for (const loss of state.losses) {
+      if (!recent(loss.at)) continue;
+      const edits = `${String(loss.count)} ${loss.count === 1 ? "edit" : "edits"}`;
+      entries.push({ key: `${repo.repoId}:loss:${String(loss.id)}`, repo, at: loss.at, order: loss.id, kind: "notice",
+        message: `${edits} not shown`, detail: `${edits} withheld by the agent or lost on the way; the files themselves are intact` });
+    }
     const unavailable = state.availability !== "watching" && state.availability !== "connecting";
-    if (incomplete || state.issue !== null || unavailable) {
+    if (state.issue !== null || unavailable) {
       const availability = unavailable ? AVAILABILITY_LABELS[state.availability] : null;
       entries.push({ key: `${repo.repoId}:notice`, repo, at: state.lastWorkedAt ?? 0, order: Number.MAX_SAFE_INTEGER,
-        kind: "notice", message: state.issue !== null ? "Monitoring issue" : availability ?? "Activity detail is incomplete",
-        detail: [state.issue, availability, incomplete ? `Activity detail is incomplete: ${String(state.missedDetails)} detail-loss signals${state.coverageInterrupted ? "; observation coverage interrupted" : ""}` : null]
-          .filter((text) => text !== null).join(" · ") });
+        kind: "notice", message: state.issue !== null || availability === null ? "Monitoring issue" : availability,
+        detail: [state.issue, availability].filter((text) => text !== null).join(" · ") });
     }
   }
   return entries.sort((left, right) => left.at - right.at || left.order - right.order).slice(-80);

@@ -4,7 +4,7 @@
 import { isVisibleFileKind } from "../files/file_feed.js";
 import { activitySupport } from "../agent/activity_support.js";
 import {
-  acceptDetails, createActivity, isUnchangedEdit, observeChange, retractLiveSignal, seedHistory, type OverviewActivity,
+  acceptDetails, createActivity, isUnchangedEdit, noteLoss, observeChange, retractLiveSignal, seedHistory, type OverviewActivity,
 } from "./overview_activity.js";
 import { projectEdit } from "./overview_edit.js";
 import {
@@ -66,8 +66,7 @@ export function createOverviewStore(now: () => number = Date.now): OverviewStore
         })),
         lastChangedAt: activity.lastChangedAt,
         lastWorkedAt: activity.lastWorkedAt,
-        missedDetails: activity.missedDetails,
-        coverageInterrupted: activity.coverageInterrupted,
+        losses: activity.losses.map((loss) => ({ ...loss })),
       });
     }
     snapshot = { repos, revision: snapshot.revision + 1 };
@@ -106,12 +105,10 @@ export function createOverviewStore(now: () => number = Date.now): OverviewStore
       const nextWatched = new Set(next.watchedRepoIds);
       for (const activity of activities.values()) {
         if (alive(activity, transport) && !alive(activity, next)) {
-          activity.coverageInterrupted ||= activity.establishedWatch;
           activity.confirmed = false;
           activity.rehydrating = false;
           activity.recoveryPending = true;
         }
-        if (usable(activity, next) && nextWatched.has(activity.repoId)) activity.establishedWatch = true;
       }
       transport = { ...next, watchedRepoIds: [...next.watchedRepoIds] };
       watched = nextWatched;
@@ -136,7 +133,6 @@ export function createOverviewStore(now: () => number = Date.now): OverviewStore
       if (event.type !== "fileChanged" && event.type !== "snapshot" && event.type !== "fileDelta" && event.type !== "fileDeltaCounters") return;
       const activity = activities.get(event.repoId);
       if (activity === undefined || event.rootPath !== activity.root.path) return;
-      activity.establishedWatch = true;
       if (usable(activity, transport)) activity.confirmed = true;
       if (event.type === "snapshot") {
         seedHistory(activity, event, at);
@@ -146,13 +142,17 @@ export function createOverviewStore(now: () => number = Date.now): OverviewStore
         activity.rehydrating = false;
       } else if (event.type === "fileChanged") {
         observeChange(activity, event, at);
-      } else if (acceptDetails(activity, event) && event.type === "fileDelta" && isVisibleFileKind(event.kind)) {
-        if (isUnchangedEdit(event)) retractLiveSignal(activity, event.path);
-        else {
-          activity.edits.push(projectEdit(event, at, nextEditId));
-          nextEditId += 1;
-          if (activity.edits.length > OVERVIEW_EDITS_MAX) activity.edits.shift();
-          activity.lastWorkedAt = at;
+      } else {
+        const lost = acceptDetails(activity, event);
+        if (lost !== null && noteLoss(activity, lost, at, nextEditId)) nextEditId += 1;
+        if (lost !== null && event.type === "fileDelta" && isVisibleFileKind(event.kind)) {
+          if (isUnchangedEdit(event)) retractLiveSignal(activity, event.path);
+          else {
+            activity.edits.push(projectEdit(event, at, nextEditId));
+            nextEditId += 1;
+            if (activity.edits.length > OVERVIEW_EDITS_MAX) activity.edits.shift();
+            activity.lastWorkedAt = at;
+          }
         }
       }
       publish();

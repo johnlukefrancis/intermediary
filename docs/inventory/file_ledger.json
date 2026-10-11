@@ -266,6 +266,10 @@
       "summary": "One Git column working-tree block (a repository, or one worktree of a project): status, state lines, groups"
     },
     {
+      "path": "app/src/components/overview/overview_feed_entries_test.ts",
+      "summary": "Loss notices sit where the loss happened and age out with the working window"
+    },
+    {
       "path": "app/src/components/overview/overview_feed_entries.ts",
       "summary": "Bounded chronological Overview edit, observation and coverage entries"
     },

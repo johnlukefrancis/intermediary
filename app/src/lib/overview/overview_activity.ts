@@ -5,7 +5,7 @@ import type { RepoRoot } from "../../shared/config.js";
 import type { AgentEvent, FileDeltaCountersEvent, FileDeltaEvent } from "../../shared/protocol.js";
 import { isVisibleFileKind } from "../files/file_feed.js";
 import {
-  OVERVIEW_RECENT_MAX, type OverviewEdit, type OverviewSignal,
+  OVERVIEW_EDITS_MAX, OVERVIEW_RECENT_MAX, type OverviewEdit, type OverviewLoss, type OverviewSignal,
 } from "./overview_types.js";
 
 export interface OverviewActivity {
@@ -15,11 +15,9 @@ export interface OverviewActivity {
   edits: OverviewEdit[];
   lastChangedAt: number | null;
   lastWorkedAt: number | null;
-  missedDetails: number;
-  coverageInterrupted: boolean;
+  losses: OverviewLoss[];
   lastSeq: number | null;
   confirmed: boolean;
-  establishedWatch: boolean;
   watcherIssue: string | null;
   refreshIssue: string | null;
   refreshUnavailable: boolean;
@@ -30,8 +28,7 @@ export interface OverviewActivity {
 export function createActivity(repoId: string, root: RepoRoot): OverviewActivity {
   return {
     repoId, root: { ...root }, recent: [], edits: [],
-    lastChangedAt: null, lastWorkedAt: null, missedDetails: 0,
-    coverageInterrupted: false, lastSeq: null, confirmed: false, establishedWatch: false,
+    lastChangedAt: null, lastWorkedAt: null, losses: [], lastSeq: null, confirmed: false,
     watcherIssue: null, refreshIssue: null, refreshUnavailable: false, rehydrating: false, recoveryPending: false,
   };
 }
@@ -73,19 +70,29 @@ export function seedHistory(activity: OverviewActivity, event: Extract<AgentEven
   }
 }
 
-export function acceptDetails(activity: OverviewActivity, event: FileDeltaEvent | FileDeltaCountersEvent): boolean {
+/** Stream's rule: a restart is a new stream; a forward gap plus the agent's counters are edits not shown.
+ * Returns that count, or null for a repeated sequence number. */
+export function acceptDetails(activity: OverviewActivity, event: FileDeltaEvent | FileDeltaCountersEvent): number | null {
   const last = activity.lastSeq;
-  if (last !== null) {
-    if (event.seq === last) return false;
-    if (event.seq < last) {
-      if (event.seq !== 1) return false;
-      activity.coverageInterrupted = true;
-    } else {
-      activity.missedDetails += event.seq - last - 1;
-    }
-  }
+  if (last === event.seq) return null;
   activity.lastSeq = event.seq;
-  activity.missedDetails += event.withheld + event.dropped;
+  const gap = last !== null && event.seq > last ? event.seq - last - 1 : 0;
+  return gap + event.withheld + event.dropped;
+}
+
+/** Losses with no edit between them share one mark, which moves to the newest loss.
+ * Returns whether `id` (from the edit counter) was spent on a new mark. */
+export function noteLoss(activity: OverviewActivity, count: number, at: number, id: number): boolean {
+  if (count <= 0) return false;
+  const latest = activity.losses.at(-1);
+  const lastEditId = activity.edits.at(-1)?.id ?? 0;
+  if (latest !== undefined && latest.id > lastEditId) {
+    latest.count += count;
+    latest.at = Math.max(latest.at, at);
+    return false;
+  }
+  activity.losses.push({ id, at, count });
+  if (activity.losses.length > OVERVIEW_EDITS_MAX) activity.losses.shift();
   return true;
 }
 

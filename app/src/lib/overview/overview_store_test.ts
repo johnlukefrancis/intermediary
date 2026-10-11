@@ -99,7 +99,7 @@ void test("removed and replaced roots reject every delayed activity event", () =
   store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/r", seq: 2, withheld: 99, dropped: 99 });
   const replaced = repo(store);
   assert.equal(replaced.lastChangedAt, null);
-  assert.equal(replaced.missedDetails, 0);
+  assert.equal(replaced.losses.length, 0);
   assert.equal(replaced.recent.length, 0);
   assert.equal(replaced.edits.length, 0);
   store.intake(changed("current.ts", "r", "/replacement"), TIME);
@@ -148,20 +148,19 @@ void test("floods keep six folded paths and a short immutable settled preview", 
   store.dispose();
 });
 
-void test("sequence duplicates are ignored, gaps and losses accumulate, and restart discloses interruption", () => {
+void test("losses mark where they happened, merge until the next edit, and a restart is a new stream", () => {
   const store = createOverviewStore(() => TIME);
   store.setRepositories([repository()]);
   store.intake({ ...delta(4), folded: 50, withheld: 2 }, TIME);
   store.intake({ ...delta(4), path: "duplicate.ts", dropped: 99 }, TIME);
-  store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/r", seq: 7, withheld: 3, dropped: 1 });
-  assert.equal(repo(store).missedDetails, 8);
+  store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/r", seq: 7, withheld: 3, dropped: 1 }, TIME);
+  store.intake({ type: "fileDeltaCounters", repoId: "r", rootPath: "/r", seq: 8, withheld: 1, dropped: 0 }, TIME + 5);
+  assert.deepEqual(repo(store).losses.map((loss) => [loss.count, loss.at]), [[2, TIME], [7, TIME + 5]]);
   assert.equal(repo(store).edits.at(-1)?.path, "settled.ts");
-  store.intake(delta(5, "late.ts"), TIME);
-  assert.equal(repo(store).edits.at(-1)?.path, "settled.ts");
+  assert.ok((repo(store).losses[0]?.id ?? 0) < (repo(store).edits.at(-1)?.id ?? 0));
   store.intake(delta(1, "restart.ts"), TIME);
-  assert.equal(repo(store).coverageInterrupted, true);
   assert.equal(repo(store).edits.at(-1)?.path, "restart.ts");
-  assert.equal(repo(store).missedDetails, 8);
+  assert.equal(repo(store).losses.length, 2);
   assert.equal(repo(store).lastChangedAt, null);
   store.dispose();
 });
@@ -187,7 +186,7 @@ void test("watcher failures stay sticky through traffic and clear only after bac
   store.markRehydrated();
   assert.equal(repo(store).availability, "watching");
   assert.equal(repo(store).issue, null);
-  assert.equal(repo(store).coverageInterrupted, true);
+  assert.equal(repo(store).losses.length, 0);
   store.setRepoIssue("r", { kind: "host", path: "/r" }, "history refresh failed");
   assert.equal(repo(store).issue, "history refresh failed");
   assert.equal(repo(store).availability, "watching");
@@ -207,31 +206,27 @@ void test("watcher failures stay sticky through traffic and clear only after bac
   store.dispose();
 });
 
-void test("initial hello has no gap and WSL recovery preserves uninterrupted host coverage and sequence", () => {
+void test("initial hello has no gap and a WSL flap marks only the real host sequence gap", () => {
   const store = createOverviewStore(() => TIME);
   store.setRepositories([repository(), repository("w", "/w", "wsl")]);
   store.setTransport({ ...ONLINE, watchedRepoIds: ["r", "w"] });
   store.markRehydrated();
   store.intake(delta(4), TIME);
   store.intake({ ...delta(4), repoId: "w", rootPath: "/w" }, TIME);
-  assert.equal(repo(store).coverageInterrupted, false);
-  assert.equal(repo(store).missedDetails, 0);
-  assert.equal(repo(store, "w").coverageInterrupted, false);
+  assert.equal(repo(store).losses.length, 0);
+  assert.equal(repo(store, "w").losses.length, 0);
   store.setTransport({ ...ONLINE, watchedRepoIds: ["r", "w"], helloOk: false });
   store.setTransport({ ...ONLINE, watchedRepoIds: ["r", "w"] });
   store.markRehydrated();
   store.intake(delta(5), TIME);
-  assert.equal(repo(store).coverageInterrupted, false);
-  assert.equal(repo(store, "w").coverageInterrupted, false);
+  assert.equal(repo(store).losses.length, 0);
   store.setTransport({ ...ONLINE, watchedRepoIds: ["r", "w"], wslOnline: false });
   store.setTransport({ ...ONLINE, watchedRepoIds: ["r", "w"] });
   store.markRehydrated();
   store.intake(delta(7), TIME);
   store.intake({ ...delta(10), repoId: "w", rootPath: "/w" }, TIME);
-  assert.equal(repo(store).coverageInterrupted, false);
-  assert.equal(repo(store).missedDetails, 1);
-  assert.equal(repo(store, "w").coverageInterrupted, true);
-  assert.equal(repo(store, "w").missedDetails, 0);
+  assert.deepEqual(repo(store).losses.map((loss) => loss.count), [1]);
+  assert.equal(repo(store, "w").losses.length, 0);
   store.dispose();
 });
 

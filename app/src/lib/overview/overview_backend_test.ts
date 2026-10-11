@@ -17,24 +17,22 @@ function view(store: OverviewStore, repoId: string) {
   return snapshot;
 }
 
-void test("cold WSL initialization can time out before any watch without inventing a coverage gap", () => {
+void test("WSL flaps with a continuous sequence never invent an edit loss", () => {
   const store = createOverviewStore(() => 900_000);
   store.setRepositories([{ repoId: "w", root: { kind: "wsl", path: "/wsl" } }]);
   store.setTransport({ ...ONLINE, helloOk: false, watchedRepoIds: [] });
   store.setTransport({ ...ONLINE, helloOk: false, watchedRepoIds: [], wslOnline: false });
-  assert.equal(view(store, "w").coverageInterrupted, false);
+  assert.equal(view(store, "w").losses.length, 0);
   store.setTransport(ONLINE);
   store.markRehydrated();
   assert.equal(view(store, "w").availability, "watching");
-  assert.equal(view(store, "w").coverageInterrupted, false);
   store.intake({ type: "fileDeltaCounters", repoId: "w", rootPath: "/wsl", seq: 9, withheld: 0, dropped: 0 });
-  assert.equal(view(store, "w").missedDetails, 0);
   store.setTransport({ ...ONLINE, helloOk: false });
   store.setTransport({ ...ONLINE, helloOk: false, wslOnline: false });
-  assert.equal(view(store, "w").coverageInterrupted, true);
   store.setTransport(ONLINE);
   store.markRehydrated();
-  assert.equal(view(store, "w").coverageInterrupted, true);
+  store.intake({ type: "fileDeltaCounters", repoId: "w", rootPath: "/wsl", seq: 10, withheld: 0, dropped: 0 });
+  assert.equal(view(store, "w").losses.length, 0);
   store.dispose();
 });
 
@@ -93,6 +91,6 @@ void test("an old external WSL backend requires an update while the host continu
   store.markRehydrated();
   assert.equal(view(store, "w").availability, "watching");
   assert.equal(view(store, "w").issue, null);
-  assert.equal(view(store, "h").coverageInterrupted, false);
+  assert.equal(view(store, "h").losses.length, 0);
   store.dispose();
 });

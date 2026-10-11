@@ -59,7 +59,9 @@ ahead/behind and the `CONFLICTS`, `TRUNCATED` and `MID-OPERATION` badges.
 
 Sections match the SOURCE rail exactly: MERGE CONFLICTS (alert tone), STAGED
 CHANGES and CHANGES, where CHANGES includes untracked paths; empty sections are
-omitted. Rows use the SOURCE face on one 24 px line: icon, name,
+omitted. Sections start collapsed, so each worktree reads as its branch line and
+section counts; a section head expands it until the block remounts. Rows use the
+SOURCE face on one 24 px line: icon, name,
 head-truncated directory, then the change badge. Each section shows eight rows, then
 `+N MORE IN SOURCE`. A click, Enter or Space opens the row's diff full-pane; the
 opened entry is frozen until reopened. A deleted text row is inert. Staging,
@@ -108,14 +110,17 @@ delta, never an inferred join with a later raw notification.
   position and exposes a compact return-to-live control.
 - Opening a file retains the feed behind its workspace. Closing returns to
   current activity with the reader's scroll/focus behavior preserved.
-- Cold startup waiting is distinct from lost established coverage. Failed,
-  disconnected and incompatible watches remain visible as concise status,
-  including when the active feed is empty. WSL failure does not mark host roots
-  unavailable.
+- Cold startup waiting is distinct from failed coverage. Failed, disconnected and
+  incompatible watches remain visible as concise status, including when the
+  active feed is empty. WSL failure does not mark host roots unavailable.
 - Connecting, quiet and unavailable states use the same centered glass empty
   panel as the no-repositories screen. They retain the app's visual language.
-- Sequence gaps and withheld previews remain disclosed. The feed is bounded
-  monitoring, not a durable activity journal or a claim about agent task status.
+- Lost edits use Stream's rule: only a forward sequence gap or the agent's
+  withheld and dropped counters count, and a watcher restart is a new stream. A
+  transport flap alone is never a loss. `N EDITS NOT SHOWN` sits where the loss
+  happened, merges until the next edit and ages out like an edit. The feed is
+  bounded monitoring, not a durable activity journal or a claim about agent task
+  status.
 
 ## Acceptance
 

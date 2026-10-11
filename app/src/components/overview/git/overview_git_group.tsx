@@ -30,7 +30,8 @@ function rowTitle(entry: SourceControlEntry): string {
 
 export function OverviewGitGroup({ kind, entries, onOpenDiff, onOpenSource }: OverviewGitGroupProps): React.JSX.Element {
   const alert = kind === "conflicts";
-  const [collapsed, setCollapsed] = useState(false);
+  // Overview is a glance across repositories: counts first, rows on request.
+  const [collapsed, setCollapsed] = useState(true);
   const bodyId = useId();
   const hidden = entries.length - ROW_CAP;
   return (
