@@ -86,6 +86,13 @@ pub async fn dispatch_command(
         UiCommand::ReadImageFile(command) => {
             repo_commands::read_image_file_command(command, ctx).await
         }
+        UiCommand::InspectBundleEntry(command) => {
+            let root = repo_commands::command_repo_root(&command.repo_id, ctx).await?;
+            let result =
+                crate::bundles::inspect_bundle_entry(root, command, cancellation.bundle_token()?)
+                    .await?;
+            Ok(UiResponse::InspectBundleEntryResult(result))
+        }
         UiCommand::BuildBundle(command) => {
             let (staging, repo_config) = {
                 let state = ctx.runtime.read().await;

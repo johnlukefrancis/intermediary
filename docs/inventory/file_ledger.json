@@ -54,6 +54,10 @@
       "summary": "Replace-conflict confirmation and inline error notice, shared by import and entry-action transactions"
     },
     {
+      "path": "app/src/components/bundles/bundle_entry_hover.tsx",
+      "summary": "Glass inspection tooltip with source sizes and largest selected files"
+    },
+    {
       "path": "app/src/components/bundles/bundle_entry_rename_input.tsx",
       "summary": "In-place rename input mounted in a ZIPS tree row's name slot"
     },
@@ -76,6 +80,10 @@
     {
       "path": "app/src/components/bundles/bundle_file_explorer.tsx",
       "summary": "Lazy file explorer for bundle directory/file inclusion, selection, clipboard, drag-move, and rename"
+    },
+    {
+      "path": "app/src/components/bundles/bundle_hover_provider.tsx",
+      "summary": "One delayed, cancellable metadata inspection per bundle tree"
     },
     {
       "path": "app/src/components/bundles/bundle_list.tsx",
@@ -722,6 +730,10 @@
       "summary": "Shared minimum agent contract for root-identified activity in Stream and Overview"
     },
     {
+      "path": "app/src/lib/agent/agent_client_inspection_test.ts",
+      "summary": "Remote hover cancellation and settled-request cleanup at the WebSocket boundary"
+    },
+    {
       "path": "app/src/lib/agent/agent_client_legacy.ts",
       "summary": "Legacy hostPath/windowsPath envelope normalization for older agent payloads"
     },
@@ -1162,6 +1174,10 @@
       "summary": "Global bundle exclude schema and UI options"
     },
     {
+      "path": "app/src/shared/protocol_bundle_inspection.ts",
+      "summary": "Selection-aware bundle entry measurements and bounded largest-file results"
+    },
+    {
       "path": "app/src/shared/protocol_bundles.ts",
       "summary": "Bundle-related agent protocol schemas and types"
     },
@@ -1254,6 +1270,10 @@
       "summary": "Bundle column style entrypoint"
     },
     {
+      "path": "app/src/styles/bundle_entry_hover.css",
+      "summary": "Readable bundle-size inspection on the shared glass popover surface"
+    },
+    {
       "path": "app/src/styles/bundle_file_explorer_drop.css",
       "summary": "Drag-and-drop import hover states for the ZIPS explorer tree and directory rows"
     },
@@ -1287,7 +1307,7 @@
     },
     {
       "path": "app/src/styles/context_menu.css",
-      "summary": "Right-click context menu with glass aesthetic"
+      "summary": "Shared glass popover surface and right-click menu controls"
     },
     {
       "path": "app/src/styles/deck_section_switcher.css",
@@ -1510,6 +1530,10 @@
       "summary": "Bundle build orchestration using the im_bundle library"
     },
     {
+      "path": "crates/im_agent/src/bundles/bundle_inspection.rs",
+      "summary": "Owned blocking inspection worker shared by host and WSL repository routes"
+    },
+    {
       "path": "crates/im_agent/src/bundles/bundle_lister.rs",
       "summary": "Bundle listing and latest selection logic"
     },
@@ -1552,6 +1576,10 @@
     {
       "path": "crates/im_agent/src/main.rs",
       "summary": "WSL agent daemon entry point"
+    },
+    {
+      "path": "crates/im_agent/src/protocol/bundle_inspection.rs",
+      "summary": "Selection-aware bundle entry inspection request and response contracts"
     },
     {
       "path": "crates/im_agent/src/protocol/cancel_bundle_tests.rs",
@@ -2366,6 +2394,14 @@
       "summary": "Normalize and apply user-configurable global excludes for bundle scanning"
     },
     {
+      "path": "crates/im_bundle/src/inspection_tests.rs",
+      "summary": "Inspection selection parity, size ranking, bounded scans and containment regressions"
+    },
+    {
+      "path": "crates/im_bundle/src/inspection.rs",
+      "summary": "Bounded metadata inspection using the archive's canonical selection predicate"
+    },
+    {
       "path": "crates/im_bundle/src/lib.rs",
       "summary": "Library root for bundle scanning and zip creation"
     },
@@ -2548,6 +2584,10 @@
     {
       "path": "crates/im_host_agent/src/server/mod.rs",
       "summary": "Host-agent WebSocket server module exports"
+    },
+    {
+      "path": "crates/im_host_agent/src/server/request_dispatch.rs",
+      "summary": "Connection-scoped request dispatch and cancellation of the current hover inspection"
     },
     {
       "path": "crates/im_host_agent/src/server/shutdown_dispatch.rs",

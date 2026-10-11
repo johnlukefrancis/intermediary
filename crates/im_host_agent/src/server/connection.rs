@@ -5,9 +5,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use futures_util::{SinkExt, StreamExt};
-use im_agent::error::to_response_error;
 use im_agent::logging::Logger;
-use im_agent::protocol::{EnvelopeKind, RequestEnvelope, ResponseEnvelope};
 use im_agent::server::attach_runtime_identity_header;
 use im_agent::server::EventBus;
 use serde_json::json;
@@ -19,10 +17,10 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::runtime::HostRuntime;
 
-use super::dispatch;
 use super::handshake_auth::{
     unauthorized_handshake_response, ConnectionHandshakeAuth, HandshakeRejectReason,
 };
+use super::request_dispatch::ConnectionRequests;
 
 #[derive(Clone)]
 pub struct ConnectionContext {
@@ -84,9 +82,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
 
     let (mut sink, mut stream) = ws_stream.split();
     let (response_tx, mut response_rx) = mpsc::unbounded_channel::<Message>();
-    // Two bounded lanes: a client that stops reading loses stream events (a
-    // `seq` gap) past `EVENT_QUEUE_CAP` / `EVENT_QUEUE_BYTES`, never memory,
-    // and never a control event - that lane backpressures the relay instead.
+    // Slow clients lose bounded stream events with a seq gap; control events backpressure.
     let (mut event_rx, relay_task) = ctx.event_bus.relay(
         ctx.logger.clone(),
         peer.to_string(),
@@ -116,16 +112,11 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     });
 
+    let mut requests = ConnectionRequests::default();
     while let Some(message) = stream.next().await {
         match message {
             Ok(Message::Text(text)) => {
-                let request_ctx = ctx.clone();
-                let request_response_tx = response_tx.clone();
-                tokio::spawn(async move {
-                    if let Some(response) = handle_message(&text, &request_ctx).await {
-                        let _ = request_response_tx.send(Message::Text(response));
-                    }
-                });
+                requests.receive(&text, &ctx, &response_tx);
             }
             Ok(Message::Binary(_)) => {
                 ctx.logger.warn(
@@ -145,6 +136,7 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         }
     }
 
+    drop(requests);
     drop(response_tx);
     relay_task.abort();
     let _ = writer.await;
@@ -153,44 +145,6 @@ pub async fn handle_connection(stream: TcpStream, peer: SocketAddr, ctx: Connect
         "Host-agent client disconnected",
         Some(json!({"peer": peer.to_string()})),
     );
-}
-
-async fn handle_message(raw: &str, ctx: &ConnectionContext) -> Option<String> {
-    let envelope: RequestEnvelope = match serde_json::from_str(raw) {
-        Ok(envelope) => envelope,
-        Err(err) => {
-            ctx.logger.warn(
-                "Invalid JSON message",
-                Some(json!({"error": err.to_string()})),
-            );
-            return None;
-        }
-    };
-
-    if envelope.kind != EnvelopeKind::Request {
-        ctx.logger.warn(
-            "Ignoring non-request envelope",
-            Some(json!({"kind": format!("{:?}", envelope.kind)})),
-        );
-        return None;
-    }
-
-    let request_id = envelope.request_id.clone();
-    let response = match dispatch::dispatch_command(envelope.payload, ctx).await {
-        Ok(payload) => ResponseEnvelope::ok(request_id, payload),
-        Err(err) => ResponseEnvelope::error(request_id, to_response_error(&err)),
-    };
-
-    match serde_json::to_string(&response) {
-        Ok(text) => Some(text),
-        Err(err) => {
-            ctx.logger.error(
-                "Failed to serialize response",
-                Some(json!({"error": err.to_string()})),
-            );
-            None
-        }
-    }
 }
 
 fn is_expected_probe_handshake_error(error_text: &str) -> bool {

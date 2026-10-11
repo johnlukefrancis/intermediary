@@ -1,26 +1,8 @@
 // Path: crates/im_host_agent/src/wsl/wsl_backend_client/timeouts.rs
 // Description: The host->WSL request-timeout ladder and the agent-side worst case each tier covers
 
-//! Every constant here bounds one whole forwarded request, and a forwarded
-//! source-control request runs a *sequence* of Git commands in the WSL agent,
-//! each with its own bound (read 20 s, index 60 s, commit 120 s, remote 180 s;
-//! `crates/im_agent/src/source_control/runner/mod.rs`). The numbers below are
-//! therefore stated as sums of those bounds, not guesses.
-//!
-//! The unit that recurs is one status capture: `rev-parse --show-prefix`,
-//! `status --porcelain=v2`, `diff --cached --quiet`, `rev-parse MERGE_HEAD`,
-//! and `ls-files --stage` — five bounded reads, **100 s** worst case. Every
-//! mutation reads status before it acts (section paths, discard stamps, the
-//! commit precondition) and again after it, so a mutation's worst case is
-//! `100 + <the mutating calls> + 100`.
-//!
-//! What a tier guarantees: it covers the request's whole end-to-end worst case
-//! (every Git command it can run, including the follow-up status read) with a
-//! 20 s margin, and the UI tier above it adds 30 s more. It is still not a claim
-//! about physical finality: when it expires the host answers
-//! `WSL_BACKEND_TIMEOUT`, the WSL action is `Passive` and keeps running, the
-//! effect is `unknown`, and the UI reconciles against `mutationInProgress`
-//! until the agent reports itself idle.
+//! Forwarding budgets cover the full sequence of bounded agent operations.
+//! Mutation timeouts preserve unknown outcomes for reconciliation; UI budgets add 30 s.
 
 use std::time::Duration;
 
@@ -30,48 +12,30 @@ pub(super) const FORWARD_REQUEST_TIMEOUT_DEFAULT: Duration = Duration::from_secs
 pub(super) const FORWARD_REQUEST_TIMEOUT_CLIENT_HELLO: Duration = Duration::from_secs(12);
 pub(super) const FORWARD_REQUEST_TIMEOUT_BUILD_BUNDLE: Duration = Duration::from_secs(5 * 60);
 
-/// Reads. A diff is 2 bounded reads (prefix + diff) = 40 s, an image diff 3
-/// (prefix + both sides) = 60 s. A status capture is 5 bounded reads = 100 s
-/// worst case; 120 s covers it. UI tier above: 150 s.
+/// Status needs five reads (100 s); 120 s includes forwarding margin.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_READ: Duration = Duration::from_secs(120);
 
 /// Stage / unstage. Section status 100 s + `add -A` / `reset -q` 60 s +
 /// follow-up status 100 s = 260 s end to end; 280 s covers it. UI tier above: 310 s.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_INDEX: Duration = Duration::from_secs(280);
 
-/// Discard, its own class because it runs two index mutations: classification
-/// status 100 s + `restore --worktree` 60 s + `reset -q` 60 s + follow-up
-/// status 100 s = 320 s end to end; 340 s covers it. UI tier above: 370 s.
+/// Discard: two status captures + restore + reset = 320 s; forwarding adds 20 s.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_DISCARD: Duration =
     Duration::from_secs(340);
 
-/// Commit. Precondition status 100 s + `rev-parse HEAD` 20 s + `commit` 120 s
-/// + post-timeout HEAD re-check 20 s + follow-up status 100 s = 360 s end to
-/// end; 380 s covers it. UI tier above: 410 s.
+/// Commit: pre/post status + HEAD read/recheck + commit = 360 s; forwarding adds 20 s.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_COMMIT: Duration = Duration::from_secs(380);
 
-/// Push / pull. Push is the worst case: status 100 s + `remote` 20 s + `push`
-/// 180 s + follow-up status 100 s = 400 s end to end; 420 s covers it. UI tier
-/// above: 450 s.
+/// Remote: two status captures + remote read + push = 400 s; forwarding adds 20 s.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SOURCE_CONTROL_REMOTE: Duration = Duration::from_secs(420);
 
-/// Shutdown. The WSL agent drains for at most 450 s
-/// (`im_agent::server::SHUTDOWN_EMERGENCY_BOUND`) and answers immediately
-/// after; 470 s leaves room for the response hop while the host's own drain
-/// loop (`shutdown_dispatch::drain_wsl_backend`) still governs the real
-/// wall-clock bound with its own emergency deadline and retries.
+/// The agent drains for 450 s; 470 s leaves a response hop inside the host drain owner.
 pub(super) const FORWARD_REQUEST_TIMEOUT_SHUTDOWN: Duration = Duration::from_secs(470);
 
-/// Import. 20 s for the lock's `rev-parse` plus a 280 s copy budget across the
-/// `/mnt` drvfs boundary — a budget, not a proof; on expiry the host answers
-/// `WSL_BACKEND_TIMEOUT`, the effect is `unknown`, and the watcher reconciles.
-/// UI tier above: 330 s.
+/// Import: 20 s lock resolution + 280 s copy budget; expiry is an unknown outcome.
 pub(super) const FORWARD_REQUEST_TIMEOUT_IMPORT_FILES: Duration = Duration::from_secs(300);
 
-/// A worktree delete, move or rename. 20 s for the lock's `rev-parse` + 20 s
-/// `capture_location` + the renames themselves, microseconds in practice; 60 s
-/// covers it. UI tier above: 90 s. An in-repo copy is a copy like any other
-/// and answers to the import tier instead.
+/// Entry mutations budget lock/location resolution; recursive copy uses the import tier.
 pub(super) const FORWARD_REQUEST_TIMEOUT_WORKTREE_ENTRY: Duration = Duration::from_secs(60);
 
 pub(super) fn timeout_for_command(command: &UiCommand) -> Duration {
@@ -82,9 +46,9 @@ pub(super) fn timeout_for_command(command: &UiCommand) -> Duration {
         UiCommand::ImportFiles(_) => FORWARD_REQUEST_TIMEOUT_IMPORT_FILES,
         UiCommand::WorktreeAction(command) => match command.action.kind() {
             WorktreeActionKind::Copy => FORWARD_REQUEST_TIMEOUT_IMPORT_FILES,
-            WorktreeActionKind::Delete
-            | WorktreeActionKind::Move
-            | WorktreeActionKind::Rename => FORWARD_REQUEST_TIMEOUT_WORKTREE_ENTRY,
+            WorktreeActionKind::Delete | WorktreeActionKind::Move | WorktreeActionKind::Rename => {
+                FORWARD_REQUEST_TIMEOUT_WORKTREE_ENTRY
+            }
         },
         UiCommand::SourceControlStatus(_)
         | UiCommand::SourceControlDiff(_)
@@ -103,6 +67,7 @@ pub(super) fn timeout_for_command(command: &UiCommand) -> Duration {
         | UiCommand::WatchRepo(_)
         | UiCommand::Refresh(_)
         | UiCommand::StageFile(_)
+        | UiCommand::InspectBundleEntry(_)
         | UiCommand::ReadTextFile(_)
         | UiCommand::ReadImageFile(_)
         | UiCommand::CancelBundleBuild(_)

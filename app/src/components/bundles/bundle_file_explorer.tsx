@@ -1,6 +1,7 @@
 // Path: app/src/components/bundles/bundle_file_explorer.tsx
 // Description: Lazy file explorer for bundle directory/file inclusion, selection, clipboard, drag-move, and rename
 
+import { BundleHoverProvider } from "./bundle_hover_provider.js";
 import { topmostPaths } from "../../lib/bundles/bundle_selection_visibility.js";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -193,40 +194,43 @@ export function BundleFileExplorer({
         </div>
       </div>
 
-      <TreeInteractionProvider
-        selected={treeSelection.selected}
-        cutPaths={new Set(clipboard.clipboard?.mode === "cut" ? clipboard.clipboard.paths : [])}
-        dropTargetDir={mergedDropTargetDir}
-        renaming={renamingPath}
-        visibleRows={visibleRows}
-        expandedDirs={expandedDirs}
-        selectOnly={treeSelection.selectOnly}
-        toggle={treeSelection.toggle}
-        rangeTo={treeSelection.rangeTo}
-        toggleExpanded={toggleExpanded}
-        onStartDrag={rowDrag.startDrag}
-        onOpenMenu={setRowMenu}
-        onRenameCommit={(newName) => { if (renamingPath) actions.renameEntry(renamingPath, newName); }}
-        onRenameCancel={() => { setRenamingPath(null); }}
-      >
-        <BundleExplorerTree
-          topLevelDirs={topLevelDirs}
-          topLevelFiles={topLevelFiles}
-          selection={selection}
-        globalExcludes={globalExcludes}
+      <BundleHoverProvider repoId={repoId} selection={selection} globalExcludes={config.globalExcludes}
+        disabled={!!(rowMenu || blankMenu || renamingPath || pendingDelete || isDragActive || rowDrag.draggedPaths.length)}>
+        <TreeInteractionProvider
+          selected={treeSelection.selected}
+          cutPaths={new Set(clipboard.clipboard?.mode === "cut" ? clipboard.clipboard.paths : [])}
+          dropTargetDir={mergedDropTargetDir}
+          renaming={renamingPath}
+          visibleRows={visibleRows}
           expandedDirs={expandedDirs}
-          listings={listings}
-          renameInFlight={actions.inFlight}
-          isDragActive={isDragActive}
-          listRef={listRef}
-          onToggleExpanded={toggleExpanded}
-          onToggleDirectory={inclusion.handleToggleDirectory}
-          onToggleFile={inclusion.handleToggleFile}
-          onOpenFile={onOpenFile}
-          onKeyDown={keyboard.onKeyDown}
-          onBlankContextMenu={(event) => { setBlankMenu({ x: event.clientX, y: event.clientY }); }}
-        />
-      </TreeInteractionProvider>
+          selectOnly={treeSelection.selectOnly}
+          toggle={treeSelection.toggle}
+          rangeTo={treeSelection.rangeTo}
+          toggleExpanded={toggleExpanded}
+          onStartDrag={rowDrag.startDrag}
+          onOpenMenu={setRowMenu}
+          onRenameCommit={(newName) => { if (renamingPath) actions.renameEntry(renamingPath, newName); }}
+          onRenameCancel={() => { setRenamingPath(null); }}
+        >
+          <BundleExplorerTree
+            topLevelDirs={topLevelDirs}
+            topLevelFiles={topLevelFiles}
+            selection={selection}
+            globalExcludes={globalExcludes}
+            expandedDirs={expandedDirs}
+            listings={listings}
+            renameInFlight={actions.inFlight}
+            isDragActive={isDragActive}
+            listRef={listRef}
+            onToggleExpanded={toggleExpanded}
+            onToggleDirectory={inclusion.handleToggleDirectory}
+            onToggleFile={inclusion.handleToggleFile}
+            onOpenFile={onOpenFile}
+            onKeyDown={keyboard.onKeyDown}
+            onBlankContextMenu={(event) => { setBlankMenu({ x: event.clientX, y: event.clientY }); }}
+          />
+        </TreeInteractionProvider>
+      </BundleHoverProvider>
 
       {rowMenu && repoRoot && (
         <BundleExplorerRowMenu

@@ -1,7 +1,9 @@
 // Path: crates/im_agent/src/protocol/mod.rs
 // Description: WebSocket protocol types for the agent
 
+mod bundle_inspection;
 mod commands;
+pub use bundle_inspection::{InspectBundleEntryCommand, InspectBundleEntryResult};
 mod commands_import;
 mod commands_source_control;
 mod commands_tr_fleet;

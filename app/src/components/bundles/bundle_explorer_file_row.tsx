@@ -2,6 +2,7 @@
 // Description: File row for the bundle explorer with icon-driven include/exclude toggle, selection, and rename
 
 import type React from "react";
+import { useBundleHover } from "./bundle_hover_provider.js";
 import { useCallback } from "react";
 import { FileIcon, getFileFamily } from "../../lib/icons/index.js";
 import { baseName } from "../../lib/bundles/bundle_selection_visibility.js";
@@ -31,6 +32,7 @@ export function BundleExplorerFileRow({
   onToggle,
   onOpen,
 }: BundleExplorerFileRowProps): React.JSX.Element {
+  const hoverProps = useBundleHover(path);
   const interaction = useRowInteraction(path, "file");
 
   const handleToggle = useCallback(
@@ -53,7 +55,6 @@ export function BundleExplorerFileRow({
 
   const family = getFileFamily(path);
   const decoration = useFileDecoration(path);
-  const title = globallyExcluded ? `${path} — excluded by a global rule` : path;
 
   return (
     <div
@@ -68,7 +69,7 @@ export function BundleExplorerFileRow({
       onDoubleClick={handleDoubleClick}
       onContextMenu={interaction.onContextMenu}
       onPointerDown={interaction.onPointerDown}
-      title={decoration === null ? title : `${title} — ${decoration.label}`}
+        {...hoverProps}
     >
       <button
         type="button"

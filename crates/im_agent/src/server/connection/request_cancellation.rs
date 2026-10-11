@@ -23,7 +23,9 @@ pub(super) enum RequestCancellation {
 impl RequestCancellation {
     pub(super) fn for_command(command: &UiCommand) -> Self {
         match command {
-            UiCommand::BuildBundle(_) => Self::Bundle(BundleCancelToken::new()),
+            UiCommand::BuildBundle(_) | UiCommand::InspectBundleEntry(_) => {
+                Self::Bundle(BundleCancelToken::new())
+            }
             UiCommand::StageFile(_) => Self::StageFile(StageFileCancelToken::new()),
             UiCommand::SourceControlStatus(_)
             | UiCommand::SourceControlDiff(_)

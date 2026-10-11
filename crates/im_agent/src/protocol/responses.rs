@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::bundle_inspection::InspectBundleEntryResult;
 use super::responses_import::ImportFilesResult;
 use super::responses_legacy_wire::{BuildBundleResultWire, BundleInfoWire, StageFileResultWire};
 use super::responses_repo::{GetRepoTopLevelResult, ListRepoDirectoryResult};
@@ -121,9 +122,7 @@ pub struct ListBundlesResult {
     pub bundles: Vec<BundleInfo>,
 }
 
-/// The answer to `shutdown`: whether every mutation this agent owned finished
-/// inside the drain budget, and how many were still holding their worktree
-/// lock when the budget expired.
+/// Shutdown reports drain completion and the mutation locks still held at expiry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ShutdownResult {
@@ -148,6 +147,8 @@ pub enum UiResponse {
     ReadTextFileResult(ReadTextFileResult),
     #[serde(rename = "readImageFileResult")]
     ReadImageFileResult(ReadImageFileResult),
+    #[serde(rename = "inspectBundleEntryResult")]
+    InspectBundleEntryResult(InspectBundleEntryResult),
     #[serde(rename = "buildBundleResult")]
     BuildBundleResult(BuildBundleResult),
     #[serde(rename = "cancelBundleBuildResult")]

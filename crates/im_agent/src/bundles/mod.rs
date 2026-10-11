@@ -2,6 +2,8 @@
 // Description: Bundle helpers for the agent
 
 mod bundle_builder;
+mod bundle_inspection;
+pub use bundle_inspection::inspect_bundle_entry;
 mod bundle_builder_blocking;
 mod bundle_lister;
 mod bundle_progress;

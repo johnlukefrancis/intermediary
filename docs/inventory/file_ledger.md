@@ -16,12 +16,14 @@ app/src/components/bundles/build_progress_button.tsx - Bundle build/cancel butto
 app/src/components/bundles/bundle_column.tsx - Main bundles column component
 app/src/components/bundles/bundle_drag_ghost.tsx - Floating label that follows the pointer during an in-tree row drag
 app/src/components/bundles/bundle_entries_feedback.tsx - Replace-conflict confirmation and inline error notice, shared by import and entry-action transactions
+app/src/components/bundles/bundle_entry_hover.tsx - Glass inspection tooltip with source sizes and largest selected files
 app/src/components/bundles/bundle_entry_rename_input.tsx - In-place rename input mounted in a ZIPS tree row's name slot
 app/src/components/bundles/bundle_explorer_directory.tsx - Recursive directory node for the lazy bundle file explorer, with selection, drag, and rename
 app/src/components/bundles/bundle_explorer_file_row.tsx - File row for the bundle explorer with icon-driven include/exclude toggle, selection, and rename
 app/src/components/bundles/bundle_explorer_row_menu.tsx - Right-click menu for a ZIPS tree row - file/folder actions plus cut/copy/paste/rename/delete
 app/src/components/bundles/bundle_explorer_tree.tsx - Top-level directory/file list for the bundle explorer, carrying drop-target attributes and tree keyboard focus
 app/src/components/bundles/bundle_file_explorer.tsx - Lazy file explorer for bundle directory/file inclusion, selection, clipboard, drag-move, and rename
+app/src/components/bundles/bundle_hover_provider.tsx - One delayed, cancellable metadata inspection per bundle tree
 app/src/components/bundles/bundle_list.tsx - Single LATEST bundle row (inline, no header)
 app/src/components/bundles/bundle_row.tsx - Individual bundle row with drag support
 app/src/components/bundles/bundle_selection_panel.tsx - Bundle build controls and file explorer selection panel
@@ -183,6 +185,7 @@ app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigge
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/activity_support.ts - Shared minimum agent contract for root-identified activity in Stream and Overview
+app/src/lib/agent/agent_client_inspection_test.ts - Remote hover cancellation and settled-request cleanup at the WebSocket boundary
 app/src/lib/agent/agent_client_legacy.ts - Legacy hostPath/windowsPath envelope normalization for older agent payloads
 app/src/lib/agent/agent_client.ts - WebSocket client with reconnection and message correlation
 app/src/lib/agent/agent_request_timeouts.ts - Per-command UI request timeout ladder (strictly above the agent and host->WSL budgets)
@@ -293,6 +296,7 @@ app/src/shared/config/version.ts - Persisted config schema version
 app/src/shared/global_exclude_rules_test.ts - The frontend global-exclude matcher agrees with the Rust scanner on suffixes, names, and path segments
 app/src/shared/global_exclude_rules.ts - Normalize global excludes and match names and paths the way the bundle scanner does
 app/src/shared/global_excludes.ts - Global bundle exclude schema and UI options
+app/src/shared/protocol_bundle_inspection.ts - Selection-aware bundle entry measurements and bounded largest-file results
 app/src/shared/protocol_bundles.ts - Bundle-related agent protocol schemas and types
 app/src/shared/protocol_events_delta.ts - Zod mirror of the agent fileDelta event: bounded content of one settled file change
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
@@ -316,6 +320,7 @@ app/src/styles/boot.css - Boot phase opacity gate - smooth fade-in when main win
 app/src/styles/bundle_build_button.css - Bundle build and cancel command button styles
 app/src/styles/bundle_column_layout.css - Bundle column layout and preset selector styles
 app/src/styles/bundle_column.css - Bundle column style entrypoint
+app/src/styles/bundle_entry_hover.css - Readable bundle-size inspection on the shared glass popover surface
 app/src/styles/bundle_file_explorer_drop.css - Drag-and-drop import hover states for the ZIPS explorer tree and directory rows
 app/src/styles/bundle_file_explorer_selection.css - Row selection, cut-dim, drag ghost, and list focus states for the ZIPS tree
 app/src/styles/bundle_file_explorer.css - Lazy bundle file explorer rows and file include glow states
@@ -324,7 +329,7 @@ app/src/styles/bundle_selection_panel.css - Bundle selection panel shell and sha
 app/src/styles/chrome.css - Unified header chrome styles for tab bar, status bar, and banners
 app/src/styles/columns.css - Standard deck grid layout: Auto files, the drag divider, and the rail at its persisted width
 app/src/styles/confirm_modal.css - Confirmation dialog overlay with glass panel styling
-app/src/styles/context_menu.css - Right-click context menu with glass aesthetic
+app/src/styles/context_menu.css - Shared glass popover surface and right-click menu controls
 app/src/styles/deck_section_switcher.css - Segmented icon-rocker deck section tablist shared by the handset deck and the right rail
 app/src/styles/deck_splitter.css - The drag divider between the left deck panel and the rail: occupies the column gap, lights up on hover and while drag...
 app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the workspace editor shell
@@ -380,6 +385,7 @@ app/src/vite_env.d.ts - Vite client type declarations
 crates/im_agent/src/bundles/bundle_builder_blocking.rs - Blocking bundle build steps and filesystem operations
 crates/im_agent/src/bundles/bundle_builder_tests.rs - Tests for bundle builder helpers
 crates/im_agent/src/bundles/bundle_builder.rs - Bundle build orchestration using the im_bundle library
+crates/im_agent/src/bundles/bundle_inspection.rs - Owned blocking inspection worker shared by host and WSL repository routes
 crates/im_agent/src/bundles/bundle_lister.rs - Bundle listing and latest selection logic
 crates/im_agent/src/bundles/bundle_progress.rs - Bundle progress forwarding from im_bundle to agent events
 crates/im_agent/src/bundles/ignore_rules.rs - Centralized ignore patterns for bundle building and scanning
@@ -391,6 +397,7 @@ crates/im_agent/src/lib.rs - Library root for the Intermediary WSL agent daemon
 crates/im_agent/src/logging/json_logger.rs - JSONL logger that writes to agent_latest.log and optionally mirrors to stdout/stderr
 crates/im_agent/src/logging/mod.rs - Logging exports and helpers for the agent
 crates/im_agent/src/main.rs - WSL agent daemon entry point
+crates/im_agent/src/protocol/bundle_inspection.rs - Selection-aware bundle entry inspection request and response contracts
 crates/im_agent/src/protocol/cancel_bundle_tests.rs - Protocol tests for cancellable bundle build messages
 crates/im_agent/src/protocol/commands_import.rs - UI-to-agent command payload for importing external OS files into a repo directory
 crates/im_agent/src/protocol/commands_source_control.rs - UI-to-agent source-control command payloads (status, diff, tagged actions)
@@ -594,6 +601,8 @@ crates/im_bundle/src/git_capture/verification.rs - Streaming selected-file coher
 crates/im_bundle/src/git.rs - Public Git primitives shared by bundle evidence capture and agent source control
 crates/im_bundle/src/global_excludes_summary.rs - Manifest-facing normalized summary for bundle global excludes
 crates/im_bundle/src/global_excludes.rs - Normalize and apply user-configurable global excludes for bundle scanning
+crates/im_bundle/src/inspection_tests.rs - Inspection selection parity, size ranking, bounded scans and containment regressions
+crates/im_bundle/src/inspection.rs - Bounded metadata inspection using the archive's canonical selection predicate
 crates/im_bundle/src/lib.rs - Library root for bundle scanning and zip creation
 crates/im_bundle/src/macos_process_session.rs - macOS process-session ownership for native terminals and supervised agents
 crates/im_bundle/src/manifest.rs - Bundle manifest structure and serialization
@@ -640,6 +649,7 @@ crates/im_host_agent/src/server/connection.rs - Host-agent per-connection WebSoc
 crates/im_host_agent/src/server/dispatch.rs - Host-agent command dispatch over routed runtime backends
 crates/im_host_agent/src/server/handshake_auth.rs - Host-agent websocket handshake token and origin validation utilities
 crates/im_host_agent/src/server/mod.rs - Host-agent WebSocket server module exports
+crates/im_host_agent/src/server/request_dispatch.rs - Connection-scoped request dispatch and cancellation of the current hover inspection
 crates/im_host_agent/src/server/shutdown_dispatch.rs - Host-agent shutdown: drain the WSL backend first, then this process, then exit
 crates/im_host_agent/src/server/shutdown_dispatch/tests.rs - Unit tests for the WSL-unavailable/outstanding-mutation shutdown decision
 crates/im_host_agent/src/server/ws_server.rs - Host-agent WebSocket accept loop and connection dispatch

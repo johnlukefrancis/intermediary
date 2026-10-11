@@ -2,6 +2,7 @@
 // Description: Recursive directory node for the lazy bundle file explorer, with selection, drag, and rename
 
 import type React from "react";
+import { useBundleHover } from "./bundle_hover_provider.js";
 import { useCallback } from "react";
 import type { BundleSelection } from "../../shared/protocol.js";
 import type { NormalizedGlobalExcludes } from "../../shared/global_exclude_rules.js";
@@ -61,6 +62,7 @@ export function BundleExplorerDirectory({
     : directoryHasInclusions(path, selection, globalExcludes);
   const id = checkboxId(path);
   const decoration = useDirectoryDecoration(path);
+  const hoverProps = useBundleHover(path);
   const interaction = useRowInteraction(path, "dir");
 
   const handleExpand = useCallback((event: React.MouseEvent) => {
@@ -79,6 +81,7 @@ export function BundleExplorerDirectory({
         onClick={interaction.onClick}
         onContextMenu={interaction.onContextMenu}
         onPointerDown={interaction.onPointerDown}
+        {...hoverProps}
       >
         <button
           className="dir-expand-btn"
@@ -107,7 +110,6 @@ export function BundleExplorerDirectory({
         ) : (
           <span
             className="bundle-explorer-dir-name"
-            title={decoration === null ? path : `${path} — ${decoration.label}`}
           >
             {baseName(path)}
           </span>

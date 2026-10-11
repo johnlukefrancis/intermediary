@@ -4,6 +4,7 @@
 mod connection;
 mod dispatch;
 mod handshake_auth;
+mod request_dispatch;
 mod shutdown_dispatch;
 mod ws_server;
 

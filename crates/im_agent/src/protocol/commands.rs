@@ -5,6 +5,7 @@ use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::bundle_inspection::InspectBundleEntryCommand;
 use super::commands_import::ImportFilesCommand;
 use super::commands_source_control::{
     SourceControlActionCommand, SourceControlDiffCommand, SourceControlImageDiffCommand,
@@ -198,6 +199,8 @@ pub enum UiCommand {
     ReadTextFile(ReadTextFileCommand),
     #[serde(rename = "readImageFile")]
     ReadImageFile(ReadImageFileCommand),
+    #[serde(rename = "inspectBundleEntry")]
+    InspectBundleEntry(InspectBundleEntryCommand),
     #[serde(rename = "buildBundle")]
     BuildBundle(BuildBundleCommand),
     #[serde(rename = "cancelBundleBuild")]
@@ -242,6 +245,7 @@ impl UiCommand {
             UiCommand::StageFile(_) => "stageFile",
             UiCommand::ReadTextFile(_) => "readTextFile",
             UiCommand::ReadImageFile(_) => "readImageFile",
+            UiCommand::InspectBundleEntry(_) => "inspectBundleEntry",
             UiCommand::BuildBundle(_) => "buildBundle",
             UiCommand::CancelBundleBuild(_) => "cancelBundleBuild",
             UiCommand::GetRepoTopLevel(_) => "getRepoTopLevel",
@@ -260,9 +264,7 @@ impl UiCommand {
         }
     }
 
-    /// The repository a command targets, or `None` for global commands. Kept
-    /// exhaustive on purpose: a new repo-scoped command that is not listed here
-    /// must fail to compile rather than silently become unroutable.
+    /// Exhaustive routing: every repository command must name its target.
     pub fn repo_id(&self) -> Option<&str> {
         match self {
             UiCommand::WatchRepo(command) => Some(&command.repo_id),
@@ -270,6 +272,7 @@ impl UiCommand {
             UiCommand::StageFile(command) => Some(&command.repo_id),
             UiCommand::ReadTextFile(command) => Some(&command.repo_id),
             UiCommand::ReadImageFile(command) => Some(&command.repo_id),
+            UiCommand::InspectBundleEntry(command) => Some(&command.repo_id),
             UiCommand::BuildBundle(command) => Some(&command.repo_id),
             UiCommand::CancelBundleBuild(command) => Some(&command.repo_id),
             UiCommand::GetRepoTopLevel(command) => Some(&command.repo_id),

@@ -87,15 +87,7 @@ pub async fn list_repo_directory_command(
     ))
 }
 
-/// Copies external OS files into one directory of a WSL-rooted repo.
-///
-/// An import writes the worktree without Git, so it takes the same
-/// per-worktree mutation lock every Git mutation takes: a drop must not
-/// interleave with a commit or a discard over the same index. The lock is also
-/// the drain gate, so a shutdown refuses new imports with `AGENT_DRAINING`.
-/// Resolving the lock spawns `rev-parse`, so a configured root that is not a
-/// repository is refused there (`GIT_NOT_REPOSITORY`) rather than being given
-/// an unlocked path of its own.
+/// Import holds the Git mutation/drain lock; non-repositories are refused.
 pub async fn import_files_command(
     command: protocol::ImportFilesCommand,
     ctx: &ConnectionContext,
@@ -121,15 +113,7 @@ pub async fn import_files_command(
     }))
 }
 
-/// Deletes, moves, copies, or renames entries in a WSL-rooted repo worktree.
-///
-/// Like an import, this writes the worktree without Git and therefore takes
-/// the same per-worktree mutation lock every Git mutation takes: a rename must
-/// not interleave with a commit or a discard over the same index. The lock is
-/// also the drain gate, so a shutdown refuses new actions with
-/// `AGENT_DRAINING`, and resolving it spawns `rev-parse`, so a configured root
-/// that is not a repository is refused there rather than being given an
-/// unlocked path of its own.
+/// Worktree actions share the Git mutation/drain lock with imports and Git writes.
 pub async fn worktree_action_command(
     command: protocol::WorktreeActionCommand,
     ctx: &ConnectionContext,
@@ -169,7 +153,10 @@ pub(super) fn resolve_wsl_repo_root(
         })
 }
 
-async fn command_repo_root(repo_id: &str, ctx: &ConnectionContext) -> Result<String, AgentError> {
+pub(super) async fn command_repo_root(
+    repo_id: &str,
+    ctx: &ConnectionContext,
+) -> Result<String, AgentError> {
     let state = ctx.runtime.read().await;
     let repo_config = state
         .repo_configs

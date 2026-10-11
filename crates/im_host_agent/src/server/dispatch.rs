@@ -13,6 +13,7 @@ use crate::runtime::{
 pub async fn dispatch_command(
     command: UiCommand,
     ctx: &ConnectionContext,
+    inspection_cancel: Option<im_agent::bundles::BundleCancelToken>,
 ) -> Result<UiResponse, AgentError> {
     match command {
         UiCommand::BuildBundle(command) => {
@@ -21,13 +22,14 @@ pub async fn dispatch_command(
         UiCommand::CancelBundleBuild(command) => {
             return dispatch_cancel_bundle_build(command, ctx).await;
         }
-        UiCommand::SourceControlStatus(_)
+        UiCommand::InspectBundleEntry(_)
+        | UiCommand::SourceControlStatus(_)
         | UiCommand::SourceControlDiff(_)
         | UiCommand::SourceControlImageDiff(_)
         | UiCommand::SourceControlAction(_)
         | UiCommand::ImportFiles(_)
         | UiCommand::WorktreeAction(_) => {
-            return dispatch_unlocked_repo_command(command, ctx).await;
+            return dispatch_unlocked_repo_command(command, ctx, inspection_cancel).await;
         }
         // Shutdown drains the WSL backend and then this process; both waits are
         // minutes long, so it never touches the runtime write lock.
@@ -129,14 +131,12 @@ async fn dispatch_cancel_bundle_build(
     }
 }
 
-/// Source-control commands run Git for up to minutes, and an import or a
-/// worktree action copies files for as long as the selection is big; all of
-/// them resolve their backend under a short read lock and then run with no
-/// runtime lock held, so a long push or a large folder never freezes other
-/// repos, clientHello, or WSL forwards.
+/// Resolve the backend under a short lock; long repository operations must not
+/// freeze other repos, clientHello or WSL forwards.
 async fn dispatch_unlocked_repo_command(
     command: UiCommand,
     ctx: &ConnectionContext,
+    inspection_cancel: Option<im_agent::bundles::BundleCancelToken>,
 ) -> Result<UiResponse, AgentError> {
     let repo_id = command
         .repo_id()
@@ -154,6 +154,15 @@ async fn dispatch_unlocked_repo_command(
                 runtime.host_source_control_context(&repo_id)?
             };
             match command {
+                UiCommand::InspectBundleEntry(command) => {
+                    let cancel = inspection_cancel.ok_or_else(|| {
+                        AgentError::internal("Inspection cancellation owner missing")
+                    })?;
+                    let result =
+                        im_agent::bundles::inspect_bundle_entry(context.repo_root, command, cancel)
+                            .await?;
+                    Ok(UiResponse::InspectBundleEntryResult(result))
+                }
                 UiCommand::ImportFiles(command) => execute_host_import(command, context).await,
                 UiCommand::WorktreeAction(command) => {
                     execute_host_worktree_action(command, context).await

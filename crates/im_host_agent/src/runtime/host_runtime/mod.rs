@@ -19,8 +19,8 @@ use im_agent::server::EventBus;
 use crate::runtime::host_runtime_helpers::{
     build_repo_backend_map, build_wsl_client_hello, parse_app_config, should_forward_wsl_hello,
 };
-use crate::runtime::local_host_source_control_backend::HostSourceControlContext;
 use crate::runtime::local_host_backend::LocalHostBackend;
+use crate::runtime::local_host_source_control_backend::HostSourceControlContext;
 use crate::runtime::router::resolve_repo_backend;
 use crate::runtime::tr_fleet_service::TrFleetService;
 use crate::runtime::wsl_client_hello_cache::WslClientHelloCache;
@@ -88,6 +88,7 @@ impl HostRuntime {
             | UiCommand::StageFile(_)
             | UiCommand::ReadTextFile(_)
             | UiCommand::ReadImageFile(_)
+            | UiCommand::InspectBundleEntry(_)
             | UiCommand::BuildBundle(_)
             | UiCommand::CancelBundleBuild(_)
             | UiCommand::GetRepoTopLevel(_)
@@ -98,9 +99,7 @@ impl HostRuntime {
             | UiCommand::SourceControlImageDiff(_)
             | UiCommand::SourceControlAction(_)
             | UiCommand::ImportFiles(_)
-            | UiCommand::WorktreeAction(_) => {
-                self.dispatch_repo_command(command, event_bus).await
-            }
+            | UiCommand::WorktreeAction(_) => self.dispatch_repo_command(command, event_bus).await,
             // Shutdown is dispatched by the server without the runtime lock, so
             // the drain never freezes the agent it is draining.
             UiCommand::Shutdown => Err(AgentError::internal(

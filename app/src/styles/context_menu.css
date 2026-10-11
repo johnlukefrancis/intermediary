@@ -1,7 +1,5 @@
-/*
- * Path: app/src/styles/context_menu.css
- * Description: Right-click context menu with glass aesthetic
- */
+/* Path: app/src/styles/context_menu.css
+ * Description: Shared glass popover surface and right-click menu controls */
 
 .context-menu-backdrop {
   position: fixed;
@@ -14,6 +12,9 @@
   z-index: 101;
   min-width: 180px;
   padding: var(--space-1) 0;
+}
+
+.glass-popover {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-deck-sm);

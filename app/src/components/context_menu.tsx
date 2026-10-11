@@ -71,7 +71,7 @@ export function ContextMenu({
 
   return createPortal(
     <div className="context-menu-backdrop" onMouseDown={handleBackdropMouseDown}>
-      <div ref={menuRef} className="context-menu" role="menu" style={{ left: x, top: y }}>
+      <div ref={menuRef} className="glass-popover context-menu" role="menu" style={{ left: x, top: y }}>
         {items.map((item) => (
           <button
             key={item.label}

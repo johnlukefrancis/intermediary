@@ -5,11 +5,8 @@ import type { SourceControlActionKind, UiCommand } from "../../shared/protocol.j
 
 const REQUEST_TIMEOUT_MS = 30_000;
 const BUILD_BUNDLE_TIMEOUT_MS = 5 * 60_000;
-// Source-control ladder. One request runs several bounded Git commands (20/60/120/180 s each,
-// a status capture being five reads = 100 s), so each tier covers the request's end-to-end worst
-// case: agent sum < host->WSL (120/280/340/380/420 s) < UI (+30 s). Discard is its own class in
-// both ladders because it runs a pre-status, a restore, a reset, file removal, and a post-status.
-// A UI timeout cancels nothing agent-side; the outcome is settled by reconciliation.
+// Source-control budgets cover sequential Git operations plus 30 s above host forwarding.
+// Mutations reconcile unknown outcomes; only read-only inspections use request cancellation.
 const SOURCE_CONTROL_READ_TIMEOUT_MS = 150_000;
 const SOURCE_CONTROL_INDEX_TIMEOUT_MS = 310_000;
 const SOURCE_CONTROL_DISCARD_TIMEOUT_MS = 370_000;
@@ -36,7 +33,7 @@ export function sourceControlActionTimeoutMs(kind: SourceControlActionKind): num
   }
 }
 
-/** A UI timeout only abandons the pending promise; it cancels nothing agent-side. */
+/** Mutation timeouts abandon the promise; inspection timeouts also cancel the remote scan. */
 export function getRequestTimeoutMs(command: UiCommand): number {
   switch (command.type) {
     case "buildBundle":

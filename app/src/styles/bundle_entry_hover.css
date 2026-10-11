@@ -1,0 +1,42 @@
+/* Path: app/src/styles/bundle_entry_hover.css
+ * Description: Readable bundle-size inspection on the shared glass popover surface */
+
+.bundle-entry-hover {
+  position: fixed;
+  z-index: 99;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 14px;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.bundle-entry-hover__path {
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.bundle-entry-hover__sizes { margin: 0; }
+.bundle-entry-hover__sizes > div,
+.bundle-entry-hover__largest li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 7px;
+}
+.bundle-entry-hover__sizes dd { margin: 0; white-space: nowrap; font-weight: 600; }
+.bundle-entry-hover__included { color: var(--color-accent); }
+.bundle-entry-hover__note { margin: 8px 0 0; line-height: 1.5; }
+.bundle-entry-hover__heading { margin-top: 14px; color: var(--color-text-primary); }
+.bundle-entry-hover__largest { list-style: none; padding: 0; margin: 0; }
+.bundle-entry-hover__largest span { overflow-wrap: anywhere; min-width: 0; }
+.bundle-entry-hover__largest strong { white-space: nowrap; font-weight: 400; }
+.bundle-entry-hover__partial { color: var(--color-warning); }

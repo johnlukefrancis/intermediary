@@ -2,6 +2,7 @@
 // Description: Agent<->UI WebSocket protocol unions and envelopes with Zod validation
 
 import { z } from "zod";
+import { InspectBundleEntryCommandSchema, InspectBundleEntryResultSchema } from "./protocol_bundle_inspection.js";
 import { AgentEventSchema, type AgentEvent } from "./protocol_events.js";
 import {
   BuildBundleCommandSchema,
@@ -119,9 +120,7 @@ export {
   type WorktreeAction, type WorktreeActionCommand, type WorktreeActionResult,
 } from "./protocol_worktree.js";
 
-// -----------------------------------------------------------------------------
 // Unions
-// -----------------------------------------------------------------------------
 
 export const UiCommandSchema = z.discriminatedUnion("type", [
   WatchRepoCommandSchema,
@@ -130,6 +129,7 @@ export const UiCommandSchema = z.discriminatedUnion("type", [
   ReadTextFileCommandSchema,
   ReadImageFileCommandSchema,
   BuildBundleCommandSchema,
+  InspectBundleEntryCommandSchema,
   CancelBundleBuildCommandSchema,
   ClientHelloCommandSchema,
   SetOptionsCommandSchema,
@@ -154,6 +154,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
   ReadTextFileResultSchema,
   ReadImageFileResultSchema,
   BuildBundleResultSchema,
+  InspectBundleEntryResultSchema,
   CancelBundleBuildResultSchema,
   ClientHelloResultSchema,
   SetOptionsResultSchema,
@@ -171,9 +172,7 @@ export const UiResponseSchema = z.discriminatedUnion("type", [
 ]);
 export type UiResponse = z.infer<typeof UiResponseSchema>;
 
-// -----------------------------------------------------------------------------
 // Protocol envelopes
-// -----------------------------------------------------------------------------
 
 export const RequestEnvelopeSchema = z.object({
   kind: z.literal("request"),
@@ -225,9 +224,7 @@ export const ProtocolEnvelopeSchema = z.union([
 ]);
 export type ProtocolEnvelope = z.infer<typeof ProtocolEnvelopeSchema>;
 
-// -----------------------------------------------------------------------------
 // Parsing utilities
-// -----------------------------------------------------------------------------
 
 export function parseEnvelope(data: unknown): ProtocolEnvelope {
   return ProtocolEnvelopeSchema.parse(data);

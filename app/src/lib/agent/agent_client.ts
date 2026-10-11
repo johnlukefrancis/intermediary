@@ -31,12 +31,14 @@ interface PendingRequest {
   resolve: (response: UiResponse) => void;
   reject: (error: Error) => void;
   timeout: ReturnType<typeof setTimeout>;
+  cleanup: () => void;
 }
 
 export interface AgentClient {
   connect(): void;
   disconnect(): void;
   send<T extends UiResponse>(command: UiCommand): Promise<T>;
+  send<T extends UiResponse>(command: Extract<UiCommand, { type: "inspectBundleEntry" }>, signal: AbortSignal): Promise<T>;
   getConnectionState(): ConnectionState;
 }
 
@@ -143,6 +145,7 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
       if (pending) {
         pendingRequests.delete(envelope.requestId);
         clearTimeout(pending.timeout);
+        pending.cleanup();
 
         if (envelope.status === "ok") {
           pending.resolve(envelope.payload);
@@ -180,22 +183,42 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
   function rejectAllPending(reason: string): void {
     for (const [, pending] of pendingRequests) {
       clearTimeout(pending.timeout);
+      pending.cleanup();
       pending.reject(new Error(reason));
     }
     pendingRequests.clear();
   }
 
-  function send<T extends UiResponse>(command: UiCommand): Promise<T> {
+  function send<T extends UiResponse>(command: UiCommand, signal?: AbortSignal): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         reject(new Error("Not connected"));
         return;
       }
 
+      if (signal?.aborted) { reject(new DOMException("Inspection cancelled", "AbortError")); return; }
+      const socket = ws;
       const requestId = crypto.randomUUID();
+      const cancelRemote = (): void => {
+        if (signal && socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ kind: "cancel", requestId }));
+        }
+      };
+      const abort = (): void => {
+        const pending = pendingRequests.get(requestId);
+        if (!pending) return;
+        pendingRequests.delete(requestId);
+        clearTimeout(pending.timeout);
+        pending.cleanup();
+        cancelRemote();
+        reject(new DOMException("Inspection cancelled", "AbortError"));
+      };
+      const cleanup = (): void => { signal?.removeEventListener("abort", abort); };
 
       const timeout = setTimeout(() => {
         pendingRequests.delete(requestId);
+        cleanup();
+        cancelRemote();
         reject(new Error(`Request timeout: ${command.type}`));
       }, getRequestTimeoutMs(command));
 
@@ -203,7 +226,9 @@ export function createAgentClient(config: AgentClientConfig): AgentClient {
         resolve: resolve as (r: UiResponse) => void,
         reject,
         timeout,
+        cleanup,
       });
+      signal?.addEventListener("abort", abort, { once: true });
 
       const envelope: RequestEnvelope = {
         kind: "request",

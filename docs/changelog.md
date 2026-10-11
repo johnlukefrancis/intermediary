@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Bundle-tree hover cards use the context menu’s glass surface and show total
+  size, selected size, file counts and the largest selected files. Measurements
+  follow bundle exclusions, run on demand for native and WSL repos, and label
+  partial scans.
+
 - Bundle selection allows individual files and subfolders inside excluded
   folders. Parents show partial selection, sibling files remain excluded, and
   the choices persist and apply to both archive contents and Git evidence.
