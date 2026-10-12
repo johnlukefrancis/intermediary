@@ -114,6 +114,11 @@
   color: var(--color-text-muted);
 }
 
+.sysload-note {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
 .sysload-warning {
   margin-top: 2px;
   color: var(--color-activity-hot);

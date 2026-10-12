@@ -17,6 +17,8 @@ use crate::{cpu_identity, memory_status, SystemLoadError};
 const TOP_GROUPS: usize = 8;
 /// The System Idle Process.
 const IDLE_PID: u32 = 0;
+/// Windows' compressed page store: memory pressure, not a program anyone can close.
+const COMPRESSION_IMAGE: &str = "Memory Compression";
 
 pub struct Sampler {
     query: PdhQuery,
@@ -66,7 +68,8 @@ impl Sampler {
         let hard_faults_per_sec = self.system.hard_faults_per_sec(&self.query);
         let memory = memory_status::read()?;
 
-        let (process_count, thread_count) = self.collect_processes(elapsed_secs)?;
+        let (process_count, thread_count, compressed_bytes) =
+            self.collect_processes(elapsed_secs)?;
         let processes = self.top_groups();
 
         Ok(SystemLoadSnapshot {
@@ -87,6 +90,7 @@ impl Sampler {
                 commit_bytes: memory.commit_bytes,
                 commit_limit_bytes: memory.commit_limit_bytes,
                 hard_faults_per_sec,
+                compressed_bytes,
             },
             gpus: self.gpu.gpus(&self.adapters),
             disks,
@@ -99,9 +103,9 @@ impl Sampler {
     fn collect_processes(
         &mut self,
         elapsed_secs: Option<f64>,
-    ) -> Result<(u32, u32), SystemLoadError> {
+    ) -> Result<(u32, u32, u64), SystemLoadError> {
         let records = self.table.refresh()?;
-        let (mut process_count, mut thread_count) = (0u32, 0u32);
+        let (mut process_count, mut thread_count, mut compressed_bytes) = (0u32, 0u32, 0u64);
         self.groups.begin();
         for record in records.iter().filter(|record| record.pid != IDLE_PID) {
             process_count += 1;
@@ -121,11 +125,15 @@ impl Sampler {
                 gpu_percent: self.gpu.process_percent(record.pid),
                 gpu_memory_bytes: self.gpu.process_memory_bytes(record.pid),
             };
-            self.groups.add(&record.name, &load);
+            if record.name == COMPRESSION_IMAGE {
+                compressed_bytes += record.private_bytes;
+            } else {
+                self.groups.add(&record.name, &load);
+            }
         }
         self.rates.finish();
         self.groups.finish();
-        Ok((process_count, thread_count))
+        Ok((process_count, thread_count, compressed_bytes))
     }
 
     fn top_groups(&mut self) -> Vec<ProcessGroupLoad> {

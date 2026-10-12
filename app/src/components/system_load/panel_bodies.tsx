@@ -14,6 +14,7 @@ import { PanelHeadline } from "./panel_parts.js";
 import { ProcessList } from "./process_list.js";
 
 const MIN_NET_SCALE_BYTES = 128 * 1024;
+const COMPRESSED_NOTE_BYTES = 256 * 1024 * 1024;
 
 interface BodyProps {
   state: LoadState;
@@ -57,6 +58,7 @@ function MemoryBody({ state, severity }: BodyProps): React.JSX.Element {
         severity={severity}
         value={`${formatGigabytes(memory.totalBytes - memory.availableBytes)} / ${formatGigabytes(memory.totalBytes)} GB`}
         aside={`${formatGigabytes(memory.availableBytes)} GB free`}
+        note={memory.compressedBytes >= COMPRESSED_NOTE_BYTES ? `${formatGigabytes(memory.compressedBytes)} GB compressed by Windows` : null}
         warning={commitPercent(memory) >= 90 ? "Commit limit nearly reached" : null}
       />
       {percentTrend(state, "mem")}

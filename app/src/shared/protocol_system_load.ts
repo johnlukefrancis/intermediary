@@ -20,6 +20,8 @@ export const MemoryLoadSchema = z.object({
   commitBytes: z.number(),
   commitLimitBytes: z.number(),
   hardFaultsPerSec: z.number(),
+  /** Windows' compressed page store; never listed as a process group. */
+  compressedBytes: z.number(),
 });
 export type MemoryLoad = z.infer<typeof MemoryLoadSchema>;
 

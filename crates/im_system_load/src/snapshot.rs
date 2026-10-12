@@ -40,6 +40,8 @@ pub struct MemoryLoad {
     pub commit_limit_bytes: u64,
     /// Hard-fault page reads per second (`\Memory\Pages Input/sec`).
     pub hard_faults_per_sec: f32,
+    /// Windows' compressed store (the Memory Compression process), kept out of process groups.
+    pub compressed_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]

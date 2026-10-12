@@ -123,6 +123,9 @@ largest row.
   `WriteTransferCount`), so it can include some network and device I/O, unlike Task Manager's ETW
   disk column.
 - Groups are formed by image name, not by Task Manager's app tree.
+- The Memory Compression process is Windows' compressed page store, not a program. It is
+  reported as `memory.compressedBytes` (Task Manager's "In use (Compressed)") and never listed
+  among the top programs.
 - Network interfaces are reported as PDH lists them, including virtual adapters. The panel shows
   the active ones.
 

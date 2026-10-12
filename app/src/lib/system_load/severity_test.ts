@@ -16,6 +16,7 @@ function memory(inUsePercent: number, hardFaultsPerSec: number, commitPercent = 
     commitBytes: commitPercent * GB,
     commitLimitBytes: 100 * GB,
     hardFaultsPerSec,
+    compressedBytes: 0,
   };
 }
 
