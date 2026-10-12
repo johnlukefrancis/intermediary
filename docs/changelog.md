@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- The status strip shows live CPU, memory, GPU, disk and network meters beside
+  OPTIONS, with a PAGING alarm when memory pressure forces hard faults. Hovering
+  a meter opens a panel with a minute of history, the subsystem breakdown and
+  the top programs by that resource, grouped and named like Task Manager.
+
 - Options → General has a saved **Crosstalk bubbles** toggle. Turning it off
   clears current bubbles while repository activity pulses continue.
 

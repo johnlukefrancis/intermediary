@@ -44,6 +44,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/design/stream_panel_design.md](design/stream_panel_design.md) | Stream panel (default left mode): live edit stream, card grammar, cadence, bounds, behaviour table, acceptance |
 | [docs/design/overview_design.md](design/overview_design.md) | Active-repository Overview: consolidated feed, automatic membership, bounded capture and acceptance |
 | [docs/design/project_launch_design.md](design/project_launch_design.md) | One-click project launch on repo tabs: top-level candidate discovery, usage ranking, Unreal launch-or-focus |
+| [docs/design/system_load_design.md](design/system_load_design.md) | Status-strip system load meters (CPU, memory, GPU, disk, network): Windows sources, Task Manager parity, severity, hover panels |
 
 ## Architecture
 
@@ -59,6 +60,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 
 | Document | Purpose |
 |----------|---------|
+| [docs/implementation/system_load_implementation.md](implementation/system_load_implementation.md) | Active Quest for the status-strip system load monitor: sampler crate, strip UI, Windows witness and installation |
 | [docs/implementation/crosstalk_bubbles_implementation.md](implementation/crosstalk_bubbles_implementation.md) | Overview speech bubbles and reply echoes: ownership, native verification and installation receipt |
 | [docs/implementation/bundle_selection_implementation.md](implementation/bundle_selection_implementation.md) | Descendant bundle selection implementation, regression evidence and Windows installation |
 | [docs/implementation/bundle_inspection_implementation.md](implementation/bundle_inspection_implementation.md) | Active execution owner for bundle-tree size hover panels and Windows verification |

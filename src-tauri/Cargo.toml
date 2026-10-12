@@ -30,6 +30,7 @@ chrono = "0.4"
 once_cell = "1.19"
 regex = "1.10"
 im_bundle = { path = "../crates/im_bundle" }
+im_system_load = { path = "../crates/im_system_load" }
 uuid = { version = "1.8", features = ["v4"] }
 notify = "8.2"
 # Integrated terminal: ConPTY on Windows, native PTY on macOS.

@@ -1,0 +1,28 @@
+# Path: crates/im_system_load/Cargo.toml
+# Description: Tauri-free Windows system-load sampler (CPU, memory, GPU, disk, network, top processes)
+
+[package]
+name = "im_system_load"
+version = "0.1.24"
+edition = "2021"
+
+description = "Windows system-load sampler for Intermediary"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Wdk_System_SystemInformation",
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Performance",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+] }
+# DXGI adapter enumeration only.
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dxgi"] }

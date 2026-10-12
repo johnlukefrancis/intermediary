@@ -8,6 +8,7 @@ members = [
     "crates/im_bundle",
     "crates/im_agent",
     "crates/im_host_agent",
+    "crates/im_system_load",
 ]
 
 [workspace.package]

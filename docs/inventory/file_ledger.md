@@ -97,7 +97,8 @@ app/src/components/source_control/source_control_section_head.tsx - Shared colla
 app/src/components/source_control/source_control_section.tsx - Collapsible MERGE CONFLICTS / STAGED CHANGES / CHANGES section with capped rows and a bulk action
 app/src/components/source_control/source_control_status_line.tsx - Branch, ahead/behind, HEAD sha, and refresh/pull/push controls for the Source Control column
 app/src/components/source_control/source_control_warnings.tsx - Conflict alert and warning rows (omitted paths, truncated status) in the Source Control column
-app/src/components/status_bar.tsx - Status bar with connection status LED, error display, and options button
+app/src/components/status_bar.tsx - Status strip: connection LED and error ticker, system-load meters, and the options button
+app/src/components/status_connection.tsx - Status-strip connection LED and label plus the rotating, marquee-on-overflow error ticker
 app/src/components/stream/stream_burst_card.tsx - Fixed-height card standing in for a flood of changes: count, span, top dirs, per-op and per-kind strips, resolved
 app/src/components/stream/stream_card_head.tsx - The one-line card head: badge, file icon, name over dir, +N M, baseline chip, edit count, clock
 app/src/components/stream/stream_card.tsx - Memoized file card chassis: spine, head, body dispatch, click / double-click / drag / right-click / keys
@@ -111,6 +112,16 @@ app/src/components/stream/stream_notice_row.tsx - Console-prompt notice row: hon
 app/src/components/stream/stream_panel.tsx - Stream panel shell with mode controls, support states, and the live scroller
 app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
 app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
+app/src/components/system_load/cpu_memory_panels.tsx - CPU and MEMORY detail-panel bodies: readout, history, breakdown and top processes
+app/src/components/system_load/device_panels.tsx - GPU and DISK detail-panel bodies: per-adapter engines and memory, per-disk activity, top processes
+app/src/components/system_load/load_meter.tsx - One strip meter: wide-tracked label, segmented LED bar with 5 s peak hold, tabular value
+app/src/components/system_load/load_panel.tsx - Fixed glass detail panel ("context window") placed below its meter and clamped to the window
+app/src/components/system_load/load_sparkline.tsx - 60 s area chart for a detail panel; samples enter at the right edge and age leftwards
+app/src/components/system_load/network_panel.tsx - NETWORK detail-panel body: receive/send history and per-interface rates with link speed
+app/src/components/system_load/panel_parts.tsx - Shared detail-panel building blocks: readout, section, stat grid and labelled micro-bar row
+app/src/components/system_load/process_list.tsx - TOP PROCESSES list: grouped label, N badge, value and a micro-bar scaled to the largest row
+app/src/components/system_load/system_load_cluster.tsx - Status-strip instrument window of CPU/MEM/GPU/DSK/NET meters; owns the 1 Hz load state and its panel
+app/src/components/system_load/use_meter_panel.ts - Hover-intent, grace-close, focus and click-to-pin state for the system-load detail panel
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
 app/src/components/tab_bar/launch_control.tsx - Per-repo launch control: the play button with transient feedback and, optionally, the target-menu chevron
 app/src/components/tab_bar/launch_menu.tsx - Launch-target chooser listing a repo's candidates by kind and file name, default marked
@@ -212,6 +223,7 @@ app/src/hooks/use_repo_state.ts - Per-repo file state management with event subs
 app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
+app/src/hooks/use_system_load.ts - Owns the system-load sampling cadence: one request 1 s after the last resolves, only while visible
 app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
 app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection, snap-to-next-tab, and active-tab reveal for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
@@ -306,6 +318,11 @@ app/src/lib/stream/stream_tile_targets_test.ts - Tile retention arithmetic: repo
 app/src/lib/stream/stream_tile_targets.ts - Projects Stream strip slots and repository-scoped source identities into shared image targets
 app/src/lib/stream/stream_types.ts - Card, ring, snapshot, transport, and store contracts for the per-repo Stream store
 app/src/lib/stream/testing/stream_fixtures.ts - Event and card builders shared by the Stream unit tests; never imported by app code
+app/src/lib/system_load/format.ts - Task Manager style number formatting for system-load meters and detail panels
+app/src/lib/system_load/load_state.ts - Folds each system-load snapshot into the latest reading, a 60-sample history and the paging streak
+app/src/lib/system_load/meters.ts - Strip meter readings (bar level, 5 s peak, value, severity) and LED segment tones
+app/src/lib/system_load/severity_test.ts - Memory severity and the three-sample paging rule from the system-load design
+app/src/lib/system_load/severity.ts - Calm/busy/hot/paging classification for system-load meters (docs/design/system_load_design.md)
 app/src/lib/tabs/tab_items.ts - Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs
 app/src/lib/terminal/terminal_flow.ts - Per-session monotonic output credit acknowledgements: coalesced after xterm parses bytes, or on receipt while the pag...
 app/src/lib/terminal/terminal_ipc.ts - Typed Tauri invoke wrappers and the output-channel seam for terminal sessions (mirrors src-tauri terminal/frames.rs)
@@ -353,6 +370,7 @@ app/src/shared/protocol_launch.ts - Tauri project-launch command response schema
 app/src/shared/protocol_repo_commands.ts - Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas
 app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
 app/src/shared/protocol_source_control.ts - Source-control status, diff, and action command/result schemas shared with the agents
+app/src/shared/protocol_system_load.ts - `sample_system_load` Tauri command response schema (mirrors crates/im_system_load/src/snapshot.rs)
 app/src/shared/protocol_tr_fleet.ts - TR fleet command/response schemas for build-server status and recovery controls
 app/src/shared/protocol_worktree.ts - ZIPS-tree worktree action (delete/move/copy/rename) command/result schemas shared with the agent
 app/src/shared/protocol.ts - Agent<->UI WebSocket protocol unions and envelopes with Zod validation
@@ -409,12 +427,15 @@ app/src/styles/scrollbars.css - Thin dark scrollbar styling with accent hints
 app/src/styles/source_control_rows.css - Source Control change rows: icon, name over dir, badge, and hover stage/unstage action
 app/src/styles/source_control_sections.css - Source Control collapsible section headers, bulk actions, and row containers
 app/src/styles/source_control.css - Source Control column: status line, warnings, commit box, and notices
-app/src/styles/status_bar.css - Status bar with connection LED, error display, and options button
+app/src/styles/status_bar.css - Status strip: connection LED, error ticker, instrument-window slot and options button
 app/src/styles/stream/stream_card_body.css - Stream card bodies: the diff density override, footers and ghosts, burst and notice rows
 app/src/styles/stream/stream_card_image.css - Stream image strips: the growing-then-wrapping tile grid, width-sized checkerboard slots, badges, names, the BEFORE/A...
 app/src/styles/stream/stream_card.css - Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules
 app/src/styles/stream/stream_motion.css - Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion
 app/src/styles/stream/stream_panel.css - Stream scroller, exceptional status, follow control and compact history rows
+app/src/styles/system_load_breakdown.css - System-load panel breakdowns: stat grid, micro-bars, per-core heat strip, disks, interfaces, top processes
+app/src/styles/system_load_panel.css - System-load detail panel shell: glass surface, header cue, big readout and 60 s history chart
+app/src/styles/system_load.css - Status-strip instrument window: segmented LED meters, severity states and narrow-width relief
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar_items.css - Repository navigation actions, group menus and add/remove controls
 app/src/styles/tab_bar_launch.css - Project-launch play button, target chevron, target menu and launch error notice
@@ -737,6 +758,26 @@ crates/im_host_agent/src/wsl/wsl_backend_link.rs - Bounds on the host->WSL socke
 crates/im_host_agent/src/wsl/wsl_backend_messages.rs - WSL-backend message parsing and pending-response helpers
 crates/im_host_agent/src/wsl/wsl_transport_status_tests.rs - WSL transport status tests: offline error de-noising and online recovery per generation
 crates/im_host_agent/src/wsl/wsl_transport_status.rs - Generation-scoped wslBackendStatus online announcements and de-noised WSL transport error events
+crates/im_system_load/src/cpu_identity.rs - Processor brand string from the registry and the logical processor count
+crates/im_system_load/src/error.rs - Sampler error carrying the failed operation and its OS status
+crates/im_system_load/src/file_description.rs - Friendly process labels from the executable's FileDescription, cached per image name
+crates/im_system_load/src/gpu_adapters.rs - One-time DXGI adapter enumeration for GPU names, memory totals and LUIDs
+crates/im_system_load/src/gpu_counters.rs - PDH GPU engine and memory counters joined to DXGI adapters and process ids
+crates/im_system_load/src/gpu_instance_tests.rs - Tests for PDH GPU instance-name parsing
+crates/im_system_load/src/gpu_instance.rs - Parses PDH GPU counter instance names into pid, adapter LUID, node and engine
+crates/im_system_load/src/gpu_usage_tests.rs - Tests for the Task Manager GPU aggregation rule
+crates/im_system_load/src/gpu_usage.rs - Task Manager GPU aggregation - per-engine sums, adapter busiest engine, process busiest engine
+crates/im_system_load/src/lib.rs - Crate root - Windows system-load sampler producing SystemLoadSnapshot
+crates/im_system_load/src/memory_status.rs - Physical memory and commit charge from GlobalMemoryStatusEx
+crates/im_system_load/src/pdh_query.rs - One PDH query with English counter paths, formatted scalar reads and reused wildcard arrays
+crates/im_system_load/src/process_groups.rs - Groups processes by image name and selects the union of the top groups per resource
+crates/im_system_load/src/process_rates.rs - Per-process CPU share and I/O rate from deltas keyed by (pid, create time)
+crates/im_system_load/src/process_table.rs - One NtQuerySystemInformation(SystemProcessInformation) walk per sample into reused records
+crates/im_system_load/src/sampler.rs - Windows Sampler - owns the PDH query, adapter list and process state; assembles snapshots
+crates/im_system_load/src/snapshot.rs - System-load wire snapshot serialized to the frontend (mirrors app/src/shared/protocol_system_load.ts)
+crates/im_system_load/src/system_counters.rs - PDH counters for CPU utility and speed, paging, physical disks and network interfaces
+crates/im_system_load/src/unsupported.rs - Non-Windows Sampler whose construction reports that sampling is unavailable
+crates/im_system_load/src/wide.rs - UTF-16 conversions shared by the Windows FFI modules
 scripts/classification/code_extensions_source.mjs - Pinned baseline + local overrides for code-classification file extensions.
 scripts/classification/generate_code_classification_artifacts.mjs - Generate TS/Rust code-classification extension artifacts from a pinned source list.
 scripts/fileledger/add_file_headers.mjs - Adds missing header comments (path + description) to source files using the ledger output.
@@ -850,6 +891,7 @@ src-tauri/src/lib/paths/app_paths.rs - Application path resolution logic
 src-tauri/src/lib/paths/mod.rs - Path resolution module exports
 src-tauri/src/lib/paths/repo_root_resolver.rs - Path-native repo root resolver for user-selected repo paths
 src-tauri/src/lib/paths/wsl_convert.rs - Windows <-> WSL path conversion utilities
+src-tauri/src/lib/system_load.rs - Hosts the lazily created system-load Sampler and the sample_system_load command
 src-tauri/src/lib/terminal/clipboard.rs - Reads CF_UNICODETEXT from the Windows clipboard for terminal paste, because WebView2 cannot read the clipboard withou...
 src-tauri/src/lib/terminal/exit_cell.rs - Set-once exit record of a session's child, with bounded waits for the threads that need it
 src-tauri/src/lib/terminal/flow_gate.rs - Cumulative sent/consumed flow watermarks bounding terminal output publication

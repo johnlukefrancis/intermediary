@@ -1674,6 +1674,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "im_system_load"
+version = "0.1.24"
+dependencies = [
+ "serde",
+ "windows 0.61.3",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1733,6 +1742,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "im_bundle",
+ "im_system_load",
  "libc",
  "notify",
  "objc2",

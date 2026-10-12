@@ -17,6 +17,11 @@ export const VERSION_TARGETS = [
   },
   { kind: "toml", path: "crates/im_bundle/Cargo.toml", label: "crates/im_bundle/Cargo.toml" },
   {
+    kind: "toml",
+    path: "crates/im_system_load/Cargo.toml",
+    label: "crates/im_system_load/Cargo.toml",
+  },
+  {
     kind: "json",
     path: "src-tauri/resources/agent_bundle/version.json",
     label: "src-tauri/resources/agent_bundle/version.json",

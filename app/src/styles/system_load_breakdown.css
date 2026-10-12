@@ -1,0 +1,246 @@
+/* Path: app/src/styles/system_load_breakdown.css
+ * Description: System-load panel breakdowns: stat grid, micro-bars, per-core heat strip, disks, interfaces, top processes */
+
+.sysload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sysload-section__title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.sysload-section__title::before {
+  content: ':: ';
+}
+
+.sysload-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+/* ===== STATS ===== */
+.sysload-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px var(--space-3);
+  margin: 0;
+}
+
+.sysload-stats__item {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.sysload-stats dt {
+  color: var(--color-text-muted);
+}
+
+.sysload-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+/* ===== MICRO-BARS ===== */
+/* Rows share one column grid (subgrid) so every bar in a group starts and ends together. */
+.sysload-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 12ch) minmax(40px, 1fr) auto;
+  gap: 5px var(--space-2);
+  align-items: center;
+}
+
+.sysload-bar-row,
+.sysload-disk {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.sysload-bar-row__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sysload-bar-row__value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.sysload-micro-bar {
+  --bar: var(--color-activity-low);
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 1px;
+  background: var(--color-activity-idle);
+}
+
+.sysload-micro-bar[data-severity="busy"] { --bar: var(--color-activity-high); }
+.sysload-micro-bar[data-severity="hot"],
+.sysload-micro-bar[data-severity="paging"] { --bar: var(--color-activity-hot); }
+
+.sysload-micro-bar__fill {
+  display: block;
+  height: 100%;
+  background: var(--bar);
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
+/* ===== PER-CORE HEAT STRIP ===== */
+.sysload-cores {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  height: 28px;
+  padding: 2px;
+  box-sizing: border-box;
+  background: var(--glass-vintage-content);
+  border: 1px solid var(--sysload-hairline);
+  border-radius: var(--radius-deck-xs);
+}
+
+.sysload-core {
+  --bar: var(--color-activity-low);
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 0;
+  min-width: 1px;
+  background: var(--color-activity-idle);
+}
+
+.sysload-core[data-severity="busy"] { --bar: var(--color-activity-high); }
+.sysload-core[data-severity="hot"] { --bar: var(--color-activity-hot); }
+
+.sysload-core__fill {
+  width: 100%;
+  background: var(--bar);
+  transition: height var(--duration-normal) var(--ease-out);
+}
+
+/* ===== DISKS AND INTERFACES ===== */
+.sysload-disk {
+  row-gap: 2px;
+}
+
+.sysload-disk__rates {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.sysload-iface {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sysload-iface__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sysload-iface__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.sysload-iface__link {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.sysload-iface__rates {
+  display: grid;
+  grid-template-columns: 1fr 1fr 40px 4ch;
+  align-items: center;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.sysload-iface__util {
+  text-align: right;
+  color: var(--color-text-muted);
+}
+
+/* ===== TOP PROCESSES ===== */
+.sysload-procs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px auto;
+  gap: 5px var(--space-2);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sysload-proc {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.sysload-proc .sysload-micro-bar {
+  --bar: var(--sysload-tone);
+}
+
+.sysload-proc__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.sysload-proc__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.sysload-proc__count {
+  flex: none;
+  padding: 0 3px;
+  border: 1px solid var(--sysload-hairline);
+  border-radius: var(--radius-deck-xs);
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  color: var(--color-text-muted);
+}
+
+.sysload-proc__value {
+  min-width: 7ch;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.sysload-proc__secondary {
+  margin-left: 6px;
+  color: var(--color-text-muted);
+}

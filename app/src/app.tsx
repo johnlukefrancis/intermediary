@@ -160,7 +160,7 @@ export function App(): React.JSX.Element {
       >
         <header ref={headerRef} className="header-stack glass-surface">
           <AgentOfflineBanner />
-          <StatusBar />
+          <StatusBar documentHidden={documentHidden} />
         </header>
         <main className="tab-content">
           <EmptyRepoState
@@ -199,7 +199,7 @@ export function App(): React.JSX.Element {
           onRepoAdded={selectRepo}
         />
         <AgentOfflineBanner />
-        <StatusBar />
+        <StatusBar documentHidden={documentHidden} />
       </header>
       <main className="tab-content">
         {overviewActive

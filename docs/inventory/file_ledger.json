@@ -379,7 +379,11 @@
     },
     {
       "path": "app/src/components/status_bar.tsx",
-      "summary": "Status bar with connection status LED, error display, and options button"
+      "summary": "Status strip: connection LED and error ticker, system-load meters, and the options button"
+    },
+    {
+      "path": "app/src/components/status_connection.tsx",
+      "summary": "Status-strip connection LED and label plus the rotating, marquee-on-overflow error ticker"
     },
     {
       "path": "app/src/components/stream/stream_burst_card.tsx",
@@ -432,6 +436,46 @@
     {
       "path": "app/src/components/stream/stream_text_body.tsx",
       "summary": "Capped diff lines in the shared row grammar with the \"+N MORE  OPEN DIFF\" and \"NEW FILE\" footers"
+    },
+    {
+      "path": "app/src/components/system_load/cpu_memory_panels.tsx",
+      "summary": "CPU and MEMORY detail-panel bodies: readout, history, breakdown and top processes"
+    },
+    {
+      "path": "app/src/components/system_load/device_panels.tsx",
+      "summary": "GPU and DISK detail-panel bodies: per-adapter engines and memory, per-disk activity, top processes"
+    },
+    {
+      "path": "app/src/components/system_load/load_meter.tsx",
+      "summary": "One strip meter: wide-tracked label, segmented LED bar with 5 s peak hold, tabular value"
+    },
+    {
+      "path": "app/src/components/system_load/load_panel.tsx",
+      "summary": "Fixed glass detail panel (\"context window\") placed below its meter and clamped to the window"
+    },
+    {
+      "path": "app/src/components/system_load/load_sparkline.tsx",
+      "summary": "60 s area chart for a detail panel; samples enter at the right edge and age leftwards"
+    },
+    {
+      "path": "app/src/components/system_load/network_panel.tsx",
+      "summary": "NETWORK detail-panel body: receive/send history and per-interface rates with link speed"
+    },
+    {
+      "path": "app/src/components/system_load/panel_parts.tsx",
+      "summary": "Shared detail-panel building blocks: readout, section, stat grid and labelled micro-bar row"
+    },
+    {
+      "path": "app/src/components/system_load/process_list.tsx",
+      "summary": "TOP PROCESSES list: grouped label, N badge, value and a micro-bar scaled to the largest row"
+    },
+    {
+      "path": "app/src/components/system_load/system_load_cluster.tsx",
+      "summary": "Status-strip instrument window of CPU/MEM/GPU/DSK/NET meters; owns the 1 Hz load state and its panel"
+    },
+    {
+      "path": "app/src/components/system_load/use_meter_panel.ts",
+      "summary": "Hover-intent, grace-close, focus and click-to-pin state for the system-load detail panel"
     },
     {
       "path": "app/src/components/tab_bar.tsx",
@@ -838,6 +882,10 @@
       "summary": "One-shot startup handshake to reveal main window after config load"
     },
     {
+      "path": "app/src/hooks/use_system_load.ts",
+      "summary": "Owns the system-load sampling cadence: one request 1 s after the last resolves, only while visible"
+    },
+    {
       "path": "app/src/hooks/use_tab_bar_dropdown.ts",
       "summary": "Owns tab-bar dropdown open state, trigger containment, and anchored positioning"
     },
@@ -1214,6 +1262,26 @@
       "summary": "Event and card builders shared by the Stream unit tests; never imported by app code"
     },
     {
+      "path": "app/src/lib/system_load/format.ts",
+      "summary": "Task Manager style number formatting for system-load meters and detail panels"
+    },
+    {
+      "path": "app/src/lib/system_load/load_state.ts",
+      "summary": "Folds each system-load snapshot into the latest reading, a 60-sample history and the paging streak"
+    },
+    {
+      "path": "app/src/lib/system_load/meters.ts",
+      "summary": "Strip meter readings (bar level, 5 s peak, value, severity) and LED segment tones"
+    },
+    {
+      "path": "app/src/lib/system_load/severity_test.ts",
+      "summary": "Memory severity and the three-sample paging rule from the system-load design"
+    },
+    {
+      "path": "app/src/lib/system_load/severity.ts",
+      "summary": "Calm/busy/hot/paging classification for system-load meters (docs/design/system_load_design.md)"
+    },
+    {
       "path": "app/src/lib/tabs/tab_items.ts",
       "summary": "Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs"
     },
@@ -1400,6 +1468,10 @@
     {
       "path": "app/src/shared/protocol_source_control.ts",
       "summary": "Source-control status, diff, and action command/result schemas shared with the agents"
+    },
+    {
+      "path": "app/src/shared/protocol_system_load.ts",
+      "summary": "`sample_system_load` Tauri command response schema (mirrors crates/im_system_load/src/snapshot.rs)"
     },
     {
       "path": "app/src/shared/protocol_tr_fleet.ts",
@@ -1627,7 +1699,7 @@
     },
     {
       "path": "app/src/styles/status_bar.css",
-      "summary": "Status bar with connection LED, error display, and options button"
+      "summary": "Status strip: connection LED, error ticker, instrument-window slot and options button"
     },
     {
       "path": "app/src/styles/stream/stream_card_body.css",
@@ -1648,6 +1720,18 @@
     {
       "path": "app/src/styles/stream/stream_panel.css",
       "summary": "Stream scroller, exceptional status, follow control and compact history rows"
+    },
+    {
+      "path": "app/src/styles/system_load_breakdown.css",
+      "summary": "System-load panel breakdowns: stat grid, micro-bars, per-core heat strip, disks, interfaces, top processes"
+    },
+    {
+      "path": "app/src/styles/system_load_panel.css",
+      "summary": "System-load detail panel shell: glass surface, header cue, big readout and 60 s history chart"
+    },
+    {
+      "path": "app/src/styles/system_load.css",
+      "summary": "Status-strip instrument window: segmented LED meters, severity states and narrow-width relief"
     },
     {
       "path": "app/src/styles/tab_bar_dropdown.css",
@@ -2938,6 +3022,86 @@
       "summary": "Generation-scoped wslBackendStatus online announcements and de-noised WSL transport error events"
     },
     {
+      "path": "crates/im_system_load/src/cpu_identity.rs",
+      "summary": "Processor brand string from the registry and the logical processor count"
+    },
+    {
+      "path": "crates/im_system_load/src/error.rs",
+      "summary": "Sampler error carrying the failed operation and its OS status"
+    },
+    {
+      "path": "crates/im_system_load/src/file_description.rs",
+      "summary": "Friendly process labels from the executable's FileDescription, cached per image name"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_adapters.rs",
+      "summary": "One-time DXGI adapter enumeration for GPU names, memory totals and LUIDs"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_counters.rs",
+      "summary": "PDH GPU engine and memory counters joined to DXGI adapters and process ids"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_instance_tests.rs",
+      "summary": "Tests for PDH GPU instance-name parsing"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_instance.rs",
+      "summary": "Parses PDH GPU counter instance names into pid, adapter LUID, node and engine"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_usage_tests.rs",
+      "summary": "Tests for the Task Manager GPU aggregation rule"
+    },
+    {
+      "path": "crates/im_system_load/src/gpu_usage.rs",
+      "summary": "Task Manager GPU aggregation - per-engine sums, adapter busiest engine, process busiest engine"
+    },
+    {
+      "path": "crates/im_system_load/src/lib.rs",
+      "summary": "Crate root - Windows system-load sampler producing SystemLoadSnapshot"
+    },
+    {
+      "path": "crates/im_system_load/src/memory_status.rs",
+      "summary": "Physical memory and commit charge from GlobalMemoryStatusEx"
+    },
+    {
+      "path": "crates/im_system_load/src/pdh_query.rs",
+      "summary": "One PDH query with English counter paths, formatted scalar reads and reused wildcard arrays"
+    },
+    {
+      "path": "crates/im_system_load/src/process_groups.rs",
+      "summary": "Groups processes by image name and selects the union of the top groups per resource"
+    },
+    {
+      "path": "crates/im_system_load/src/process_rates.rs",
+      "summary": "Per-process CPU share and I/O rate from deltas keyed by (pid, create time)"
+    },
+    {
+      "path": "crates/im_system_load/src/process_table.rs",
+      "summary": "One NtQuerySystemInformation(SystemProcessInformation) walk per sample into reused records"
+    },
+    {
+      "path": "crates/im_system_load/src/sampler.rs",
+      "summary": "Windows Sampler - owns the PDH query, adapter list and process state; assembles snapshots"
+    },
+    {
+      "path": "crates/im_system_load/src/snapshot.rs",
+      "summary": "System-load wire snapshot serialized to the frontend (mirrors app/src/shared/protocol_system_load.ts)"
+    },
+    {
+      "path": "crates/im_system_load/src/system_counters.rs",
+      "summary": "PDH counters for CPU utility and speed, paging, physical disks and network interfaces"
+    },
+    {
+      "path": "crates/im_system_load/src/unsupported.rs",
+      "summary": "Non-Windows Sampler whose construction reports that sampling is unavailable"
+    },
+    {
+      "path": "crates/im_system_load/src/wide.rs",
+      "summary": "UTF-16 conversions shared by the Windows FFI modules"
+    },
+    {
       "path": "scripts/classification/code_extensions_source.mjs",
       "summary": "Pinned baseline + local overrides for code-classification file extensions."
     },
@@ -3388,6 +3552,10 @@
     {
       "path": "src-tauri/src/lib/paths/wsl_convert.rs",
       "summary": "Windows <-> WSL path conversion utilities"
+    },
+    {
+      "path": "src-tauri/src/lib/system_load.rs",
+      "summary": "Hosts the lazily created system-load Sampler and the sample_system_load command"
     },
     {
       "path": "src-tauri/src/lib/terminal/clipboard.rs",

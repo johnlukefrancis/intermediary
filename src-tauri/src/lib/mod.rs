@@ -10,6 +10,7 @@ mod launch;
 mod macos_instance;
 pub mod obs;
 pub mod paths;
+mod system_load;
 mod terminal;
 mod wsl_control;
 
@@ -95,6 +96,7 @@ pub fn run() {
         .manage(auth_state)
         .manage(TerminalRegistry::default())
         .manage(crosstalk::CrosstalkState::default())
+        .manage(system_load::SystemLoadState::default())
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -143,7 +145,8 @@ pub fn run() {
             terminal_resize,
             terminal_ack,
             terminal_close,
-            terminal_clipboard_text
+            terminal_clipboard_text,
+            system_load::sample_system_load
         ])
         .build(context);
 
