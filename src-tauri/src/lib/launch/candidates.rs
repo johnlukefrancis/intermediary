@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use super::recent_items::recent_item_evidence;
+use super::target::{resolve_target, standalone_target};
 use super::unreal_recent::unreal_recent_evidence;
 use super::{kind_for_file_name, path_identity, LaunchCandidate, LaunchKind};
 
@@ -69,7 +70,7 @@ fn rank(root: &RootFiles, evidence: &HashMap<String, i64>) -> Vec<LaunchCandidat
         .files
         .iter()
         .map(|(name, kind)| LaunchCandidate {
-            relative_path: name.clone(),
+            target: name.clone(),
             kind: *kind,
             last_used_ms: evidence
                 .get(&path_identity(&format!("{}\\{}", root.host_root, name)))
@@ -82,11 +83,11 @@ fn rank(root: &RootFiles, evidence: &HashMap<String, i64>) -> Vec<LaunchCandidat
             .cmp(&a.last_used_ms)
             .then_with(|| kind_rank(a.kind).cmp(&kind_rank(b.kind)))
             .then_with(|| {
-                let a_named = file_stem(&a.relative_path).to_lowercase() == folder;
-                let b_named = file_stem(&b.relative_path).to_lowercase() == folder;
+                let a_named = file_stem(&a.target).to_lowercase() == folder;
+                let b_named = file_stem(&b.target).to_lowercase() == folder;
                 b_named.cmp(&a_named)
             })
-            .then_with(|| a.relative_path.to_lowercase().cmp(&b.relative_path.to_lowercase()))
+            .then_with(|| a.target.to_lowercase().cmp(&b.target.to_lowercase()))
     });
     candidates
 }
@@ -95,6 +96,34 @@ fn kind_rank(kind: LaunchKind) -> u8 {
     match kind {
         LaunchKind::Unreal => 0,
         LaunchKind::Html => 1,
+        LaunchKind::Web => 2,
+    }
+}
+
+pub(crate) fn include_configured_target(
+    candidates: &mut Vec<LaunchCandidate>,
+    host_root: &str,
+    configured: Option<&str>,
+) {
+    let Some(target) = configured else { return };
+    if !standalone_target(target) {
+        return;
+    }
+    if candidates
+        .iter()
+        .any(|candidate| candidate.target == target)
+    {
+        return;
+    }
+    if let Ok((_, kind)) = resolve_target(host_root, target) {
+        candidates.insert(
+            0,
+            LaunchCandidate {
+                target: target.to_string(),
+                kind,
+                last_used_ms: None,
+            },
+        );
     }
 }
 
@@ -107,7 +136,7 @@ fn file_stem(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{rank, RootFiles};
+    use super::{include_configured_target, rank, scan_root, RootFiles};
     use crate::launch::LaunchKind;
     use std::collections::HashMap;
 
@@ -121,13 +150,16 @@ mod tests {
 
     #[test]
     fn usage_evidence_outranks_name_rules() {
-        let files = root(&[("Coilbound.html", LaunchKind::Html), ("film.html", LaunchKind::Html)]);
+        let files = root(&[
+            ("Coilbound.html", LaunchKind::Html),
+            ("film.html", LaunchKind::Html),
+        ]);
         let evidence = HashMap::from([(
             r"\\wsl.localhost\ubuntu\home\johnf\dev\coilbound\film.html".to_string(),
             5,
         )]);
         let ranked = rank(&files, &evidence);
-        assert_eq!(ranked[0].relative_path, "film.html");
+        assert_eq!(ranked[0].target, "film.html");
         assert_eq!(ranked[0].last_used_ms, Some(5));
     }
 
@@ -140,8 +172,25 @@ mod tests {
         ]);
         let ranked: Vec<String> = rank(&files, &HashMap::new())
             .into_iter()
-            .map(|c| c.relative_path)
+            .map(|c| c.target)
             .collect();
         assert_eq!(ranked, ["Game.uproject", "Coilbound.html", "a.html"]);
+    }
+
+    #[test]
+    fn explicit_gallery_survives_build_entry_exclusion_without_duplicates() {
+        let repo = tempfile::tempdir().unwrap();
+        let root = repo.path().to_str().unwrap();
+        std::fs::write(repo.path().join("package.json"), "{}").unwrap();
+        std::fs::write(repo.path().join("index.html"), "<html></html>").unwrap();
+        let mut candidates = rank(&scan_root(root), &HashMap::new());
+        include_configured_target(&mut candidates, root, Some("index.html"));
+        assert!(candidates.is_empty());
+        let url = "http://localhost:8788/repairs/";
+        include_configured_target(&mut candidates, root, Some(url));
+        include_configured_target(&mut candidates, root, Some(url));
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0].target, url);
+        assert_eq!(candidates[0].kind, LaunchKind::Web);
     }
 }

@@ -12,6 +12,7 @@ import {
 interface LaunchRootRequest {
   repoId: string;
   root: RepoRoot;
+  configuredTarget: string | null;
 }
 
 export interface LaunchCandidatesState {
@@ -21,14 +22,15 @@ export interface LaunchCandidatesState {
 
 export function useLaunchCandidates(
   repos: readonly RepoConfig[],
-  distroOverride: string | null
+  distroOverride: string | null,
+  launchTargets: Readonly<Record<string, string>>
 ): LaunchCandidatesState {
   const [candidatesByRepo, setCandidatesByRepo] = useState<LaunchCandidatesByRepo>({});
   const requestSeq = useRef(0);
-  const rootsKey = repos.map((r) => `${r.repoId}=${repoRootKey(r.root)}`).join("|");
+  const rootsKey = JSON.stringify(repos.map((r) => [r.repoId, repoRootKey(r.root), launchTargets[r.repoId]]));
   const roots = useMemo<LaunchRootRequest[]>(
-    () => repos.map((r) => ({ repoId: r.repoId, root: r.root })),
-    // Keyed by ids and roots so unrelated repo-config edits do not refetch.
+    () => repos.map((r) => ({ repoId: r.repoId, root: r.root, configuredTarget: launchTargets[r.repoId] ?? null })),
+    // Unrelated repo-config edits do not refetch.
     [rootsKey]
   );
 

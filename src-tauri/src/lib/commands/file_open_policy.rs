@@ -111,10 +111,7 @@ pub(crate) fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), S
     #[cfg(target_os = "windows")]
     {
         for host_path in host_paths {
-            Command::new("explorer")
-                .arg(host_path)
-                .spawn()
-                .map_err(|e| format!("Failed to open file '{host_path}': {e}"))?;
+            super::windows_shell::open(host_path)?;
         }
         return Ok(());
     }

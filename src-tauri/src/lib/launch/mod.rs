@@ -1,10 +1,11 @@
 // Path: src-tauri/src/lib/launch/mod.rs
-// Description: Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus
+// Description: Project launch targets: discovered repo files, explicit host files and browser URLs
 
 mod candidates;
 mod launch_action;
 mod recent_items;
 mod shell_link;
+mod target;
 mod unreal_engine;
 mod unreal_focus;
 mod unreal_recent;
@@ -12,20 +13,23 @@ mod unreal_recent;
 use serde::Serialize;
 
 pub use candidates::discover_candidates;
+pub(crate) use candidates::include_configured_target;
 pub use launch_action::{launch_target, LaunchOutcome};
+pub(crate) use target::standalone_target;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum LaunchKind {
     Unreal,
     Html,
+    Web,
 }
 
-/// A launchable top-level file of a repository root, ordered best first by discovery.
+/// A discovered repo file or explicitly configured file/URL, ordered best first.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchCandidate {
-    pub relative_path: String,
+    pub target: String,
     pub kind: LaunchKind,
     /// Most recent observed open of this exact file, Unix milliseconds.
     pub last_used_ms: Option<i64>,

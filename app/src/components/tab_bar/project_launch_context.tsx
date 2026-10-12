@@ -42,13 +42,14 @@ export function ProjectLaunchProvider({
     repos: config.repos,
     distroOverride: config.agentDistro,
     launchTargets: config.launchTargets,
+    demoTargets: config.demoTargets,
     setLaunchTarget,
     onError: handleError,
   });
 
-  const noticeFeedback = noticeRepoId ? launch.feedbackFor(noticeRepoId) : null;
+  const noticeFeedback = notice.openDropdownId ? launch.feedbackFor(notice.openDropdownId) : null;
   const noticeMessage =
-    noticeFeedback?.phase === "error" && noticeFeedback.sourceId === notice.openDropdownId
+    noticeFeedback?.phase === "error"
       ? noticeFeedback.message
       : null;
   const { openDropdownId: openNoticeId, closeDropdown: closeNotice } = notice;
@@ -89,8 +90,8 @@ export function ProjectLaunchProvider({
             candidates={launch.candidatesFor(menuRepoId)}
             target={menuTarget}
             accentStyle={accentFor(menuRepoId)}
-            onChoose={(relativePath) => {
-              launch.choose(menuRepoId, `tab:${menuRepoId}`, relativePath);
+            onChoose={(target) => {
+              launch.choose(menuRepoId, `tab:${menuRepoId}`, target);
               menu.closeDropdown();
             }}
           />

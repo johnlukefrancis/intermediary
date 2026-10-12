@@ -10,14 +10,14 @@ type SaveConfig = (config: PersistedConfig) => void;
 export function useSetLaunchTarget(
   setConfig: SetConfig,
   saveConfig: SaveConfig
-): (repoId: string, relativePath: string) => void {
+): (repoId: string, target: string) => void {
   return useCallback(
-    (repoId: string, relativePath: string) => {
+    (repoId: string, target: string) => {
       setConfig((prev) => {
-        if (prev.launchTargets[repoId] === relativePath) return prev;
+        if (prev.launchTargets[repoId] === target) return prev;
         const next: PersistedConfig = {
           ...prev,
-          launchTargets: { ...prev.launchTargets, [repoId]: relativePath },
+          launchTargets: { ...prev.launchTargets, [repoId]: target },
         };
         saveConfig(next);
         return next;

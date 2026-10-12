@@ -3,11 +3,10 @@
 
 use crate::config::types::RepoRoot;
 use std::path::Path;
+#[cfg(not(windows))]
 use std::process::Command;
 use tauri::AppHandle;
 
-#[cfg(target_os = "windows")]
-use super::file_manager::explorer_file_arg;
 use super::file_manager::{is_windows_unc_path, resolve_host_path};
 use super::file_open_policy::open_paths_by_policy;
 use super::file_opener_paths::{resolve_host_file_path, resolve_host_file_paths};
@@ -15,17 +14,13 @@ use super::wsl_distro::resolve_runtime_wsl_distro;
 
 fn reveal_existing_host_file(host_path: String) -> Result<(), String> {
     let path = Path::new(&host_path);
-    if !is_windows_unc_path(&host_path) && (!path.exists() || path.is_dir()) {
-        return Err(format!("File does not exist: {host_path}"));
+    if !is_windows_unc_path(&host_path) && !path.exists() {
+        return Err(format!("Item does not exist: {host_path}"));
     }
 
     #[cfg(target_os = "windows")]
     {
-        Command::new("explorer")
-            .arg(explorer_file_arg(&host_path))
-            .spawn()
-            .map_err(|e| format!("Failed to open Explorer: {e}"))?;
-        return Ok::<(), String>(());
+        return super::windows_shell::reveal(&host_path);
     }
 
     #[cfg(target_os = "macos")]

@@ -3,12 +3,12 @@
 
 import { z } from "zod";
 
-export const LaunchKindSchema = z.enum(["unreal", "html"]);
+export const LaunchKindSchema = z.enum(["unreal", "html", "web"]);
 export type LaunchKind = z.infer<typeof LaunchKindSchema>;
 
-/** One launchable top-level file of a repo root, relative to that root. */
+/** A discovered repo file or explicitly configured host file/browser URL. */
 export const LaunchCandidateSchema = z.object({
-  relativePath: z.string().min(1),
+  target: z.string().min(1),
   kind: LaunchKindSchema,
   lastUsedMs: z.number().nullable(),
 });

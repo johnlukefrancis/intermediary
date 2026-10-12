@@ -17,6 +17,7 @@ use crate::obs::logging;
 pub struct LaunchRoot {
     repo_id: String,
     root: RepoRoot,
+    configured_target: Option<String>,
 }
 
 /// Distro UNC prefixes, resolved once per app run: discovery reruns on every window focus.
@@ -67,13 +68,18 @@ pub async fn launch_candidates(
         let mut discovered = launch::discover_candidates(&readable).into_iter();
         let mut by_repo = HashMap::new();
         for (entry, host_root) in roots.iter().zip(&resolved) {
-            let candidates = match host_root {
+            let mut candidates = match host_root {
                 Some(_) => discovered.next().unwrap_or_default(),
                 None => {
                     logging::log("warn", "launch", "root_unresolved", &entry.repo_id);
                     Vec::new()
                 }
             };
+            launch::include_configured_target(
+                &mut candidates,
+                host_root.as_deref().unwrap_or(""),
+                entry.configured_target.as_deref(),
+            );
             by_repo.insert(entry.repo_id.clone(), candidates);
         }
         by_repo
@@ -86,17 +92,21 @@ pub async fn launch_candidates(
 pub async fn launch_target(
     app: AppHandle,
     root: RepoRoot,
-    relative_path: String,
+    target: String,
     distro_override: Option<String>,
 ) -> Result<LaunchOutcome, String> {
     let distro = resolve_runtime_wsl_distro(&app, distro_override.as_deref());
     tauri::async_runtime::spawn_blocking(move || {
-        let host_root = host_roots(std::slice::from_ref(&root), distro.as_deref())
-            .pop()
-            .flatten()
-            .ok_or_else(|| format!("Failed to resolve repo root {}", root.path()))?;
-        let outcome = launch::launch_target(&host_root, &relative_path);
-        let detail = format!("{relative_path} in {host_root}: {outcome:?}");
+        let host_root = if launch::standalone_target(&target) {
+            String::new()
+        } else {
+            host_roots(std::slice::from_ref(&root), distro.as_deref())
+                .pop()
+                .flatten()
+                .ok_or_else(|| format!("Failed to resolve repo root {}", root.path()))?
+        };
+        let outcome = launch::launch_target(&host_root, &target);
+        let detail = format!("{target} for {}: {outcome:?}", root.path());
         logging::log("info", "launch", "launch_target", &detail);
         outcome
     })

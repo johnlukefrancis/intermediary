@@ -3,10 +3,15 @@
 
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { PersistedConfig } from "../shared/config.js";
+import type { PersistedConfig, RepoConfig } from "../shared/config.js";
 
 type SetConfig = Dispatch<SetStateAction<PersistedConfig>>;
 type SaveConfig = (config: PersistedConfig) => void;
+
+function retainDemoTargets(config: PersistedConfig, repos: readonly RepoConfig[]): Record<string, string> {
+  const tabKeys = new Set(repos.map((repo) => repo.groupId ?? repo.repoId));
+  return Object.fromEntries(Object.entries(config.demoTargets).filter(([key]) => tabKeys.has(key)));
+}
 
 function deleteRepoNote(repoId: string): void {
   void invoke("delete_note", { repoId }).catch((err: unknown) => {
@@ -69,6 +74,7 @@ export function useRemoveRepo(
           tabThemes: newTabThemes,
           starredFiles: newStarredFiles,
           launchTargets: newLaunchTargets,
+          demoTargets: retainDemoTargets(prev, newRepos),
         };
         saveConfig(next);
         return next;
@@ -143,6 +149,7 @@ export function useRemoveGroup(
           tabThemes: updatedTabThemes,
           starredFiles: updatedStarredFiles,
           launchTargets: updatedLaunchTargets,
+          demoTargets: retainDemoTargets(prev, remainingRepos),
         };
         saveConfig(next);
         return next;

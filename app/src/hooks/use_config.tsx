@@ -133,8 +133,8 @@ interface ConfigContextValue {
   setTextureIntensityPercent: (value: number) => void;
   /** Persist remembered window bounds for a mode */
   setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void;
-  /** Persist a repo's chosen project-launch target (root-relative path) */
-  setLaunchTarget: (repoId: string, relativePath: string) => void;
+  /** Persist a repo file, absolute host file or browser URL as its launch target. */
+  setLaunchTarget: (repoId: string, target: string) => void;
   /** Reset all settings to defaults */
   resetConfig: () => void;
 }

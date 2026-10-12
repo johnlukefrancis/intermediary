@@ -18,7 +18,7 @@ pub use ui_state::{UiState, UiWindowBounds};
 pub use validation::validate_config;
 
 /// Current config schema version
-pub const CONFIG_VERSION: u32 = 29;
+pub const CONFIG_VERSION: u32 = 30;
 
 /// Top-level persisted configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,9 +64,12 @@ pub struct PersistedConfig {
     /// Legacy starred files per repo
     #[serde(default)]
     pub starred_files: HashMap<String, StarredFilesEntry>,
-    /// Chosen launch target per repo: repoId -> root-relative file path
+    /// Repo launch choice: top-level file, absolute host file or HTTP(S) URL.
     #[serde(default)]
     pub launch_targets: HashMap<String, String>,
+    /// HTML demo file/URL shared by a tab: groupId or single repoId -> target.
+    #[serde(default)]
+    pub demo_targets: HashMap<String, String>,
     /// Global theme mode (dark/warm)
     #[serde(default)]
     pub theme_mode: ThemeMode,
@@ -101,6 +104,7 @@ impl Default for PersistedConfig {
             tab_themes: HashMap::new(),
             starred_files: HashMap::new(),
             launch_targets: HashMap::new(),
+            demo_targets: HashMap::new(),
             theme_mode: ThemeMode::default(),
             ui_mode: UiMode::default(),
             window_opacity_percent: default_window_opacity_percent(),

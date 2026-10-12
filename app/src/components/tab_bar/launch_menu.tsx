@@ -9,7 +9,7 @@ interface LaunchMenuProps {
   candidates: readonly LaunchCandidate[];
   target: LaunchCandidate;
   accentStyle: React.CSSProperties;
-  onChoose: (relativePath: string) => void;
+  onChoose: (target: string) => void;
 }
 
 export function LaunchMenu({
@@ -21,21 +21,21 @@ export function LaunchMenu({
   return (
     <div className="group-dropdown launch-menu" style={accentStyle} role="menu">
       {candidates.map((candidate) => {
-        const isDefault = candidate.relativePath === target.relativePath;
+        const isDefault = candidate.target === target.target;
         return (
           <button
-            key={candidate.relativePath}
+            key={candidate.target}
             className={`group-dropdown-item ${isDefault ? "selected" : ""}`}
             onClick={() => {
-              onChoose(candidate.relativePath);
+              onChoose(candidate.target);
             }}
             type="button"
             role="menuitem"
-            title={`Launch ${candidate.relativePath} and make it the default`}
+            title={`Launch ${candidate.target} and make it the default`}
           >
             <span className="group-radio">{isDefault ? "●" : "○"}</span>
             <span className="launch-menu-kind">{candidate.kind}</span>
-            {launchFileName(candidate.relativePath)}
+            {launchFileName(candidate.target)}
           </button>
         );
       })}

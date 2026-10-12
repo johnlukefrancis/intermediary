@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-10-12
+Updated on: 2026-10-13
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -60,6 +60,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 
 | Document | Purpose |
 |----------|---------|
+| [docs/implementation/file_launch_implementation.md](implementation/file_launch_implementation.md) | Windows file-manager actions, authoring gallery bindings and separate Blorb HTML demo play action |
 | [docs/implementation/system_load_implementation.md](implementation/system_load_implementation.md) | Active Quest for the status-strip system load monitor: sampler crate, strip UI, Windows witness and installation |
 | [docs/implementation/crosstalk_bubbles_implementation.md](implementation/crosstalk_bubbles_implementation.md) | Overview speech bubbles and reply echoes: ownership, native verification and installation receipt |
 | [docs/implementation/bundle_selection_implementation.md](implementation/bundle_selection_implementation.md) | Descendant bundle selection implementation, regression evidence and Windows installation |
@@ -122,6 +123,7 @@ Runnable commands organized by area (ADR-012 compliant).
 | [docs/commands/verify_terminal.md](commands/verify_terminal.md) | Manually witness the integrated terminal in the installed app: tabs, WSL entry, TUIs, clipboard, switches, close semantics, flood, minimize, app-exit idle probe |
 | [docs/commands/verify_stream.md](commands/verify_stream.md) | Manually witness the Stream panel in the installed app: cards, re-edit merging, bursts, images, follow-scroll, governor carve-out, persistence, DevTools checks |
 | [docs/commands/verify_overview.md](commands/verify_overview.md) | Verify all-repository observation, image previews, pause, navigation, themes, persistence and current checks |
+| [docs/commands/verify_file_launch.md](commands/verify_file_launch.md) | Verify Windows file/directory reveals and the two authoring gallery launch bindings |
 | [docs/commands/agent_bundle.md](commands/agent_bundle.md) | Build the bundled agent runtime for installers |
 | [docs/commands/release_windows.md](commands/release_windows.md) | Windows-first release flow, version bumping, and GitHub release automation |
 | [docs/commands/build_installer_from_wsl.md](commands/build_installer_from_wsl.md) | Build, silently install, and relaunch the Windows installer from a WSL shell |

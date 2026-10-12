@@ -3398,6 +3398,10 @@
       "summary": "Tauri commands of the integrated terminal: open, raw-body write, resize, ack, close and the Rust-side clipboard read"
     },
     {
+      "path": "src-tauri/src/lib/commands/windows_shell.rs",
+      "summary": "Native Windows Shell dispatch for item selection and default file or URL opening"
+    },
+    {
       "path": "src-tauri/src/lib/commands/wsl_distro.rs",
       "summary": "Resolve WSL distro override from persisted app config for command-time path conversion"
     },
@@ -3483,11 +3487,11 @@
     },
     {
       "path": "src-tauri/src/lib/launch/launch_action.rs",
-      "summary": "Launches one top-level target: focus-or-start for Unreal projects, default handler for HTML"
+      "summary": "Launches repo files, explicit host files and browser URLs through the platform owner"
     },
     {
       "path": "src-tauri/src/lib/launch/mod.rs",
-      "summary": "Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus"
+      "summary": "Project launch targets: discovered repo files, explicit host files and browser URLs"
     },
     {
       "path": "src-tauri/src/lib/launch/recent_items.rs",
@@ -3496,6 +3500,10 @@
     {
       "path": "src-tauri/src/lib/launch/shell_link.rs",
       "summary": "Minimal MS-SHLLINK reader that recovers a shortcut's target path from its LinkInfo"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/target.rs",
+      "summary": "Resolve supported project launch targets from explicit URLs, host files or top-level repo files"
     },
     {
       "path": "src-tauri/src/lib/launch/unreal_engine.rs",

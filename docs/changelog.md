@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Blorb has a compact custom browser/play icon beside its Unreal launcher,
+  opening the live MOMO gameplay page through the existing lab server. The saved
+  group demo link and each project launch choice remain independent.
+
+- Open Containing Folder accepts bundle directories and uses native Windows
+  Shell selection for files and folders, including WSL paths. Default file and
+  browser opening also reports native Shell errors.
+- Repository launch targets can bind an external host file or browser URL.
+  Mainland and islands authoring tabs launch their established HTML galleries.
+
 - The status strip shows live CPU, memory, GPU, disk and network meters beside
   OPTIONS, with a PAGING alarm when memory pressure forces hard faults. Hovering
   a meter opens a panel with a minute of history, the subsystem breakdown and

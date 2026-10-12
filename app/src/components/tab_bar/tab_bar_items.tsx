@@ -6,7 +6,7 @@ import type { GroupTab, SingleTab } from "../../lib/tabs/tab_items.js";
 import type { RepoRoot } from "../../shared/config.js";
 import { GroupRemoveButton } from "../group_remove_button.js";
 import { TabRemoveButton } from "../tab_remove_button.js";
-import { LaunchControl } from "./launch_control.js";
+import { RepoLaunchControls } from "./launch_control.js";
 
 /** Vintage folder icon SVG using theme CSS variables */
 function FolderIcon(): React.JSX.Element {
@@ -115,7 +115,7 @@ export function SingleTabItem({
           <FolderIcon />
         </button>
       )}
-      <LaunchControl repoId={tab.repoId} sourceId={`tab:${tab.repoId}`} withMenu />
+      <RepoLaunchControls repoId={tab.repoId} sourceId={`tab:${tab.repoId}`} withMenu />
       <button
         className={`tab-button ${isActive ? "active" : ""}`}
         onClick={() => {
@@ -200,7 +200,7 @@ export function GroupTabItem({
         </button>
       )}
       {displayRepo && (
-        <LaunchControl repoId={displayRepo.repoId} sourceId={`tab:${displayRepo.repoId}`} withMenu />
+        <RepoLaunchControls repoId={displayRepo.repoId} sourceId={`tab:${displayRepo.repoId}`} withMenu />
       )}
       <button
         className={`tab-button ${isActive ? "active" : ""}`}

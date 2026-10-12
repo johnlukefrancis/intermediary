@@ -35,6 +35,12 @@
   font-size: var(--text-xs);
 }
 
+.launch-demo-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 .launch-chevron {
   width: 12px;
   margin-left: -2px;
