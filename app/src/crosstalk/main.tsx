@@ -21,6 +21,9 @@ function SpeechSurface(): React.JSX.Element {
   const [side, setSide] = useState("left");
   const root = useRef<HTMLDivElement>(null);
   const held = useRef(new Set<string>());
+  const measuredArrival = useRef<string | undefined>(undefined);
+  const sizing = useRef(Promise.resolve());
+  const arrival = conversation.recent[0]?.message.id;
   const onRemove = useCallback((id: string) => {
     held.current.delete(id);
     setConversation(state => ({ ...state, cards: state.cards.filter(item => item.id !== id) }));
@@ -59,16 +62,17 @@ function SpeechSurface(): React.JSX.Element {
   useEffect(() => {
     const element = root.current;
     if (!element) return;
-    let pending = Promise.resolve();
     const observer = new ResizeObserver(() => {
       const height = messages.length === 0 ? 0 : element.scrollHeight;
-      pending = pending.then(async () => { await invoke("crosstalk_resize", { height }); })
+      const raise = messages.length > 0 && arrival !== measuredArrival.current;
+      measuredArrival.current = arrival;
+      sizing.current = sizing.current.then(async () => { await invoke("crosstalk_resize", { height, raise }); })
         // TODO(ts-precision): Tauri command rejections are an external error seam.
         .catch((error: unknown) => { console.error("[crosstalk]", error); });
     });
     observer.observe(element);
     return () => { observer.disconnect(); };
-  }, [messages.length]);
+  }, [messages.length, arrival]);
 
   return <div ref={root} className="speech-stack" data-side={side} aria-label="Agent conversations" aria-live="polite">
     {messages.map(message => <Bubble key={message.id} message={message} repos={presentation.repos} onRemove={onRemove} onHold={onHold} />)}

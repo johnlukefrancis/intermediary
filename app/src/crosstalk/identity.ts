@@ -2,7 +2,7 @@
 // Description: Agent identity and configured repository accents for delivered messages
 
 import { DEFAULT_ACCENT_HEX } from "../lib/theme/accent_utils.js";
-import { repoRootFromInputPath, repoRootKey } from "../shared/config/repo_root.js";
+import { containingRepository } from "../lib/crosstalk/repository.js";
 
 export interface Message {
   id: string;
@@ -21,19 +21,10 @@ export function agent(address: string): { client: string; folder: string; tag: s
   return { client: match?.[1] ?? "agent", folder: match?.[2] ?? address, tag: match?.[3] ?? "" };
 }
 
-function key(path: string): string {
-  const root = repoRootFromInputPath(path);
-  return root ? repoRootKey(root).replace(/\\/g, "/").replace(/\/$/, "") : path;
-}
-
 export function repoStyle(message: Message, repos: readonly RepoStyle[]): RepoStyle {
   const sender = agent(message.from);
-  const cwd = message.cwd ? key(message.cwd) : null;
-  const matches = cwd ? repos.filter(repo => {
-    const path = key(repo.path);
-    return cwd === path || cwd.startsWith(`${path}/`);
-  }).sort((a, b) => b.path.length - a.path.length) : [];
-  if (matches[0]) return matches[0];
+  const match = message.cwd ? containingRepository(message.cwd, repos) : undefined;
+  if (match) return match;
   const folders = repos.filter(repo => repo.path.replace(/[\\/]+$/, "").split(/[\\/]/).at(-1)
     ?.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/^-+|-+$/g, "") === sender.folder);
   // A unique folder also identifies the same configured repo's Windows/WSL twin.

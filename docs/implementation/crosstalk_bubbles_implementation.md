@@ -5,6 +5,45 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 
 ## Live receipt
 
+- Active follow-up (base `77f5d1e`, lane-glow work remains uncommitted): JL wants
+  bubbles visible over a neighbouring focused window, even when Intermediary is
+  partly obscured. JL clarified that re-engaging a covering window must put it
+  above the bubble, whereas clicking elsewhere must leave the bubble visible.
+  Raise only on a displayed message's arrival, at the ordinary window level with
+  no activation or owner movement. Resizing/expiry/theme changes must not raise.
+  The companion reports each accepted arrival through its existing size command;
+  native placement uses a synchronous promote/demote with
+  `SWP_NOACTIVATE | SWP_NOOWNERZORDER`. Direct `HWND_TOP` stayed behind focused
+  Chrome in the native witness due to Windows foreground permission rules.
+  Clicking already-focused Chrome also left the normal-tier bubble in front.
+  A visible-only UI-thread mouse hook now yields only on an overlapping window's
+  button-down, passes the input through and detaches on hide/shutdown.
+  Always-on-top was inspected successfully, then rejected by this clarified UX.
+  Native witness now targets idle focused Chrome under a new bubble, click-to-cover,
+  unrelated clicks, later arrivals, resize without resurfacing and normal hiding.
+  JL also uses full-width portrait stacks: preserve inside-right placement, a
+  contained scrollable stack and no outward pointer when neither side fits.
+  Completed: installed native checks pass for arrival above focused Chrome,
+  click-to-cover, non-overlapping clicks leaving cards visible, resize staying
+  covered, same-height full-stack replacements resurfacing, and expiry/minimize.
+  On the real portrait monitor, the full-width app contains the stack with no
+  pointer; clicking the gallery on the other display leaves it visible and gives
+  Chrome focus. Native fixtures stay out of the canonical Crosstalk log.
+- Current verification: TypeScript, ESLint, 144 TS tests, Windows cargo check,
+  two native Crosstalk tests (including portrait containment), headers, full ledger
+  and installer packaging pass. Existing terminal warnings remain unrelated.
+  Native evidence: `target/crosstalk_witness/arrival_results.json`,
+  `portrait_results.json`, `portrait_inside.png`. Earlier witness setup needed
+  hidden helper processes and hit-tested clicks while JL used other windows;
+  foreground moves to other agent terminals were not app focus theft.
+- Installed executable SHA256:
+  `7BDF962A2EF2534075E20E69155C1E579BDCD4BDE7995E5BC27E38CB1CC3CEDB`.
+  Build and installed bytes match. Reopened normally, saved native arrangement
+  restored and inspection port 9225 confirmed closed. Work is uncommitted;
+  macOS native behavior was not inspected in this Windows session.
+
+## Earlier delivery
+
 - Target: `/home/johnf/dev/intermediary`, `master`, base `200b9ad`; clean at entry.
 - Commission: real agent messages as small speech bubbles beside Overview,
   adaptive left/right placement, inside placement when maximized, hover hold,
@@ -76,6 +115,7 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
   theme and configured repo/group styles from the main app.
 - `src-tauri/src/lib/crosstalk/{mod.rs,observer.rs,feed.rs,placement.rs}`:
   native lifecycle, bounded event reader and monitor-aware window placement.
+  Windows-only `pointer.rs` owns click-to-cover without focus-change hiding.
   `src-tauri/src/lib/mod.rs` integrates setup, commands, events and shutdown.
 - `src-tauri/Cargo.toml`, `Cargo.lock`: filesystem notifications and macOS
   transparency support. `src-tauri/capabilities/crosstalk.json` and

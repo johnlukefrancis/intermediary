@@ -56,6 +56,14 @@ side. Maximize to put them inside. Minimize and switch to a repository: the surf
 hides and clears. Return to Overview: expired/hidden messages do not replay. Check
 dark, warm and light themes, three-message bursts and long expanded text. The
 companion must never become the foreground window when a message arrives.
+Focus a neighbouring Chrome window where a bubble will appear, with Chrome partly
+covering Intermediary. The bubble must stay above Chrome through arrival and text
+expansion while Chrome retains keyboard focus and Intermediary stays behind it.
+Click Chrome: it now covers the bubble. Clicking a non-overlapping window must
+leave an exposed bubble visible. A new message comes forward again, including a
+same-height replacement in a full three-card stack. Resizing or expiring a card
+must not bring a covered stack forward. Expiry, minimization and leaving Overview
+must still remove the surface.
 
 The feed reader and placement invariants run on the Windows build surface:
 
@@ -67,6 +75,24 @@ Live delivery is the source witness. Explicitly labelled UI fixtures may supplem
 it for bursts and appearance via the installed app's temporary WebView2 inspection
 lane. Never append fixture messages to Crosstalk's real event log. Restore window
 bounds, theme and navigation, then relaunch without debugging arguments.
+
+## Git lane glow
+
+After an agent's next real turn transition, inspect its configured root in the
+Git column. A dirty lane breathes in its repo/group accent, including expanded
+file names. Nested launch folders map to the most specific configured root;
+siblings and roots sharing a folder name do not inherit the glow.
+
+Use a clean configured root and two sessions: ending one must not show a finished
+signal while the other works. When both are idle, a `CLEAN` row glows more strongly
+and fades over 24 seconds; it disappears by the next five-second Overview age tick.
+It does not increase `N CHANGED`. Repeated or older turn events must not restart
+the fade. Leaving and returning to Overview preserves only its remaining time.
+Held, disconnected, failed, truncated or mid-operation status cannot prove clean.
+Check reduced motion: steady dirty highlight and gradual clean fade.
+
+Keep fixtures in the installed renderer's temporary inspection lane, never in
+the canonical Crosstalk event log. Restore the original view and native bounds.
 
 ## Automated corroboration
 

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { RepoConfig } from "../../shared/config.js";
 import type { OverviewSnapshot } from "../../lib/overview/overview_types.js";
 import { isWorking } from "../../lib/overview/overview_focus.js";
+import { recentlyFinished, type Lane } from "../../lib/overview/overview_lanes.js";
 
 export interface OverviewSelection {
   /** Recently worked repositories in config order; identity changes only when membership does */
@@ -14,9 +15,10 @@ export interface OverviewSelection {
   select: (repoId: string | null) => void;
 }
 
-export function useOverviewSelection(repos: readonly RepoConfig[], snapshot: OverviewSnapshot, now: number): OverviewSelection {
+export function useOverviewSelection(repos: readonly RepoConfig[], snapshot: OverviewSnapshot, now: number, lanes: ReadonlyMap<string, Lane>): OverviewSelection {
   const [selected, setSelected] = useState<string | null>(null);
-  const workingKey = repos.filter((repo) => isWorking(snapshot.repos.get(repo.repoId), now)).map((repo) => repo.repoId).join("\0");
+  const workingKey = repos.filter((repo) => isWorking(snapshot.repos.get(repo.repoId), now)
+    || recentlyFinished(lanes.get(repo.repoId), now)).map((repo) => repo.repoId).join("\0");
   const working = useMemo(() => {
     const ids = new Set(workingKey.split("\0"));
     return repos.filter((repo) => ids.has(repo.repoId));

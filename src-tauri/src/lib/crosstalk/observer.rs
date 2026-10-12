@@ -75,7 +75,17 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
                     break;
                 }
                 match feed.read(&path) {
-                    Ok(messages) => {
+                    Ok(batch) => {
+                        for turn in batch.turns {
+                            if worker_cancel.load(Ordering::Acquire) {
+                                break;
+                            }
+                            if let Err(error) = app.emit_to("main", "crosstalk-turn", turn) {
+                                super::report(&format!(
+                                    "Could not publish Crosstalk turn: {error}"
+                                ));
+                            }
+                        }
                         let state = app.state::<CrosstalkState>();
                         let Ok(view) = state.view.lock() else {
                             break;
@@ -83,7 +93,7 @@ pub fn start(app: &AppHandle) -> Result<(), String> {
                         if !view.presentation.active || !view.window_visible || !view.ready {
                             continue;
                         }
-                        for mut message in messages {
+                        for mut message in batch.messages {
                             if worker_cancel.load(Ordering::Acquire) {
                                 break;
                             }

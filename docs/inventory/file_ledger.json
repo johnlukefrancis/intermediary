@@ -622,12 +622,12 @@
       "summary": "Main-window Overview visibility and theme projected to the native companion"
     },
     {
-      "path": "app/src/hooks/overview/use_dirty_repo_ids.ts",
-      "summary": "The shown repositories whose working tree is not known clean, read from the shared status registry"
-    },
-    {
       "path": "app/src/hooks/overview/use_overview_file_actions.ts",
       "summary": "Repository-bound Overview context menus and user-triggered drag-out actions"
+    },
+    {
+      "path": "app/src/hooks/overview/use_overview_git_states.ts",
+      "summary": "One shared-status subscription projects visible Git lanes and their turn glow"
     },
     {
       "path": "app/src/hooks/overview/use_overview_git_totals.ts",
@@ -934,6 +934,10 @@
       "summary": "Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders"
     },
     {
+      "path": "app/src/lib/crosstalk/repository.ts",
+      "summary": "Exact normalized root-prefix attribution for Crosstalk sender paths"
+    },
+    {
       "path": "app/src/lib/diff/diff_lines_test.ts",
       "summary": "Golden line model for parsePatch over a unified patch and a combined conflict patch"
     },
@@ -1028,6 +1032,18 @@
     {
       "path": "app/src/lib/overview/overview_history_test.ts",
       "summary": "Reconnect history orders recent paths by observed time without inventing live activity"
+    },
+    {
+      "path": "app/src/lib/overview/overview_lane_glow.ts",
+      "summary": "Git status and observed turns jointly determine a lane's visual signal"
+    },
+    {
+      "path": "app/src/lib/overview/overview_lanes_test.ts",
+      "summary": "Exact lane attribution, concurrent sessions and stale turns cannot fabricate completion"
+    },
+    {
+      "path": "app/src/lib/overview/overview_lanes.ts",
+      "summary": "Bounded exact-root agent session projection for Overview lane activity"
     },
     {
       "path": "app/src/lib/overview/overview_store_test.ts",
@@ -3304,6 +3320,10 @@
     {
       "path": "src-tauri/src/lib/crosstalk/placement.rs",
       "summary": "Monitor-aware physical placement of the owned speech-bubble window"
+    },
+    {
+      "path": "src-tauri/src/lib/crosstalk/pointer.rs",
+      "summary": "Visible-companion mouse hook yields only to a clicked overlapping window"
     },
     {
       "path": "src-tauri/src/lib/launch/candidates.rs",

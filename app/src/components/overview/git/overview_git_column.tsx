@@ -8,7 +8,8 @@ import type { SourceControlEntry } from "../../../shared/protocol.js";
 import type { OverviewSnapshot } from "../../../lib/overview/overview_types.js";
 import { statusRegistry } from "../../../lib/source_control/status_registry.js";
 import { DEFAULT_ACCENT_HEX } from "../../../lib/theme/accent_utils.js";
-import { useDirtyRepoIds } from "../../../hooks/overview/use_dirty_repo_ids.js";
+import { useOverviewGitStates } from "../../../hooks/overview/use_overview_git_states.js";
+import type { Lane } from "../../../lib/overview/overview_lanes.js";
 import { OverviewGitRepo } from "./overview_git_repo.js";
 import { OverviewGitProject } from "./overview_git_project.js";
 import "../../../styles/overview/overview_git.css";
@@ -18,6 +19,8 @@ interface OverviewGitColumnProps {
   shown: readonly RepoConfig[];
   tabThemes: Readonly<Record<string, TabTheme>>;
   snapshot: OverviewSnapshot;
+  lanes: ReadonlyMap<string, Lane>;
+  now: number;
   onOpenRepoSource: (repoId: string) => void;
   onOpenDiff: (repo: RepoConfig, entry: SourceControlEntry) => void;
 }
@@ -59,26 +62,28 @@ function useRetainedRepos(working: readonly RepoConfig[]): void {
   }, []);
 }
 
-export function OverviewGitColumn({ working, shown, tabThemes, snapshot, onOpenRepoSource, onOpenDiff }: OverviewGitColumnProps): React.JSX.Element {
+export function OverviewGitColumn({ working, shown, tabThemes, snapshot, lanes, now, onOpenRepoSource, onOpenDiff }: OverviewGitColumnProps): React.JSX.Element {
   useRetainedRepos(working);
-  const dirty = useDirtyRepoIds(shown);
-  const visible = useMemo(() => shown.filter((repo) => dirty.has(repo.repoId)), [dirty, shown]);
+  const states = useOverviewGitStates(shown, lanes, snapshot, now);
+  const visible = useMemo(() => shown.filter(repo => states.get(repo.repoId)?.dirty || states.get(repo.repoId)?.glow === "finished"), [states, shown]);
+  const changed = shown.filter(repo => states.get(repo.repoId)?.dirty).length;
   const blocks = useMemo(() => gitBlocks(visible), [visible]);
   const accentOf = (key: string): string => tabThemes[key]?.accentHex ?? DEFAULT_ACCENT_HEX;
   return (
     <section className="panel overview-git" aria-label="Working tree">
       <header className="overview-git__header">
         <h2 className="panel-title">WORKING TREE</h2>
-        <span className="overview-git__count">{visible.length === 1 ? "1 CHANGED" : `${String(visible.length)} CHANGED`}</span>
+        <span className="overview-git__count">{changed === 1 ? "1 CHANGED" : `${String(changed)} CHANGED`}</span>
       </header>
       <div className="overview-git__shell">
         <div className="overview-git__scroller">
           {blocks.length === 0 && <p className="overview-git-repo__state" data-tone="clean">ALL CLEAN</p>}
           {blocks.map((block) => block.grouped
             ? <OverviewGitProject key={block.key} label={block.label} accentHex={accentOf(block.key)} members={block.members}
-              snapshot={snapshot} onOpenRepoSource={onOpenRepoSource} onOpenDiff={onOpenDiff} />
+              snapshot={snapshot} lanes={lanes} states={states} onOpenRepoSource={onOpenRepoSource} onOpenDiff={onOpenDiff} />
             : block.members.map((repo) => <OverviewGitRepo key={repo.repoId} repo={repo} accentHex={accentOf(block.key)} worktree={false}
               availability={snapshot.repos.get(repo.repoId)?.availability ?? "connecting"}
+              glow={states.get(repo.repoId)?.glow ?? null} finishedAt={lanes.get(repo.repoId)?.finishedAt ?? null}
               onOpenRepoSource={onOpenRepoSource} onOpenDiff={onOpenDiff} />))}
         </div>
       </div>

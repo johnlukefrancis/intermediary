@@ -13,6 +13,7 @@ import { useSourceControlStatus } from "../../../hooks/source_control/use_source
 import { READING_WORKING_TREE, statusErrorCopy } from "../../source_control/source_control_copy.js";
 import { OverviewGitRepoHead } from "./overview_git_repo_head.js";
 import { OverviewGitGroup } from "./overview_git_group.js";
+import type { LaneGlow } from "../../../lib/overview/overview_lane_glow.js";
 
 /** Watch facts that mean no status read can answer; the registry skips these roots itself */
 const HELD_COPY: Readonly<Partial<Record<OverviewAvailability, string>>> = {
@@ -25,6 +26,8 @@ interface OverviewGitRepoProps {
   /** Nested under its project's rule as one worktree */
   worktree: boolean;
   availability: OverviewAvailability;
+  glow: LaneGlow;
+  finishedAt: number | null;
   onOpenRepoSource: (repoId: string) => void;
   onOpenDiff: (repo: RepoConfig, entry: SourceControlEntry) => void;
 }
@@ -46,20 +49,23 @@ function Body({ status, phase, held, onOpenDiff, onOpenSource }: {
     if (phase.kind !== "error") return <StateLine tone="waiting">{READING_WORKING_TREE}</StateLine>;
     return <StateLine tone="error" title={phase.message || undefined}>{statusErrorCopy(phase.code).heading}</StateLine>;
   }
+  if (groups.length === 0) return <StateLine tone="clean">CLEAN</StateLine>;
   return <>{groups.map((group) => <OverviewGitGroup key={group.kind} kind={group.kind} entries={group.entries}
     onOpenDiff={onOpenDiff} onOpenSource={onOpenSource} />)}</>;
 }
 
 export const OverviewGitRepo = memo(function OverviewGitRepo({
-  repo, accentHex, worktree, availability, onOpenRepoSource, onOpenDiff,
+  repo, accentHex, worktree, availability, glow, finishedAt, onOpenRepoSource, onOpenDiff,
 }: OverviewGitRepoProps): React.JSX.Element {
   const { status, phase } = useSourceControlStatus(repo.repoId);
-  const style = useMemo(() => hexToAccentCssVars(accentHex) as React.CSSProperties, [accentHex]);
+  const style = useMemo(() => ({ ...hexToAccentCssVars(accentHex),
+    "--lane-finish-delay": `${glow === "finished" && finishedAt !== null ? -Math.max(0, Date.now() - finishedAt) : 0}ms`,
+  }) as React.CSSProperties, [accentHex, glow, finishedAt]);
   const openSource = useCallback(() => { onOpenRepoSource(repo.repoId); }, [onOpenRepoSource, repo.repoId]);
   const openDiff = useCallback((entry: SourceControlEntry) => { onOpenDiff(repo, entry); }, [onOpenDiff, repo]);
   const held = HELD_COPY[availability];
   return (
-    <section className="overview-git-repo" style={style} data-worktree={worktree || undefined} data-repo-id={repo.repoId} aria-label={`${repo.label} working tree`}>
+    <section className="overview-git-repo" style={style} data-lane={glow ?? undefined} data-worktree={worktree || undefined} data-repo-id={repo.repoId} aria-label={`${repo.label} working tree`}>
       <OverviewGitRepoHead repo={repo} status={status} rereading={held === undefined && status !== null && phase.kind === "loading"}
         onOpenSource={openSource} />
       <Body status={status} phase={phase} held={held} onOpenDiff={openDiff} onOpenSource={openSource} />

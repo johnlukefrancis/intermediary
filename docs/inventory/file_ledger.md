@@ -158,8 +158,8 @@ app/src/hooks/images/image_tile_records.ts - Shared image tile records, Blob own
 app/src/hooks/images/image_tile_thumbnail.ts - Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob
 app/src/hooks/images/use_image_tiles.ts - Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency
 app/src/hooks/overview/use_crosstalk.ts - Main-window Overview visibility and theme projected to the native companion
-app/src/hooks/overview/use_dirty_repo_ids.ts - The shown repositories whose working tree is not known clean, read from the shared status registry
 app/src/hooks/overview/use_overview_file_actions.ts - Repository-bound Overview context menus and user-triggered drag-out actions
+app/src/hooks/overview/use_overview_git_states.ts - One shared-status subscription projects visible Git lanes and their turn glow
 app/src/hooks/overview/use_overview_git_totals.ts - Changed-file and conflict totals across shown repositories, read from the shared status registry
 app/src/hooks/overview/use_overview_history.ts - Serial initial and reconnect history refresh across connected roots, with host roots first
 app/src/hooks/overview/use_overview_images.ts - Visible Overview image metadata projected into the shared revision-bound tile loader
@@ -236,6 +236,7 @@ app/src/lib/bundles/bundle_selection_updates.ts - Explicit bundle inclusion chan
 app/src/lib/bundles/bundle_selection_visibility_test.ts - Tree file rows mirror the scanner: a globally excluded file is neither enabled nor included
 app/src/lib/bundles/bundle_selection_visibility.ts - Shared path visibility helpers for bundle selection state
 app/src/lib/bundles/flatten_visible_tree.ts - Flattens the lazily-loaded ZIPS tree into the exact visible row order the DOM renders
+app/src/lib/crosstalk/repository.ts - Exact normalized root-prefix attribution for Crosstalk sender paths
 app/src/lib/diff/diff_lines_test.ts - Golden line model for parsePatch over a unified patch and a combined conflict patch
 app/src/lib/diff/diff_lines.ts - Pure unified/combined patch parser and the shared diff line model
 app/src/lib/files/file_feed.ts - Auto file feed filtering, ranking, and row metric helpers
@@ -260,6 +261,9 @@ app/src/lib/overview/overview_edits_test.ts - Independent feed-entry retention, 
 app/src/lib/overview/overview_focus_test.ts - Active-work selection rejects idle roots and file mtimes, ages out, and re-enters on work
 app/src/lib/overview/overview_focus.ts - Recent-work membership from observed edits, independent of watch health and open tabs
 app/src/lib/overview/overview_history_test.ts - Reconnect history orders recent paths by observed time without inventing live activity
+app/src/lib/overview/overview_lane_glow.ts - Git status and observed turns jointly determine a lane's visual signal
+app/src/lib/overview/overview_lanes_test.ts - Exact lane attribution, concurrent sessions and stale turns cannot fabricate completion
+app/src/lib/overview/overview_lanes.ts - Bounded exact-root agent session projection for Overview lane activity
 app/src/lib/overview/overview_store_test.ts - Independent oracles for all-root retention, activity identity, bounds and watcher recovery
 app/src/lib/overview/overview_store.ts - App-lifetime all-repository observations with event-triggered immutable publication
 app/src/lib/overview/overview_types.ts - Bounded repository activity projections for the all-repository Overview
@@ -829,6 +833,7 @@ src-tauri/src/lib/crosstalk/feed.rs - Bounded incremental reader of complete Cro
 src-tauri/src/lib/crosstalk/mod.rs - Overview visibility and lifecycle of the read-only Crosstalk companion
 src-tauri/src/lib/crosstalk/observer.rs - One filesystem-notified feed worker tied to the native app lifetime
 src-tauri/src/lib/crosstalk/placement.rs - Monitor-aware physical placement of the owned speech-bubble window
+src-tauri/src/lib/crosstalk/pointer.rs - Visible-companion mouse hook yields only to a clicked overlapping window
 src-tauri/src/lib/launch/candidates.rs - Top-level launch candidate discovery for repository roots, ranked by observed usage
 src-tauri/src/lib/launch/launch_action.rs - Launches one top-level target: focus-or-start for Unreal projects, default handler for HTML
 src-tauri/src/lib/launch/mod.rs - Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus

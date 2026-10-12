@@ -11,7 +11,7 @@ use std::{
 const READ_LIMIT: u64 = 256 * 1024;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Message {
+pub struct Event {
     pub id: String,
     pub kind: String,
     pub from: String,
@@ -20,6 +20,12 @@ pub struct Message {
     pub sent: u64,
     #[serde(default)]
     pub cwd: Option<String>,
+}
+
+#[derive(Default)]
+pub struct Batch {
+    pub messages: Vec<Event>,
+    pub turns: Vec<Event>,
 }
 
 pub struct Feed {
@@ -42,10 +48,12 @@ impl Feed {
         })
     }
 
-    pub fn read(&mut self, path: &Path) -> std::io::Result<Vec<Message>> {
+    pub fn read(&mut self, path: &Path) -> std::io::Result<Batch> {
         let mut file = match File::open(path) {
             Ok(file) => file,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Batch::default())
+            }
             Err(error) => return Err(error),
         };
         let end = file.metadata()?.len();
@@ -64,7 +72,7 @@ impl Feed {
         file.take(READ_LIMIT).read_to_end(&mut bytes)?;
         self.offset += bytes.len() as u64;
         self.pending.extend(bytes);
-        let mut messages = Vec::new();
+        let mut batch = Batch::default();
         let mut consumed = 0;
         for (index, byte) in self.pending.iter().enumerate() {
             if *byte != b'\n' {
@@ -76,12 +84,19 @@ impl Feed {
                 self.discard_line = false;
                 continue;
             }
-            match serde_json::from_slice::<Message>(line) {
+            match serde_json::from_slice::<Event>(line) {
                 Ok(message) if message.kind == "message" && !message.text.trim().is_empty() => {
-                    messages.push(message);
-                    if messages.len() > 3 {
-                        messages.remove(0);
+                    batch.messages.push(message);
+                    if batch.messages.len() > 3 {
+                        batch.messages.remove(0);
                     }
+                }
+                Ok(turn)
+                    if turn.kind == "turn"
+                        && matches!(turn.text.as_str(), "working" | "idle")
+                        && turn.cwd.as_ref().is_some_and(|cwd| !cwd.is_empty()) =>
+                {
+                    batch.turns.push(turn)
                 }
                 Ok(_) => {}
                 Err(_) => super::report("Ignored malformed Crosstalk event"),
@@ -93,7 +108,7 @@ impl Feed {
             self.discard_line = true;
             super::report("Crosstalk record exceeded 256 KiB; bubble event was skipped");
         }
-        Ok(messages)
+        Ok(batch)
     }
 }
 
@@ -110,14 +125,19 @@ mod tests {
         let event = "{\"id\":\"a\",\"kind\":\"message\",\"from\":\"claude@home#1\",\"to\":\"codex@app#2\",\"text\":\"Hello 🌊\\nsecond line\",\"sent\":12}\n";
         let split = event.find('🌊').unwrap() + 1;
         file.write_all(&event.as_bytes()[..split]).unwrap();
-        assert!(feed.read(file.path()).unwrap().is_empty());
+        assert!(feed.read(file.path()).unwrap().messages.is_empty());
         file.write_all(&event.as_bytes()[split..]).unwrap();
-        let messages = feed.read(file.path()).unwrap();
+        let messages = feed.read(file.path()).unwrap().messages;
         assert_eq!(messages.len(), 1);
         assert_eq!(messages[0].text, "Hello 🌊\nsecond line");
-        assert!(feed.read(file.path()).unwrap().is_empty());
+        assert!(feed.read(file.path()).unwrap().messages.is_empty());
         file.write_all(event.replace("\"message\"", "\"status\"").as_bytes())
             .unwrap();
-        assert!(feed.read(file.path()).unwrap().is_empty());
+        assert!(feed.read(file.path()).unwrap().messages.is_empty());
+        writeln!(file, "{{\"id\":\"b\",\"kind\":\"turn\",\"from\":\"claude@repo#1\",\"to\":\"\",\"text\":\"idle\",\"sent\":13,\"cwd\":\"/repo\"}}" ).unwrap();
+        let batch = feed.read(file.path()).unwrap();
+        assert!(batch.messages.is_empty());
+        assert_eq!(batch.turns.len(), 1);
+        assert_eq!(batch.turns[0].cwd.as_deref(), Some("/repo"));
     }
 }

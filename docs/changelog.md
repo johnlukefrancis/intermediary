@@ -2,12 +2,19 @@
 
 ## Unreleased
 
+- Overview's Git lanes use Crosstalk turns for a soft repository-coloured pulse
+  while dirty, plus a stronger 24-second glow when the last session ends with a
+  clean tree. Concurrent sessions stay distinct; clean finishing rows appear
+  briefly without increasing the changed-repository count.
+
 - Overview shows delivered Crosstalk messages as animated, repository-coloured
   speech bubbles beside the app, moving inside when screen space is tight.
   Hover holds a message and click expands it; the surface follows the app theme
   and disappears outside Overview without stealing focus. Delayed replies recall
   the previous message as a compact animated echo with its original agent icon
   and repository colour. Faint agent tags distinguish sessions sharing a repo.
+  New bubbles appear above focused neighbouring windows without raising Intermediary
+  or taking keyboard focus; clicking a covering window brings it back above them.
 
 - Bundle-tree hover cards use the context menu’s glass surface and show total
   size, selected size, file counts and the largest selected files. Measurements

@@ -4,18 +4,48 @@
 use super::{CrosstalkState, LABEL};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 
-fn visibility(window: &tauri::WebviewWindow, visible: bool) -> tauri::Result<()> {
+fn visibility(window: &tauri::WebviewWindow, visible: bool, raise: bool) -> tauri::Result<()> {
     #[cfg(windows)]
     {
-        use windows_sys::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE, SW_SHOWNOACTIVATE};
+        use windows_sys::Win32::UI::WindowsAndMessaging::{
+            IsWindowVisible, SetWindowPos, ShowWindow, HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER,
+            SWP_SHOWWINDOW, SW_HIDE,
+        };
         let hwnd = window.hwnd()?.0 as isize;
         // Windows can restore owned popups independently of Tao's cached visibility flag.
         window.run_on_main_thread(move || unsafe {
-            ShowWindow(hwnd as _, if visible { SW_SHOWNOACTIVATE } else { SW_HIDE });
+            if visible {
+                let flags = SWP_NOACTIVATE
+                    | SWP_NOMOVE
+                    | SWP_NOSIZE
+                    | SWP_NOOWNERZORDER
+                    | SWP_SHOWWINDOW
+                    | if raise { 0 } else { SWP_NOZORDER };
+                let position = |after| {
+                    if SetWindowPos(hwnd as _, after, 0, 0, 0, 0, flags) == 0 {
+                        super::report(&format!(
+                            "Could not show Crosstalk: {}",
+                            std::io::Error::last_os_error()
+                        ));
+                    }
+                };
+                // Promotion is immediately undone; clicks must be able to cover the bubble.
+                if raise {
+                    position(HWND_TOPMOST);
+                }
+                position(if raise { HWND_NOTOPMOST } else { HWND_TOP });
+            } else {
+                ShowWindow(hwnd as _, SW_HIDE);
+            }
+            if let Err(error) = super::pointer::track(hwnd as _, IsWindowVisible(hwnd as _) != 0) {
+                super::report(&error);
+            }
         })
     }
     #[cfg(not(windows))]
     {
+        let _ = raise;
         if visible {
             window.show()
         } else {
@@ -68,7 +98,7 @@ pub fn place(main: [i32; 4], work: [i32; 4], scale: f64, height: f64) -> Placeme
     }
 }
 
-pub fn layout(app: &AppHandle) -> Result<(), String> {
+pub fn layout(app: &AppHandle, raise: bool) -> Result<(), String> {
     let state = app.state::<CrosstalkState>();
     let _layout = state
         .layout
@@ -106,10 +136,10 @@ pub fn layout(app: &AppHandle) -> Result<(), String> {
     };
     let result = (|| -> tauri::Result<()> {
         if !active || height < 1.0 {
-            return visibility(&bubbles, false);
+            return visibility(&bubbles, false, false);
         }
         let Some(monitor) = main.current_monitor()? else {
-            return visibility(&bubbles, false);
+            return visibility(&bubbles, false, false);
         };
         let pos = main.outer_position()?;
         let size = main.outer_size()?;
@@ -128,7 +158,7 @@ pub fn layout(app: &AppHandle) -> Result<(), String> {
         bubbles.emit("crosstalk-side", rect.side)?;
         bubbles.set_size(PhysicalSize::new(rect.width, rect.height))?;
         bubbles.set_position(PhysicalPosition::new(rect.x, rect.y))?;
-        visibility(&bubbles, true)
+        visibility(&bubbles, true, raise)
     })();
     result.map_err(|e| format!("Could not position Crosstalk bubbles: {e}"))
 }
@@ -153,5 +183,14 @@ mod tests {
         let p = place([-1900, 100, 900, 700], [-1920, 0, 1920, 1040], 1.0, 200.0);
         assert_eq!(p.side, "right");
         assert!(p.x < 0 && p.x + p.width as i32 <= 0);
+        let p = place(
+            [-1088, 1280, 1096, 640],
+            [-1080, 0, 1080, 1920],
+            1.0,
+            2000.0,
+        );
+        assert_eq!(p.side, "inside");
+        assert!(p.x >= -1080 && p.x + p.width as i32 <= 0);
+        assert!(p.y >= 1280 && p.y + p.height as i32 <= 1920);
     }
 }

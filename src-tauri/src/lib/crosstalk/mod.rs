@@ -4,6 +4,8 @@
 mod feed;
 mod observer;
 mod placement;
+#[cfg(windows)]
+mod pointer;
 
 use crate::obs::logging;
 use serde::{Deserialize, Serialize};
@@ -130,13 +132,11 @@ pub async fn crosstalk_configure(
         )
         .map_err(|e| e.to_string())?;
     }
-    if active {
-        let app_copy = app.clone();
-        tauri::async_runtime::spawn_blocking(move || observer::start(&app_copy))
-            .await
-            .map_err(|e| e.to_string())??;
-    }
-    placement::layout(&app)
+    let app_copy = app.clone();
+    tauri::async_runtime::spawn_blocking(move || observer::start(&app_copy))
+        .await
+        .map_err(|e| e.to_string())??;
+    placement::layout(&app, false)
 }
 
 #[tauri::command]
@@ -156,6 +156,7 @@ pub async fn crosstalk_resize(
     app: AppHandle,
     window: WebviewWindow,
     height: f64,
+    raise: bool,
 ) -> Result<(), String> {
     require_window(&window, LABEL)?;
     if !height.is_finite() || !(0.0..=4096.0).contains(&height) {
@@ -166,7 +167,7 @@ pub async fn crosstalk_resize(
         .lock()
         .map_err(|_| "Crosstalk view lock failed")?
         .height = height;
-    placement::layout(&app)
+    placement::layout(&app, raise)
 }
 
 pub fn main_window_event(app: &AppHandle, event: &tauri::WindowEvent) {
@@ -188,7 +189,7 @@ pub fn main_window_event(app: &AppHandle, event: &tauri::WindowEvent) {
             app.state::<CrosstalkState>()
                 .layout_pending
                 .store(false, Ordering::Release);
-            if let Err(error) = placement::layout(&app) {
+            if let Err(error) = placement::layout(&app, false) {
                 report(&error);
             }
         });
@@ -196,6 +197,8 @@ pub fn main_window_event(app: &AppHandle, event: &tauri::WindowEvent) {
 }
 
 pub fn shutdown(app: &AppHandle) {
+    #[cfg(windows)]
+    pointer::stop();
     if let Ok(mut owner) = app.state::<CrosstalkState>().observer.lock() {
         if let Some(observer) = owner.take() {
             observer.stop();

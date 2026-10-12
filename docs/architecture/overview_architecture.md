@@ -5,7 +5,8 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009
 
 Overview is one repository-labelled feed of recent work beside a read-only Git
 column, using the full main surface. Its product contract is [the design](../design/overview_design.md).
-It monitors filesystem activity and does not infer agent identity or completion.
+The feed monitors filesystem activity; explicit Crosstalk turns supply the Git
+column's separate lane signal. File edits never imply an agent's identity or completion.
 
 ## Ownership
 
@@ -18,7 +19,7 @@ It monitors filesystem activity and does not infer agent identity or completion.
 | Capture | `overview_store.ts`, `overview_activity.ts` | Six recent paths and twelve settled edits per root; immutable publication after event-triggered 80 ms batching. Stable edit IDs span roots and replacements. No retained intake queue. |
 | Excerpts | `overview_edit.ts` | Shared patch parser; six changed lines of 180 characters, plus metadata. No file/image reads or Blob URLs. |
 | Images | `hooks/images`, `lib/images`, Overview target projection | Shared revision-bound thumbnail loader with Stream. Visible targets retain at most twenty-four slots, including available previous revisions, with two reads in flight; repository/root/path scopes before/after. Source byte/pixel gates and URL cleanup remain shared. |
-| Membership | `overview_focus.ts`, `lastWorkedAt` | Live changes/deltas and persisted activity timestamps qualify roots for fifteen minutes. Watch health and tab selection never imply work. History timestamps are consumed before presentation truncation. |
+| Membership | `overview_focus.ts`, `lastWorkedAt`, `overview_lanes.ts` | Observed edits qualify roots for fifteen minutes; an explicit last-session turn end admits a root for 24 seconds. Watch health and tab selection never imply work. History timestamps are consumed before presentation truncation. |
 | Reading | `use_overview.ts`, `use_overview_follow.ts` | Capture is continuous. Scroll away from the tail holds reading position; keyboard focus and the file workspace suspend follow. One visible five-second age clock. |
 | Selection | `use_overview_selection.ts`, `overview_view.tsx` | One filter owns `working`, `selection` and `shown` for the toolbar, the feed and the Git column. `working` changes identity only when membership does, never on the age clock. |
 | Feed | `components/overview`, `styles/overview` | Chronological entries, at most eighty visible, repository accents/labels, bounded excerpts, history/observation rows and concise availability notices. The toolbar strip above both columns holds the focus chips. |
@@ -86,15 +87,35 @@ the message and recalled-context headers, distinguishing sessions in one root.
 
 Placement uses physical window and monitor work-area bounds, scaled from the
 main window's DPI. The surface chooses left, right or inside, never takes focus,
-has no taskbar entry and follows the owner's native lifetime. Its only core
+has no taskbar entry and follows the owner's native lifetime. A displayed message
+requests one raise through the size command after rendering, including same-height
+card replacements. The companion uses ordinary window ordering, so clicking a
+covering window brings that window above it; unrelated clicks do not hide it.
+Resizing, expiry and presentation changes never request another raise. Existing
+visibility rules still hide the companion outside Overview, on minimization and
+when no cards remain. Its only core
 capabilities are event subscription/unsubscription; its custom commands validate
 the caller window. Message text is rendered as text. CSP and file access scopes
 are unchanged.
 
-On Windows the shell applies visibility through `ShowWindow` on the UI thread,
-using `SW_SHOWNOACTIVATE` for arrival. Windows can restore an owned popup while
+On Windows the shell applies visibility through native calls on the UI thread,
+using `SWP_NOACTIVATE` when showing. Windows can restore an owned popup while
 Tao's cached visibility still says hidden; native visibility remains the sole
 authority so an empty surface is hidden again after owner restoration.
+Arrival promotes then immediately demotes the companion with `SetWindowPos` in
+one UI dispatch, without activation or owner reordering. Direct `HWND_TOP` did
+not cross the focused Chrome window in the native witness: Windows requires
+foreground permission for that operation ([API contract](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos)).
+The resulting window is ordinary, not always-on-top. Other layouts include
+`SWP_NOZORDER`; the main window stays behind the focused app.
+
+While the companion is visible, `pointer.rs` owns one UI-thread mouse hook. It
+passes all input onward and acts only on button-down: the clicked top-level window
+must overlap the companion and be neither the companion nor its owner. The hook
+lowers only the companion behind that window, covering the already-focused-window
+case that ordinary activation does not reorder. Unrelated clicks and focus changes
+do nothing. The hook is removed when the surface hides and at shutdown; there is
+no window enumeration, timer, keyboard observer or retained input history.
 
 The product icons are bundled original-colour SVGs from
 [LobeHub's icon library](https://github.com/lobehub/lobe-icons), with the MIT
@@ -102,6 +123,30 @@ licence embedded in each asset. They are the Codex purple cloud and Claude Code
 orange mascot, not the corporate marks. External URLs are never loaded at runtime.
 The macOS-only Tauri private-API feature supplies transparent child-window support;
 this does not broaden the production CSP or frontend capabilities.
+
+## Git lane activity
+
+The existing native Crosstalk observer starts after the main frontend subscribes,
+including when Overview is not selected. It routes `turn` records to the main
+window independently of speech visibility; status records remain silent. There
+is no history replay or backfill, so already-running agents appear after their
+next transition. Crosstalk also supplies a final idle turn when a session closes.
+
+`overview_lanes.ts` retains at most 128 session states. The greatest event ID per
+address wins; repeated states advance that watermark without restarting a finish.
+Configured root removal/replacement invalidates sessions. `lib/crosstalk/repository.ts`
+owns normalized longest-prefix matching shared with bubbles. Turn attribution
+requires an exact root prefix; it never guesses from a folder name or group label.
+Multiple sessions aggregate per root, and a root cannot finish while one is working.
+
+An accepted idle transition requests a refresh through the existing Git status
+registry. `use_overview_git_states.ts` combines its resident status with lane state:
+known dirty roots breathe; a watched, settled, non-truncated, non-mutating clean
+root can finish. `use_overview_selection.ts` admits recent turn ends for 24 seconds
+using the existing visible five-second age clock, then ordinary membership applies.
+CSS owns all animation: dirty lanes swell every 3.2 seconds with a quiet interval;
+negative delay preserves the remaining clean finish fade across remounts.
+No additional agent poll, Git reader, animation timer or persisted lane history exists.
 
 ## Limits
 

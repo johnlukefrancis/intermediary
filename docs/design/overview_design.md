@@ -46,9 +46,19 @@ chips use the repository tab's mono uppercase lettering in that repository's acc
 
 The right column is one glass panel headed `[ WORKING TREE ]`, sharing the
 repository tabs' splitter and persisted rail width. It lists only working trees with
-something to show: a clean worktree or repository is hidden, and when every shown
-root is clean the column reads `ALL CLEAN`. Reading, held and failed roots stay
-visible. The header counts the listed working trees as `N CHANGED`.
+something to show: clean roots normally hide, with a short exception for a lane
+whose last agent turn just ended. With no changed or finishing root the column
+reads `ALL CLEAN`. Reading, held and failed roots stay visible. The header counts
+changed roots as `N CHANGED`; the temporary clean row does not increase that count.
+
+Crosstalk turn events add a repository-coloured glow. Once a lane is observed,
+its dirty tree has a soft, slow breathing glow on the title and visible items
+while it remains in Overview. When the last working session in a lane becomes
+idle and Git is known clean, a stronger pulse fades over 24 seconds. A recent
+turn-end temporarily admits that root to the shared Overview filter, then normal
+filesystem inactivity rules resume. The clean row says `CLEAN`; this means the
+turn ended with no pending changes, not that the agent's entire task is complete.
+Reduced motion holds a steady dirty highlight and gently fades the clean one.
 
 A config group is one project whose members are worktrees. A grouped project gets
 one sticky accent rule with its group label, and each changed worktree hangs beneath
@@ -128,7 +138,11 @@ While Overview is visible, newly delivered Crosstalk messages appear as small
 speech bubbles beside the native window. The side with enough free monitor work
 area wins; when neither side fits, the same surface sits inside the right edge.
 Moving, resizing or changing monitor repositions it. Leaving Overview, opening
-global notes or minimizing hides and clears it. It never activates the main window.
+global notes or minimizing hides and clears it. New bubbles appear above neighbouring
+windows even when another app has focus or partly covers Intermediary. Clicking a
+covering window brings it above the bubble; clicking elsewhere leaves the bubble
+visible. Only a new message raises the surface again. Bubbles never activate or
+raise the main window and do not take keyboard focus.
 
 Each card shows the original purple Codex icon or orange Claude Code mascot,
 sender repository and faint session tag, recipient repository, bottom-right time

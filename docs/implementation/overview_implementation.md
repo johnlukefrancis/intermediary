@@ -1,9 +1,55 @@
 # Repository Overview Implementation
-Updated on: 2026-10-09
+Updated on: 2026-10-12
 Owners: JL · Codex
 Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 
 ## Live receipt
+
+- JL's visibility follow-up: both real Codex/Claude bubbles appeared, confirmed
+  by JL; the immediate native capture had been too early. The Git glow looked
+  nearly steady. Tune its existing CSS owner to a distinct three-second swell
+  with a quiet interval; keep dirty/restart semantics and the 24-second clean
+  finish unchanged. Completed in the installed app: 3.2-second period, observed
+  halo opacity 0.06–0.90 and distinct title glow, steady reduced-motion treatment,
+  no runtime errors. TypeScript, ESLint, Windows cargo check and packaging passed.
+  CSS-only tuning did not rerun the previously passing behavioral test suites.
+  Evidence: `target/crosstalk_witness/pulse_results.json`, `pulse_quiet.png`,
+  `pulse_peak.png`; native presentation fixture used the real dirty Git status.
+- Active commission (base `77f5d1e`, clean): repo-coloured Git lane glow from
+  Crosstalk's installed `turn` events. Extend the existing observer, never poll
+  agents or add a second Git reader. The main frontend owns bounded session state
+  mapped by exact normalized longest root prefix; no folder-name inference.
+- Dirty observed lanes breathe softly while they remain in Overview. An idle
+  transition with no other working session qualifies a known-clean lane for a
+  brighter 24-second fade and temporary membership. The existing visible age
+  clock owns expiry; CSS owns motion and reduced-motion treatment. Unknown,
+  failed, held or mid-operation Git status cannot mean finished/clean.
+- Implemented: one native observer routes bounded turn batches separately from
+  speech; main-window lane state rejects stale IDs and repeated transitions,
+  clears replaced roots, and aggregates up to 128 sessions. The producer emits
+  final idle on session closure. The existing Git registry refreshes on accepted
+  idle; no second reader or liveness poll. UI-only age and CSS own expiration/motion.
+- Checks: TypeScript, ESLint, 144 TS tests, Windows cargo check and two native
+  Crosstalk tests pass. Headers and full ledger regenerated; diff whitespace clean.
+- Native witness: real dirty Intermediary status has an accent halo and pulsing
+  title/file names. A clean Crosstalk root remains quiet with one session working,
+  then displays `CLEAN` and the stronger fade after both end. Expiry removes that
+  row, and repeated idle does not revive it. Reduced motion uses a steady dirty
+  highlight and a non-pulsing clean fade; no runtime/CSP errors. Initial harness
+  selector ambiguity was corrected to address Git rows specifically.
+- Lane pulse verification build hash (current installation is tracked in
+  `crosstalk_bubbles_implementation.md`):
+  `12F44E6D618F94647F2013E1EEEECA0D1765E674970F5144357B9E74FF8A8BC0`.
+  Actual producer turns from `claude@private#3534`, launched below
+  `E:\UnrealProjects\Blorb\Source\BlorbAuthoring\Private`, mapped to the grouped
+  Blorb master row, showing its real 10,466-change dirty status and soft glow.
+  Native evidence: `target/crosstalk_witness/lane_results.json`,
+  `live_lane_results.json`, `lane_dirty.png`, `lane_finished.png` (ignored).
+  Completed: silently installed, reopened normally on Overview, original native
+  bounds restored, temporary DevTools port 9225 closed. JL retains visual acceptance;
+  this refinement is uncommitted. macOS native witness was not run.
+
+## Earlier Overview delivery
 
 - Target: `/home/johnf/dev/intermediary`, `master`, base `2d79133`.
   Remote fetched; local and origin/master match and include Stream/macOS work.
@@ -69,6 +115,15 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 
 ## Changed owners
 
+- Lane refinement: `lib/overview/overview_lanes.ts`, `overview_lane_glow.ts`,
+  `overview_lanes_test.ts`, and `lib/crosstalk/repository.ts` own bounded session
+  attribution and Git/turn invariants. `crosstalk/identity.ts` reuses root matching.
+- `hooks/overview/use_crosstalk.ts`, `use_overview_selection.ts`, new
+  `use_overview_git_states.ts` (replaces `use_dirty_repo_ids.ts`), `overview_view.tsx`,
+  Git column/project/repo components and `overview_git.css` own subscription,
+  membership, clean-row visibility and motion. Native `crosstalk/feed.rs`,
+  `observer.rs` and `mod.rs` route turns through the existing read-only worker.
+
 - `components/overview`, `hooks/overview`, `lib/overview`, `styles/overview`:
   consolidated feed, active membership, history, reading and file interactions.
 - `overview_view.tsx`, app/navigation/config/tab-bar owners: global destination,
@@ -80,7 +135,7 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 - Design/architecture/guide/roadmap/changelog, verification commands and inventory:
   current contracts, file ownership and repeatable verification. Version 0.1.24.
 
-## Verification
+## Earlier Overview verification
 
 - Frontend: typecheck and ESLint pass; TypeScript tests 113/113.
 - Rust: im_agent 367/367, im_host_agent 39/39; Windows cargo check and the
