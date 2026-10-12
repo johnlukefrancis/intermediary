@@ -40,7 +40,7 @@ export function App(): React.JSX.Element {
   const { activeRepoId, overviewActive, deckLanding, selectRepo, openRepoStream, openRepoSource, openOverview } = useAppNavigation();
   useActivityHost(documentHidden);
   const [notesOpen, setNotesOpen] = useState(false);
-  useCrosstalk(isLoaded && overviewActive && !documentHidden && !notesOpen, config.themeMode, config.repos, config.tabThemes);
+  useCrosstalk(isLoaded && config.crosstalkBubblesEnabled && overviewActive && !documentHidden && !notesOpen, config.themeMode, config.repos, config.tabThemes);
   const toggleNotes = useCallback(() => { setNotesOpen((open) => !open); }, []);
   const closeNotes = useCallback(() => { setNotesOpen(false); }, []);
 

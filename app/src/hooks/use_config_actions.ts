@@ -45,6 +45,22 @@ export function useSetAutoStageGlobal(
   );
 }
 
+export function useSetCrosstalkBubblesEnabled(
+  setConfig: SetConfig,
+  saveConfig: SaveConfig
+): (value: boolean) => void {
+  return useCallback(
+    (value: boolean) => {
+      setConfig((prev) => {
+        const next = { ...prev, crosstalkBubblesEnabled: value };
+        saveConfig(next);
+        return next;
+      });
+    },
+    [setConfig, saveConfig]
+  );
+}
+
 export function useSetLastActiveTabId(
   setConfig: SetConfig,
   saveConfig: SaveConfig

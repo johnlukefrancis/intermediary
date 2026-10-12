@@ -38,6 +38,8 @@ pub struct PersistedConfig {
     pub agent_distro: Option<String>,
     /// Global default for auto-staging
     pub auto_stage_global: bool,
+    #[serde(default = "default_crosstalk_bubbles_enabled")]
+    pub crosstalk_bubbles_enabled: bool,
     /// Configured repositories
     pub repos: Vec<RepoConfig>,
     /// Maximum recent files to track per repo (25-2000)
@@ -88,6 +90,7 @@ impl Default for PersistedConfig {
             agent_auto_start: default_agent_auto_start(),
             agent_distro: None,
             auto_stage_global: true,
+            crosstalk_bubbles_enabled: default_crosstalk_bubbles_enabled(),
             repos: default_repos(),
             recent_files_limit: default_recent_files_limit(),
             ui_state: UiState::default(),
@@ -111,6 +114,10 @@ fn default_repos() -> Vec<RepoConfig> {
 }
 
 fn default_agent_auto_start() -> bool {
+    true
+}
+
+fn default_crosstalk_bubbles_enabled() -> bool {
     true
 }
 

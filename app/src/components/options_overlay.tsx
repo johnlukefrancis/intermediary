@@ -22,6 +22,8 @@ import "../styles/options_theme.css";
 import "../styles/options_excludes.css";
 
 interface OptionsOverlayProps {
+  crosstalkBubblesEnabled: boolean;
+  setCrosstalkBubblesEnabled: (value: boolean) => void;
   autoStageOnChange: boolean;
   setAutoStageOnChange: (value: boolean) => void;
   agentAutoStart: boolean;
@@ -65,6 +67,8 @@ interface ThemeEntry {
 }
 
 export function OptionsOverlay({
+  crosstalkBubblesEnabled,
+  setCrosstalkBubblesEnabled,
   autoStageOnChange,
   setAutoStageOnChange,
   agentAutoStart,
@@ -209,6 +213,8 @@ export function OptionsOverlay({
             />
 
             <GeneralSection
+              crosstalkBubblesEnabled={crosstalkBubblesEnabled}
+              setCrosstalkBubblesEnabled={setCrosstalkBubblesEnabled}
               uiMode={uiMode}
               setUiMode={setUiMode}
               windowOpacityPercent={windowOpacityPercent}

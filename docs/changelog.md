@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Options → General has a saved **Crosstalk bubbles** toggle. Turning it off
+  clears current bubbles while repository activity pulses continue.
+
 - Overview's Git lanes use Crosstalk turns for a soft repository-coloured pulse
   while dirty, plus a stronger 24-second glow when the last session ends with a
   clean tree. Concurrent sessions stay distinct; clean finishing rows appear

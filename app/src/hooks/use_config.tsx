@@ -16,6 +16,7 @@ import type { FilesMode, MainView } from "../shared/config/ui_state_schema.js";
 import { useConfigStorage } from "./use_config_storage.js";
 import {
   useSetAutoStageGlobal,
+  useSetCrosstalkBubblesEnabled,
   useSetLastActiveTabId,
   useSetLastActiveGroupRepoId,
   useSetBundleSelection,
@@ -51,6 +52,7 @@ import { useSetLaunchTarget } from "./use_config_actions_launch.js";
 import { useRemoveGroup, useRemoveRepo } from "./use_config_actions_remove.js";
 
 interface ConfigContextValue {
+  setCrosstalkBubblesEnabled: (value: boolean) => void;
   setMainView: (view: MainView) => void;
   /** Current config (always available, defaults if load failed) */
   config: PersistedConfig;
@@ -161,6 +163,7 @@ export function ConfigProvider({
     useConfigStorage();
 
   const setAutoStageGlobal = useSetAutoStageGlobal(setConfig, saveConfig);
+  const setCrosstalkBubblesEnabled = useSetCrosstalkBubblesEnabled(setConfig, saveConfig);
   const setLastActiveTabId = useSetLastActiveTabId(setConfig, saveConfig);
   const setLastActiveGroupRepoId = useSetLastActiveGroupRepoId(
     setConfig,
@@ -215,6 +218,7 @@ export function ConfigProvider({
     persistenceLocked,
     persistenceLockReason,
     setAutoStageGlobal,
+    setCrosstalkBubblesEnabled,
     setLastActiveTabId,
     setLastActiveGroupRepoId,
     setActiveRail,

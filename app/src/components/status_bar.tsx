@@ -58,6 +58,7 @@ export function StatusBar(): React.JSX.Element {
     setUiMode,
     setWindowOpacityPercent,
     setTextureIntensityPercent,
+    setCrosstalkBubblesEnabled,
     loadError,
     saveError,
     persistenceLocked,
@@ -240,6 +241,8 @@ export function StatusBar(): React.JSX.Element {
         <OptionsOverlay
           autoStageOnChange={autoStageOnChange}
           setAutoStageOnChange={setAutoStageOnChange}
+          crosstalkBubblesEnabled={config.crosstalkBubblesEnabled}
+          setCrosstalkBubblesEnabled={setCrosstalkBubblesEnabled}
           agentAutoStart={config.agentAutoStart}
           setAgentAutoStart={setAgentAutoStart}
           supportsWsl={platformSupportsWsl}

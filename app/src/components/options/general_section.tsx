@@ -55,6 +55,8 @@ const UI_MODES: ReadonlyArray<TriStateOption<UiMode>> = [
 ];
 
 interface GeneralSectionProps {
+  crosstalkBubblesEnabled: boolean;
+  setCrosstalkBubblesEnabled: (value: boolean) => void;
   uiMode: UiMode;
   setUiMode: (mode: UiMode) => void;
   windowOpacityPercent: number;
@@ -68,6 +70,8 @@ interface GeneralSectionProps {
 }
 
 export function GeneralSection({
+  crosstalkBubblesEnabled,
+  setCrosstalkBubblesEnabled,
   uiMode,
   setUiMode,
   windowOpacityPercent,
@@ -162,6 +166,22 @@ export function GeneralSection({
               onChange={(event) => {
                 setAutoStageOnChange(event.target.checked);
               }}
+            />
+            <span className="vintage-toggle-track" aria-hidden="true" />
+          </label>
+        )}
+      />
+      <OptionsFieldRow
+        label="Crosstalk bubbles"
+        hint="Show agent conversations beside Overview"
+        controlAlign="start"
+        control={(
+          <label className="vintage-toggle">
+            <input
+              type="checkbox"
+              aria-label="Crosstalk bubbles"
+              checked={crosstalkBubblesEnabled}
+              onChange={(event) => { setCrosstalkBubblesEnabled(event.target.checked); }}
             />
             <span className="vintage-toggle-track" aria-hidden="true" />
           </label>

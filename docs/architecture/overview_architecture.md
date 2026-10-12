@@ -93,7 +93,11 @@ card replacements. The companion uses ordinary window ordering, so clicking a
 covering window brings that window above it; unrelated clicks do not hide it.
 Resizing, expiry and presentation changes never request another raise. Existing
 visibility rules still hide the companion outside Overview, on minimization and
-when no cards remain. Its only core
+when no cards remain. Options → General exposes **Crosstalk bubbles**, saved as
+`crosstalkBubblesEnabled` and enabled by default for new and existing configs.
+Disabling it uses the same presentation gate to hide and clear current cards;
+messages received while off are dropped, so re-enabling shows only new messages.
+Turn observation and Git lane pulses remain active. Its only core
 capabilities are event subscription/unsubscription; its custom commands validate
 the caller window. Message text is rendered as text. CSP and file access scopes
 are unchanged.

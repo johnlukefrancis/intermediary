@@ -111,6 +111,7 @@ export const PersistedConfigSchema = z.object({
     .default(null),
   /** Global auto-stage setting */
   autoStageGlobal: z.boolean().default(true),
+  crosstalkBubblesEnabled: z.boolean().default(true),
   /** Configured repositories */
   repos: z.array(RepoConfigSchema).default([]),
   /** Maximum recent files to track per repo (25-2000) */
@@ -215,6 +216,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     },
     outputWindowsRoot: null,
     agentAutoStart: true,
+    crosstalkBubblesEnabled: true,
     agentDistro: null,
     tabThemes: {},
     starredFiles: {},

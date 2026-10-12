@@ -5,6 +5,30 @@ Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009, ADR-010
 
 ## Live receipt
 
+- Options toggle follow-up, base `bfa1b58`, clean at entry: add a saved
+  **Crosstalk bubbles** switch to Options → General, enabled by default.
+  Persisted config owns the preference; the existing presentation `active` gate
+  hides/clears bubbles immediately and drops messages while disabled. Turn
+  observation and repo pulses continue. Re-enabling waits for new messages.
+  Complete: installed Options control visually inspected; default-on, immediate
+  native hiding, dropping messages while off, off across app restart, no replay
+  and new messages after re-enable pass (`target/crosstalk_witness/toggle_results.json`,
+  `toggle_options.png`). Typecheck, ESLint, 144 TS tests, Windows cargo check and
+  27 Rust config tests pass. Existing terminal warnings are unrelated.
+  Rebuilt MSI/NSIS and silently installed matching executable SHA256
+  `58690534F1C2428FBA714E837DA3F583C3912956FC1030C9C66280320A35A9F0`.
+  Testing leaves bubbles enabled; app relaunched normally with the inspection
+  port closed. Uncommitted.
+- Changed owners: `app/src/shared/config/persisted_config.ts` and
+  `src-tauri/src/lib/config/types.rs` persist the default-on preference;
+  `app/src/hooks/use_config_actions.ts` and `use_config.tsx` expose its setter;
+  `app/src/components/status_bar.tsx`, `options_overlay.tsx` and
+  `options/general_section.tsx` wire the Options switch; `app/src/app.tsx`
+  projects it through existing visibility. Architecture and changelog document
+  the behavior; this receipt records installation and verification.
+
+## Previous delivery
+
 - Active follow-up (base `77f5d1e`, lane-glow work remains uncommitted): JL wants
   bubbles visible over a neighbouring focused window, even when Intermediary is
   partly obscured. JL clarified that re-engaging a covering window must put it
