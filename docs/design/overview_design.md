@@ -1,5 +1,5 @@
 # Repository Overview Design
-Updated on: 2026-10-11
+Updated on: 2026-10-12
 Owners: JL · Codex
 Depends on: ADR-000, ADR-005, ADR-007
 
@@ -121,6 +121,36 @@ delta, never an inferred join with a later raw notification.
   happened, merges until the next edit and ages out like an edit. The feed is
   bounded monitoring, not a durable activity journal or a claim about agent task
   status.
+
+## Crosstalk speech bubbles
+
+While Overview is visible, newly delivered Crosstalk messages appear as small
+speech bubbles beside the native window. The side with enough free monitor work
+area wins; when neither side fits, the same surface sits inside the right edge.
+Moving, resizing or changing monitor repositions it. Leaving Overview, opening
+global notes or minimizing hides and clears it. It never activates the main window.
+
+Each card shows the original purple Codex icon or orange Claude Code mascot,
+sender repository and faint session tag, recipient repository, bottom-right time
+and three lines of actual text. Client names and click instructions are absent.
+Hover holds its remaining fourteen-second lifetime; click expands the body and
+keeps it open until folded or dismissed.
+At most three cards remain, preserving a held card during incoming bursts.
+Spring-in motion comes from the adjacent window edge; departure shrinks and
+fades. Reduced-motion preferences use opacity only. Dark, warm and light colours
+come from the app's existing theme tokens. Configured repository/group accents
+colour the sender label, icon surround, border and glow; unmatched agents use the app accent.
+
+When the other participant answers after the previous card disappears, that
+message returns as a muted two-line echo above the reply. Its original icon,
+repository accent and session tag return first; the reply settles beneath it.
+Clicking either text expands the exchange and holds its lifetime. Only the latest message between
+the exact two agents, seen within five minutes, qualifies. A still-visible original
+is never duplicated. Context clears with the surface and is never a saved transcript.
+
+The observer reads only new complete message records from Crosstalk's canonical
+`events.jsonl`. Status events never become speech. Startup does not replay history,
+and Intermediary neither claims inboxes nor changes agent delivery.
 
 ## Acceptance
 

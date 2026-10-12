@@ -3,6 +3,7 @@
 
 mod agent;
 mod commands;
+mod crosstalk;
 pub mod config;
 mod launch;
 #[cfg(target_os = "macos")]
@@ -93,10 +94,12 @@ pub fn run() {
         .manage(WslDistroState::default())
         .manage(auth_state)
         .manage(TerminalRegistry::default())
+        .manage(crosstalk::CrosstalkState::default())
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_dialog::init())
-        .setup(|_| {
+        .setup(|app| {
             logging::log("info", "app", "setup_entered", "Tauri setup entered");
+            crosstalk::setup(app.handle())?;
             Ok(())
         })
         // Navigation or reload orphans the old page's terminal channels (I1).
@@ -110,6 +113,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            crosstalk::crosstalk_configure,
+            crosstalk::crosstalk_ready,
+            crosstalk::crosstalk_resize,
             get_app_paths,
             load_config,
             save_config,
@@ -168,12 +174,16 @@ pub fn run() {
         }
 
         if let RunEvent::WindowEvent { label, event, .. } = &event {
+            if label == "main" {
+                crosstalk::main_window_event(app_handle, event);
+            }
             if label == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
                 retire_splashscreen(app_handle);
             }
         }
 
         if !stopped && matches!(event, RunEvent::ExitRequested { .. } | RunEvent::Exit) {
+            crosstalk::shutdown(app_handle);
             // Terminals first (I4): their wsl.exe children must be gone before the
             // supervisor's WSL idle probe decides whether the distro can be freed.
             let terminals_settled =

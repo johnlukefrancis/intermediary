@@ -1,5 +1,5 @@
 # Verify Repository Overview
-Updated on: 2026-10-09
+Updated on: 2026-10-12
 Owners: JL · Agents
 Depends on: ADR-005, ADR-010, ADR-012
 
@@ -33,6 +33,40 @@ includes its configured root identity.
 9. Check compact navigation, the repository-filter toolbar and the shared glass
    connecting/quiet/unavailable states. When no filters or issues are present,
    there is no empty toolbar. Inspect file viewing in handset layout.
+
+## Crosstalk bubbles
+
+With Crosstalk installed, remain in Overview while agents exchange a real message.
+Confirm the sender's repository/group accent, the original purple Codex icon or
+orange Claude Code mascot, faint sender tag, recipient repository and bottom-right
+timestamp. There are no client-name labels or click hints. Hover beyond fourteen seconds to hold a
+card; click its text to expand, click again to fold, and dismiss with the cross.
+Inspect spring entrance and shrink/fade departure, plus reduced-motion opacity.
+
+Let a message expire, then have its exact recipient answer within five minutes.
+The previous text should softly reappear as a two-line echo above the reply,
+preserving both agent icons and repository colours. Expand the echo and verify
+the exchange stays open. A reply while the original is visible must not duplicate
+it; another session with the same folder name must not inherit its context.
+Send from two sessions in the same repository: the faint `#tag` after each
+repository header must distinguish them, including the recalled-message header.
+
+Move the main window to either side of the monitor; bubbles occupy the roomier
+side. Maximize to put them inside. Minimize and switch to a repository: the surface
+hides and clears. Return to Overview: expired/hidden messages do not replay. Check
+dark, warm and light themes, three-message bursts and long expanded text. The
+companion must never become the foreground window when a message arrives.
+
+The feed reader and placement invariants run on the Windows build surface:
+
+```bash
+pwsh -NoProfile -Command 'Set-Location "E:\Code\intermediary"; cargo test -p intermediary crosstalk::'
+```
+
+Live delivery is the source witness. Explicitly labelled UI fixtures may supplement
+it for bursts and appearance via the installed app's temporary WebView2 inspection
+lane. Never append fixture messages to Crosstalk's real event log. Restore window
+bounds, theme and navigation, then relaunch without debugging arguments.
 
 ## Automated corroboration
 

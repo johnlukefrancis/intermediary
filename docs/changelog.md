@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Overview shows delivered Crosstalk messages as animated, repository-coloured
+  speech bubbles beside the app, moving inside when screen space is tight.
+  Hover holds a message and click expands it; the surface follows the app theme
+  and disappears outside Overview without stealing focus. Delayed replies recall
+  the previous message as a compact animated echo with its original agent icon
+  and repository colour. Faint agent tags distinguish sessions sharing a repo.
+
 - Bundle-tree hover cards use the context menu’s glass surface and show total
   size, selected size, file counts and the largest selected files. Measurements
   follow bundle exclusions, run on demand for native and WSL repos, and label

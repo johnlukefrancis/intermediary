@@ -2,6 +2,10 @@
   "scope": "src-tauri, crates, app, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)",
   "entries": [
     {
+      "path": "app/crosstalk.html",
+      "summary": "Transparent native Crosstalk speech-bubble surface"
+    },
+    {
       "path": "app/index.html",
       "summary": "index module"
     },
@@ -486,6 +490,34 @@
       "summary": "Shared textarea surface for notes and scratch file viewing"
     },
     {
+      "path": "app/src/crosstalk/bubble.tsx",
+      "summary": "Agent speech card with hover-held lifetime, expansion and exit animation"
+    },
+    {
+      "path": "app/src/crosstalk/conversation_test.ts",
+      "summary": "Reply context must belong to the latest exact participant pair and stay bounded"
+    },
+    {
+      "path": "app/src/crosstalk/conversation.ts",
+      "summary": "Bounded recent pair context for recalling an expired message beside its reply"
+    },
+    {
+      "path": "app/src/crosstalk/identity_test.ts",
+      "summary": "Repository colour attribution protects nested roots and ambiguous folder names"
+    },
+    {
+      "path": "app/src/crosstalk/identity.ts",
+      "summary": "Agent identity and configured repository accents for delivered messages"
+    },
+    {
+      "path": "app/src/crosstalk/main.tsx",
+      "summary": "Sole bounded speech-bubble renderer in the transparent companion window"
+    },
+    {
+      "path": "app/src/crosstalk/speech.css",
+      "summary": "Theme-native glass speech cards with edge spring and dissolve motion"
+    },
+    {
       "path": "app/src/hooks/agent/agent_context_types.ts",
       "summary": "Shared context and event handler types for the agent provider hook"
     },
@@ -584,6 +616,10 @@
     {
       "path": "app/src/hooks/images/use_image_tiles.ts",
       "summary": "Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency"
+    },
+    {
+      "path": "app/src/hooks/overview/use_crosstalk.ts",
+      "summary": "Main-window Overview visibility and theme projected to the native companion"
     },
     {
       "path": "app/src/hooks/overview/use_dirty_repo_ids.ts",
@@ -3252,6 +3288,22 @@
     {
       "path": "src-tauri/src/lib/config/types/validation.rs",
       "summary": "Persisted configuration validation rules and invariants"
+    },
+    {
+      "path": "src-tauri/src/lib/crosstalk/feed.rs",
+      "summary": "Bounded incremental reader of complete Crosstalk JSONL delivery records"
+    },
+    {
+      "path": "src-tauri/src/lib/crosstalk/mod.rs",
+      "summary": "Overview visibility and lifecycle of the read-only Crosstalk companion"
+    },
+    {
+      "path": "src-tauri/src/lib/crosstalk/observer.rs",
+      "summary": "One filesystem-notified feed worker tied to the native app lifetime"
+    },
+    {
+      "path": "src-tauri/src/lib/crosstalk/placement.rs",
+      "summary": "Monitor-aware physical placement of the owned speech-bubble window"
     },
     {
       "path": "src-tauri/src/lib/launch/candidates.rs",

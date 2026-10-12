@@ -1734,6 +1734,7 @@ dependencies = [
  "dirs 5.0.1",
  "im_bundle",
  "libc",
+ "notify",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",

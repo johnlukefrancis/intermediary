@@ -3,6 +3,7 @@
 Scope: src-tauri, crates, app, scripts (extensions: .cjs, .css, .d.cts, .d.mts, .d.ts, .html, .js, .mjs, .mts, .py, .rs, .scss, .ts, .tsx)
 
 ```text
+app/crosstalk.html - Transparent native Crosstalk speech-bubble surface
 app/index.html - index module
 app/splashscreen.html - Deck-themed boot screen shown before main window is ready
 app/src/app.tsx - Root component with config-driven tab state management
@@ -124,6 +125,13 @@ app/src/components/terminal/terminal_exit_notice.tsx - Console-prompt notice flo
 app/src/components/terminal/terminal_tab_strip.tsx - Tablist of one repo's terminal tabs (PWSH n, x per tab, + at the end); arrows move focus, click or Enter activates
 app/src/components/text_workspace_semantics.tsx - Theme-aware semantic text layer for the workspace editor
 app/src/components/text_workspace.tsx - Shared textarea surface for notes and scratch file viewing
+app/src/crosstalk/bubble.tsx - Agent speech card with hover-held lifetime, expansion and exit animation
+app/src/crosstalk/conversation_test.ts - Reply context must belong to the latest exact participant pair and stay bounded
+app/src/crosstalk/conversation.ts - Bounded recent pair context for recalling an expired message beside its reply
+app/src/crosstalk/identity_test.ts - Repository colour attribution protects nested roots and ambiguous folder names
+app/src/crosstalk/identity.ts - Agent identity and configured repository accents for delivered messages
+app/src/crosstalk/main.tsx - Sole bounded speech-bubble renderer in the transparent companion window
+app/src/crosstalk/speech.css - Theme-native glass speech cards with edge spring and dissolve motion
 app/src/hooks/agent/agent_context_types.ts - Shared context and event handler types for the agent provider hook
 app/src/hooks/agent/agent_diagnostics.ts - Agent diagnostics model and helpers for connection-state-driven status bar details
 app/src/hooks/agent/use_agent_probe.ts - Probe the agent port when disconnected for diagnostics
@@ -149,6 +157,7 @@ app/src/hooks/bundles/use_tree_selection.ts - Row selection state for the ZIPS t
 app/src/hooks/images/image_tile_records.ts - Shared image tile records, Blob ownership and stable published pixel projections
 app/src/hooks/images/image_tile_thumbnail.ts - Probes and gates fetched image bytes, retaining an original small image or a bounded thumbnail Blob
 app/src/hooks/images/use_image_tiles.ts - Revision-bound image reads, bounded thumbnail retention and actual unfinished-request concurrency
+app/src/hooks/overview/use_crosstalk.ts - Main-window Overview visibility and theme projected to the native companion
 app/src/hooks/overview/use_dirty_repo_ids.ts - The shown repositories whose working tree is not known clean, read from the shared status registry
 app/src/hooks/overview/use_overview_file_actions.ts - Repository-bound Overview context menus and user-triggered drag-out actions
 app/src/hooks/overview/use_overview_git_totals.ts - Changed-file and conflict totals across shown repositories, read from the shared status registry
@@ -816,6 +825,10 @@ src-tauri/src/lib/config/types/model.rs - Supporting persisted configuration mod
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/ui_state.rs - Remembered UI state: rail section, left files mode, rail width, and window bounds
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
+src-tauri/src/lib/crosstalk/feed.rs - Bounded incremental reader of complete Crosstalk JSONL delivery records
+src-tauri/src/lib/crosstalk/mod.rs - Overview visibility and lifecycle of the read-only Crosstalk companion
+src-tauri/src/lib/crosstalk/observer.rs - One filesystem-notified feed worker tied to the native app lifetime
+src-tauri/src/lib/crosstalk/placement.rs - Monitor-aware physical placement of the owned speech-bubble window
 src-tauri/src/lib/launch/candidates.rs - Top-level launch candidate discovery for repository roots, ranked by observed usage
 src-tauri/src/lib/launch/launch_action.rs - Launches one top-level target: focus-or-start for Unreal projects, default handler for HTML
 src-tauri/src/lib/launch/mod.rs - Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus

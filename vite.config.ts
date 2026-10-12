@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, "app/index.html"),
         splashscreen: resolve(__dirname, "app/splashscreen.html"),
+        crosstalk: resolve(__dirname, "app/crosstalk.html"),
       },
     },
   },

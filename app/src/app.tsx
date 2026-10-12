@@ -10,6 +10,7 @@ import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { OverviewView } from "./components/overview_view.js";
 import { GlobalNotesOverlay } from "./components/global_notes/global_notes_overlay.js";
 import { useActivityHost } from "./hooks/use_activity_host.js";
+import { useCrosstalk } from "./hooks/overview/use_crosstalk.js";
 import { useAppNavigation } from "./hooks/use_app_navigation.js";
 import { useConfig } from "./hooks/use_config.js";
 import { useEffectiveUiMode } from "./hooks/use_effective_ui_mode.js";
@@ -39,6 +40,7 @@ export function App(): React.JSX.Element {
   const { activeRepoId, overviewActive, deckLanding, selectRepo, openRepoStream, openRepoSource, openOverview } = useAppNavigation();
   useActivityHost(documentHidden);
   const [notesOpen, setNotesOpen] = useState(false);
+  useCrosstalk(isLoaded && overviewActive && !documentHidden && !notesOpen, config.themeMode, config.repos, config.tabThemes);
   const toggleNotes = useCallback(() => { setNotesOpen((open) => !open); }, []);
   const closeNotes = useCallback(() => { setNotesOpen(false); }, []);
 

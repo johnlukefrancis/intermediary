@@ -1,0 +1,84 @@
+/* Path: app/src/crosstalk/speech.css
+ * Description: Theme-native glass speech cards with edge spring and dissolve motion */
+
+:root { --window-opacity-alpha: 1; background: transparent; font-family: var(--font-sans); }
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; width: 100%; background: transparent; }
+body { overflow: hidden; }
+button { font: inherit; }
+.speech-stack { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 20px; --arrival-x: 24px;
+  max-height: 100vh; overflow-y: auto; scrollbar-width: none; }
+.speech-stack[data-side="right"] { --arrival-x: -24px; }
+.speech { position: relative; flex-shrink: 0; padding: 13px 12px 10px;
+  color: var(--theme-text-primary); border: 1px solid color-mix(in srgb, var(--color-accent) 46%, var(--theme-border));
+  border-radius: 12px; background: linear-gradient(125deg, var(--color-accent-soft), transparent 60%), var(--theme-bg-surface);
+  box-shadow: 0 5px 14px #0004, 0 0 14px color-mix(in srgb, var(--color-accent) 12%, transparent), inset 0 1px var(--theme-border-highlight);
+  transform-origin: right 28px; animation: speech-arrive 520ms cubic-bezier(.16, 1, .3, 1) both; }
+.speech::after { content: ""; position: absolute; width: 10px; height: 10px; top: 25px; right: -6px;
+  background: var(--theme-bg-surface); border-top: 1px solid var(--color-accent); border-right: 1px solid var(--color-accent);
+  transform: rotate(45deg); border-radius: 0 2px 0 0; opacity: .85; }
+[data-side="right"] .speech { transform-origin: left 28px; }
+[data-side="right"] .speech::after { right: auto; left: -6px; transform: rotate(225deg); }
+[data-side="inside"] .speech::after { display: none; }
+.speech[data-leaving] { pointer-events: none; animation: speech-depart 300ms cubic-bezier(.4, 0, 1, 1) both; }
+.speech__current { display: flex; gap: 10px; }
+.speech[data-echo] .speech__current { animation: speech-reply 420ms 160ms cubic-bezier(.16, 1, .3, 1) both; }
+.speech__echo { display: flex; align-items: flex-start; gap: 7px; width: 100%; margin: -2px 0 12px; padding: 7px 8px;
+  text-align: left; border: 0; border-left: 2px solid var(--color-accent); border-radius: 3px 7px 7px 3px;
+  background: var(--color-accent-soft); color: var(--theme-text-secondary); cursor: pointer;
+  animation: speech-recall 650ms cubic-bezier(.16, 1, .3, 1) both; }
+.speech__echo img { width: 17px; height: 17px; object-fit: contain; flex: 0 0 17px; opacity: .8; }
+.speech__echo-body { min-width: 0; }
+.speech__echo-heading { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.speech__echo-heading .speech__tag { font-size: 8px; }
+.speech__echo-repo { display: block; color: var(--color-accent); font: 700 8px/1.5 var(--font-mono);
+  text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.speech__echo-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 10px; line-height: 1.45; }
+.speech[data-expanded] .speech__echo-text { display: block; max-height: 180px; overflow-y: auto; scrollbar-width: thin; }
+.speech__icon { display: grid; place-items: center; flex: 0 0 29px; width: 29px; height: 29px;
+  color: var(--color-accent); border: 1px solid var(--color-accent-soft); border-radius: 9px;
+  background: var(--color-accent-soft); box-shadow: inset 0 1px var(--theme-border-highlight); }
+.speech__icon img { width: 23px; height: 23px; object-fit: contain; }
+.speech__body { min-width: 0; flex: 1; }
+.speech__header { display: flex; align-items: center; gap: 6px; min-width: 0; height: 17px; }
+.speech__repo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-accent);
+  font: 700 10px/1.4 var(--font-mono); letter-spacing: .045em; text-transform: uppercase; }
+.speech__tag { flex: 0 0 auto; color: var(--theme-text-muted); font: 9px/1.4 var(--font-mono); }
+.speech__close { flex: 0 0 18px; margin: -3px -5px 0 auto; padding: 0; width: 18px; height: 21px;
+  border: 0; color: var(--theme-text-secondary); background: transparent; font-size: 17px; cursor: pointer; opacity: .5; }
+.speech:hover .speech__close, .speech__close:hover { opacity: 1; }
+.speech__route { display: flex; gap: 6px; color: var(--theme-text-secondary); font: 9px/1.5 var(--font-mono); margin: 2px 0 8px; }
+.speech__route > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.speech__message { display: block; width: 100%; text-align: left; padding: 0; border: 0; background: transparent;
+  color: inherit; cursor: pointer; font-size: 12px; line-height: 1.55; }
+.speech__message > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; }
+.speech[data-expanded] .speech__message > span { display: block; max-height: 240px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--color-accent) transparent; }
+.speech__footer { display: flex; justify-content: flex-end; margin-top: 7px; color: var(--theme-text-muted); font: 9px/1.4 var(--font-mono); }
+.speech button:focus-visible { outline: 1px solid var(--color-accent); outline-offset: 3px; }
+@keyframes speech-arrive {
+  0% { opacity: 0; transform: translateX(var(--arrival-x)) translateY(9px) scale(.78) rotate(-2deg); filter: blur(3px); }
+  58% { opacity: 1; transform: translateX(-3px) translateY(-2px) scale(1.025) rotate(.5deg); filter: blur(0); }
+  100% { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes speech-depart {
+  0% { opacity: 1; transform: none; filter: blur(0); }
+  25% { opacity: 1; transform: scale(1.015); }
+  100% { opacity: 0; transform: translateX(var(--arrival-x)) translateY(-7px) scale(.86); filter: blur(3px); }
+}
+@keyframes speech-recall {
+  from { opacity: 0; transform: translateY(7px) scale(.96); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+@keyframes speech-reply {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .speech { animation: speech-fade-in 150ms ease-out both; }
+  .speech__echo, .speech[data-echo] .speech__current { animation: speech-fade-in 150ms ease-out both; }
+  .speech[data-leaving] { animation: speech-fade-out 180ms ease-in both; }
+  @keyframes speech-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes speech-fade-out { to { opacity: 0; } }
+}

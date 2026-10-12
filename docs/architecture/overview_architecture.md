@@ -1,5 +1,5 @@
 # Repository Overview Architecture
-Updated on: 2026-10-11
+Updated on: 2026-10-12
 Owners: JL · Agents
 Depends on: ADR-000, ADR-005, ADR-007, ADR-008, ADR-009
 
@@ -49,6 +49,59 @@ Initial watch startup cannot lose coverage it never established. A later loss of
 an established watch, sequence gaps and withheld/dropped detail are disclosed.
 Label-only rehello does not invent a coverage gap. Monitoring failures remain
 visible even when no repositories qualify for the feed.
+
+## Crosstalk companion
+
+`src-tauri/src/lib/crosstalk` owns the read-only Crosstalk event observer and
+the transparent `crosstalk` window, owned by the main native window. The main
+frontend's `use_crosstalk.ts` supplies Overview visibility, theme and configured
+repository styles. The dedicated `app/src/crosstalk` entrypoint owns the three
+visible cards, held lifetime, expansion and motion. It does not mount app providers,
+open agent sockets or consume repository activity.
+
+`conversation.ts` retains the latest displayed message for up to sixteen exact
+participant pairs. A reverse-direction arrival within five minutes recalls that
+message only when its card has gone; the recalled text is a compact part of the
+new card. Pair direction supplies recent context, not a provider thread/reply ID.
+No recursive transcript is retained. Navigation and native minimization clear
+both visible cards and pair context.
+
+One `notify` directory watcher coalesces file-change notifications through a
+one-slot channel. Its single worker starts at EOF, retains partial JSONL records,
+reads at most 256 KiB per wake and selects at most three new message events.
+Oversized bursts/records are skipped with an application log warning. Status
+records remain silent. Cancellation wakes and joins the worker at app exit.
+The source is `CROSSTALK_ROOT/events.jsonl`, or local application data's
+`crosstalk/events.jsonl`; absence of the provider is reported in the application
+log/console without affecting repository observation. Crosstalk owns the schema
+and the canonical delivery record; the native shell never writes to its store.
+
+Sender registration is a bounded read of the exact safe address filename. Its cwd
+selects the longest matching configured root; an unambiguous folder identity also
+matches a Windows/WSL twin. Group members use the group's configured accent.
+Unknown or ambiguous identities use the default app accent. Main config changes
+propagate into already visible cards.
+The address suffix supplies a muted `#tag` beside the repository name in both
+the message and recalled-context headers, distinguishing sessions in one root.
+
+Placement uses physical window and monitor work-area bounds, scaled from the
+main window's DPI. The surface chooses left, right or inside, never takes focus,
+has no taskbar entry and follows the owner's native lifetime. Its only core
+capabilities are event subscription/unsubscription; its custom commands validate
+the caller window. Message text is rendered as text. CSP and file access scopes
+are unchanged.
+
+On Windows the shell applies visibility through `ShowWindow` on the UI thread,
+using `SW_SHOWNOACTIVATE` for arrival. Windows can restore an owned popup while
+Tao's cached visibility still says hidden; native visibility remains the sole
+authority so an empty surface is hidden again after owner restoration.
+
+The product icons are bundled original-colour SVGs from
+[LobeHub's icon library](https://github.com/lobehub/lobe-icons), with the MIT
+licence embedded in each asset. They are the Codex purple cloud and Claude Code
+orange mascot, not the corporate marks. External URLs are never loaded at runtime.
+The macOS-only Tauri private-API feature supplies transparent child-window support;
+this does not broaden the production CSP or frontend capabilities.
 
 ## Limits
 
