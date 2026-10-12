@@ -303,7 +303,7 @@ Contents:
 Config is loaded on app startup via Tauri command and saved with debounce (500ms) on changes. Atomic writes (temp file + rename) prevent corruption.
 The Options menu includes a "Reset all settings" action that restores defaults, clears repos/preferences, and wipes staging bundles, recent-file caches, and local notes without deleting repository files.
 
-Per-repo notes are stored outside config under `<app_local_data>/notes/`, keyed by a collision-safe repoId-derived filename. Removing a repo or group triggers best-effort note deletion for removed repoIds.
+Notes are stored outside config under `<app_local_data>/notes/`: per-repo notes are keyed by a collision-safe repoId-derived filename, and the global scratchpad (the **Notes** button beside Overview, a full-page markdown overlay closed with Esc) is `global.md`. Removing a repo or group triggers best-effort note deletion for removed repoIds.
 
 The websocket auth token is stored separately in `<app_local_data>/ws_auth.json` (for example `%LOCALAPPDATA%\com.johnf.intermediary\ws_auth.json`), deliberately outside the `agent/` directory the installer wipes on every version-bump reinstall. The token therefore survives reinstalls, so a surviving backend re-authenticates instead of wedging; a one-time migration adopts any legacy `agent/ws_auth.json`.
 

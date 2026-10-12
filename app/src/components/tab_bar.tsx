@@ -11,7 +11,7 @@ import { useWorktreeAdd } from "../hooks/use_worktree_add.js";
 import { useTabBarDropdown } from "../hooks/use_tab_bar_dropdown.js";
 import { useTabBarScroll } from "../hooks/use_tab_bar_scroll.js";
 import { AddRepoButton } from "./add_repo_button.js";
-import { OverviewTab } from "./tab_bar/overview_tab.js";
+import { MainNav } from "./tab_bar/main_nav.js";
 import {
   GroupTabItem,
   SingleTabItem,
@@ -28,11 +28,13 @@ import {
 import "../styles/tab_bar.css";
 import "../styles/tab_bar_items.css";
 import "../styles/tab_bar_dropdown.css";
-import "../styles/overview_navigation.css";
+import "../styles/main_nav.css";
 
 interface TabBarProps {
   overviewActive: boolean;
   onOverview: () => void;
+  notesOpen: boolean;
+  onToggleNotes: () => void;
   tabs: TabItem[];
   activeRepoId: string | null;
   tabThemes: Record<string, TabTheme>;
@@ -52,6 +54,8 @@ function getDropdownId(tab: TabItem): string {
 export function TabBar({
   overviewActive,
   onOverview,
+  notesOpen,
+  onToggleNotes,
   tabs,
   activeRepoId,
   tabThemes,
@@ -178,7 +182,8 @@ export function TabBar({
 
   return (
     <nav className="tab-bar" ref={navRef}>
-      <OverviewTab active={overviewActive} onSelect={onOverview} />
+      <MainNav overviewActive={overviewActive} notesOpen={notesOpen}
+        onOverview={onOverview} onToggleNotes={onToggleNotes} />
       <div className="tab-bar-repositories">
         <button
           type="button"

@@ -61,7 +61,7 @@ export function RepoTab({ repoId, uiMode, deckLanding }: RepoTabProps): React.JS
   const { dragState, handleDragStart, handleMultiDragStart, clearError } = useDrag({
     onStaged: registerStaged,
   });
-  const noteState = useNotes(repoId);
+  const noteState = useNotes({ kind: "repo", repoId });
   const repoWorkspace = useRepoWorkspace(repoId);
   // Status is fetched for the active repo regardless of the active rail so the SOURCE count stays live.
   const sourceControl = useSourceControlState(repoId);

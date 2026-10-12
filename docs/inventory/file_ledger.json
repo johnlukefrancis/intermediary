@@ -142,6 +142,10 @@
       "summary": "Shared context-menu item builders for repo-relative file actions"
     },
     {
+      "path": "app/src/components/global_notes/global_notes_overlay.tsx",
+      "summary": "Full-page global markdown scratchpad layered over the current view"
+    },
+    {
       "path": "app/src/components/group_remove_button.tsx",
       "summary": "Remove button for grouped repos with confirmation"
     },
@@ -430,8 +434,8 @@
       "summary": "Tab navigation with grouped repo dropdown support and scroll overflow arrows"
     },
     {
-      "path": "app/src/components/tab_bar/overview_tab.tsx",
-      "summary": "Global activity destination using the repository navigation grammar"
+      "path": "app/src/components/tab_bar/main_nav.tsx",
+      "summary": "Icon keycap cluster for app-level destinations (Overview, Notes) ahead of the repo tabs"
     },
     {
       "path": "app/src/components/tab_bar/tab_bar_dropdowns.tsx",
@@ -751,7 +755,7 @@
     },
     {
       "path": "app/src/hooks/use_notes.ts",
-      "summary": "Per-repo note content hook with debounced save via Tauri commands"
+      "summary": "Repo or global note content hook with debounced save via Tauri commands"
     },
     {
       "path": "app/src/hooks/use_repo_state.ts",
@@ -1430,6 +1434,10 @@
       "summary": "Centered glass empty-state surface, subdued typography and repository action context"
     },
     {
+      "path": "app/src/styles/global_notes.css",
+      "summary": "Global notes overlay sheet, corner close, and roomy markdown editor sizing"
+    },
+    {
       "path": "app/src/styles/handset_chassis.css",
       "summary": "Handset v2 chassis frame, glow capsule accents, and section transitions"
     },
@@ -1440,6 +1448,10 @@
     {
       "path": "app/src/styles/image_diff_workspace.css",
       "summary": "Side-by-side image diff panes, checkerboard slots, and handset stacking"
+    },
+    {
+      "path": "app/src/styles/main_nav.css",
+      "summary": "Recessed keycap cluster for app-level navigation ahead of the repository tab track"
     },
     {
       "path": "app/src/styles/main.css",
@@ -1468,10 +1480,6 @@
     {
       "path": "app/src/styles/options_theme.css",
       "summary": "Theme section styles - color picker, texture picker, rename controls"
-    },
-    {
-      "path": "app/src/styles/overview_navigation.css",
-      "summary": "Global Overview destination beside the repository tab track"
     },
     {
       "path": "app/src/styles/overview/overview_detail.css",
@@ -3115,7 +3123,7 @@
     },
     {
       "path": "src-tauri/src/lib/commands/notes.rs",
-      "summary": "Tauri commands for per-repo plain-text notes persistence"
+      "summary": "Tauri commands for per-repo and global plain-text notes persistence"
     },
     {
       "path": "src-tauri/src/lib/commands/paths.rs",

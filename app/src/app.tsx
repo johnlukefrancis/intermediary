@@ -1,13 +1,14 @@
 // Path: app/src/app.tsx
 // Description: Root component with config-driven tab state management
 
-import React, { useEffect, useLayoutEffect, useRef, useMemo } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useMemo, useState } from "react";
 import { TabBar } from "./components/tab_bar.js";
 import { StatusBar } from "./components/status_bar.js";
 import { AgentOfflineBanner } from "./components/agent_offline_banner.js";
 import { RepoTab } from "./tabs/repo_tab.js";
 import { EmptyRepoState } from "./components/empty_repo_state.js";
 import { OverviewView } from "./components/overview_view.js";
+import { GlobalNotesOverlay } from "./components/global_notes/global_notes_overlay.js";
 import { useActivityHost } from "./hooks/use_activity_host.js";
 import { useAppNavigation } from "./hooks/use_app_navigation.js";
 import { useConfig } from "./hooks/use_config.js";
@@ -37,6 +38,9 @@ export function App(): React.JSX.Element {
   const effectiveUiMode = useEffectiveUiMode(config.uiMode, isLoaded);
   const { activeRepoId, overviewActive, deckLanding, selectRepo, openRepoStream, openRepoSource, openOverview } = useAppNavigation();
   useActivityHost(documentHidden);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const toggleNotes = useCallback(() => { setNotesOpen((open) => !open); }, []);
+  const closeNotes = useCallback(() => { setNotesOpen(false); }, []);
 
   useModeWindowSnap(config.uiMode, config.uiState.windowBoundsByMode, isLoaded);
   useModeWindowBoundsPersistence(effectiveUiMode, setWindowBoundsForMode);
@@ -184,10 +188,12 @@ export function App(): React.JSX.Element {
           tabs={tabs}
           activeRepoId={overviewActive ? null : activeRepoId}
           overviewActive={overviewActive}
-          onOverview={openOverview}
+          onOverview={() => { closeNotes(); openOverview(); }}
+          notesOpen={notesOpen}
+          onToggleNotes={toggleNotes}
           tabThemes={config.tabThemes}
           lastActiveGroupRepoIds={config.uiState.lastActiveGroupRepoIds}
-          onRepoChange={selectRepo}
+          onRepoChange={(repoId) => { closeNotes(); selectRepo(repoId); }}
           onRepoAdded={selectRepo}
         />
         <AgentOfflineBanner />
@@ -199,6 +205,7 @@ export function App(): React.JSX.Element {
             onOpenRepo={openRepoStream} onOpenRepoSource={openRepoSource} />
           : activeRepoId && <RepoTab repoId={activeRepoId} uiMode={effectiveUiMode} deckLanding={deckLanding} />}
       </main>
+      {notesOpen && <GlobalNotesOverlay onClose={closeNotes} />}
     </div>
   );
 }

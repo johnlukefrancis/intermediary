@@ -72,4 +72,5 @@ Skills are global-only (`~/.codex/skills`). Invoke based on task surface—don't
 - List acceptance checks actually run.
 - Required: run `pnpm exec tsc --noEmit` and `pnpm exec eslint` at end of turn (when app code exists); report lint errors.
 - Required: run `cargo check` at end of turn (when Rust code exists); fix any build errors cleanly under end state assumptions (ADR 7).
+- Required after any app or Rust change: rebuild the local installer, silently install it, and relaunch the app for JL to test — `docs/commands/build_installer_from_wsl.md`.
 - ALWAYS Suggest a commit message when you make changes to any file, so that the user always has a unique commit message to use, for example: `emoji type(scope): summary`.

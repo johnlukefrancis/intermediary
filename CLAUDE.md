@@ -85,4 +85,5 @@ Skills are global-only (`~/.claude/skills`). Invoke based on task surface—don'
 - List acceptance checks actually run.
 - Required: run `pnpm exec tsc --noEmit` and `pnpm exec eslint` at end of turn (when app code exists); report lint errors.
 - Required: run `cargo check` at end of turn (when Rust code exists); fix any build errors cleanly under end state assumptions (ADR 7).
+- Required after any app or Rust change: rebuild the local installer, silently install it, and relaunch the app for JL to test — `docs/commands/build_installer_from_wsl.md`.
 - **Commit message**: After EVERY code change, provide a commit message covering only that change (not cumulative). Even small follow-up edits get their own message. Format: `🟩 type(scope): summary`.

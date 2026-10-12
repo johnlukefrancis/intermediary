@@ -17,6 +17,7 @@ interface TextWorkspaceEditorProps {
   isLoading?: boolean;
   error?: string | null;
   maxLength: number;
+  autoFocus?: boolean;
 }
 
 function countText(value: string): { lines: number; characters: number } {
@@ -40,6 +41,7 @@ export function TextWorkspaceEditor({
   isLoading = false,
   error = null,
   maxLength,
+  autoFocus = false,
 }: TextWorkspaceEditorProps): React.JSX.Element {
   const counts = useMemo(() => countText(value), [value]);
   const editorShellRef = useRef<HTMLDivElement>(null);
@@ -78,6 +80,7 @@ export function TextWorkspaceEditor({
         maxLength={maxLength}
         spellCheck={false}
         aria-label={ariaLabel}
+        autoFocus={autoFocus}
       />
       <div className="text-workspace-count" aria-live="polite">
         {counts.lines} lines / {counts.characters} chars

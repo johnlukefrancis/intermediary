@@ -1,5 +1,5 @@
 // Path: src-tauri/src/lib/commands/notes.rs
-// Description: Tauri commands for per-repo plain-text notes persistence
+// Description: Tauri commands for per-repo and global plain-text notes persistence
 
 use crate::obs::logging;
 use std::fs;
@@ -7,12 +7,22 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use serde::Deserialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tauri::{AppHandle, Manager};
 
 const MAX_NOTE_BYTES: usize = 100_000;
 const MAX_NOTE_PREFIX_CHARS: usize = 48;
+const GLOBAL_NOTE_FILE: &str = "global.md";
 static TEMP_FILE_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum NoteTarget {
+    #[serde(rename_all = "camelCase")]
+    Repo { repo_id: String },
+    Global,
+}
 
 /// Resolve the notes directory under app local data, creating it if needed.
 fn resolve_notes_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -117,10 +127,17 @@ fn resolve_note_path(app: &AppHandle, repo_id: &str) -> Result<PathBuf, String> 
     Ok(dir.join(format!("{file_stem}.txt")))
 }
 
-/// Load a per-repo note from disk. Returns empty string if no note exists yet.
+fn resolve_target_path(app: &AppHandle, target: &NoteTarget) -> Result<PathBuf, String> {
+    match target {
+        NoteTarget::Repo { repo_id } => resolve_note_path(app, repo_id),
+        NoteTarget::Global => Ok(resolve_notes_dir(app)?.join(GLOBAL_NOTE_FILE)),
+    }
+}
+
+/// Load a note from disk. Returns empty string if no note exists yet.
 #[tauri::command]
-pub async fn load_note(app: AppHandle, repo_id: String) -> Result<String, String> {
-    let path = resolve_note_path(&app, &repo_id)?;
+pub async fn load_note(app: AppHandle, target: NoteTarget) -> Result<String, String> {
+    let path = resolve_target_path(&app, &target)?;
 
     tauri::async_runtime::spawn_blocking(move || match fs::read_to_string(&path) {
         Ok(text) => Ok(text),
@@ -134,16 +151,16 @@ pub async fn load_note(app: AppHandle, repo_id: String) -> Result<String, String
     .map_err(|err| log_notes_error("load_failed", format!("Note load task failed: {err}")))?
 }
 
-/// Save a per-repo note to disk. Atomic write (temp + sync + rename).
+/// Save a note to disk. Atomic write (temp + sync + rename).
 #[tauri::command]
-pub async fn save_note(app: AppHandle, repo_id: String, content: String) -> Result<(), String> {
+pub async fn save_note(app: AppHandle, target: NoteTarget, content: String) -> Result<(), String> {
     if content.as_bytes().len() > MAX_NOTE_BYTES {
         return Err(format!(
             "Note exceeds maximum size ({MAX_NOTE_BYTES} bytes)"
         ));
     }
 
-    let path = resolve_note_path(&app, &repo_id)?;
+    let path = resolve_target_path(&app, &target)?;
 
     tauri::async_runtime::spawn_blocking(move || write_note_atomic(&path, &content))
         .await

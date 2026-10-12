@@ -38,6 +38,7 @@ app/src/components/drag_error_notice.tsx - Small inline error notice for drag fa
 app/src/components/empty_repo_state.tsx - Empty state UI when no repos are configured
 app/src/components/empty_state_panel.tsx - Shared centered glass empty-state surface with optional details and an action
 app/src/components/file_context_menu_items.ts - Shared context-menu item builders for repo-relative file actions
+app/src/components/global_notes/global_notes_overlay.tsx - Full-page global markdown scratchpad layered over the current view
 app/src/components/group_remove_button.tsx - Remove button for grouped repos with confirmation
 app/src/components/image_diff_pane.tsx - One side of an image diff: Git-labelled header, checkerboard image slot, size footer
 app/src/components/image_diff_workspace.tsx - Side-by-side before/after viewer for a changed image opened from source control
@@ -110,7 +111,7 @@ app/src/components/stream/stream_panel.tsx - Stream panel shell with mode contro
 app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
 app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
-app/src/components/tab_bar/overview_tab.tsx - Global activity destination using the repository navigation grammar
+app/src/components/tab_bar/main_nav.tsx - Icon keycap cluster for app-level destinations (Overview, Notes) ahead of the repo tabs
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -190,7 +191,7 @@ app/src/hooks/use_image_blob_url.ts - Base64 image payload to a revocable Blob U
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
 app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU
-app/src/hooks/use_notes.ts - Per-repo note content hook with debounced save via Tauri commands
+app/src/hooks/use_notes.ts - Repo or global note content hook with debounced save via Tauri commands
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
@@ -360,9 +361,11 @@ app/src/styles/diff_workspace.css - Read-only diff viewer styling mirroring the 
 app/src/styles/drag_error_notice.css - Inline glass toast for drag errors
 app/src/styles/effects.css - Deck chassis frame, substrate (grid + grain), vignette, and glass utilities
 app/src/styles/empty_state_panel.css - Centered glass empty-state surface, subdued typography and repository action context
+app/src/styles/global_notes.css - Global notes overlay sheet, corner close, and roomy markdown editor sizing
 app/src/styles/handset_chassis.css - Handset v2 chassis frame, glow capsule accents, and section transitions
 app/src/styles/handset_deck.css - Handset mode single-panel vertical deck layout
 app/src/styles/image_diff_workspace.css - Side-by-side image diff panes, checkerboard slots, and handset stacking
+app/src/styles/main_nav.css - Recessed keycap cluster for app-level navigation ahead of the repository tab track
 app/src/styles/main.css - Global layout reset and base structure
 app/src/styles/motion.css - Motion utilities, transition presets, and reduced-motion support
 app/src/styles/options_controls.css - Buttons, text/number inputs, checkbox rows, and path display controls
@@ -370,7 +373,6 @@ app/src/styles/options_excludes.css - Collapsible sections, chevron toggle, and 
 app/src/styles/options_layout.css - Two-column grid layout, sections, rows, footer, and responsive fallback
 app/src/styles/options_overlay.css - Overlay backdrop, panel shell, and keyframe animations
 app/src/styles/options_theme.css - Theme section styles - color picker, texture picker, rename controls
-app/src/styles/overview_navigation.css - Global Overview destination beside the repository tab track
 app/src/styles/overview/overview_detail.css - Stream-family file head, uppercase meta chips, relative clock and the shared diff-row density
 app/src/styles/overview/overview_feed.css - Singular chronological feed, repository section rules and Stream-family entry chassis
 app/src/styles/overview/overview_git.css - Overview Git column: glass shell, Stream-family repository blocks, state lines and dense read-only rows
@@ -781,7 +783,7 @@ src-tauri/src/lib/commands/file_open_policy.rs - Host launcher policy for openin
 src-tauri/src/lib/commands/file_opener_paths.rs - Resolve repo-relative file paths to host-visible paths
 src-tauri/src/lib/commands/file_opener.rs - Reveal files in file manager or open with default application
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
-src-tauri/src/lib/commands/notes.rs - Tauri commands for per-repo plain-text notes persistence
+src-tauri/src/lib/commands/notes.rs - Tauri commands for per-repo and global plain-text notes persistence
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
 src-tauri/src/lib/commands/reset.rs - Tauri command to clear staging artifacts and caches
 src-tauri/src/lib/commands/startup_window_bounds.rs - Resolve and apply persisted launch bounds for startup windows
