@@ -32,6 +32,9 @@ silently and relaunch for JL. Design: `docs/design/system_load_design.md`.
 - Checks: tsc, eslint, `pnpm run test:ts` (147 pass), version contract, `cargo test` and
   clippy for `im_system_load` (Linux and msvc target), Windows `cargo check -p intermediary`
   via the separate mirror E:\Code\intermediary-sysload.
-- Frontier: branch commit; then fast-forward master with #72c2's changes preserved and one
-  combined installer once their Blorb demo action is ready; installed-app CDP witness.
+- Landed 8775f7b on master (fast-forward; #72c2's dirty overlap edits verified byte-identical
+  after the union). JL then asked for less: no numbers on the strip, severity-tinted bars, and a
+  lean hover (headline, verdict, slim trend, top programs). The simplification removes the
+  per-core, commit, engine, per-disk and per-interface breakdowns.
+- Frontier: commit the simplification, fast-forward master, build, install, witness.
 - Evidence root: ignored target/system_load_witness in the master tree.

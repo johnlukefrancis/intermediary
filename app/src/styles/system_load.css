@@ -1,11 +1,11 @@
 /* Path: app/src/styles/system_load.css
- * Description: Status-strip instrument window: segmented LED meters, severity states and narrow-width relief */
+ * Description: Status-strip instrument window: severity-tinted LED meters and narrow-width relief */
 
 .sysload-window {
   --sysload-recess: var(--glass-vintage-content);
   --sysload-recess-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
   --sysload-hairline: color-mix(in srgb, var(--color-text-muted) 28%, transparent);
-  --sysload-seg-w: 3px;
+  --sysload-seg-w: 4px;
   display: flex;
   align-items: stretch;
   flex: 0 1 auto;
@@ -73,68 +73,38 @@
   color: var(--color-text-secondary);
 }
 
-.sysload-meter__value {
-  min-width: 4ch;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-  color: var(--color-text-secondary);
-  transition: color var(--duration-normal) var(--ease-out);
-}
-
-.sysload-meter[data-meter="net"] .sysload-meter__value {
-  min-width: 11ch;
-}
-
-/* ===== LED BAR ===== */
+/* ===== LED BAR: lit segments take the meter's severity, so calm recedes and hot jumps out ===== */
 .sysload-led {
   display: inline-grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--sysload-seg-w);
   gap: 1px;
-  height: 8px;
+  height: 10px;
 }
 
 .sysload-led__seg {
-  --seg: var(--color-activity-low);
-  --seg-glow: var(--color-activity-glow);
+  --seg: color-mix(in srgb, var(--color-activity-low) 72%, transparent);
   border-radius: 0.5px;
   background: var(--color-activity-idle);
   transition: background var(--duration-normal) var(--ease-out),
-    opacity var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
 }
 
-.sysload-led__seg[data-tone="mid"] { --seg: var(--color-activity-mid); }
-.sysload-led__seg[data-tone="high"] { --seg: var(--color-activity-high); --seg-glow: var(--color-activity-hot-glow); }
-.sysload-led__seg[data-tone="hot"] { --seg: var(--color-activity-hot); --seg-glow: var(--color-activity-hot-glow); }
+.sysload-meter[data-severity="busy"] .sysload-led__seg { --seg: var(--color-activity-high); }
+.sysload-meter[data-severity="hot"] .sysload-led__seg,
+.sysload-meter[data-severity="paging"] .sysload-led__seg { --seg: var(--color-activity-hot); }
 
-.sysload-led__seg[data-state="lit"] {
+.sysload-led__seg[data-lit="true"] {
   background: var(--seg);
 }
 
-.sysload-led__seg[data-state="peak"] {
-  background: var(--seg);
-  opacity: 0.6;
+.sysload-meter[data-severity="hot"] .sysload-led__seg[data-lit="true"],
+.sysload-meter[data-severity="paging"] .sysload-led__seg[data-lit="true"] {
+  box-shadow: 0 0 4px 0 var(--color-activity-hot-glow);
 }
 
-.sysload-meter[data-severity="calm"] .sysload-led__seg[data-state="lit"] {
-  opacity: 0.82;
-}
-
-/* ===== SEVERITY ===== */
-.sysload-meter[data-severity="busy"] .sysload-meter__value {
-  color: var(--color-activity-high);
-}
-
-.sysload-meter[data-severity="hot"] .sysload-meter__value,
-.sysload-meter[data-severity="paging"] .sysload-meter__value {
+.sysload-meter[data-severity="hot"] .sysload-meter__label {
   color: var(--color-activity-hot);
-}
-
-.sysload-meter[data-severity="hot"] .sysload-led__seg[data-state="lit"],
-.sysload-meter[data-severity="paging"] .sysload-led__seg[data-state="lit"] {
-  box-shadow: 0 0 4px 0 var(--seg-glow);
 }
 
 .sysload-meter[data-severity="paging"] {
@@ -158,20 +128,14 @@
   }
 }
 
-/* ===== NARROW STRIP: drop values, then shorten bars; labels and bars remain ===== */
-@container status-strip (max-width: 920px) {
-  .sysload-meter__value {
-    display: none;
-  }
-}
-
+/* ===== NARROW STRIP: bars shorten; labels and bars always remain ===== */
 @container status-strip (max-width: 640px) {
-  .sysload-window { --sysload-seg-w: 2px; }
+  .sysload-window { --sysload-seg-w: 3px; }
   .sysload-meter { gap: 4px; padding: 0 6px; }
 }
 
 @container status-strip (max-width: 470px) {
-  .sysload-window { --sysload-seg-w: 1px; }
+  .sysload-window { --sysload-seg-w: 2px; }
   .sysload-meter { padding: 0 var(--space-1); }
   .sysload-meter__label { letter-spacing: 0.03em; }
 }

@@ -112,14 +112,12 @@ app/src/components/stream/stream_notice_row.tsx - Console-prompt notice row: hon
 app/src/components/stream/stream_panel.tsx - Stream panel shell with mode controls, support states, and the live scroller
 app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
 app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
-app/src/components/system_load/cpu_memory_panels.tsx - CPU and MEMORY detail-panel bodies: readout, history, breakdown and top processes
-app/src/components/system_load/device_panels.tsx - GPU and DISK detail-panel bodies: per-adapter engines and memory, per-disk activity, top processes
-app/src/components/system_load/load_meter.tsx - One strip meter: wide-tracked label, segmented LED bar with 5 s peak hold, tabular value
+app/src/components/system_load/load_meter.tsx - One strip meter: wide-tracked label and a segmented LED bar tinted by the meter's severity
 app/src/components/system_load/load_panel.tsx - Fixed glass detail panel ("context window") placed below its meter and clamped to the window
-app/src/components/system_load/load_sparkline.tsx - 60 s area chart for a detail panel; samples enter at the right edge and age leftwards
-app/src/components/system_load/network_panel.tsx - NETWORK detail-panel body: receive/send history and per-interface rates with link speed
-app/src/components/system_load/panel_parts.tsx - Shared detail-panel building blocks: readout, section, stat grid and labelled micro-bar row
-app/src/components/system_load/process_list.tsx - TOP PROCESSES list: grouped label, N badge, value and a micro-bar scaled to the largest row
+app/src/components/system_load/load_sparkline.tsx - Slim 60 s trend line for a detail panel; samples enter at the right edge and age leftwards
+app/src/components/system_load/panel_bodies.tsx - Lean per-meter panel bodies: how much is used, a verdict, a 60 s trend and the top programs
+app/src/components/system_load/panel_parts.tsx - Detail-panel headline ("how much"), severity verdict line and shared micro-bar
+app/src/components/system_load/process_list.tsx - TOP PROGRAMS list: grouped label, N badge, value and a micro-bar scaled to the largest row
 app/src/components/system_load/system_load_cluster.tsx - Status-strip instrument window of CPU/MEM/GPU/DSK/NET meters; owns the 1 Hz load state and its panel
 app/src/components/system_load/use_meter_panel.ts - Hover-intent, grace-close, focus and click-to-pin state for the system-load detail panel
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
@@ -320,7 +318,7 @@ app/src/lib/stream/stream_types.ts - Card, ring, snapshot, transport, and store 
 app/src/lib/stream/testing/stream_fixtures.ts - Event and card builders shared by the Stream unit tests; never imported by app code
 app/src/lib/system_load/format.ts - Task Manager style number formatting for system-load meters and detail panels
 app/src/lib/system_load/load_state.ts - Folds each system-load snapshot into the latest reading, a 60-sample history and the paging streak
-app/src/lib/system_load/meters.ts - Strip meter readings (bar level, 5 s peak, value, severity) and LED segment tones
+app/src/lib/system_load/meters.ts - Strip meter readings (bar level, severity, spoken value) and the plain-language panel verdicts
 app/src/lib/system_load/severity_test.ts - Memory severity and the three-sample paging rule from the system-load design
 app/src/lib/system_load/severity.ts - Calm/busy/hot/paging classification for system-load meters (docs/design/system_load_design.md)
 app/src/lib/tabs/tab_items.ts - Tab-bar items derived from the configured repos: standalone tabs and grouped (worktree) tabs
@@ -433,9 +431,8 @@ app/src/styles/stream/stream_card_image.css - Stream image strips: the growing-t
 app/src/styles/stream/stream_card.css - Stream card chassis: spine, head grid, focus and lifecycle states, narrow-chassis rules
 app/src/styles/stream/stream_motion.css - Stream arrival choreography: keyframes, pressure bands, the governor carve-out, and reduced motion
 app/src/styles/stream/stream_panel.css - Stream scroller, exceptional status, follow control and compact history rows
-app/src/styles/system_load_breakdown.css - System-load panel breakdowns: stat grid, micro-bars, per-core heat strip, disks, interfaces, top processes
-app/src/styles/system_load_panel.css - System-load detail panel shell: glass surface, header cue, big readout and 60 s history chart
-app/src/styles/system_load.css - Status-strip instrument window: segmented LED meters, severity states and narrow-width relief
+app/src/styles/system_load_panel.css - System-load detail panel: glass shell, header cue, headline and verdict, trend line, top programs
+app/src/styles/system_load.css - Status-strip instrument window: severity-tinted LED meters and narrow-width relief
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar_items.css - Repository navigation actions, group menus and add/remove controls
 app/src/styles/tab_bar_launch.css - Project-launch play button, target chevron, target menu and launch error notice

@@ -7,12 +7,9 @@ import { createPortal } from "react-dom";
 import type { LoadState } from "../../lib/system_load/load_state.js";
 import { PANEL_TITLES, type MeterKey } from "../../lib/system_load/meters.js";
 import type { LoadSeverity } from "../../lib/system_load/severity.js";
-import { CpuPanel, MemoryPanel } from "./cpu_memory_panels.js";
-import { DiskPanel, GpuPanel } from "./device_panels.js";
-import { NetworkPanel } from "./network_panel.js";
+import { PanelBody } from "./panel_bodies.js";
 import "../../styles/context_menu.css";
 import "../../styles/system_load_panel.css";
-import "../../styles/system_load_breakdown.css";
 
 export const LOAD_PANEL_ID = "sysload-panel";
 const EDGE_PX = 8;
@@ -40,16 +37,6 @@ function placePanel(panel: HTMLDivElement | null, anchor: HTMLElement | null): v
   panel.style.maxHeight = `${Math.max(120, window.innerHeight - top - EDGE_PX)}px`;
 }
 
-function PanelBody({ meterKey, state }: { meterKey: MeterKey; state: LoadState }): React.JSX.Element {
-  switch (meterKey) {
-    case "cpu": return <CpuPanel state={state} />;
-    case "mem": return <MemoryPanel state={state} />;
-    case "gpu": return <GpuPanel state={state} />;
-    case "dsk": return <DiskPanel state={state} />;
-    case "net": return <NetworkPanel state={state} />;
-  }
-}
-
 export function LoadPanel({
   meterKey, anchor, state, severity, pinned, onPointerEnter, onPointerLeave, panelRef,
 }: LoadPanelProps): React.JSX.Element {
@@ -68,16 +55,17 @@ export function LoadPanel({
       aria-label={`${PANEL_TITLES[meterKey]} detail`}
       className="glass-popover sysload-panel"
       data-severity={severity}
+      data-meter={meterKey}
       data-pinned={pinned ? "true" : undefined}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
     >
       <header className="sysload-panel__header">
         <h2 className="sysload-panel__title">{PANEL_TITLES[meterKey]}</h2>
-        <span className="sysload-panel__hint">{pinned ? "Pinned · Esc" : "Click to pin"}</span>
+        {pinned ? <span className="sysload-panel__hint">Pinned</span> : null}
       </header>
       <div className="sysload-panel__body">
-        <PanelBody meterKey={meterKey} state={state} />
+        <PanelBody meterKey={meterKey} state={state} severity={severity} />
       </div>
     </div>,
     document.body

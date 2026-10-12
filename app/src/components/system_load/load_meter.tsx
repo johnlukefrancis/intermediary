@@ -1,28 +1,11 @@
 // Path: app/src/components/system_load/load_meter.tsx
-// Description: One strip meter: wide-tracked label, segmented LED bar with 5 s peak hold, tabular value
+// Description: One strip meter: wide-tracked label and a segmented LED bar tinted by the meter's severity
 
 import type React from "react";
-import { litSegments, SEGMENT_COUNT, segmentTone, type MeterKey, type MeterReading } from "../../lib/system_load/meters.js";
+import { litSegments, SEGMENT_COUNT, type MeterKey, type MeterReading } from "../../lib/system_load/meters.js";
 import { LOAD_PANEL_ID } from "./load_panel.js";
 
 const SEGMENT_INDEXES = Array.from({ length: SEGMENT_COUNT }, (_, index) => index);
-
-function LedBar({ level, peak }: { level: number; peak: number }): React.JSX.Element {
-  const lit = litSegments(level);
-  const peakIndex = litSegments(peak) - 1;
-  return (
-    <span className="sysload-led" aria-hidden="true">
-      {SEGMENT_INDEXES.map((index) => (
-        <span
-          key={index}
-          className="sysload-led__seg"
-          data-tone={segmentTone(index)}
-          data-state={index < lit ? "lit" : index === peakIndex ? "peak" : undefined}
-        />
-      ))}
-    </span>
-  );
-}
 
 interface LoadMeterProps {
   reading: MeterReading;
@@ -39,6 +22,7 @@ export function LoadMeter({
   reading, open, registerAnchor, onEnter, onFocus, onClick, onLeave, onBlur,
 }: LoadMeterProps): React.JSX.Element {
   const { key } = reading;
+  const lit = litSegments(reading.level);
   return (
     <button
       type="button"
@@ -57,8 +41,11 @@ export function LoadMeter({
       onClick={() => { onClick(key); }}
     >
       <span className="sysload-meter__label">{reading.label}</span>
-      <LedBar level={reading.level} peak={reading.peak} />
-      <span className="sysload-meter__value">{reading.value}</span>
+      <span className="sysload-led" aria-hidden="true">
+        {SEGMENT_INDEXES.map((index) => (
+          <span key={index} className="sysload-led__seg" data-lit={index < lit ? "true" : undefined} />
+        ))}
+      </span>
     </button>
   );
 }

@@ -14,11 +14,12 @@ or disk, currently means opening Task Manager. Intermediary is always open; its 
 
 ## Goals
 
-- Five always-visible meters in the status strip: CPU, MEM, GPU, DSK, NET. The state of each
-  should read in a fraction of a second: calm, busy, hot, or (for memory) paging.
-- Hovering a meter opens a detail panel with a 60-second history, the subsystem's breakdown
-  and the programs using the most of that resource, named and grouped like Task Manager
-  ("Google Chrome ×28").
+- Five always-visible meters in the status strip: CPU, MEM, GPU, DSK, NET. How full each is,
+  and whether it is calm, busy, hot or (for memory) paging, reads in a fraction of a second
+  without numbers.
+- Hovering a meter answers three questions and nothing more: how much is used, is that a
+  problem, and which programs are using it ("Google Chrome ×44"). It tells JL how many more
+  agents the machine can take and what to close.
 - Numbers agree with Task Manager closely enough that JL never has to open it to check.
 - The strip stays minimal and reads as part of the instrument deck.
 
@@ -72,26 +73,25 @@ itself. The System Idle Process is excluded.
 ## Strip layout
 
 ```
-● CONNECTED  · error ticker…        ┃ CPU ▮▮▮▯▯▯▯▯▯▯ 22% │ MEM ▮▮▮▮▮▮▯▯▯▯ 59% │ GPU ▮▯▯▯▯▯ 10% │ DSK ▯ 1% │ NET ↓0.2 ↑0.1 ┃  OPTIONS
+● CONNECTED  · error ticker…        ┃ CPU ▮▮▮▯▯▯▯▯▯▯ │ MEM ▮▮▮▮▮▮▮▯▯▯ │ GPU ▮▯▯▯▯▯▯▯▯▯ │ DSK ▯▯▯▯▯▯▯▯▯▯ │ NET ▮▮▯▯▯▯▯▯▯▯ ┃  OPTIONS
 ```
 
 - Left: connection LED and label (unchanged states), then the error ticker.
 - Right: the meter cluster sits in a recessed instrument window (darker inset, hairline border,
   deck radius) beside OPTIONS. Meters are separated by hairlines.
-- Each meter: a tiny wide-tracked label, a segmented LED bar and a tabular value. Lit segments
-  ramp through the activity tokens (low → mid → high → hot) by position, so a full bar ends
-  red; unlit segments use `--color-activity-idle`. A peak-hold segment holds the 5-second peak.
-- NET has no natural percentage. Its bar is log-scaled throughput (1 KB/s … 1 GB/s) and its
-  value shows ↓/↑ rates.
-- Narrow widths (handset) drop values, then shorten bars; labels and bars always remain.
+- Each meter is a tiny wide-tracked label and a segmented LED bar; the strip shows no numbers.
+  Lit segments take the meter's severity colour, so calm meters recede and one hot meter
+  stands out. Unlit segments use `--color-activity-idle`.
+- NET has no natural percentage. Its bar is log-scaled throughput (1 KB/s … 1 GB/s).
+- Narrow widths (handset) shorten bars; labels and bars always remain.
 
 ## Severity
 
 | Level | CPU / GPU / DSK | MEM | Visual |
 |---|---|---|---|
-| calm | < 60% | < 75% | muted, no glow |
-| busy | 60–85% | 75–90% | value text warms |
-| hot | ≥ 85% | ≥ 90% or commit ≥ 90% of limit | lit segments glow, value turns hot |
+| calm | < 60% | < 75% | lit segments muted `--color-activity-low` |
+| busy | 60–85% | 75–90% | lit segments `--color-activity-high` |
+| hot | ≥ 85% | ≥ 90% or commit ≥ 90% of limit | lit segments `--color-activity-hot` with glow |
 | paging | — | in use ≥ 85% and hard faults ≥ 100/s for 3 consecutive samples | label reads PAGING, slow pulse |
 
 Pulses stop under reduced motion and while `.app[data-motion="paused"]`.
@@ -103,15 +103,18 @@ meter or the panel. Moving to another meter switches immediately. Clicking pins 
 an outside click or Escape. Meters are buttons, so focus opens the panel too. The panel is a glass
 surface below the meter, clamped to the window, `:: CPU` style header.
 
-| Panel | Contents |
-|---|---|
-| CPU | usage, effective speed, processes/threads, 60 s history, one micro-bar per logical core, top 6 by CPU |
-| MEMORY | in use / total, available, committed / limit, hard faults per second, 60 s history, top 6 by private working set |
-| GPU | per adapter: name, usage, engine bars (3D, Copy, Video Decode, …), dedicated and shared memory bars; 60 s history; top 6 by GPU with VRAM |
-| DISK | per physical disk: active time, read and write rate; 60 s history of the busiest disk; top 6 by I/O |
-| NETWORK | per active interface: ↓/↑ rate, link speed; 60 s history of receive and send |
+Every panel has the same shape: a headline answering how much, a severity-tinted verdict, a
+slim 60-second trend, then the top six programs.
 
-Process rows: friendly label, `×N` group count, value, and a micro-bar scaled to the panel's
+| Panel | Headline | Verdict (calm / busy / hot) | Top programs |
+|---|---|---|---|
+| CPU | usage % | Plenty of headroom / Busy / Maxed out | by CPU share |
+| MEMORY | in use / total GB and GB free | Plenty free / Getting full / Nearly full; "Full — paging to disk" when paging; a commit-limit warning at ≥ 90% | by private working set |
+| GPU | busiest adapter's usage and VRAM used / total | Plenty of headroom / Busy / Maxed out | by GPU share, with VRAM |
+| DISK | busiest disk's active time, its name, total read/write | Quiet / Busy / Saturated | by I/O rate |
+| NETWORK | ↓ / ↑ rate of the busiest interface | Quiet / Busy / Saturated | none: Windows does not expose it |
+
+Program rows: friendly label, `×N` group count, value, and a micro-bar scaled to the panel's
 largest row.
 
 ## Accepted boundaries

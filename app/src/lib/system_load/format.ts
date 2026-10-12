@@ -38,35 +38,6 @@ export function formatBits(bitsPerSec: number): string {
   return `${(bitsPerSec / 1e3).toFixed(bitsPerSec >= 1e5 ? 0 : 1)} Kbps`;
 }
 
-export function formatLinkSpeed(bitsPerSec: number): string {
-  if (bitsPerSec >= 1e9) return `${trimZero(bitsPerSec / 1e9)} Gbps`;
-  return `${trimZero(bitsPerSec / 1e6)} Mbps`;
-}
-
-/** Strip-width bits per second: at most four characters, e.g. 840K, 12M, 1.2G. */
-export function formatBitsCompact(bitsPerSec: number): string {
-  if (bitsPerSec >= 1e9) return `${compact(bitsPerSec / 1e9)}G`;
-  if (bitsPerSec >= 1e6) return `${compact(bitsPerSec / 1e6)}M`;
-  if (bitsPerSec >= 1e3) return `${compact(bitsPerSec / 1e3)}K`;
-  return "0";
-}
-
-export function formatGhz(mhz: number): string {
-  return `${(mhz / 1000).toFixed(2)} GHz`;
-}
-
-export function formatCount(value: number): string {
-  return Math.round(value).toLocaleString();
-}
-
-function compact(value: number): string {
-  return value < 10 ? value.toFixed(1) : String(Math.round(value));
-}
-
-function trimZero(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
 export function clampPercent(percent: number): number {
   return Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0;
 }
