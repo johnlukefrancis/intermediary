@@ -103,7 +103,7 @@ fn is_text_relative_path(relative_path: &str) -> bool {
     false
 }
 
-fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
+pub(crate) fn open_paths_with_default_app(host_paths: &[String]) -> Result<(), String> {
     if host_paths.is_empty() {
         return Err("No files provided".to_string());
     }

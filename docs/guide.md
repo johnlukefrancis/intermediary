@@ -1,5 +1,5 @@
 # Intermediary Documentation Guide
-Updated on: 2026-10-10
+Updated on: 2026-10-12
 Owners: JL · Agents
 Depends on: ADR-000, ADR-006
 
@@ -43,6 +43,7 @@ Architectural Decision Records — the primary contracts for this codebase.
 | [docs/design/terminal_design.md](design/terminal_design.md) | Integrated terminal (TERMINAL rail): goals, behaviour table, key and clipboard policy, accepted boundaries, acceptance |
 | [docs/design/stream_panel_design.md](design/stream_panel_design.md) | Stream panel (default left mode): live edit stream, card grammar, cadence, bounds, behaviour table, acceptance |
 | [docs/design/overview_design.md](design/overview_design.md) | Active-repository Overview: consolidated feed, automatic membership, bounded capture and acceptance |
+| [docs/design/project_launch_design.md](design/project_launch_design.md) | One-click project launch on repo tabs: top-level candidate discovery, usage ranking, Unreal launch-or-focus |
 
 ## Architecture
 

@@ -25,8 +25,6 @@ import {
   useUpdateRepo,
   useRenameRepoLabel,
   useRenameGroupLabel,
-  useRemoveRepo,
-  useRemoveGroup,
 } from "./use_config_actions.js";
 import {
   useSetThemeMode,
@@ -49,6 +47,8 @@ import {
   useSetFilesMode,
   useSetRailWidthPercent,
 } from "./use_config_actions_rail.js";
+import { useSetLaunchTarget } from "./use_config_actions_launch.js";
+import { useRemoveGroup, useRemoveRepo } from "./use_config_actions_remove.js";
 
 interface ConfigContextValue {
   setMainView: (view: MainView) => void;
@@ -131,6 +131,8 @@ interface ConfigContextValue {
   setTextureIntensityPercent: (value: number) => void;
   /** Persist remembered window bounds for a mode */
   setWindowBoundsForMode: (mode: UiMode, bounds: UiWindowBounds) => void;
+  /** Persist a repo's chosen project-launch target (root-relative path) */
+  setLaunchTarget: (repoId: string, relativePath: string) => void;
   /** Reset all settings to defaults */
   resetConfig: () => void;
 }
@@ -198,6 +200,7 @@ export function ConfigProvider({
     setConfig,
     saveConfig
   );
+  const setLaunchTarget = useSetLaunchTarget(setConfig, saveConfig);
   const setWindowBoundsForMode = useSetWindowBoundsForMode(
     setConfig,
     saveConfig
@@ -239,6 +242,7 @@ export function ConfigProvider({
     setWindowOpacityPercent,
     setTextureIntensityPercent,
     setWindowBoundsForMode,
+    setLaunchTarget,
     resetConfig,
   };
 

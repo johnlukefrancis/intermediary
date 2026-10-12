@@ -1,5 +1,5 @@
 // Path: app/src/hooks/use_tab_bar_scroll.ts
-// Description: Scroll overflow detection and snap-to-next-tab for the tab bar track
+// Description: Scroll overflow detection, snap-to-next-tab, and active-tab reveal for the tab bar track
 
 import { useRef, useState, useEffect, useCallback } from "react";
 
@@ -29,7 +29,7 @@ function readScroll(el: HTMLElement): ScrollState {
   };
 }
 
-export function useTabBarScroll(): UseTabBarScrollResult {
+export function useTabBarScroll(activeRepoId: string | null): UseTabBarScrollResult {
   const trackRef = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState<ScrollState>({
     isOverflowing: false,
@@ -57,6 +57,21 @@ export function useTabBarScroll(): UseTabBarScrollResult {
       el.removeEventListener("scroll", sync);
     };
   }, [sync]);
+
+  /* Auto-scroll the active tab into view */
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!activeRepoId || !track) return;
+    const activeEl = track.querySelector<HTMLElement>("[aria-current='page']");
+    if (!activeEl) return;
+    const trackRect = track.getBoundingClientRect();
+    const elRect = activeEl.getBoundingClientRect();
+    if (elRect.left < trackRect.left) {
+      track.scrollBy({ left: elRect.left - trackRect.left - 8, behavior: "smooth" });
+    } else if (elRect.right > trackRect.right) {
+      track.scrollBy({ left: elRect.right - trackRect.right + 8, behavior: "smooth" });
+    }
+  }, [activeRepoId]);
 
   const scrollLeft = useCallback(() => {
     const track = trackRef.current;

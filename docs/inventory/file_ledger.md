@@ -111,7 +111,10 @@ app/src/components/stream/stream_panel.tsx - Stream panel shell with mode contro
 app/src/components/stream/stream_scroller.tsx - The scroll container: ring in order, roving focus, follow pill, and a throttled screen-reader digest
 app/src/components/stream/stream_text_body.tsx - Capped diff lines in the shared row grammar with the "+N MORE  OPEN DIFF" and "NEW FILE" footers
 app/src/components/tab_bar.tsx - Tab navigation with grouped repo dropdown support and scroll overflow arrows
+app/src/components/tab_bar/launch_control.tsx - Per-repo launch control: the play button with transient feedback and, optionally, the target-menu chevron
+app/src/components/tab_bar/launch_menu.tsx - Launch-target chooser listing a repo's candidates by kind and file name, default marked
 app/src/components/tab_bar/main_nav.tsx - Icon keycap cluster for app-level destinations (Overview, Notes) ahead of the repo tabs
+app/src/components/tab_bar/project_launch_context.tsx - Tab-bar project-launch provider: launch state for every tab plus the target menu and error notice overlays
 app/src/components/tab_bar/tab_bar_dropdowns.tsx - Dropdown panels for single-repo and grouped-repo tab-bar actions
 app/src/components/tab_bar/tab_bar_items.tsx - Focused tab item renderers for single and grouped repository tabs
 app/src/components/tab_remove_button.tsx - "x" button for removing repos with confirmation
@@ -177,7 +180,9 @@ app/src/hooks/use_app_navigation.ts - App view selection, remembered repository 
 app/src/hooks/use_bundle_state.ts - Per-repo bundle state management with event subscription
 app/src/hooks/use_client_hello.ts - Owns the clientHello lifecycle: per-session runner, retry backoff, resync and WSL re-hello
 app/src/hooks/use_config_actions_extended.ts - Extended config actions for theme, legacy starred files, and recent files limit
+app/src/hooks/use_config_actions_launch.ts - Config action persisting a repo's chosen project-launch target
 app/src/hooks/use_config_actions_rail.ts - Config actions for persisted panel state: the rail section, the rail width, and the left files mode
+app/src/hooks/use_config_actions_remove.ts - Config actions that remove a repo or a whole group and every per-repo map entry they own
 app/src/hooks/use_config_actions.ts - Core config action factory functions for repo and bundle management
 app/src/hooks/use_config_storage.ts - Config persistence + loading hook for use_config
 app/src/hooks/use_config.tsx - Config persistence context provider and hook
@@ -188,16 +193,18 @@ app/src/hooks/use_effective_ui_mode.ts - Derives runtime effective UI mode from 
 app/src/hooks/use_file_actions.ts - Hook for OS-level file operations (reveal in file manager, open file)
 app/src/hooks/use_file_selection.ts - Multi-file selection state hook with shift-range and ctrl/cmd-toggle support
 app/src/hooks/use_image_blob_url.ts - Base64 image payload to a revocable Blob URL for workspace image and image-diff panes
+app/src/hooks/use_launch_candidates.ts - Fetches launch candidates for every configured repo root in one call; refreshes on root change, focus, or demand
 app/src/hooks/use_mode_window_bounds_persistence.ts - Persists window bounds per mode from live resize events
 app/src/hooks/use_mode_window_snap.ts - Applies per-mode window bounds when the active UI mode changes
 app/src/hooks/use_motion_governor.ts - Pauses motion when window is not foreground (hidden, minimized, or unfocused) to save GPU
 app/src/hooks/use_notes.ts - Repo or global note content hook with debounced save via Tauri commands
+app/src/hooks/use_project_launch.ts - Project-launch actions over the repo candidates: effective target, launch, choose, and transient feedback
 app/src/hooks/use_repo_state.ts - Per-repo file state management with event subscription
 app/src/hooks/use_repo_workspace.ts - Repo-tab workspace state for notes, text buffers, image previews, and text/image diffs
 app/src/hooks/use_resume_detector.ts - Detects likely OS sleep/wake resume using time gaps plus visibility/focus signals
 app/src/hooks/use_startup_ready.ts - One-shot startup handshake to reveal main window after config load
 app/src/hooks/use_tab_bar_dropdown.ts - Owns tab-bar dropdown open state, trigger containment, and anchored positioning
-app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection and snap-to-next-tab for the tab bar track
+app/src/hooks/use_tab_bar_scroll.ts - Scroll overflow detection, snap-to-next-tab, and active-tab reveal for the tab bar track
 app/src/hooks/use_worktree_add.ts - Hook for adding worktrees to existing groups or single repos
 app/src/lib/agent/activity_support.ts - Shared minimum agent contract for root-identified activity in Stream and Overview
 app/src/lib/agent/agent_client_inspection_test.ts - Remote hover cancellation and settled-request cleanup at the WebSocket boundary
@@ -235,6 +242,8 @@ app/src/lib/images/image_tile_pixels_test.ts - Revision-bound pixels: a read is 
 app/src/lib/images/image_tile_pixels.ts - Shared image preview eligibility, exact revision acceptance, source pixel gate and thumbnail fit
 app/src/lib/images/image_tile_targets_test.ts - Cross-repository/root BEFORE isolation and one thumbnail budget across all source identities
 app/src/lib/images/image_tile_targets.ts - Image tile source identities, newest-thumbnail retention and source-scoped BEFORE pairing
+app/src/lib/launch/launch_target_test.ts - Effective launch target honours a persisted choice only while it is still a candidate
+app/src/lib/launch/launch_target.ts - Pure launch-target resolution: persisted choice while still a candidate, else the top-ranked candidate
 app/src/lib/overview/overview_activity.ts - Bounded live observations, historical paths and settled-detail sequence accounting
 app/src/lib/overview/overview_backend_test.ts - Root-scoped watcher failure and backend-version recovery regression oracles
 app/src/lib/overview/overview_edit.ts - Metadata-only settled edits with bounded excerpts from the shared patch parser
@@ -327,6 +336,7 @@ app/src/shared/protocol_events_delta.ts - Zod mirror of the agent fileDelta even
 app/src/shared/protocol_events.ts - Agent event and file metadata schemas shared by protocol envelope parsing
 app/src/shared/protocol_file_meta.ts - Leaf file metadata enums shared by the file change and file delta event schemas
 app/src/shared/protocol_import.ts - Drag-and-drop file import command/result schemas shared with the agent
+app/src/shared/protocol_launch.ts - Tauri project-launch command response schemas (launch candidates and launch outcome)
 app/src/shared/protocol_repo_commands.ts - Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas
 app/src/shared/protocol_repo_topology.ts - Repo topology and lazy directory listing protocol schemas
 app/src/shared/protocol_source_control.ts - Source-control status, diff, and action command/result schemas shared with the agents
@@ -394,6 +404,7 @@ app/src/styles/stream/stream_motion.css - Stream arrival choreography: keyframes
 app/src/styles/stream/stream_panel.css - Stream scroller, exceptional status, follow control and compact history rows
 app/src/styles/tab_bar_dropdown.css - Dropdown-specific styles for tab bar worktree actions
 app/src/styles/tab_bar_items.css - Repository navigation actions, group menus and add/remove controls
+app/src/styles/tab_bar_launch.css - Project-launch play button, target chevron, target menu and launch error notice
 app/src/styles/tab_bar.css - Tab bar navigation with ASCII-instrument bracketed labels
 app/src/styles/terminal_column.css - Terminal rail body: tab strip, xterm host and session element, console-prompt notices
 app/src/styles/text_workspace_semantics.css - Semantic Markdown rendering layer for workspace text editors
@@ -782,6 +793,7 @@ src-tauri/src/lib/commands/file_manager.rs - Open folders in the host OS file ma
 src-tauri/src/lib/commands/file_open_policy.rs - Host launcher policy for opening text and non-text files
 src-tauri/src/lib/commands/file_opener_paths.rs - Resolve repo-relative file paths to host-visible paths
 src-tauri/src/lib/commands/file_opener.rs - Reveal files in file manager or open with default application
+src-tauri/src/lib/commands/launch.rs - Tauri commands for project launch candidates and one-click launch-or-focus
 src-tauri/src/lib/commands/mod.rs - Tauri command exports
 src-tauri/src/lib/commands/notes.rs - Tauri commands for per-repo and global plain-text notes persistence
 src-tauri/src/lib/commands/paths.rs - get_app_paths command implementation and path conversion utilities
@@ -804,6 +816,14 @@ src-tauri/src/lib/config/types/model.rs - Supporting persisted configuration mod
 src-tauri/src/lib/config/types/tests.rs - Tests for persisted configuration types
 src-tauri/src/lib/config/types/ui_state.rs - Remembered UI state: rail section, left files mode, rail width, and window bounds
 src-tauri/src/lib/config/types/validation.rs - Persisted configuration validation rules and invariants
+src-tauri/src/lib/launch/candidates.rs - Top-level launch candidate discovery for repository roots, ranked by observed usage
+src-tauri/src/lib/launch/launch_action.rs - Launches one top-level target: focus-or-start for Unreal projects, default handler for HTML
+src-tauri/src/lib/launch/mod.rs - Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus
+src-tauri/src/lib/launch/recent_items.rs - Windows Recent-items evidence: when each candidate file was last opened through the shell
+src-tauri/src/lib/launch/shell_link.rs - Minimal MS-SHLLINK reader that recovers a shortcut's target path from its LinkInfo
+src-tauri/src/lib/launch/unreal_engine.rs - Resolves a .uproject's EngineAssociation to the UnrealEditor.exe that should open it
+src-tauri/src/lib/launch/unreal_focus.rs - Finds an UnrealEditor.exe whose command line names a project and brings its window forward
+src-tauri/src/lib/launch/unreal_recent.rs - Unreal Editor's own recent-projects evidence from every engine version's EditorSettings.ini
 src-tauri/src/lib/macos_instance.rs - Mac application exclusivity before mutable startup and native activation
 src-tauri/src/lib/mod.rs - Library root - Tauri setup and plugin registration
 src-tauri/src/lib/obs/logging.rs - File-based logger writing to run_latest.txt

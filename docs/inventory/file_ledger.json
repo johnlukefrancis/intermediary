@@ -434,8 +434,20 @@
       "summary": "Tab navigation with grouped repo dropdown support and scroll overflow arrows"
     },
     {
+      "path": "app/src/components/tab_bar/launch_control.tsx",
+      "summary": "Per-repo launch control: the play button with transient feedback and, optionally, the target-menu chevron"
+    },
+    {
+      "path": "app/src/components/tab_bar/launch_menu.tsx",
+      "summary": "Launch-target chooser listing a repo's candidates by kind and file name, default marked"
+    },
+    {
       "path": "app/src/components/tab_bar/main_nav.tsx",
       "summary": "Icon keycap cluster for app-level destinations (Overview, Notes) ahead of the repo tabs"
+    },
+    {
+      "path": "app/src/components/tab_bar/project_launch_context.tsx",
+      "summary": "Tab-bar project-launch provider: launch state for every tab plus the target menu and error notice overlays"
     },
     {
       "path": "app/src/components/tab_bar/tab_bar_dropdowns.tsx",
@@ -698,8 +710,16 @@
       "summary": "Extended config actions for theme, legacy starred files, and recent files limit"
     },
     {
+      "path": "app/src/hooks/use_config_actions_launch.ts",
+      "summary": "Config action persisting a repo's chosen project-launch target"
+    },
+    {
       "path": "app/src/hooks/use_config_actions_rail.ts",
       "summary": "Config actions for persisted panel state: the rail section, the rail width, and the left files mode"
+    },
+    {
+      "path": "app/src/hooks/use_config_actions_remove.ts",
+      "summary": "Config actions that remove a repo or a whole group and every per-repo map entry they own"
     },
     {
       "path": "app/src/hooks/use_config_actions.ts",
@@ -742,6 +762,10 @@
       "summary": "Base64 image payload to a revocable Blob URL for workspace image and image-diff panes"
     },
     {
+      "path": "app/src/hooks/use_launch_candidates.ts",
+      "summary": "Fetches launch candidates for every configured repo root in one call; refreshes on root change, focus, or demand"
+    },
+    {
       "path": "app/src/hooks/use_mode_window_bounds_persistence.ts",
       "summary": "Persists window bounds per mode from live resize events"
     },
@@ -756,6 +780,10 @@
     {
       "path": "app/src/hooks/use_notes.ts",
       "summary": "Repo or global note content hook with debounced save via Tauri commands"
+    },
+    {
+      "path": "app/src/hooks/use_project_launch.ts",
+      "summary": "Project-launch actions over the repo candidates: effective target, launch, choose, and transient feedback"
     },
     {
       "path": "app/src/hooks/use_repo_state.ts",
@@ -779,7 +807,7 @@
     },
     {
       "path": "app/src/hooks/use_tab_bar_scroll.ts",
-      "summary": "Scroll overflow detection and snap-to-next-tab for the tab bar track"
+      "summary": "Scroll overflow detection, snap-to-next-tab, and active-tab reveal for the tab bar track"
     },
     {
       "path": "app/src/hooks/use_worktree_add.ts",
@@ -928,6 +956,14 @@
     {
       "path": "app/src/lib/images/image_tile_targets.ts",
       "summary": "Image tile source identities, newest-thumbnail retention and source-scoped BEFORE pairing"
+    },
+    {
+      "path": "app/src/lib/launch/launch_target_test.ts",
+      "summary": "Effective launch target honours a persisted choice only while it is still a candidate"
+    },
+    {
+      "path": "app/src/lib/launch/launch_target.ts",
+      "summary": "Pure launch-target resolution: persisted choice while still a candidate, else the top-ranked candidate"
     },
     {
       "path": "app/src/lib/overview/overview_activity.ts",
@@ -1298,6 +1334,10 @@
       "summary": "Drag-and-drop file import command/result schemas shared with the agent"
     },
     {
+      "path": "app/src/shared/protocol_launch.ts",
+      "summary": "Tauri project-launch command response schemas (launch candidates and launch outcome)"
+    },
+    {
       "path": "app/src/shared/protocol_repo_commands.ts",
       "summary": "Core repo watch, refresh, staging, file-read, handshake, and bundle-list command schemas"
     },
@@ -1564,6 +1604,10 @@
     {
       "path": "app/src/styles/tab_bar_items.css",
       "summary": "Repository navigation actions, group menus and add/remove controls"
+    },
+    {
+      "path": "app/src/styles/tab_bar_launch.css",
+      "summary": "Project-launch play button, target chevron, target menu and launch error notice"
     },
     {
       "path": "app/src/styles/tab_bar.css",
@@ -3118,6 +3162,10 @@
       "summary": "Reveal files in file manager or open with default application"
     },
     {
+      "path": "src-tauri/src/lib/commands/launch.rs",
+      "summary": "Tauri commands for project launch candidates and one-click launch-or-focus"
+    },
+    {
       "path": "src-tauri/src/lib/commands/mod.rs",
       "summary": "Tauri command exports"
     },
@@ -3204,6 +3252,38 @@
     {
       "path": "src-tauri/src/lib/config/types/validation.rs",
       "summary": "Persisted configuration validation rules and invariants"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/candidates.rs",
+      "summary": "Top-level launch candidate discovery for repository roots, ranked by observed usage"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/launch_action.rs",
+      "summary": "Launches one top-level target: focus-or-start for Unreal projects, default handler for HTML"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/mod.rs",
+      "summary": "Project launch targets: top-level candidate discovery, usage ranking and launch-or-focus"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/recent_items.rs",
+      "summary": "Windows Recent-items evidence: when each candidate file was last opened through the shell"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/shell_link.rs",
+      "summary": "Minimal MS-SHLLINK reader that recovers a shortcut's target path from its LinkInfo"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/unreal_engine.rs",
+      "summary": "Resolves a .uproject's EngineAssociation to the UnrealEditor.exe that should open it"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/unreal_focus.rs",
+      "summary": "Finds an UnrealEditor.exe whose command line names a project and brings its window forward"
+    },
+    {
+      "path": "src-tauri/src/lib/launch/unreal_recent.rs",
+      "summary": "Unreal Editor's own recent-projects evidence from every engine version's EditorSettings.ini"
     },
     {
       "path": "src-tauri/src/lib/macos_instance.rs",

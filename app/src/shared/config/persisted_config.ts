@@ -147,6 +147,8 @@ export const PersistedConfigSchema = z.object({
   tabThemes: z.record(z.string(), TabThemeSchema).default({}),
   /** Legacy starred files per repo, retained for config compatibility */
   starredFiles: StarredFilesSchema.default({}),
+  /** Chosen launch target per repo: repoId -> root-relative file path */
+  launchTargets: z.record(z.string(), z.string().min(1)).default({}),
   /** Global theme mode (dark/warm) */
   themeMode: ThemeModeSchema.default("dark"),
   /** UI density mode (standard/handset) */
@@ -216,6 +218,7 @@ export function getDefaultPersistedConfig(): PersistedConfig {
     agentDistro: null,
     tabThemes: {},
     starredFiles: {},
+    launchTargets: {},
     themeMode: "dark",
     uiMode: "standard",
     windowOpacityPercent: 100,

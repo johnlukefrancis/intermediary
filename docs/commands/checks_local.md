@@ -29,6 +29,13 @@ To check only the Tauri app:
 cargo check -p intermediary
 ```
 
+The Tauri crate needs GTK to build on Linux, so check and test its Windows-only code
+(launch, terminal) on the Windows mirror after syncing:
+```bash
+./scripts/windows/sync_to_windows.sh
+pwsh -NoProfile -Command 'Set-Location E:\Code\intermediary; cargo test -p intermediary --lib'
+```
+
 To check only the bundle CLI crate:
 ```bash
 cargo check -p im_bundle

@@ -26,6 +26,10 @@ export function useTabBarDropdown({
     setOpenDropdownId(null);
   }, []);
 
+  const openDropdown = useCallback((dropdownId: string) => {
+    setOpenDropdownId(dropdownId);
+  }, []);
+
   const registerDropdownTrigger = useCallback(
     (dropdownId: string, node: HTMLButtonElement | null) => {
       if (node) {
@@ -115,6 +119,7 @@ export function useTabBarDropdown({
     closeDropdown,
     dropdownAnchorStyle,
     dropdownRef,
+    openDropdown,
     openDropdownId,
     registerDropdownTrigger,
     toggleDropdown,

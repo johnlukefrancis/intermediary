@@ -6,6 +6,7 @@ import type { GroupTab, SingleTab } from "../../lib/tabs/tab_items.js";
 import type { RepoRoot } from "../../shared/config.js";
 import { GroupRemoveButton } from "../group_remove_button.js";
 import { TabRemoveButton } from "../tab_remove_button.js";
+import { LaunchControl } from "./launch_control.js";
 
 /** Vintage folder icon SVG using theme CSS variables */
 function FolderIcon(): React.JSX.Element {
@@ -42,20 +43,25 @@ export function isGroupActive(
   return group.repos.some((r) => r.repoId === activeRepoId);
 }
 
+/** The repo a group tab shows: the active one, else the group's last active, else its first. */
+export function getGroupDisplayRepo(
+  group: GroupTab,
+  activeRepoId: string | null,
+  lastActiveGroupRepoIds: Record<string, string>
+): GroupTab["repos"][number] | undefined {
+  const lastActiveId = lastActiveGroupRepoIds[group.groupId];
+  return group.repos.find((r) => r.repoId === activeRepoId)
+    ?? group.repos.find((r) => r.repoId === lastActiveId)
+    ?? group.repos[0];
+}
+
 export function getGroupDisplayLabel(
   group: GroupTab,
   activeRepoId: string | null,
   lastActiveGroupRepoIds: Record<string, string>
 ): string {
-  const activeRepo = group.repos.find((r) => r.repoId === activeRepoId);
-  let activeLabel: string;
-  if (activeRepo) {
-    activeLabel = activeRepo.label;
-  } else {
-    const lastActiveId = lastActiveGroupRepoIds[group.groupId];
-    const lastActiveRepo = group.repos.find((r) => r.repoId === lastActiveId);
-    activeLabel = lastActiveRepo?.label ?? group.repos[0]?.label ?? "";
-  }
+  const activeLabel =
+    getGroupDisplayRepo(group, activeRepoId, lastActiveGroupRepoIds)?.label ?? "";
   const trimmedGroupLabel = group.groupLabel.trim();
   const trimmedActiveLabel = activeLabel.trim();
   const showActiveSuffix =
@@ -109,6 +115,7 @@ export function SingleTabItem({
           <FolderIcon />
         </button>
       )}
+      <LaunchControl repoId={tab.repoId} sourceId={`tab:${tab.repoId}`} withMenu />
       <button
         className={`tab-button ${isActive ? "active" : ""}`}
         onClick={() => {
@@ -169,6 +176,7 @@ export function GroupTabItem({
 }: GroupTabItemProps): React.JSX.Element {
   const isActive = isGroupActive(tab, activeRepoId);
   const fullGroupLabel = getGroupDisplayLabel(tab, activeRepoId, lastActiveGroupRepoIds);
+  const displayRepo = getGroupDisplayRepo(tab, activeRepoId, lastActiveGroupRepoIds);
   const repoCount = tab.repos.length;
 
   return (
@@ -190,6 +198,9 @@ export function GroupTabItem({
         >
           <FolderIcon />
         </button>
+      )}
+      {displayRepo && (
+        <LaunchControl repoId={displayRepo.repoId} sourceId={`tab:${displayRepo.repoId}`} withMenu />
       )}
       <button
         className={`tab-button ${isActive ? "active" : ""}`}

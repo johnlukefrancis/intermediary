@@ -5,6 +5,7 @@ import type React from "react";
 import type { GroupTab, SingleTab } from "../../lib/tabs/tab_items.js";
 import { GroupRemoveButton } from "../group_remove_button.js";
 import { TabRemoveButton } from "../tab_remove_button.js";
+import { LaunchControl } from "./launch_control.js";
 
 interface SingleTabDropdownProps {
   tab: SingleTab;
@@ -77,6 +78,7 @@ export function GroupTabDropdown({
               <span className="group-radio">{isSelected ? "●" : "○"}</span>
               {repo.label}
             </button>
+            <LaunchControl repoId={repo.repoId} sourceId={`row:${repo.repoId}`} withMenu={false} />
             <TabRemoveButton
               repoId={repo.repoId}
               label={repo.label}

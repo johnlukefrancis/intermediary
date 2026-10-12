@@ -72,6 +72,7 @@ pub(super) fn migrate_config(mut config: PersistedConfig) -> PersistedConfig {
     if config.config_version < 28 {
         seed_recommended_scene_extensions(&mut config);
     }
+    // Version 28 -> 29: Add launch_targets (serde default handles missing field).
 
     config.config_version = CONFIG_VERSION;
     config

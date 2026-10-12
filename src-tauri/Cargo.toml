@@ -41,16 +41,19 @@ objc2-app-kit = { version = "0.3", default-features = false, features = ["NSPast
 objc2-foundation = { version = "0.3", default-features = false, features = ["NSString"] }
 
 [target.'cfg(windows)'.dependencies]
-# Native terminal clipboard, build-number discovery, and ConPTY process ownership.
+# Terminal clipboard, build number and ConPTY ownership; launch engine lookup and editor focus.
 windows-sys = { version = "0.61", features = [
+    "Wdk_System_Threading",
     "Win32_Foundation",
     "Win32_System_DataExchange",
+    "Win32_System_Diagnostics_ToolHelp",
     "Win32_System_Memory",
     "Win32_System_Console",
     "Win32_System_Pipes",
     "Win32_System_Registry",
     "Win32_System_Threading",
     "Win32_Security",
+    "Win32_UI_WindowsAndMessaging",
 ] }
 
 [dev-dependencies]

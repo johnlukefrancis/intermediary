@@ -123,7 +123,11 @@ pub fn run_wslpath(
     wsl_path: &str,
     distro_override: Option<&str>,
 ) -> Result<String, WslConvertError> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
     let mut command = Command::new("wsl.exe");
+    command.creation_flags(CREATE_NO_WINDOW);
     for arg in build_wslpath_command_args(wsl_path, distro_override) {
         command.arg(arg);
     }
