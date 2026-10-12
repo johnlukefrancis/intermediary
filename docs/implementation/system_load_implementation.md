@@ -36,5 +36,15 @@ silently and relaunch for JL. Design: `docs/design/system_load_design.md`.
   after the union). JL then asked for less: no numbers on the strip, severity-tinted bars, and a
   lean hover (headline, verdict, slim trend, top programs). The simplification removes the
   per-core, commit, engine, per-disk and per-interface breakdowns.
-- Frontier: commit the simplification, fast-forward master, build, install, witness.
+- Memory Compression (Windows' compressed store, hidden by Task Manager) moved out of the
+  program list into `memory.compressedBytes`, shown as a quiet note (6c2cbb6).
+- Installed: master 6c2cbb6 plus #72c2's uncommitted demo-launch tree, silent NSIS install,
+  SHA256 A5C798BC02D6E4B3E72C3036E2A11263A503970A077CC2C7C7617AA39924B8DB. CDP witness on 9225
+  with the window visible: the strip shows numberless bars (MEM busy amber at 81%, others calm).
+  All five panels pinned and captured with live data: memory "49.5 / 61.1 GB · 11.6 GB free ·
+  4.6 GB compressed", GPU "23% · VRAM 10.0 / 15.6 GB", disk "C:", top programs agree with Task
+  Manager. Relaunched normally and 9225 is closed.
+- Earlier first-version witness: hover intent was unreliable only while a fullscreen game
+  occluded the window (Chromium defers synthetic input and timers there); JL's own hover worked.
+- Frontier: complete pending JL's acceptance of the look and feel.
 - Evidence root: ignored target/system_load_witness in the master tree.
