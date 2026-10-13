@@ -6,8 +6,13 @@ import { hexToAccentCssVars } from "../lib/theme/accent_utils.js";
 import { agent, repoStyle, type RepoStyle } from "./identity.js";
 import type { SpeechMessage } from "./conversation.js";
 
-const claudeIcon = new URL("./assets/claude_code.svg?no-inline", import.meta.url).href;
-const codexIcon = new URL("./assets/codex.svg?no-inline", import.meta.url).href;
+const codex = { icon: new URL("./assets/codex.svg?no-inline", import.meta.url).href, name: "Codex" };
+const clients: Record<string, { icon: string; name: string }> = {
+  claude: { icon: new URL("./assets/claude_code.svg?no-inline", import.meta.url).href, name: "Claude Code" },
+  codex,
+  muse: { icon: new URL("./assets/muse.png?no-inline", import.meta.url).href, name: "Muse Code" },
+};
+const clientOf = (client: string | undefined) => clients[client ?? ""] ?? codex;
 
 interface Props {
   message: SpeechMessage;
@@ -57,7 +62,7 @@ export function Bubble({ message, repos, onRemove, onHold }: Props): React.JSX.E
     {echo && echoRepo && <button className="speech__echo" aria-label={expanded ? "Collapse previous message" : "Expand previous message"}
       aria-expanded={expanded} style={hexToAccentCssVars(echoRepo.accent) as React.CSSProperties}
       onClick={() => { setExpanded(value => !value); }}>
-      <img src={echoSender?.client === "claude" ? claudeIcon : codexIcon} alt={echoSender?.client === "claude" ? "Claude Code" : "Codex"} />
+      <img src={clientOf(echoSender?.client).icon} alt={clientOf(echoSender?.client).name} />
       <span className="speech__echo-body">
         <span className="speech__echo-heading" title={echo.from}>
           <span className="speech__echo-repo">{echoRepo.label}</span>
@@ -67,8 +72,8 @@ export function Bubble({ message, repos, onRemove, onHold }: Props): React.JSX.E
       </span>
     </button>}
     <div className="speech__current">
-      <div className="speech__icon" title={sender.client === "claude" ? "Claude Code" : "Codex"}>
-        <img src={sender.client === "claude" ? claudeIcon : codexIcon} alt={sender.client === "claude" ? "Claude Code" : "Codex"} />
+      <div className="speech__icon" title={clientOf(sender.client).name}>
+        <img src={clientOf(sender.client).icon} alt={clientOf(sender.client).name} />
       </div>
       <div className="speech__body">
         <header className="speech__header">
